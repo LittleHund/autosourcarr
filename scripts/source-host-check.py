@@ -79,7 +79,7 @@ def check(host, item, query, lang):
             result["preferences_set"] = configure(host, sid, item["preferences"])
             if len(result["preferences_set"]) < len(item["preferences"]): raise RuntimeError("preferences not found: %s" % result["preferences_set"])
         step = "search"
-        page = call(host, "GET", "/v1/sources/%s/mangas?type=SEARCH&page=1&query=%s" % (sid, urllib.parse.quote(query)))
+        page = {"mangas": []} if item.get("browse") else call(host, "GET", "/v1/sources/%s/mangas?type=SEARCH&page=1&query=%s" % (sid, urllib.parse.quote(query)))
         if not page["mangas"]:
             step = "popular"; page = call(host, "GET", "/v1/sources/%s/mangas?type=POPULAR&page=1" % sid)
         if not page["mangas"]: raise RuntimeError("no titles found")
@@ -88,7 +88,7 @@ def check(host, item, query, lang):
         pages = []; seen_chapters = False
         # First titles in order; per title the oldest, newest and middle chapter. A chapter without pages (e.g. a
         # Komga book in a format without page images) moves on to the next.
-        for candidate in page["mangas"][:5]:
+        for candidate in page["mangas"][:item.get("titles", 5)]:
             step = "details"
             detail = call(host, "POST", "/v1/mangas/%d/fetch" % candidate["id"], {"fetchManga": True, "fetchChapters": True})
             chapters = detail["chapters"]
@@ -121,7 +121,9 @@ def lib14_item():
     row = next(r for r in rows if r["pkg"] == "eu.kanade.tachiyomi.extension.all.komga")
     if not str(row["version"]).startswith("1.4."): raise RuntimeError("Komga in the archive is %s, not lib 1.4" % row["version"])
     return {"pkg": row["pkg"], "apk": LIB14_REPO + "apk/" + row["apk"], "version": row["version"], "sources": [], "lib14": True,
-            "preferences": {"address": "https://demo.komga.org", "username": "demo@komga.org", "password": "komga-demo"}}
+            "preferences": {"address": "https://demo.komga.org", "username": "demo@komga.org", "password": "komga-demo"},
+            # The demo's first titles are EPUB books (no page images): browse more of the list for a comic.
+            "browse": True, "titles": 30}
 
 def configure(host, sid, values):
     prefs = call(host, "GET", "/v1/sources/%s/preferences" % sid)
