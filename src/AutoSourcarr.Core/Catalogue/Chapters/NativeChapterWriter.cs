@@ -211,6 +211,8 @@ public sealed class NativeChapterWriter(SqliteDatabase database, object sourceWr
             touched?.Add(vid.Value);
             if (isGallery && old is not null) MoveHistory(o, old.Id, old.VirtualId, vid.Value);
             if (item.Old is { } initial && (initial.MangaId != context.MangaId || initial.Order != ch.SourceOrder)) { o.Execute("DELETE FROM candidate_pages WHERE candidate_id=$p0", P(initial.Id)); invalidated?.Add(initial.Id); }
+            // PERF-5: an unchanged chapter is not rewritten, so last_seen means "last changed"; the scan time per source title is
+            // source_record_scans.checked_at below. Nothing decides on last_seen.
             o.Execute("""
                 INSERT INTO chapter_candidates(virtual_chapter_id,source_id,source_name,source_match_id,source_manga_id,source_chapter_id,
                   source_chapter_url,source_order,source_chapter_index,name,chapter_number,volume_number,upload_date,scanlator,page_count,active,first_seen,last_seen)

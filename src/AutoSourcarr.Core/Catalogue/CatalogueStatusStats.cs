@@ -110,7 +110,7 @@ public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourc
         var cache = catalog["cache"]!.AsObject();
         cache["cover_files"] = covers;
         cache["cover_bytes"] = coverBytes;
-        var paths = DatabasePaths.Resolve(current);
+        var paths = database.Paths; // live paths: a database move switches them without a restart
         long Size(string path) => File.Exists(path) ? new FileInfo(path).Length : 0;
         var databaseBytes = new[] { paths.Catalog, paths.Origins }
             .Sum(path => Size(path) + Size(path + "-wal") + Size(path + "-shm"));

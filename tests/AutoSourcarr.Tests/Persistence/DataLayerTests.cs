@@ -149,8 +149,28 @@ public static class DataLayerTests
             Check.Throws<ArgumentException>(() => DatabaseRelocation.Move(database, "relative/path", directory => saved = directory));
             Check.Throws<ArgumentException>(() => DatabaseRelocation.Move(database, Path.Combine(temp.Path, "missing"), directory => saved = directory));
             Check.Throws<ArgumentException>(() => DatabaseRelocation.Move(database, data, directory => saved = directory));
-            var result = DatabaseRelocation.Move(database, target, directory => saved = directory);
+            // A symlinked folder is refused here because startup refuses it too.
+            if (!OperatingSystem.IsWindows())
+            {
+                var linked = Path.Combine(temp.Path, "linked");
+                Directory.CreateSymbolicLink(linked, target);
+                Check.Throws<ArgumentException>(() => DatabaseRelocation.Move(database, linked, directory => saved = directory));
+            }
+            // A folder another instance holds is refused before anything is copied.
+            Check.Throws<ArgumentException>(() => DatabaseRelocation.Move(database, target, directory => saved = directory, claimTarget: _ => throw new IOException("locked")));
+            Check.True(saved is null && !File.Exists(Path.Combine(target, "catalog.sqlite")));
+            var claim = new Claim();
+            var result = DatabaseRelocation.Move(database, target, directory => saved = directory, claimTarget: _ => claim);
+            Check.True(!claim.Disposed, "The instance lock on the new folder is kept after a successful move.");
             Check.Equal(target, saved);
+            foreach (var name in new[] { "catalog.sqlite", "chapter-origins.sqlite" })
+                using (var moved = new SqliteConnection("Data Source=" + Path.Combine(target, name) + ";Pooling=False"))
+                {
+                    moved.Open();
+                    using var mode = moved.CreateCommand();
+                    mode.CommandText = "PRAGMA journal_mode";
+                    Check.Equal("wal", (mode.ExecuteScalar() as string)?.ToLowerInvariant());
+                }
             Check.Equal(target, database.Paths.Directory);
             Check.True(File.Exists(Path.Combine(data, "catalog.sqlite")) && File.Exists(Path.Combine(target, "catalog.sqlite")) && File.Exists(Path.Combine(target, "chapter-origins.sqlite")));
             Check.True(result.CatalogBytes > 0 && result.Message.Contains("safety copy", StringComparison.Ordinal));
@@ -168,9 +188,27 @@ public static class DataLayerTests
             // A failing save of the new folder leaves everything as it was.
             var third = Path.Combine(temp.Path, "third");
             Directory.CreateDirectory(third);
-            Check.Throws<IOException>(() => DatabaseRelocation.Move(database, third, _ => throw new IOException("config.json is read-only")));
+            var failedClaim = new Claim();
+            Check.Throws<IOException>(() => DatabaseRelocation.Move(database, third, _ => throw new IOException("config.json is read-only"), claimTarget: _ => failedClaim));
+            Check.True(failedClaim.Disposed, "The lock on a folder that was not switched to is released.");
             Check.Equal(target, database.Paths.Directory);
             Check.True(!File.Exists(Path.Combine(third, "catalog.sqlite")), "Copies are removed after a failure.");
+        });
+
+        suite.Add("data layer: a write nested in a read writes only for its own call", () =>
+        {
+            using var temp = new Sandbox();
+            using var database = new SqliteDatabase(new AutoSourcarrSettings { DataDir = temp.Path });
+            new SchemaMigrator(database).Initialize();
+            database.Read(DatabaseFile.Catalog, outer =>
+            {
+                Check.True(!outer.CanWrite);
+                database.Write(DatabaseFile.Catalog, inner => inner.Execute("INSERT INTO entries(id,preferred_title,status,created_at,updated_at) VALUES(7,'Nested',0,'t','t')"));
+                Check.True(!outer.CanWrite, "The outer read stays read-only after the nested write.");
+                Check.Throws<InvalidOperationException>(() => outer.Execute("DELETE FROM entries"));
+                return 0;
+            });
+            Check.Equal("Nested", database.Read(DatabaseFile.Catalog, c => c.Scalar("SELECT preferred_title FROM entries WHERE id=7") as string));
         });
 
         suite.Add("data layer: the moved folder is saved as an app value that wins over Compose", () =>
@@ -181,6 +219,12 @@ public static class DataLayerTests
             Check.Equal("/database", new ConfigStore(temp.Path).Load().Settings["DATABASE_DIR"]);
             Check.True(editor.ManagedKeys().Contains("DATABASE_DIR") && !editor.OverriddenByEnvironment("DATABASE_DIR"));
         });
+    }
+
+    private sealed class Claim : IDisposable
+    {
+        public bool Disposed { get; private set; }
+        public void Dispose() => Disposed = true;
     }
 
     private sealed record EntryRow(long Id, string Title, string UpdatedAt);

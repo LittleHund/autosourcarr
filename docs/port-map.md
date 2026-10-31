@@ -26,10 +26,21 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | Host: `__init__` | exists: ApplicationRuntime composition root |
 | SettingsEndpoints: `GET /api/admin/config` | done: `GET /api/v1/config` |
 | SettingsEndpoints: `GET /api/admin/storage/database` | done: `GET /api/v1/storage/database` |
-| SettingsEndpoints: `POST /api/admin/storage/database/move` | moved to phase 2 (copy, verify and switch need the new data layer); the UI shows why the button is off |
+| SettingsEndpoints: `POST /api/admin/storage/database/move` | moved to phase 2; done there (see Phase 2) |
 | SettingsEndpoints: `GET/PUT /api/admin/settings/env[/{file_id}]` | done: replaced by `GET/PUT /api/v1/settings` (config.json) |
 | SetupEndpoints: 4 routes | done (see `setup_api.py`) |
 | UI pages of this phase | done: setup wizard (setup.js) and Settings > Configuration / Database storage (app.js) call `/api/v1` through the generated client |
+
+### Phase 2 (data layer), ticked 2026-10-31
+
+| Row | Result |
+| --- | --- |
+| `db.py` → Persistence | done: FluentMigrator 8.0.1 migrations per file (tags `catalog` / `origins`, VersionInfo per file); the 0.4.4 baseline runs the released SQL plus the 0.3.x → 0.4.4 steps, so 0.3.27 and 0.4.4 files upgrade in place (fixtures in tests/Fixtures/legacy); ASC1 stamp checked before and written after; Dapper 2.1.66 under DatabaseSession with typed rows and keyset paging (`QueryAs`, `QueryPage`); read sessions refuse writes; hot upserts write only changed rows |
+| SettingsEndpoints: `POST /api/admin/storage/database/move` | done: `POST /api/v1/storage/database/move` (DatabaseRelocation: drain, online backup, integrity/stamp/row-count check, switch, DATABASE_DIR saved in config.json) |
+| Engine-neutral export format (plan text) | exists: CatalogueFormat (JSON, portable UIDs, no SQLite types) from stage 26; its routes and the Postgres round trip are checked in phases 9 and 16 |
+| Page-first queries | API done (`QueryPage`, keyset, `LIMIT n+1`); each list adopts it when its routes are ported (phases 8–10) |
+| UI pages of this phase | done: Settings > Database storage move button calls `/api/v1` through the generated client |
+| Audit fixes (fresh-agent audit) | moved files go back to WAL and every start sets WAL; move refuses symlinked folders and takes the instance lock on the new folder first; a write nested in a read uses an IMMEDIATE transaction and writes only for its own call; status page and storage card use the live paths; `last_seen` on source_config / chapter_candidates now means "last changed" (decision, nothing reads it) |
 
 ### Route groups without a phase (assigned 2026-10-31)
 
@@ -63,7 +74,7 @@ Section 3 left 124 of the 246 routes without a phase. Each phase now owns its ro
 | `color_profile.py` | Matching (phase 8) | ColorProfile | new (GalleryMetadata covers the evidence part) |
 | `config.py` | Settings (phase 1) | AutoSourcarrSettings / SettingsLoader | exists |
 | `cover_cache.py` | Imaging (phase 10) | CoverCache | exists |
-| `db.py` | Persistence (phase 2) | SqliteDatabase / SchemaMigrator / DatabaseSession | exists (legacy-migrations.json carries the 0.4.x revisions) |
+| `db.py` | Persistence (phase 2) | SqliteDatabase / SchemaMigrator / DatabaseSession | done (phase 2: FluentMigrator + Dapper) |
 | `decision_preview.py` | Matching (phase 8) | DecisionPreview | new |
 | `dependency_cache.py` | Sources/Repositories (phase 6) | RepositoryManifest | exists |
 | `diagnostic_groups.py` | Diagnostics (phase 1) | DiagnosticGroups | exists |

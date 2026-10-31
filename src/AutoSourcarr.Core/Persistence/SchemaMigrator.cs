@@ -81,7 +81,7 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
         using (var connection = database.Open(file, initialize: true))
         using (var command = connection.CreateCommand())
         {
-            command.CommandText = string.Create(CultureInfo.InvariantCulture, $"PRAGMA application_id={SchemaApplicationId}; PRAGMA user_version={SchemaRevision}; PRAGMA optimize;");
+            command.CommandText = string.Create(CultureInfo.InvariantCulture, $"PRAGMA journal_mode=WAL; PRAGMA application_id={SchemaApplicationId}; PRAGMA user_version={SchemaRevision}; PRAGMA optimize;");
             command.ExecuteNonQuery();
         }
     }
