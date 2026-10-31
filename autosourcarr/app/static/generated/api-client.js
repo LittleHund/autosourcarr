@@ -487,7 +487,7 @@
        */
       login(body, options) { return call('POST', '/api/v1/auth/login', body, options); },
       /**
-       * Sign out of this browser.
+       * Sign out. Ends every session of the account, on all devices.
        * POST /api/v1/auth/logout
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}

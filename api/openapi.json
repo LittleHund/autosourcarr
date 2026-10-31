@@ -202,7 +202,7 @@
     "/api/v1/auth/logout": {
       "post": {
         "operationId": "logout",
-        "summary": "Sign out of this browser.",
+        "summary": "Sign out. Ends every session of the account, on all devices.",
         "responses": {
           "200": {
             "description": "Success",
