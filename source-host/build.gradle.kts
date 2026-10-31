@@ -30,6 +30,9 @@ dependencies {
     implementation(libs.sort)
     implementation(libs.bundles.twelvemonkeys)
     implementation(libs.imageio.webp)
+
+    // Stable numeric manga/chapter ids (the C# catalogue stores them, as it stored Suwayomi's).
+    implementation("org.xerial:sqlite-jdbc:3.49.1.0")
 }
 
 application {
@@ -40,6 +43,16 @@ tasks.shadowJar {
     archiveBaseName.set("autosourcarr-source-host")
     archiveClassifier.set("")
     archiveVersion.set("")
-    mergeServiceFiles()
     isZip64 = true
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    mergeServiceFiles("META-INF/services")
+    manifest {
+        attributes("Main-Class" to "autosourcarr.host.MainKt", "Multi-Release" to true) // multi-release: GraalJS
+    }
+    dependencies {
+        // Same as Suwayomi: the GraalVM js-community POM-only metapackages put .pom files on the class path,
+        // which Shadow cannot expand (GradleUp/shadow#1716); the real jars are still included.
+        exclude(dependency("org.graalvm.js:js-community:.*"))
+        exclude(dependency("org.graalvm.js:js:.*"))
+    }
 }
