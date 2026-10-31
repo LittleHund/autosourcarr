@@ -159,7 +159,7 @@ class CloudflareInterceptor(
         originalRequest: Request,
     ): Response {
         val solved =
-            autosourcarr.host.CloudflareWebViewSolver.solve(originalRequest.url, HostConfig.flareSolverrTimeout.value.coerceAtLeast(30).seconds)
+            autosourcarr.host.CloudflareWebViewSolver.solve(originalRequest.url, HostConfig.flareSolverrTimeout.value.coerceAtLeast(90).seconds)
                 ?: throw IOException("The WebView could not pass the Cloudflare check for ${originalRequest.url.host}")
         CFClearance.storeCookies(originalRequest.url, solved.cookies)
         if (originalRequest.header("User-Agent") != solved.userAgent) setUserAgent(solved.userAgent)

@@ -66,6 +66,7 @@ object CloudflareWebViewSolver {
         // A stale clearance would end the wait at once: remove the host's old one first.
         manager.deleteCookies(url.scheme + "://" + url.host, "cf_clearance")
         val userAgent = CompletableFuture<String>()
+        val title = java.util.concurrent.atomic.AtomicReference("")
         val client = runBlocking { CefHelper.createClient() }
         var browser: CefBrowser? = null
         try {
@@ -93,6 +94,16 @@ object CloudflareWebViewSolver {
                         }
                 },
             )
+            client.addDisplayHandler(
+                object : org.cef.handler.CefDisplayHandlerAdapter() {
+                    override fun onTitleChange(
+                        browser: CefBrowser?,
+                        newTitle: String?,
+                    ) {
+                        title.set(newTitle ?: "")
+                    }
+                },
+            )
             browser =
                 client.createBrowser(url.toString(), CefRendering.CefRenderingWithHandler(OffScreen, JPanel()), false).apply { createImmediately() }
             val deadline = System.nanoTime() + timeout.inWholeNanoseconds
@@ -105,7 +116,7 @@ object CloudflareWebViewSolver {
                     return Result(cookies, agent)
                 }
             }
-            logger.warn { "WebView did not pass the Cloudflare check for ${url.host} within $timeout" }
+            logger.warn { "WebView did not pass the Cloudflare check for ${url.host} within $timeout (page title: \"${title.get()}\")" }
             return null
         } finally {
             browser?.close(true)
