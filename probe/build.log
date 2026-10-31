@@ -1,10 +1,9 @@
-  AutoSourcarr.Core -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/bin/Release/net10.0/AutoSourcarr.Core.dll
-  AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
-  AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
-  AutoSourcarr.Tests -> /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/bin/Release/net10.0/AutoSourcarr.Tests.dll
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Repair/Migration/DomainMigration.cs(10,77): error CS0509: 'DomainMigrationException': cannot derive from sealed type 'InvalidDataException' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
 
-Build succeeded.
+Build FAILED.
+
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Repair/Migration/DomainMigration.cs(10,77): error CS0509: 'DomainMigrationException': cannot derive from sealed type 'InvalidDataException' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
     0 Warning(s)
-    0 Error(s)
+    1 Error(s)
 
-Time Elapsed 00:00:27.64
+Time Elapsed 00:00:06.56

@@ -1,0 +1,30 @@
+7.0.0-1017-azure
+landlock abi 8
+1
+kernel 7.0.0-1017-azure
+landlock abi 8
+PASS compiles with -O2 -Wall -Werror (production and test builds)
+INFO stand-in proxy on 127.0.0.1:38639
+PASS runner starts, prints its isolation proof and propagates exit 0 (AUTOSOURCARR_RUNNER_V1 60a7f87351b93bd1c5bf741e4ce1e960 {"pid":5853,"uid":1001,"ppid":5852,"pdeathsig":9,"landlock":8,"nnp":1,"seccomp":2,"netgate":1,"proxy":38639,"scoped":3})
+PASS a. cannot read /config/autosourcarr-runner-check/secret (/usr/bin/cat: /config/autosourcarr-runner-check/secret: Permission denied)
+PASS b. cannot read $HOME/.ssh-like file (/usr/bin/cat: /home/runner/.autosourcarr-runner-check.LNRVYl/.ssh/id_check: Permission denied)
+PASS b. cannot read the data directory outside its job
+PASS b. the private job directory is writable as HOME
+INFO control: direct https://example.com (172.66.147.243) works outside the runner
+PASS c. curl --noproxy '*' https://example.com fails (curl: (6) Could not resolve host: example.com)
+PASS c. direct connect to 172.66.147.243:443 is refused by the connect gate, even with DNS bypassed
+PASS c. same-port decoy on 127.0.0.2:38639 is unreachable (address check, not just Landlock's port rule)
+PASS d. https://example.org through the proxy is refused with 403
+PASS e. https://example.com through the proxy succeeds
+PASS h. a JVM (/usr/lib/jvm/temurin-21-jdk-amd64/bin/java) fetches through the proxy, cannot connect directly, cannot read /config/autosourcarr-runner-check/secret
+PASS f. forced Landlock ABI 3 exits 78 (no isolation fallback)
+PASS f. the production build ignores AUTOSOURCARR_TEST_FORCE_ABI
+PASS workspace must be 0700
+PASS workspace must be under source-maintenance/runner-jobs/<32 hex>
+PASS proxy port below 1024 refused
+proxy log:
+  REFUSED example.org:443 is not an allowed egress host
+  ALLOWED example.com:443
+  ALLOWED example.com:443
+repair-runner-check: all checks passed
+exit=0

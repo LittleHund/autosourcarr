@@ -1,0 +1,1 @@
+src/AutoSourcarr.Core/Repair/Migration/DomainMigration.cs(10,77): error CS0509: 'DomainMigrationException': cannot derive from sealed type 'InvalidDataException' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
