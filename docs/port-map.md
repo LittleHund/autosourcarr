@@ -31,6 +31,21 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | SetupEndpoints: 4 routes | done (see `setup_api.py`) |
 | UI pages of this phase | done: setup wizard (setup.js) and Settings > Configuration / Database storage (app.js) call `/api/v1` through the generated client |
 
+### Route groups without a phase (assigned 2026-10-31)
+
+Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
+
+| Route group | Routes | Phase |
+| --- | --- | --- |
+| DiagnosticEndpoints (`live`, `health` done in phase 1; diagnostics, errors, errors/clear) | 5 | 1 / 3 |
+| TaskEndpoints | 4 | 3 |
+| SourceRuntimeEndpoints, EngineCompatibility (`engine/compatibility`) | 9 | 4 |
+| SourceEndpoints, SourceRepositoryEndpoints, SourceHealthEndpoints | 24 | 6 |
+| MaintenanceEndpoints | 6 | 8 |
+| CatalogueSharingEndpoints | 14 | 9 |
+| CatalogueEndpoints, DisplayMetadata / gallery / serving-upgrade / profile routes, TagEndpoints, ReaderEndpoints | 59 | 10 |
+| StaticEndpoints (Web UI), UiPreferencesEndpoints | 3 | 11 |
+
 ## 1. Modules → feature folders
 
 | Python module | C# folder | C# class | Status |
