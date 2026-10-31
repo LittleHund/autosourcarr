@@ -37,7 +37,9 @@ public static class SourceHostIntegrationTests
         {
             ["PATH"] = Environment.GetEnvironmentVariable("PATH") ?? "/usr/bin:/bin",
             ["HOME"] = temp.Path,
-            ["EXTENSION_STORES"] = "[\"" + Keiyoushi + "\"]"
+            ["EXTENSION_STORES"] = "[\"" + Keiyoushi + "\"]",
+            // The WebView (a 150 MB Chromium download) is checked by the probe's Cloudflare run, not here.
+            ["WEBVIEW_ENABLED"] = "false"
         };
         if (Environment.GetEnvironmentVariable("JAVA_HOME") is { Length: > 0 } javaHome) environment["JAVA_HOME"] = javaHome;
         var java = Environment.GetEnvironmentVariable("JAVA_HOME") is { Length: > 0 } home ? Path.Combine(home, "bin", "java") : "java";
