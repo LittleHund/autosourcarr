@@ -17,7 +17,7 @@ concurrency:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:17-alpine
@@ -38,6 +38,17 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-source-host-${{ hashFiles('source-host/build.gradle.kts', 'scripts/build-source-host.sh') }}
+          restore-keys: gradle-source-host-
       - name: Probe
         continue-on-error: true
         env:
@@ -60,7 +71,22 @@ jobs:
             [ $o -eq 0 ] && { node scripts/generate-api-client.mjs >> probe/openapi.log 2>&1; c=$?; }
             dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-settings-docs docs/settings.md >> probe/openapi.log 2>&1
           fi
-          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" > probe/result.txt
+          # Source host (phase 4): build in a pinned Suwayomi checkout, start it, check real extensions.
+          h=skipped; hc=skipped
+          if [ -d source-host ]; then
+            bash scripts/build-source-host.sh > probe/source-host-build.log 2>&1; h=$?
+            tail -60 probe/source-host-build.log | grep -E "^e:|error:|FAIL|BUILD" > probe/source-host-errors.txt || true
+            if [ $h -eq 0 ]; then
+              export SOURCE_HOST_DATA=$RUNNER_TEMP/source-host-data SOURCE_HOST_PORT=4567
+              java -jar .build/autosourcarr-source-host.jar > probe/source-host-run.log 2>&1 &
+              for i in $(seq 1 90); do curl -sf http://127.0.0.1:4567/v1/health > probe/source-host-health.json && break; sleep 2; done
+              python3 scripts/source-host-check.py --pkgs "${SOURCE_HOST_PKGS:-eu.kanade.tachiyomi.extension.all.mangadex,eu.kanade.tachiyomi.extension.en.mangapill}" --require 1 > probe/source-host-check.txt 2>&1; hc=$?
+              kill %1 2>/dev/null; sleep 2
+              tail -c 20000 probe/source-host-run.log > probe/source-host-run.tail.log
+              rm -f probe/source-host-run.log
+            fi
+          fi
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" > probe/result.txt
           cat probe/result.txt
       - name: Commit results
         if: always()
