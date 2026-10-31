@@ -42,6 +42,25 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | UI pages of this phase | done: Settings > Database storage move button calls `/api/v1` through the generated client |
 | Audit fixes (fresh-agent audit) | moved files go back to WAL and every start sets WAL; move refuses symlinked folders and takes the instance lock on the new folder first; a write nested in a read uses an IMMEDIATE transaction and writes only for its own call; status page and storage card use the live paths; `last_seen` on source_config / chapter_candidates now means "last changed" (decision, nothing reads it) |
 
+### Phase 3 (jobs and events), ticked 2026-10-31
+
+| Row | Result |
+| --- | --- |
+| Job queue (plan text, PERF-2) | done: JobQueue — 3 workers, High/Normal/Low then oldest, identical queued or running jobs merged, needs-disk one at a time, exclusive alone (holds back new starts at the head), long-running outside the worker slots; run limit, average run time and ETA per type; aging so no type is starved (load test) |
+| Watchdog and back-off (PERF-3) | done: a job without progress for its stall time is an error at once, cancelled, released after the grace time if it ignores cancellation, and retried with doubling back-off (at most one hour) |
+| One event stream (PERF-8, UI-13) | done: EventStream with ids, resume by Last-Event-ID, resync, topic filter, bounded readers, coalesced task/error pulses; `GET /api/v1/events` (SSE, heartbeat, `X-Accel-Buffering: no`) checked through nginx 1.24 in CI |
+| Grouped errors (PERF-10) | done: job failures/freezes recorded per type (`job-failed:<type>`, `job-frozen:<type>`) in the existing grouped ErrorRegistry; errors push live updates |
+| `due_scheduler.py` → DueScheduler | done: DueScheduler + CrawlPages + CrawlLane, same delays and timestamp text as 0.4.x |
+| `task_registry.py`, `task_journal.py` | done: every job is a task (Ongoing/Completed/Failed, progress, ETA, finish time, PERF-1); TaskJournal now started with the app (history survives restarts) |
+| `async_utils.py`, `read_lane.py` | exist (BoundedWorkScheduler, WholeTaskCoordinator) |
+| Jobs section: `background_task_buckets`, `track_startup_task`, `stop/resume/cancel_background_tasks`, interactive request tracking, idle waits, task slots | done: JobQueue (StopBackgroundAsync / ResumeBackground) + WholeTaskCoordinator |
+| Jobs section: `schedule_startup_dedup`, `schedule_startup_refresh`, `schedule_entry_refresh_job`, `schedule_catalog_additional_record_scan`, `schedule_catalogue_choice`, `schedule_status_aux_refresh` | queue ready; each becomes a JobType when its work is ported (phases 6–10) |
+| TaskEndpoints (4) | done: `GET /api/v1/tasks`, `POST /api/v1/tasks/clear-history`, `/{taskId}/cancel`, `/{taskId}/retry-safe` (safe replays registered per kind; library-monitor replay arrives with phase 8); plus `GET /api/v1/jobs` |
+| DiagnosticEndpoints: diagnostics, errors, errors/clear | done: `GET /api/v1/diagnostics` (PERF-9 download, now wired in the app), `GET /api/v1/errors`, `POST /api/v1/errors/clear` |
+| Database move (phase 2 audit) | done: runs as an exclusive job (`202` + task id); the UI follows the task |
+| RuntimeMetrics | done for jobs (`job_run` phase) |
+| UI pages of this phase | done: task list, cancel, clear history, safe retry, error panel and diagnostics download call `/api/v1` through the generated client; live updates through `/api/v1/events` (fetch stream with the admin token), task polling falls back to 30 s while live |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
@@ -62,7 +81,7 @@ Section 3 left 124 of the 246 routes without a phase. Each phase now owns its ro
 | Python module | C# folder | C# class | Status |
 | --- | --- | --- | --- |
 | `asset_decode.py` | Imaging (phase 10) | RasterImages | exists |
-| `async_utils.py` | Concurrency (phase 3) | BoundedWorkScheduler | exists |
+| `async_utils.py` | Concurrency (phase 3) | BoundedWorkScheduler | exists (phase 3 checked) |
 | `backup_import.py` | Imports (phase 9) | MihonBackupReader | new (generated protobuf parser, PIPE-9) |
 | `catalog_decisions.py` | Catalogue/Sharing (phase 9) | CatalogueDecisions | exists |
 | `catalog_exchange.py` | Catalogue/Sharing (phase 9) | CatalogueExchange | exists |
@@ -79,7 +98,7 @@ Section 3 left 124 of the 246 routes without a phase. Each phase now owns its ro
 | `dependency_cache.py` | Sources/Repositories (phase 6) | RepositoryManifest | exists |
 | `diagnostic_groups.py` | Diagnostics (phase 1) | DiagnosticGroups | exists |
 | `diagnostics.py` | Diagnostics (phase 1) | DiagnosticExporter | exists |
-| `due_scheduler.py` | Jobs (phase 3) | DueScheduler | new (Sonarr-style scheduled task table, PERF-2) |
+| `due_scheduler.py` | Jobs (phase 3) | DueScheduler | done (phase 3; JobQueue for PERF-2) |
 | `env_settings.py` | Settings (phase 1) | DurableConfigurationFiles / CanonicalConfiguration | exists |
 | `error_registry.py` | Diagnostics (phase 1) | ErrorRegistry | exists |
 | `extension_download.py` | Sources/Repositories (phase 6) | ExtensionPackages | new (reader APK/JAR served from the own repo index) |
@@ -142,8 +161,8 @@ Section 3 left 124 of the 246 routes without a phase. Each phase now owns its ro
 | `support_logs.py` | Diagnostics (phase 1) | SupportLogStore + Privacy/SupportPrivacy | exists |
 | `suwayomi.py` | Sources (phase 6) | SuwayomiClient (becomes the in-process extension-host client in phase 4) | exists |
 | `tag_store.py` | Catalogue/Tags (phase 10) | NativeTagStore / NativeTagReindex | exists |
-| `task_journal.py` | Jobs (phase 3) | TaskJournal | exists |
-| `task_registry.py` | Jobs (phase 3) | TaskRegistry / TaskRecord | exists |
+| `task_journal.py` | Jobs (phase 3) | TaskJournal | done (phase 3: started with the app) |
+| `task_registry.py` | Jobs (phase 3) | TaskRegistry / TaskRecord | done (phase 3: jobs mirrored, /api/v1/tasks) |
 | `thumbnail_fingerprint.py` | Imaging (phase 10) | ThumbnailFingerprint | new |
 | `translation.py` | Catalogue/Metadata (phase 10) | TranslationClient | new (phase 10) |
 

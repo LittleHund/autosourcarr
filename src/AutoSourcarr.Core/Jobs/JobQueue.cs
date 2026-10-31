@@ -87,6 +87,7 @@ public sealed class JobQueue : IAsyncDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _dispatcher;
     private long _sequence;
+    private bool _paused;
 
     public JobQueue(TaskRegistry tasks, EventStream? events = null, ErrorRegistry? errors = null, JobQueueOptions? options = null, TimeProvider? time = null)
     {
@@ -128,6 +129,45 @@ public sealed class JobQueue : IAsyncDisposable
         Signal();
         return new JobHandle(job.Id, false, job.Done.Task);
     }
+
+    /// <summary>
+    /// 0.4.x stop_background_tasks / cancel_background_tasks: before a reset or restore, cancel every queued and running
+    /// job and wait until running work has physically ended (at most <paramref name="grace"/>). Nothing starts until
+    /// <see cref="ResumeBackground"/>; jobs added meanwhile wait in the queue.
+    /// </summary>
+    public async Task<bool> StopBackgroundAsync(string reason, TimeSpan? grace = null)
+    {
+        Job[] queued, running;
+        lock (_gate)
+        {
+            _paused = true;
+            queued = _queued.ToArray(); _queued.Clear();
+            running = _running.ToArray();
+            foreach (var job in queued) { job.CancelRequested = true; job.Finished = true; }
+            foreach (var job in running) { job.CancelRequested = true; job.CancelReason = reason; job.StoppedAt = Now(); }
+        }
+        foreach (var job in queued)
+        {
+            _tasks.Fail(job.Id, reason, "Not started: " + reason);
+            Publish("cancelled", job, new JsonObject { ["reason"] = reason });
+            job.Finish(JobOutcome.Cancelled);
+        }
+        foreach (var job in running) job.Cancel();
+        var drained = Task.WhenAll(running.Select(job => (Task)job.Done.Task));
+        var finished = await Task.WhenAny(drained, Task.Delay(grace ?? _options.CancelGrace, _time)).ConfigureAwait(false) == drained;
+        _events?.Publish("jobs", new JsonObject { ["change"] = "paused", ["reason"] = reason });
+        return finished;
+    }
+
+    /// <summary>0.4.x resume_background_tasks: queued work starts again.</summary>
+    public void ResumeBackground()
+    {
+        lock (_gate) _paused = false;
+        _events?.Publish("jobs", new JsonObject { ["change"] = "resumed" });
+        Signal();
+    }
+
+    public bool Paused { get { lock (_gate) return _paused; } }
 
     /// <summary>Queue, running jobs, per-type limits/averages and an ETA for each job.</summary>
     public JsonObject Snapshot()
@@ -173,7 +213,7 @@ public sealed class JobQueue : IAsyncDisposable
                 });
             return new JsonObject
             {
-                ["workers"] = _options.Workers,
+                ["workers"] = _options.Workers, ["paused"] = _paused,
                 ["busy_workers"] = _running.Count(job => !job.Type.Flags.HasFlag(JobFlags.LongRunning)),
                 ["running"] = running, ["queued"] = queued, ["types"] = types,
             };
@@ -299,7 +339,7 @@ public sealed class JobQueue : IAsyncDisposable
     /// <summary>Sonarr's selection plus run limits and aging. Caller holds the lock.</summary>
     private Job? Next(DateTimeOffset now)
     {
-        if (_running.Any(job => job.Type.Flags.HasFlag(JobFlags.Exclusive))) return null;
+        if (_paused || _running.Any(job => job.Type.Flags.HasFlag(JobFlags.Exclusive))) return null;
         var slots = _options.Workers - _running.Count(job => !job.Type.Flags.HasFlag(JobFlags.LongRunning));
         var first = true;
         foreach (var job in Ordered(now))
@@ -386,7 +426,7 @@ public sealed class JobQueue : IAsyncDisposable
             switch (outcome)
             {
                 case JobOutcome.Completed: _tasks.Complete(job.Id, job.ResultMessage is { Length: > 0 } result ? result : "Done"); break;
-                case JobOutcome.Cancelled: _tasks.Cancel(job.Id); break;
+                case JobOutcome.Cancelled: _tasks.Cancel(job.Id, job.CancelReason ?? "Cancelled by user"); break;
                 default:
                     _tasks.Fail(job.Id, reason);
                     _errors?.Record("Jobs", $"{job.Type.Title} failed: {reason}", key: (outcome == JobOutcome.Frozen ? "job-frozen:" : "job-failed:") + job.Type.Name);
@@ -512,6 +552,7 @@ public sealed class JobQueue : IAsyncDisposable
         public bool Frozen { get; set; }
         public string FrozenReason { get; set; } = "";
         public string? ResultMessage { get; set; }
+        public string? CancelReason { get; set; }
         public bool CancelRequested { get; set; }
         public bool Finished { get; set; }
         public Task? Runtime { get; set; }

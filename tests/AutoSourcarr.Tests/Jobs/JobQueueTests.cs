@@ -213,6 +213,28 @@ public static class JobQueueTests
             gate.SetResult();
         });
 
+        suite.Add("jobs: stopping background work cancels queued and running jobs, waits for them, and resume starts new work", () =>
+        {
+            using var fixture = new Fixture(new JobQueueOptions { Workers = 1 });
+            var ended = false;
+            var running = fixture.Queue.Enqueue(Fast, "running", async job =>
+            {
+                try { await Task.Delay(Timeout.Infinite, job.CancellationToken); }
+                finally { await Task.Delay(50); ended = true; }
+            });
+            var queued = fixture.Queue.Enqueue(Fast, "queued", _ => Task.CompletedTask);
+            Wait(() => fixture.Running() == 1);
+            Check.True(fixture.Queue.StopBackgroundAsync("Database reset", TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+            Check.True(ended, "Stop waits until running work has really ended.");
+            Check.Equal(JobOutcome.Cancelled, running.Completion.GetAwaiter().GetResult());
+            Check.Equal(JobOutcome.Cancelled, queued.Completion.GetAwaiter().GetResult());
+            var later = fixture.Queue.Enqueue(Fast, "later", _ => Task.CompletedTask);
+            Thread.Sleep(100);
+            Check.True(!later.Completion.IsCompleted && fixture.Queue.Paused, "Nothing starts while background work is stopped.");
+            fixture.Queue.ResumeBackground();
+            Check.Equal(JobOutcome.Completed, later.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+        });
+
         suite.Add("jobs: finished tasks keep the job's result message and stopping fails queued work without running it", () =>
         {
             var fixture = new Fixture(new JobQueueOptions { Workers = 1 });
