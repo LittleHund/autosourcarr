@@ -1,9 +1,9 @@
-sha=abc0e5d4c86d69bb0bd33d425017ef0a21c661ab
+sha=aaf45778b03e932b5f3a4c300214f798a3aed9a6
 restore=0
-build=1
-test=skipped
-openapi=skipped
-client=skipped
+build=0
+test=1
+openapi=0
+client=0
 source_host_build=0
 source_host_check=0
-source_host_csharp=
+source_host_csharp=0

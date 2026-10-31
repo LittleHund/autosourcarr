@@ -29,6 +29,11 @@ Precedence, lowest first: built-in default, `config.json`, Compose environment v
 | --- | --- | --- | --- | --- | --- |
 | `ADMIN_TOKEN` | secret | — | Optional protection for administrative actions. After a restart, the app asks for the new token. Keep a copy before saving; this is separate from the reader key. |  | access |
 | `AUTHELIA_BROWSER_URL` | url | empty | Optional link to your Authelia or other authentication portal. Sign in there; AutoSourcarr does not store that account password. |  | access |
+| `AUTH_ADMIN_GROUPS` | text | `admins` | External sign-in: comma-separated provider groups whose members get the admin role (for example admins). Groups never make someone the owner. |  |  |
+| `AUTH_GUEST_GROUPS` | text | empty | External sign-in: comma-separated provider groups whose members get the read-only guest role. Leave empty to refuse users who are in no admin group. |  |  |
+| `AUTH_METHOD` | choice (forms, basic, external) | `forms` | How people sign in: forms (login page, the default), basic (the browser's sign-in pop-up) or external (a sign-in proxy such as Authelia sends the user name and groups in headers). API keys and the admin token work with every method. |  |  |
+| `AUTH_OWNER_EXTERNAL_USER` | text | empty | External sign-in: the provider user name bound as owner on first boot. Only this account can become owner; group mappings never can. |  |  |
+| `AUTH_RESET_OWNER` | boolean | `false` | Last-resort owner reset: set to true in Compose for one start when the owner has lost the password and every recovery code. The next start clears the owner's password (data is kept), the login page asks for a new one, and the event is logged. Remove it afterwards. | Compose only |  |
 | `KOMF_BROWSER_URL` | url | empty | Optional shortcut to an existing Komf web interface. Komf stays separate and uses its own configuration and credentials. |  | links |
 | `KOMGA_BROWSER_URL` | url | empty | Optional shortcut to your Komga library. Sign in on Komga itself; this does not configure a metadata integration. |  | links |
 | `MAIN_SUWAYOMI_PASSWORD` | secret | — | Used only for requests to the configured main Suwayomi origin. Never sent to source websites. |  | library |
