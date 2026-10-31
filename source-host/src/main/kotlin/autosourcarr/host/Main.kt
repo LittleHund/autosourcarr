@@ -41,6 +41,20 @@ fun main() {
     SourceRegistry.onUserAgentChanged = { store.reloadAll() }
 
     val repos = ExtensionRepos(java.io.File(HostConfig.dataDir, "extension-stores.json"))
+    // EXTENSION_STORES: the repositories configured in AutoSourcarr (JSON array of index URLs), as Suwayomi received them.
+    System.getenv("EXTENSION_STORES")?.takeIf { it.isNotBlank() }?.let { raw ->
+        val urls =
+            runCatching { kotlinx.serialization.json.Json.parseToJsonElement(raw.trim().removeSurrounding("'")) }
+                .getOrNull()
+                ?.let { it as? kotlinx.serialization.json.JsonArray }
+                ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+        if (urls != null) {
+            repos.setStores(urls)
+            Thread({ runCatching { repos.fetch() } }, "extension-store-fetch").apply { isDaemon = true }.start()
+        } else {
+            logger.warn { "EXTENSION_STORES is not a JSON array of repository URLs; repositories unchanged" }
+        }
+    }
     val db = HostDb(java.io.File(HostConfig.dataDir, "source-host.sqlite"))
     val server = HostApi(store, repos, db, SourceBackoff()).start(HostConfig.bind, HostConfig.port)
     logger.info { "AutoSourcarr source host ${HostConfig.HOST_VERSION} listening on ${HostConfig.bind}:${HostConfig.port}" }

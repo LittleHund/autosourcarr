@@ -100,8 +100,31 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             acceptInherited: false, cancellationToken);
     }
 
+    /// <summary>
+    /// Phase 4 image path: no native launcher and no Suwayomi. In integrated mode the app starts its own source host
+    /// (<see cref="SourceHostProcess"/>); external mode is unchanged.
+    /// </summary>
+    internal static Task<ApplicationRuntime> CreateHostedAsync(StartupConfigurationSnapshot startup,
+        IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken = default)
+        => OpenAsync(startup, environment, acceptInherited: false, cancellationToken, hosted: true);
+
+    /// <summary>
+    /// The source host gets the same source settings Suwayomi got (source-host.env, EXTENSION_STORES, FlareSolverr with
+    /// the solver timeout), minus the Suwayomi-only server keys and the user-agent java agent; the host sets its own
+    /// user agent.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, string> SourceHostEnvironment(AutoSourcarrSettings settings, SourceEngineEnvironment launch,
+        IReadOnlyDictionary<string, string?> environment)
+    {
+        var result = launch.BuildLaunch(environment, settings).Launch.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        foreach (var key in new[] { "JAVA_TOOL_OPTIONS", "BIND_IP", "BIND_PORT", "AUTH_MODE", "BASIC_AUTH_ENABLED", "WEB_UI_ENABLED",
+            "INITIAL_OPEN_IN_BROWSER_ENABLED", "AUTOSOURCARR_SOURCE_UA_REVISION", "AUTOSOURCARR_SOURCE_UA_STATUS" })
+            result.Remove(key);
+        return result;
+    }
+
     private static async Task<ApplicationRuntime> OpenAsync(StartupConfigurationSnapshot startup,
-        IReadOnlyDictionary<string, string?> environment, bool acceptInherited, CancellationToken cancellationToken)
+        IReadOnlyDictionary<string, string?> environment, bool acceptInherited, CancellationToken cancellationToken, bool hosted = false)
     {
         ArgumentNullException.ThrowIfNull(startup); ArgumentNullException.ThrowIfNull(environment);
         var owner = new ApplicationRuntime(startup.Settings);
@@ -132,12 +155,25 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             }, cancellationToken).ConfigureAwait(false);
             if (acceptInherited)
                 owner._native = await NativeSourceOwnerConnection.AcceptInheritedAsync(startup.SourceRequest, cancellationToken, owner.Logs).ConfigureAwait(false);
-            if ((startup.Settings.SourceEngineMode == "integrated") != (owner._native is not null))
+            var useHost = hosted && startup.Settings.SourceEngineMode == "integrated";
+            if (!useHost && (startup.Settings.SourceEngineMode == "integrated") != (owner._native is not null))
                 throw new InvalidDataException("Source mode and native boot ownership disagree.");
             if (owner._native is not null)
                 owner._snapshots = await NativeSourceSnapshots.CreateAsync(owner._native, owner.Io, cancellationToken).ConfigureAwait(false);
             var launch = new SourceEngineEnvironment(startup.ConfigurationRoot, "/home/suwayomi/.local/share/Tachidesk", owner.Privacy);
-            owner._source = owner._native is null
+            if (useHost)
+            {
+                var (java, jar) = SourceHostProcess.Locate(environment);
+                var hostEnvironment = SourceHostEnvironment(startup.Settings, launch, environment);
+                var process = new SourceHostProcess(java, jar, Path.Combine(owner._dataDirectory!, "source-host"), 4567, hostEnvironment,
+                    line => owner.Logs.Record("Source host", line));
+                owner.Privacy.Register(new Dictionary<string, string?> { ["source_host_token"] = process.Token });
+                try { await process.StartAsync(TimeSpan.FromMinutes(3), cancellationToken).ConfigureAwait(false); }
+                catch { await process.DisposeAsync().ConfigureAwait(false); throw; }
+                owner._source = await SourceEngineController.CreateHostedAsync(startup.Settings, process, launch, environment, owner._admin,
+                    owner.Io, owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false);
+            }
+            else owner._source = owner._native is null
                 ? await SourceEngineController.CreateExternalAsync(startup.Settings, launch, environment, owner._admin, owner.Io,
                     owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false)
                 : await SourceEngineController.CreateIntegratedAsync(startup.Settings, owner._native, launch, environment, owner._admin, owner.Io,
