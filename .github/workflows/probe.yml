@@ -79,7 +79,7 @@ jobs:
             if [ $h -eq 0 ]; then
               export SOURCE_HOST_DATA=$RUNNER_TEMP/source-host-data SOURCE_HOST_PORT=4567
               command -v xvfb-run >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q xvfb libnss3 libatk-bridge2.0-0 libgbm1 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libasound2t64 libxss1 libgtk-3-0t64; } > probe/xvfb.log 2>&1
-              xvfb-run -a -s "-screen 0 1280x1024x24" java -jar .build/autosourcarr-source-host.jar > probe/source-host-run.log 2>&1 &
+              GITHUB_TOKEN=${{ github.token }} xvfb-run -a -s "-screen 0 1280x1024x24" java -jar .build/autosourcarr-source-host.jar > probe/source-host-run.log 2>&1 &
               for i in $(seq 1 90); do curl -sf http://127.0.0.1:4567/v1/health > probe/source-host-health.json && break; sleep 2; done
               GITHUB_TOKEN=${{ github.token }} python3 scripts/source-host-check.py --pkgs "${SOURCE_HOST_PKGS:-eu.kanade.tachiyomi.extension.all.mangadex,eu.kanade.tachiyomi.extension.en.mangapill,eu.kanade.tachiyomi.extension.en.weebcentral,eu.kanade.tachiyomi.extension.en.mangatown,eu.kanade.tachiyomi.extension.all.webtoons,eu.kanade.tachiyomi.extension.all.mangaplus,eu.kanade.tachiyomi.extension.en.mangakakalot,eu.kanade.tachiyomi.extension.en.mangabuddy,eu.kanade.tachiyomi.extension.en.mangahere,eu.kanade.tachiyomi.extension.en.mangafox,eu.kanade.tachiyomi.extension.en.asurascans,eu.kanade.tachiyomi.extension.en.flamecomics,eu.kanade.tachiyomi.extension.en.mangago}" --require 10 --lib14 \
                 --cloudflare-url https://nowsecure.nl/ --cloudflare-url https://www.mangago.me/ --cloudflare-url https://asuracomic.net/ > probe/source-host-check.txt 2>&1; hc=$?
