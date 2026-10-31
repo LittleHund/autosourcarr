@@ -56,6 +56,7 @@ jobs:
             tail -c 2000 probe/test.log | grep -o '"total":[0-9]*,"passed":[0-9]*,"failed":[0-9]*' > probe/test-summary.txt
             dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-openapi api/openapi.json > probe/openapi.log 2>&1; o=$?
             [ $o -eq 0 ] && { node scripts/generate-api-client.mjs >> probe/openapi.log 2>&1; c=$?; }
+            dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-settings-docs docs/settings.md >> probe/openapi.log 2>&1
           fi
           printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" > probe/result.txt
           cat probe/result.txt
@@ -63,6 +64,6 @@ jobs:
         if: always()
         run: |
           git config user.name "probe"; git config user.email "probe@users.noreply.github.com"
-          git add -f probe api autosourcarr/app/static/generated $(find src tests -name packages.lock.json)
+          git add -f probe api docs/settings.md autosourcarr/app/static/generated $(find src tests -name packages.lock.json)
           git commit -q -m "probe results [skip ci]" || true
           git push -q origin HEAD:ci-probe || true
