@@ -3,11 +3,13 @@ const elements={'#exportErrors':{},'#errorExportStatus':{}};
 const ctx={document:{querySelector:key=>elements[key]||null},console,Blob};
 vm.createContext(ctx);
 vm.runInContext("const UI_BUILD_VERSION='0.3.36';var lastBackendErrors={items:[]};var lastHealthSnapshot={};var clientErrors=[{message:'Failed at https://private-browser.local/api/admin/test?q=private-search',detail:'Bearer private-bearer person@example.test 10.1.2.3 C:\\\\Users\\\\private-user\\\\project\\\\app.js'}];",ctx);
+vm.runInContext(fs.readFileSync(__dirname+'/../app/static/generated/api-client.js','utf8'),ctx);
+{const app=fs.readFileSync(__dirname+'/../app/static/app.js','utf8'),at=app.indexOf('function apiV1(');vm.runInContext(app.slice(at,app.indexOf('\n',at)).replace('api(path','globalThis.api(path'),ctx);}
 vm.runInContext(fs.readFileSync(__dirname+'/../app/static/workbench.js','utf8'),ctx);
 (async()=>{
  let saved,filename,calls=0;
  ctx.downloadBlob=(blob,name)=>{saved=blob;filename=name;};
- ctx.api=async path=>{assert.equal(path,'/api/admin/diagnostics');calls++;return {
+ ctx.api=async path=>{assert.equal(path,'/api/v1/diagnostics');calls++;return {
    runtime:{app_version:'0.3.36'},errors:{items:[]},internal_services:{services:{builder:{state:'failed',exit_code:17}}},
    logs:{retention:{bounded:true,files:3},entries:[{source:'builder',message:'Dto.kt:44: unresolved reference'}]},
    username:'private-identity',credential:'private-credential',workspaceId:'private-workspace'};};
