@@ -20,6 +20,7 @@ public sealed class SourceServices
 
 /// <summary>
 /// Phase 6 (port of main.py SourceEndpoints): source list and sync, groups, per-source settings, source
+/// (the admin list is /api/v1/source-settings: /api/v1/sources is the reader's public source list),
 /// preferences and source manga details under /api/v1. Sources come from the engine (the source host);
 /// enabled/priority/group choices are AutoSourcarr's own (SourceConfigurationStore).
 /// </summary>
@@ -30,7 +31,7 @@ internal static class SourceV1Endpoints
         IResult Unavailable() => Results.Json(new ProblemResponse("Sources are not available in this host."), json.ProblemResponse, statusCode: 503);
         IResult Problem(int status, string detail) => Results.Json(new ProblemResponse(detail), json.ProblemResponse, statusCode: status);
 
-        group.MapPost("/sources/sync", (Func<HttpContext, Task<IResult>>)(async context =>
+        group.MapPost("/source-settings/sync", (Func<HttpContext, Task<IResult>>)(async context =>
             {
                 if (services.Sources is not { } sources) return Unavailable();
                 var rows = await sources.Client.SourcesAsync(context.RequestAborted).ConfigureAwait(false);
@@ -41,7 +42,7 @@ internal static class SourceV1Endpoints
             .WithSummary("Read the installed sources from the engine and store them (new sources get the default choices; empty engine lists keep existing ones).")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
-        group.MapGet("/sources", (Func<HttpContext, IResult>)(_ =>
+        group.MapGet("/source-settings", (Func<HttpContext, IResult>)(_ =>
             {
                 if (services.Sources is not { } sources) return Unavailable();
                 return Results.Json(new JsonObject
@@ -98,7 +99,7 @@ internal static class SourceV1Endpoints
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound);
 
-        group.MapPut("/sources/{sourceId}", (Func<HttpContext, Task<IResult>>)(async context =>
+        group.MapPut("/source-settings/{sourceId}", (Func<HttpContext, Task<IResult>>)(async context =>
             {
                 if (services.Sources is not { } sources) return Unavailable();
                 var id = context.Request.RouteValues["sourceId"]?.ToString() ?? "";

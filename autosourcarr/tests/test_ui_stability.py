@@ -62,8 +62,8 @@ def test_sources_page_has_installed_and_manage_subtabs():
     assert 'id="sourceInstalledPanel"' in html
     assert 'id="sourceManagePanel"' in html
     assert 'id="updateAllSourceExtensions"' in html
-    assert '/api/admin/source-extensions' in source
-    assert '/api/admin/source-extensions/update-all' in source
+    assert '/api/v1/source-extensions' in source
+    assert '/api/v1/source-extensions/update-all' in source
     assert "manageSourceExtension" in source
     assert "syncSourceRowsToMatrices" in source
 

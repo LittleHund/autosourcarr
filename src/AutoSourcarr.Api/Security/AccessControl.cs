@@ -48,7 +48,7 @@ public static class AccessPolicy
         if (path == "/api/v1/auth/me" || path == "/api/v1/auth/password") return AccessLevel.Guest;
         if (path.StartsWith("/api/v1/accounts", StringComparison.Ordinal) || path == "/api/v1/keys/admin-token/regenerate") return AccessLevel.Owner;
         if (!path.StartsWith("/api/", StringComparison.Ordinal)) return AccessLevel.Guest;
-        if (method is "GET" or "HEAD" && GuestReadPrefixes.Any(prefix => path == prefix.TrimEnd('/') || path.StartsWith(prefix, StringComparison.Ordinal)))
+        if (method is "GET" or "HEAD" && GuestReadPrefixes.Any(prefix => prefix.EndsWith('/') ? path.StartsWith(prefix, StringComparison.Ordinal) : path == prefix))
             return AccessLevel.Guest;
         return AccessLevel.Admin;
     }
