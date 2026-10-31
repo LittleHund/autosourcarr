@@ -16,6 +16,7 @@ import org.cef.network.CefCookie
 import org.cef.network.CefCookieManager
 import org.cef.network.CefRequest
 import xyz.nulldev.androidcompat.webkit.CefHelper
+import xyz.nulldev.androidcompat.webkit.dispose
 import xyz.nulldev.androidcompat.webkit.disposeWithJsHandler
 import java.awt.Rectangle
 import java.nio.ByteBuffer
