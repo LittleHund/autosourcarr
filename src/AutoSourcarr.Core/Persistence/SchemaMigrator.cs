@@ -35,6 +35,9 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
         {
             Migrate(DatabaseFile.Catalog, CatalogTag);
             Migrate(DatabaseFile.Origins, OriginsTag);
+            // 0.4.x filled missing normalized preferred titles on every start, not only during the upgrade.
+            NormalizePendingTitles(DatabaseFile.Catalog);
+            NormalizePendingTitles(DatabaseFile.Origins);
         }
         finally { _normalizeTitle = previous; }
     }
@@ -81,6 +84,25 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
             command.CommandText = string.Create(CultureInfo.InvariantCulture, $"PRAGMA application_id={SchemaApplicationId}; PRAGMA user_version={SchemaRevision}; PRAGMA optimize;");
             command.ExecuteNonQuery();
         }
+    }
+
+    private void NormalizePendingTitles(DatabaseFile file)
+    {
+        using var connection = database.Open(file, initialize: true);
+        using (var check = connection.CreateCommand())
+        {
+            check.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='entry_preferred_titles'";
+            if (check.ExecuteScalar() is null)
+                return;
+        }
+        using var transaction = connection.BeginTransaction();
+        var normalize = _normalizeTitle ?? TextMatcher.NormalizeTitle;
+        foreach (var (entry, raw) in PendingTitles(connection, transaction))
+            Run(connection, transaction, """
+                UPDATE entry_preferred_titles SET normalized=$normalized
+                WHERE entry_id=$entry AND raw_title=$raw AND normalized IS NULL
+                """, ("$normalized", normalize(raw)), ("$entry", entry), ("$raw", raw));
+        transaction.Commit();
     }
 
     private static void CheckStamp(SqliteConnection connection, string path)

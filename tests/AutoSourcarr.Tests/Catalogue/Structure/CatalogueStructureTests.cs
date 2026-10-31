@@ -67,7 +67,7 @@ public static class CatalogueStructureTests
                 c.Execute("INSERT INTO display_metadata VALUES(1,1,'{\"description\":\"Display target\"}','now'),(2,1,'{\"description\":\"Display absorbed\"}','now')");
                 c.Execute("INSERT INTO portable_identity_reviews VALUES(2,'asc1:work:anilist:12','confirmed','proof','Retained note','now')"); return 0;
             });
-            var before = f.Database.Read(DatabaseFile.Catalog, c => CatalogueIdentity.Ensure(c, 2)); f.Apply(f.Choice("group", [1], [("17", 111), ("18", 222)]));
+            var before = f.Database.Write(DatabaseFile.Catalog, c => CatalogueIdentity.Ensure(c, 2)); f.Apply(f.Choice("group", [1], [("17", 111), ("18", 222)]));
             Check.Equal("{\"quality\":\"quality\"}", f.Scalar("SELECT profile_json FROM serving_profiles") as string); Check.Equal(1L, f.Count("entry_preference_history")); Check.Equal(1001L, f.Scalar("SELECT main_manga_id FROM library_tracking")!); Check.Equal(0L, f.Scalar("SELECT monitored FROM library_tracking")!);
             Check.Equal("unknown", S(JsonNode.Parse((string)f.Scalar("SELECT observation_json FROM library_tracking")!)!, "download_state")); Check.True(((string)f.Scalar("SELECT fields_json FROM display_metadata")!).Contains("Display target", StringComparison.Ordinal));
             Check.Equal(1L, f.Count("display_metadata_history")); Check.Equal("needs-review", f.Scalar("SELECT decision FROM portable_identity_reviews") as string); Check.Equal(1L, f.Count("portable_identity_review_history")); Check.Equal(1L, f.Database.Read(DatabaseFile.Catalog, c => CatalogueIdentity.Targets(c, [before]).Single()));
@@ -232,7 +232,7 @@ public static class CatalogueStructureTests
         public JsonObject Choice(string kind, long[] entries, (string Source, long Manga)[] records, string[]? targetUids = null)
         {
             var bundle = Exchange.Export()["catalogue"]!.AsObject(); var uid = CatalogueFormat.Uid("decision"); var locators = bundle["entries"]!.AsArray().SelectMany(value => value!["sources"]!.AsArray()).Where(fact => records.Any(record => S(fact!, "source_id") == record.Source && S(fact!, "reference") == PortableIdentity.RecordId(record.Source, "/manga/" + record.Manga))).Select(fact => fact!.DeepClone()).DistinctBy(fact => CatalogueFormat.Digest(fact)).ToArray();
-            var targets = targetUids is null ? Database.Read(DatabaseFile.Catalog, c => entries.Select(id => (JsonNode?)JsonValue.Create(CatalogueIdentity.Ensure(c, id))).ToArray()) : targetUids.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray();
+            var targets = targetUids is null ? Database.Write(DatabaseFile.Catalog, c => entries.Select(id => (JsonNode?)JsonValue.Create(CatalogueIdentity.Ensure(c, id))).ToArray()) : targetUids.Select(value => (JsonNode?)JsonValue.Create(value)).ToArray();
             var choice = new JsonObject { ["uid"] = uid, ["kind"] = kind, ["entries"] = new JsonArray(targets), ["records"] = new JsonArray(locators), ["value"] = new JsonObject() }; var digest = CatalogueFormat.Digest(choice); bundle["decisions"]!.AsArray().Add(choice); var preview = Exchange.Preview(Encoding.UTF8.GetBytes(CatalogueFormat.Canonical(bundle))); Exchange.Apply(S(preview, "id"), S(preview, "revision")); return Exchange.Decision(uid, digest);
         }
         public JsonObject Apply(JsonObject choice)
