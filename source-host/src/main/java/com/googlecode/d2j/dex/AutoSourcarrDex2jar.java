@@ -142,6 +142,29 @@ public final class AutoSourcarrDex2jar {
         }
     }
 
+    /** The class itself, then its superclasses up to java/lang/Object (interfaces count as Object, as for the JVM). */
+    static java.util.List<String> superChain(String type, Map<String, String> parentsByName) {
+        java.util.List<String> chain = new java.util.ArrayList<>();
+        String current = type;
+        while (current != null && chain.size() < 64) {
+            chain.add(current);
+            if ("java/lang/Object".equals(current)) return chain;
+            String parent = parentsByName.get(current);
+            if (parent == null) {
+                try {
+                    Class<?> loaded = Class.forName(current.replace('/', '.'), false, AutoSourcarrDex2jar.class.getClassLoader());
+                    Class<?> superclass = loaded.isInterface() ? Object.class : loaded.getSuperclass();
+                    parent = superclass == null ? null : superclass.getName().replace('.', '/');
+                } catch (Throwable unknown) {
+                    parent = null;
+                }
+            }
+            current = parent;
+        }
+        if (!chain.contains("java/lang/Object")) chain.add("java/lang/Object");
+        return chain;
+    }
+
     private static String toInternalClassName(String key) {
         if (key.endsWith(";")) key = key.substring(1, key.length() - 1);
         return key;
@@ -171,29 +194,15 @@ public final class AutoSourcarrDex2jar {
                         : new ClassWriter(ClassWriter.COMPUTE_FRAMES) {
                     @Override
                     protected String getCommonSuperClass(String type1, String type2) {
+                        // AutoSourcarr: dex2jar 2.4.38 never compared type2 itself with type1's ancestors, so a merge of a
+                        // class with its own superclass became Object and the JVM rejected the frames. Both chains are
+                        // walked in full (extension classes from the dex, others from the host class path).
                         if (type1.equals(type2)) return type1;
-
-                        // First collect all the possible parents of type1
-                        Set<String> parentsOfType1 = new HashSet<>();
-                        parentsOfType1.add(type1);
-                        while (parentsByName.containsKey(type1)) {
-                            type1 = parentsByName.get(type1);
-                            parentsOfType1.add(type1);
+                        Set<String> parentsOfType1 = new HashSet<>(superChain(type1, parentsByName));
+                        for (String candidate : superChain(type2, parentsByName)) {
+                            if (parentsOfType1.contains(candidate)) return candidate;
                         }
-
-                        // Then we see whether type2 or any of its parents match
-                        while (parentsByName.containsKey(type2)) {
-                            type2 = parentsByName.get(type2);
-                            if (parentsOfType1.contains(type2)) return type2;
-                        }
-
-                        try {
-                            // Maybe the default impl can resolve the rest
-                            return super.getCommonSuperClass(type1, type2);
-                        } catch (Throwable t) {
-                            // If all else fails
-                            return "java/util/Object";
-                        }
+                        return "java/lang/Object";
                     }
                 };
                 final LambadaNameSafeClassAdapter rca = new LambadaNameSafeClassAdapter(cw,
