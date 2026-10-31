@@ -69,6 +69,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     internal object CatalogueWriteGate => _catalogueWriteGate;
     internal Task<Exception> FatalFailure => _fatal.Task;
     internal bool Stopping => _http.IsStopping;
+    /// <summary>Set by the host: asks the web host to stop normally (setup restart in the integrated image).</summary>
+    internal Action? RequestStop { get; set; }
 
     internal static Task<ApplicationRuntime> CreateNativeAsync(StartupConfigurationSnapshot startup,
         IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken = default)
@@ -93,7 +95,6 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(startup); ArgumentNullException.ThrowIfNull(environment);
         var owner = new ApplicationRuntime(startup.Settings);
-        owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion);
         try
         {
             owner.Privacy.Register(environment);
@@ -130,6 +131,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._source.Client.Attention = owner._attention;
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
                 owner._dataDirectory!, () => owner.Settings, owner.Io, owner._source.Client, owner.Tasks, owner.Lanes, owner.Logs, cancellationToken).ConfigureAwait(false);
+            owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, environment,
+                values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
+                () => owner.RequestStop?.Invoke());
             if (!string.IsNullOrWhiteSpace(startup.Settings.MainSuwayomiUrl))
             {
                 owner._main = new(startup.Settings, startup.Settings.MainSuwayomiUrl,

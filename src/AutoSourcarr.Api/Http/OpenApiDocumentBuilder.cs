@@ -82,6 +82,14 @@ public static class OpenApiDocumentBuilder
         if (parameters.Count > 0)
             operation["parameters"] = parameters;
 
+        if (metadata.GetMetadata<IAcceptsMetadata>() is { RequestType: { } requestType } accepts)
+        {
+            var content = new JsonObject();
+            foreach (var contentType in accepts.ContentTypes.DefaultIfEmpty("application/json"))
+                content[contentType] = new JsonObject { ["schema"] = new JsonObject { ["$ref"] = Schema(requestType, schemas) } };
+            operation["requestBody"] = new JsonObject { ["required"] = !accepts.IsOptional, ["content"] = content };
+        }
+
         var responses = new JsonObject();
         foreach (var produced in metadata.GetOrderedMetadata<IProducesResponseTypeMetadata>().OrderBy(m => m.StatusCode))
         {
