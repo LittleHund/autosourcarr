@@ -103,12 +103,20 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
     internal static void ApplyBaseline(IDbConnection connection, IDbTransaction? transaction, DatabaseFile file)
     {
         var sql = file == DatabaseFile.Catalog ? Resource("catalog.sql") + Resource("library.sql") : Resource("origins.sql");
+        // Every statement is CREATE ... IF NOT EXISTS (or a PRAGMA), so running it again after a crash is safe.
         Run(connection, transaction, sql);
         using var plan = JsonDocument.Parse(Resource("legacy-migrations.json"));
         if (plan.RootElement.GetProperty("format").GetInt32() != 1)
             throw new InvalidDataException("Unsupported embedded database migration plan.");
-        RunSteps(connection, transaction, plan.RootElement.GetProperty(file == DatabaseFile.Catalog ? "catalog" : "origins"),
-            _normalizeTitle ?? TextMatcher.NormalizeTitle);
+        // The upgrade steps change data, so they commit together or not at all (as in 0.4.x).
+        var own = transaction is null ? connection.BeginTransaction() : null;
+        try
+        {
+            RunSteps(connection, own ?? transaction, plan.RootElement.GetProperty(file == DatabaseFile.Catalog ? "catalog" : "origins"),
+                _normalizeTitle ?? TextMatcher.NormalizeTitle);
+            own?.Commit();
+        }
+        finally { own?.Dispose(); }
     }
 
     /// <summary>Migration 2 body: the feature tables that 0.4.x created on first use.</summary>
