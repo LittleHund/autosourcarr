@@ -43,7 +43,7 @@ jobs:
         with:
           global-json-file: global.json   # 10.0.402 + latestPatch -> 10.0.403 (.NET 10.0.14)
       - name: Restore
-        run: dotnet restore AutoSourcarr.slnx
+        run: dotnet restore AutoSourcarr.slnx --locked-mode   # lock files are committed; drift fails here
       - name: Build (warnings are errors)
         run: dotnet build AutoSourcarr.slnx -c Release --no-restore
       - name: Test
