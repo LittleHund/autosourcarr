@@ -138,7 +138,7 @@ public static class AccessControlTests
         var (_, scriptKey) = accounts.CreateKey("Viewer", "script", Role.Guest);
         var routes = app.Host.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>()
             .SelectMany(endpoint => (endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["GET"])
-                .Select(method => (Method: method, Path: Path(endpoint.RoutePattern.RawText ?? ""))))
+                .Select(method => (Method: method, Path: RoutePath(endpoint.RoutePattern.RawText ?? ""))))
             .Where(route => route.Path.Length > 0).Distinct().ToArray();
         Check.True(routes.Length > 60, "routes found: " + routes.Length);
         var callers = new (string Name, Caller Caller, (string, string)[] Headers)[]
@@ -182,7 +182,7 @@ public static class AccessControlTests
         Check.True(denied.Count > 0, "refusals of signed-in callers are logged");
     }
 
-    private static string Path(string pattern)
+    private static string RoutePath(string pattern)
     {
         if (pattern.Length == 0) return "";
         var path = System.Text.RegularExpressions.Regex.Replace(pattern.StartsWith('/') ? pattern : "/" + pattern, "\\{\\*?([^}:]+)[^}]*\\}", "1");
