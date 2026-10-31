@@ -112,7 +112,8 @@ class HostDb(
                       description=?, genre=?, status=?, initialized=1, real_url=?, updated_at=? WHERE id=?
                     """.trimIndent(),
                 ).use {
-                    it.setString(1, manga.title)
+                    // Many sources leave title unset in details (it is lateinit): keep the listed title then.
+                    it.setString(1, runCatching { manga.title }.getOrNull())
                     it.setString(2, manga.thumbnail_url)
                     it.setString(3, manga.artist)
                     it.setString(4, manga.author)

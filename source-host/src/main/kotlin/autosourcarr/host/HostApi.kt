@@ -284,7 +284,7 @@ class HostApi(
                 val entry = SourceRegistry.get(parseSourceId(manga.sourceId)) ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
                 val source = entry.source
                 val input = SManga.create().apply { url = manga.url; title = manga.title; thumbnail_url = manga.thumbnailUrl; initialized = manga.initialized }
-                val known = db.chapters(id).map { row -> SChapter.create().apply { url = row.url; name = row.name } }
+                val known = db.chapters(id).map { row -> row.toSChapter() }
                 // tachiyomix 1.6 combined call; CatalogueSource bridges older extensions to their fetch* methods.
                 val update = backoff.run(source.id) { runBlocking { source.getMangaUpdate(input, known, fetchManga, fetchChapters) } }
                 val http = source as? HttpSource
@@ -387,7 +387,8 @@ class HostApi(
         }
         val manga = db.manga(chapter.mangaId)!!
         val source = SourceRegistry.get(parseSourceId(manga.sourceId))?.source ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
-        val input = SChapter.create().apply { url = chapter.url; name = chapter.name }
+        // The fields Suwayomi passes too: some sources read the number, scanlator or date when building the request.
+        val input = chapter.toSChapter()
         val pages = backoff.run(source.id) { runBlocking { source.getPageList(input) } }
         val text =
             JsonArray(
@@ -520,6 +521,17 @@ class HostApi(
         screen.sharedPreferences = source.sourcePreferences()
         source.setupPreferenceScreen(screen)
         return screen.preferences
+    }
+
+    private fun HostDb.Chapter.toSChapter(): SChapter {
+        val row = this
+        return SChapter.create().apply {
+            url = row.url
+            name = row.name
+            date_upload = row.uploadDate
+            chapter_number = row.chapterNumber.toFloat()
+            scanlator = row.scanlator
+        }
     }
 
     private fun health(): JsonObject =

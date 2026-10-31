@@ -206,6 +206,7 @@ object WebViewEngine {
                         .Builder()
                         .url("https://api.github.com/repos/JetBrains/JetBrainsRuntime/releases/tags/$JBR_RELEASE")
                         .header("Accept", "application/vnd.github+json")
+                        .apply { System.getenv("GITHUB_TOKEN")?.takeIf { it.isNotBlank() }?.let { header("Authorization", "Bearer $it") } }
                         .build(),
                 ).execute()
                 .use { response ->

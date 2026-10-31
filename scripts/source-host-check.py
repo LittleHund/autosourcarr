@@ -74,6 +74,10 @@ def check(host, item, query, lang):
         if source is None: raise RuntimeError("no source loaded")
         result["source"] = "%s (%s)" % (source["name"], source["lang"])
         sid = source["id"]
+        if item.get("preferences"):
+            step = "preferences"
+            result["preferences_set"] = configure(host, sid, item["preferences"])
+            if len(result["preferences_set"]) < len(item["preferences"]): raise RuntimeError("preferences not found: %s" % result["preferences_set"])
         step = "search"
         page = call(host, "GET", "/v1/sources/%s/mangas?type=SEARCH&page=1&query=%s" % (sid, urllib.parse.quote(query)))
         if not page["mangas"]:
@@ -102,30 +106,27 @@ def check(host, item, query, lang):
     result["seconds"] = round(time.time() - started, 1)
     return result
 
-def github(url):
-    import os
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "autosourcarr-source-host-check"}
-    if os.environ.get("GITHUB_TOKEN"): headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
-    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as response:
-        return json.loads(response.read())
+LIB14_REPO = "https://raw.githubusercontent.com/tachiyomiorg/extensions/repo/"
 
-def find_lib14(prefer):
-    """An extension APK built with extensions-lib 1.4 (version 1.4.x) from the Keiyoushi repository's history."""
-    for until in ("2024-06-01T00:00:00Z", "2024-04-01T00:00:00Z", "2024-02-15T00:00:00Z"):
-        commits = github("https://api.github.com/repos/keiyoushi/extensions/commits?sha=repo&per_page=1&until=" + until)
-        if not commits: continue
-        sha = commits[0]["sha"]
-        try:
-            rows = json.loads(urllib.request.urlopen("https://raw.githubusercontent.com/keiyoushi/extensions/%s/index.min.json" % sha, timeout=60).read())
-        except urllib.error.HTTPError:
-            continue
-        old = {row["pkg"]: row for row in rows if str(row.get("version", "")).startswith("1.4.")}
-        for pkg in prefer + sorted(old):
-            if pkg in old:
-                row = old[pkg]
-                return {"pkg": pkg, "apk": "https://raw.githubusercontent.com/keiyoushi/extensions/%s/apk/%s" % (sha, row["apk"]),
-                        "version": row["version"], "sources": [], "lib14": True, "commit": sha[:12]}
-    raise RuntimeError("no lib 1.4 extension found in the repository history")
+def lib14_item():
+    """Komga from the archived Tachiyomi repository: built with extensions-lib 1.4 (version 1.4.x), checked against
+    Komga's public demo server (credentials published by Komga)."""
+    rows = json.loads(urllib.request.urlopen(LIB14_REPO + "index.min.json", timeout=60).read())
+    row = next(r for r in rows if r["pkg"] == "eu.kanade.tachiyomi.extension.all.komga")
+    if not str(row["version"]).startswith("1.4."): raise RuntimeError("Komga in the archive is %s, not lib 1.4" % row["version"])
+    return {"pkg": row["pkg"], "apk": LIB14_REPO + "apk/" + row["apk"], "version": row["version"], "sources": [], "lib14": True,
+            "preferences": {"address": "https://demo.komga.org", "username": "demo@komga.org", "password": "komga-demo"}}
+
+def configure(host, sid, values):
+    prefs = call(host, "GET", "/v1/sources/%s/preferences" % sid)
+    done = []
+    for pref in prefs:
+        label = ((pref.get("title") or "") + " " + (pref.get("key") or "")).lower()
+        for name, value in values.items():
+            if name in label and pref.get("valueType") == "String":
+                call(host, "PUT", "/v1/sources/%s/preferences" % sid, {"position": pref["position"], "value": value}); done.append(name)
+                break
+    return done
 
 def cloudflare(host, url):
     started = time.time()
@@ -159,8 +160,7 @@ def main():
     lib14_ok = None
     if args.lib14:
         try:
-            items.append(find_lib14(["eu.kanade.tachiyomi.extension.en.mangapill", "eu.kanade.tachiyomi.extension.all.mangadex",
-                                     "eu.kanade.tachiyomi.extension.en.mangatown"]))
+            items.append(lib14_item())
         except Exception as error:
             lib14_ok = False
             print(json.dumps({"pkg": "lib 1.4", "ok": False, "failed_at": "find", "error": str(error)[:1000]}))
@@ -168,7 +168,7 @@ def main():
     for item in items:
         result = check(args.host, item, args.query, args.lang)
         if item.get("lib14"):
-            result["lib14"] = True; result["commit"] = item["commit"]; lib14_ok = result["ok"]
+            result["lib14"] = True; lib14_ok = result["ok"]
         else:
             passed += 1 if result["ok"] else 0
         print(json.dumps(result), flush=True)
