@@ -283,7 +283,14 @@ class HostApi(
                 val fetchChapters = body["fetchChapters"]?.jsonPrimitive?.booleanOrNull ?: true
                 val entry = SourceRegistry.get(parseSourceId(manga.sourceId)) ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
                 val source = entry.source
-                val input = SManga.create().apply { url = manga.url; title = manga.title; thumbnail_url = manga.thumbnailUrl; initialized = manga.initialized }
+                val input =
+                    SManga.create().apply {
+                        url = manga.url
+                        title = manga.title
+                        thumbnail_url = manga.thumbnailUrl
+                        initialized = manga.initialized
+                        memo = manga.memo
+                    }
                 val known = db.chapters(id).map { row -> row.toSChapter() }
                 // tachiyomix 1.6 combined call; CatalogueSource bridges older extensions to their fetch* methods.
                 val update = backoff.run(source.id) { runBlocking { source.getMangaUpdate(input, known, fetchManga, fetchChapters) } }
@@ -531,6 +538,7 @@ class HostApi(
             date_upload = row.uploadDate
             chapter_number = row.chapterNumber.toFloat()
             scanlator = row.scanlator
+            memo = row.memo
         }
     }
 
