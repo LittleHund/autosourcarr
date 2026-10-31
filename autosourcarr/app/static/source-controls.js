@@ -58,7 +58,7 @@ async function load(id){
  const controller=new AbortController();state.controller=controller;
  byId('sourcePreferencesFields').replaceChildren();status('Loading source settings…');controls();
  try{
-  const snapshot=await api('/api/admin/sources/'+encodeURIComponent(state.id)+'/preferences',{signal:controller.signal,timeoutMs:40000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'});
+  const snapshot=await api('/api/v1/sources/'+encodeURIComponent(state.id)+'/preferences',{signal:controller.signal,timeoutMs:40000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'});
   if(!active(String(id),generation))return;
   state.snapshots.set(String(id),snapshot);state.controller=null;render(snapshot);status(draftsFor(String(id)).size?'Current settings loaded. Unsaved edits were retained; review them before saving.':'Changes apply to this source language in the integrated engine.');
  }catch(error){if(active(String(id),generation)&&!controller.signal.aborted){state.controller=null;status('Unable to load source settings: '+error.message);controls();}}
@@ -90,7 +90,7 @@ window.openExtensionSourcePreferences=async(pkg)=>{
  if(!extension||!Array.isArray(extension.source?.nodes)){
   const controller=new AbortController();state.controller=controller;controls();
   try{
-   const inventory=await api('/api/admin/source-extensions',{signal:controller.signal,timeoutMs:45000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'});
+   const inventory=await api('/api/v1/source-extensions',{signal:controller.signal,timeoutMs:45000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'});
    if(generation!==state.generation||modal.hidden)return;
    extension=(inventory.extensions||[]).find(x=>String(x.pkgName)===pkg);
   }catch(error){if(generation===state.generation&&!modal.hidden&&!controller.signal.aborted)status('Unable to load installed sources: '+error.message);return;}
@@ -116,7 +116,7 @@ byId('sourcePreferencesForm').onsubmit=async event=>{
   for(const [key,value] of [...drafts]){
    const p=(snapshot.preferences||[]).find(pref=>identity(pref)===key);
    if(!p||!supported(p))throw new Error('A preference changed or became unavailable. Reload settings and review your remaining edits.');
-   snapshot=await api('/api/admin/sources/'+encodeURIComponent(id)+'/preferences',{method:'PUT',body:JSON.stringify({index:p.index,key:p.key,type:p.type,value,revision:snapshot.revision}),timeoutMs:65000,noMutationRefresh:true,suppressClientError:true});
+   snapshot=await api('/api/v1/sources/'+encodeURIComponent(id)+'/preferences',{method:'PUT',body:JSON.stringify({index:p.index,key:p.key,type:p.type,value,revision:snapshot.revision}),timeoutMs:65000,noMutationRefresh:true,suppressClientError:true});
    state.snapshots.set(id,snapshot);if(equal(drafts.get(key),value))drafts.delete(key);saved++;
   }
   if(state.id===id&&!modal.hidden)status(message);
@@ -137,7 +137,7 @@ async function drainUploads(){
  if(upload.running)return;upload.running=true;let changed=false;uploadStatus();
  try{while(upload.queue.length){
   const {file,row}=upload.queue.shift();row.dataset.state='installing';row.textContent=file.name+' · Installing…';uploadStatus();
-  try{const result=await api('/api/admin/source-extensions/upload',{method:'POST',body:file,headers:{'Content-Type':'application/vnd.android.package-archive','X-Filename':encodeURIComponent(file.name)},timeoutMs:240000,noMutationRefresh:true,suppressClientError:true});row.dataset.state='installed';row.textContent=file.name+' · '+(result.message||'Installed');changed=true;}
+  try{const result=await api('/api/v1/source-extensions/upload',{method:'POST',body:file,headers:{'Content-Type':'application/vnd.android.package-archive','X-Filename':encodeURIComponent(file.name)},timeoutMs:240000,noMutationRefresh:true,suppressClientError:true});row.dataset.state='installed';row.textContent=file.name+' · '+(result.message||'Installed');changed=true;}
   catch(error){const uncertain=error.name==='TimeoutError'||error.name==='TypeError'||Number(error.status_code)>=500||/not confirm|timed? ?out|timeout|network|failed to fetch/i.test(error.message);row.dataset.state=uncertain?'unconfirmed':'failed';row.textContent=file.name+' · '+(uncertain?'Installation not confirmed: ':'Installation failed: ')+error.message+(uncertain?' Refresh Sources to check whether it installed before retrying.':'');if(uncertain)changed=true;}
  }}finally{upload.running=false;uploadStatus();if(changed)refreshManagedSourcesAfterMutation();}
 }

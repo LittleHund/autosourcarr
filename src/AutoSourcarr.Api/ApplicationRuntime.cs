@@ -46,6 +46,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Sources.Repositories.SourceRepositoryPreview? _repositoryPreview;
     private AutoSourcarr.Core.Repair.PublicSourceFetcher? _publicFetcher;
     private SourceHealthCoordinator? _health;
+    private AutoSourcarr.Core.Sources.Configuration.SourceConfigurationStore? _sourceConfiguration;
+    private AutoSourcarr.Core.Sources.Controls.SourcePreferenceService? _sourcePreferences;
     private Task? _healthMonitor;
     private readonly CancellationTokenSource _healthStop = new();
     internal AutoSourcarr.Api.Security.AccessControlServices? Access => _access;
@@ -201,6 +203,12 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
                 owner._dataDirectory!, () => owner.Settings, owner.Io, owner._source.Client, owner.Tasks, owner.Lanes, owner.Logs, cancellationToken).ConfigureAwait(false);
             owner._access = OpenAccounts(owner, startup);
+            owner._sourceConfiguration = new AutoSourcarr.Core.Sources.Configuration.SourceConfigurationStore(owner.Database, owner._catalogueWriteGate,
+                () => owner.Settings.SourceLanguages.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal),
+                // Discovery and duplicate invalidations are acted on by the matching phase (8); recorded until then.
+                effect => owner.Logs.Record("Sources", "Source choices changed (" + effect.Kind + ")."));
+            owner._sourcePreferences = new AutoSourcarr.Core.Sources.Controls.SourcePreferenceService(owner._source.Client, owner._admin,
+                () => (owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", 0), owner.Privacy);
             owner._repositories = new(new CanonicalConfiguration(startup.ConfigurationRoot));
             owner._publicFetcher = new();
             owner._repositoryPreview = new(owner._publicFetcher);
@@ -216,6 +224,10 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             {
                 CheckDatabaseTarget = path => DatabaseRelocation.CheckTarget(owner.Database, path),
                 Tasks = owner.Tasks, Jobs = owner.Jobs, Events = owner.Events, Errors = owner.Errors, Access = owner._access,
+                Sources = new SourceServices
+                {
+                    Configuration = owner._sourceConfiguration!, Client = owner._source.Client, Preferences = owner._sourcePreferences!, AdminLock = owner._admin
+                },
                 SourceRuntime = new SourceRuntimeServices
                 {
                     Engine = owner.SourceEngineJson, Client = owner._source.Client, Attention = owner._attention,
@@ -477,6 +489,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         if (_healthMonitor is not null)
             await Attempt("Source health monitor", async () => { try { await _healthMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
         if (_health is not null) await Attempt("Source health", () => _health.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_sourcePreferences is not null) await Attempt("Source preferences", () => _sourcePreferences.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_publicFetcher is not null) await Attempt("Public fetcher", () => _publicFetcher.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_main is not null) await Attempt("Main transport", () => _main.DisposeAsync().AsTask()).ConfigureAwait(false);
