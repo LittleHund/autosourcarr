@@ -33,6 +33,14 @@ public sealed partial class SuwayomiClient
         return client;
     }
 
+    /// <summary>A host-only REST call (source browser, reload, health) for the source runtime routes.</summary>
+    public async Task<JsonNode?> HostAsync(HttpMethod method, string path, JsonNode? body = null, CancellationToken cancellationToken = default)
+    {
+        if (!SourceHost) throw new SourceEngineUnavailableException("This source engine is not the AutoSourcarr source host.");
+        await using var session = OpenSession(cancellationToken);
+        return await HostCoreAsync(session, method, path, body, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>One REST call to the host; a non-2xx answer becomes a SuwayomiException with the host's detail text.</summary>
     internal async Task<JsonNode?> HostCoreAsync(SourceTransportSession session, HttpMethod method, string path, JsonNode? body,
         CancellationToken cancellationToken, byte[]? raw = null, string? rawType = null, TimeSpan? timeout = null)

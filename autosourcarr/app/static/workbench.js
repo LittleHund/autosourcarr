@@ -371,7 +371,7 @@ function renderRepositories(){
 function repositoryApplyMessage(){return repositoryState.can_restart?'Choose Apply saved repositories to restart this instance’s source process. Installed extensions, sign-ins and library data are retained.':'Restart the configured external source engine to apply saved repositories.';}
 async function applySavedRepositories(){
   const button=document.querySelector('#restartRepositorySources');if(!repositoryState.can_restart||button.disabled)return;button.disabled=true;
-  try{await api('/api/admin/source-browser/restart',{method:'POST',timeoutMs:6000,noMutationRefresh:true});repositoryMessage('Source restart queued. Check Status for readiness, then refresh Discover. Installed extensions and source sign-ins are retained.');}
+  try{await apiV1({timeoutMs:6000,noMutationRefresh:true}).restartSources();repositoryMessage('Source restart queued. Check Status for readiness, then refresh Discover. Installed extensions and source sign-ins are retained.');}
   catch(error){repositoryMessage('Source restart was not queued: '+error.message);}
   finally{button.disabled=!repositoryState.can_restart;}
 }
@@ -535,11 +535,11 @@ function challengeStatusText(c={}){
 }
 async function loadSourceEngine(){
   const el=document.querySelector('#sourceEngineStatus');if(!el)return;
-  try{const s=await api('/api/admin/source-engine',{timeoutMs:5000,noMutationRefresh:true});el.textContent=(s.mode==='integrated'?'Integrated process · no separate source container':'External source engine')+' · '+s.state+(s.error?' · '+s.error:'');const details=document.querySelector('#sourceChallengeStatus');if(details)details.textContent=challengeStatusText(s.automatic_challenges);}
+  try{const s=await apiV1({timeoutMs:5000,noMutationRefresh:true}).getSourceEngine();el.textContent=(s.mode==='integrated'?'Integrated process · no separate source container':'External source engine')+' · '+s.state+(s.error?' · '+s.error:'');const details=document.querySelector('#sourceChallengeStatus');if(details)details.textContent=challengeStatusText(s.automatic_challenges);}
   catch(e){el.textContent='Unable to read source engine status: '+e.message;}
 }
 
-async function retrySourceChallenges(){try{const r=await api('/api/admin/source-engine/challenges',{method:'POST',noMutationRefresh:true,timeoutMs:5000});await loadSourceEngine();toast(r.queued?'Verification setup queued. Refresh engine status shortly.':'Check not queued: automatic handlers are disabled, the engine is starting or another check is running.');}catch(e){toast(e.message);}}
+async function retrySourceChallenges(){try{const r=await apiV1({noMutationRefresh:true,timeoutMs:5000}).checkSourceChallenges();await loadSourceEngine();toast(r.queued?'Verification setup queued. Refresh engine status shortly.':'Check not queued: automatic handlers are disabled, the engine is starting or another check is running.');}catch(e){toast(e.message);}}
 
 // Shared engine controls; refresh status without replacing an unsaved UA draft.
 const sourceBrowserUi={snapshot:null,loading:null,timer:null,dirty:false,revision:0,submitting:false};
@@ -577,7 +577,7 @@ async function loadSourceBrowser(){
   if(sourceBrowserUi.loading)return sourceBrowserUi.loading;
   clearTimeout(sourceBrowserUi.timer);
   sourceBrowserUi.loading=(async()=>{
-    try{sourceBrowserUi.snapshot=await api('/api/admin/source-browser',{timeoutMs:6000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'});renderSourceBrowser();}
+    try{sourceBrowserUi.snapshot=await apiV1({timeoutMs:6000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'}).getSourceBrowser();renderSourceBrowser();}
     catch(e){document.querySelector('#sourceBrowserOperation').textContent='Unable to refresh browser status: '+e.message;}
     finally{sourceBrowserUi.loading=null;if(sourceBrowserVisible())sourceBrowserUi.timer=setTimeout(loadSourceBrowser,sourceBrowserUi.snapshot?.busy?1500:5000);}
   })();return sourceBrowserUi.loading;
@@ -589,7 +589,8 @@ async function changeSourceBrowser(action,reset=false){
   const body=action==='user-agent'?{preset:reset?'default':document.querySelector('#sourceUserAgentPreset').value,user_agent:reset?'':document.querySelector('#sourceUserAgentValue').value}:null;
   sourceBrowserUi.submitting=true;renderSourceBrowser();
   try{
-    await api('/api/admin/source-browser/'+action,{method:action==='user-agent'?'PUT':'POST',...(body?{body:JSON.stringify(body)}:{}),timeoutMs:6000,noMutationRefresh:true});
+    const client=apiV1({timeoutMs:6000,noMutationRefresh:true});
+    await (action==='user-agent'?client.setSourceUserAgent(body):action==='clear-data'?client.clearSourceBrowserData():client.restartSources());
     if(action==='user-agent'&&sourceBrowserUi.revision===revision){sourceBrowserUi.dirty=false;}
     // The currently pending read may precede this accepted operation. Drain it,
     // then fetch the operation status instead of treating that old read as current.
@@ -600,7 +601,7 @@ async function changeSourceBrowser(action,reset=false){
 }
 async function checkBrowserChallenges(){
   const button=document.querySelector('#checkBrowserChallenges');button.disabled=true;
-  try{const r=await api('/api/admin/source-engine/challenges',{method:'POST',timeoutMs:6000,noMutationRefresh:true});await loadSourceBrowser();if(!r.queued)toast(r.automatic_challenges?.state==='disabled'?'Automatic handlers are disabled. Enable SOURCE_AUTO_CHALLENGES in Application settings and redeploy.':'The engine is starting or a handler check is already running.');}
+  try{const r=await apiV1({timeoutMs:6000,noMutationRefresh:true}).checkSourceChallenges();await loadSourceBrowser();if(!r.queued)toast(r.automatic_challenges?.state==='disabled'?'Automatic handlers are disabled. Enable SOURCE_AUTO_CHALLENGES in Application settings and redeploy.':'The engine is starting or a handler check is already running.');}
   catch(e){toast(e.message);}finally{button.disabled=!!sourceBrowserUi.snapshot?.busy||sourceBrowserUi.snapshot?.engine_state!=='ready';}
 }
 async function openSolverSettings(){

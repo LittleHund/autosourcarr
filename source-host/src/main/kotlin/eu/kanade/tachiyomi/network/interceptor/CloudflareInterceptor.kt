@@ -52,7 +52,10 @@ class CloudflareInterceptor(
         }
 
         if (!HostConfig.flareSolverrEnabled.value) {
-            throw IOException("Cloudflare bypass currently disabled")
+            // AutoSourcarr: without FlareSolverr the embedded WebView solves the challenge (Mihon's approach).
+            if (!autosourcarr.host.WebViewEngine.ready()) throw IOException("Cloudflare bypass currently disabled")
+            originalResponse.close()
+            return resolveWithWebView(chain, originalRequest)
         }
 
         logger.debug { "Cloudflare anti-bot is on, CloudflareInterceptor is kicking in..." }
@@ -63,6 +66,11 @@ class CloudflareInterceptor(
             originalResponse.close()
             resolveCloudflare(chain, originalRequest, originalResponse, flareResponseFallback)
         } catch (e: Exception) {
+            // AutoSourcarr: FlareSolverr failed or is unreachable; the WebView is the second try.
+            if (autosourcarr.host.WebViewEngine.ready()) {
+                logger.warn { "FlareSolverr failed for ${originalRequest.url.host} (${e.message}); trying the WebView" }
+                return resolveWithWebView(chain, originalRequest)
+            }
             // Because OkHttp's enqueue only handles IOExceptions, wrap the exception so that we don't crash the entire app
             throw IOException(e)
         }
@@ -144,6 +152,18 @@ class CloudflareInterceptor(
                 CFClearance.inflightCalls.remove(host, bypassRequest)
             }
         }
+    }
+
+    private fun resolveWithWebView(
+        chain: Interceptor.Chain,
+        originalRequest: Request,
+    ): Response {
+        val solved =
+            autosourcarr.host.CloudflareWebViewSolver.solve(originalRequest.url, HostConfig.flareSolverrTimeout.value.coerceAtLeast(30).seconds)
+                ?: throw IOException("The WebView could not pass the Cloudflare check for ${originalRequest.url.host}")
+        CFClearance.storeCookies(originalRequest.url, solved.cookies)
+        if (originalRequest.header("User-Agent") != solved.userAgent) setUserAgent(solved.userAgent)
+        return chain.proceed(CFClearance.buildRequestWithStoredCookies(originalRequest, solved.userAgent))
     }
 
     private fun maybeFallbackToFlareSolverResponse(
@@ -234,6 +254,13 @@ object CFClearance {
     }
 
     val inflightCalls = ConcurrentHashMap<String, CompletableFuture<Result>>()
+
+    fun storeCookies(
+        url: HttpUrl,
+        cookies: List<Cookie>,
+    ) {
+        network.cookieStore.addAll(url, cookies)
+    }
 
     fun buildRequestWithStoredCookies(
         request: Request,

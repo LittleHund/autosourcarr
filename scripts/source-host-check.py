@@ -102,6 +102,41 @@ def check(host, item, query, lang):
     result["seconds"] = round(time.time() - started, 1)
     return result
 
+def github(url):
+    import os
+    headers = {"Accept": "application/vnd.github+json", "User-Agent": "autosourcarr-source-host-check"}
+    if os.environ.get("GITHUB_TOKEN"): headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as response:
+        return json.loads(response.read())
+
+def find_lib14(prefer):
+    """An extension APK built with extensions-lib 1.4 (version 1.4.x) from the Keiyoushi repository's history."""
+    for until in ("2024-06-01T00:00:00Z", "2024-04-01T00:00:00Z", "2024-02-15T00:00:00Z"):
+        commits = github("https://api.github.com/repos/keiyoushi/extensions/commits?sha=repo&per_page=1&until=" + until)
+        if not commits: continue
+        sha = commits[0]["sha"]
+        try:
+            rows = json.loads(urllib.request.urlopen("https://raw.githubusercontent.com/keiyoushi/extensions/%s/index.min.json" % sha, timeout=60).read())
+        except urllib.error.HTTPError:
+            continue
+        old = {row["pkg"]: row for row in rows if str(row.get("version", "")).startswith("1.4.")}
+        for pkg in prefer + sorted(old):
+            if pkg in old:
+                row = old[pkg]
+                return {"pkg": pkg, "apk": "https://raw.githubusercontent.com/keiyoushi/extensions/%s/apk/%s" % (sha, row["apk"]),
+                        "version": row["version"], "sources": [], "lib14": True, "commit": sha[:12]}
+    raise RuntimeError("no lib 1.4 extension found in the repository history")
+
+def cloudflare(host, url):
+    started = time.time()
+    try:
+        result = call(host, "POST", "/v1/webview/fetch", {"url": url}, timeout=240)
+    except Exception as error:
+        result = {"status": 0, "error": str(error)[:1000]}
+    result["url"] = url; result["seconds"] = round(time.time() - started, 1)
+    result["ok"] = bool(result.get("clearance")) and result.get("status") == 200 and not result.get("challenge_page")
+    return result
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="http://127.0.0.1:4567")
@@ -111,6 +146,8 @@ def main():
     parser.add_argument("--query", default="love")
     parser.add_argument("--lang", default="en")
     parser.add_argument("--require", type=int, default=1)
+    parser.add_argument("--lib14", action="store_true", help="also install and check a lib 1.4 APK from the repository history; it must pass")
+    parser.add_argument("--cloudflare-url", action="append", default=[], help="a page behind a Cloudflare challenge; one must pass")
     args = parser.parse_args()
     index = repository(args.index)
     items = []
@@ -119,13 +156,38 @@ def main():
         else: print(json.dumps({"pkg": pkg, "ok": False, "failed_at": "index", "error": "not in the repository index"}))
     for extra in args.apk:
         pkg, url = extra.split("=", 1); items.append({"pkg": pkg, "apk": url, "sources": []})
+    lib14_ok = None
+    if args.lib14:
+        try:
+            items.append(find_lib14(["eu.kanade.tachiyomi.extension.en.mangapill", "eu.kanade.tachiyomi.extension.all.mangadex",
+                                     "eu.kanade.tachiyomi.extension.en.mangatown"]))
+        except Exception as error:
+            lib14_ok = False
+            print(json.dumps({"pkg": "lib 1.4", "ok": False, "failed_at": "find", "error": str(error)[:1000]}))
     passed = 0
     for item in items:
         result = check(args.host, item, args.query, args.lang)
-        passed += 1 if result["ok"] else 0
+        if item.get("lib14"):
+            result["lib14"] = True; result["commit"] = item["commit"]; lib14_ok = result["ok"]
+        else:
+            passed += 1 if result["ok"] else 0
         print(json.dumps(result), flush=True)
-    print(json.dumps({"summary": True, "passed": passed, "total": len(items), "required": args.require}))
-    sys.exit(0 if passed >= args.require else 1)
+    cloudflare_ok = None
+    if args.cloudflare_url:
+        # The WebView downloads its Chromium build on first start: wait for it (up to 6 minutes).
+        deadline = time.time() + 360; state = ""
+        while time.time() < deadline:
+            state = str(call(args.host, "GET", "/v1/health").get("webview", ""))
+            if state == "ready" or state.startswith("failed") or state == "disabled": break
+            time.sleep(5)
+        print(json.dumps({"webview": state}), flush=True)
+    for url in args.cloudflare_url:
+        result = cloudflare(args.host, url)
+        print(json.dumps({"cloudflare": True, **result}), flush=True)
+        cloudflare_ok = bool(cloudflare_ok) or result["ok"]
+    print(json.dumps({"summary": True, "passed": passed, "total": len([i for i in items if not i.get("lib14")]),
+                      "required": args.require, "lib14": lib14_ok, "cloudflare": cloudflare_ok}))
+    sys.exit(0 if passed >= args.require and lib14_ok is not False and cloudflare_ok is not False else 1)
 
 if __name__ == "__main__":
     main()

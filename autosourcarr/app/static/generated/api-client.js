@@ -225,6 +225,14 @@
        */
       cancelTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/cancel`, undefined, options); },
       /**
+       * Check which API features the source or main engine answers (target: source or main) and save the report.
+       * POST /api/v1/engine/{target}/compatibility
+       * @param {string} target
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      checkEngineCompatibility(target, options) { return call('POST', `/api/v1/engine/${encodeURIComponent(target)}/compatibility`, undefined, options); },
+      /**
        * Check draft reader addresses and key without saving them.
        * POST /api/v1/setup/reader-preflight
        * @param {ReaderPreflightRequest} body
@@ -233,6 +241,13 @@
        */
       checkSetupReader(body, options) { return call('POST', '/api/v1/setup/reader-preflight', body, options); },
       /**
+       * Report the Cloudflare handlers now. The source host solves challenges when a source meets one, so nothing is queued.
+       * POST /api/v1/source-engine/challenges
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      checkSourceChallenges(options) { return call('POST', '/api/v1/source-engine/challenges', undefined, options); },
+      /**
        * Remove resolved errors (or all errors with resolved_only=false).
        * POST /api/v1/errors/clear
        * @param {ErrorsClearRequest} body
@@ -240,6 +255,13 @@
        * @returns {Promise<ErrorsClearResponse>}
        */
       clearErrors(body, options) { return call('POST', '/api/v1/errors/clear', body, options); },
+      /**
+       * Remove the engine's cookies and browser data (sign-ins and Cloudflare clearances). Installed extensions stay.
+       * POST /api/v1/source-browser/clear-data
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      clearSourceBrowserData(options) { return call('POST', '/api/v1/source-browser/clear-data', undefined, options); },
       /**
        * Remove completed and failed tasks from the list; running and queued work stays.
        * POST /api/v1/tasks/clear-history
@@ -262,6 +284,13 @@
        * @returns {Promise<SetupFinishResponse>}
        */
       finishSetup(body, options) { return call('POST', '/api/v1/setup/finish', body, options); },
+      /**
+       * Sources that need a person (verification, sign-in): open items with the next automatic retry.
+       * GET /api/v1/attention
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getAttention(options) { return call('GET', '/api/v1/attention', undefined, options); },
       /**
        * The running values the UI needs to describe this instance.
        * GET /api/v1/config
@@ -340,6 +369,20 @@
        */
       getSetup(options) { return call('GET', '/api/v1/setup', undefined, options); },
       /**
+       * Source browser identity (user-agent preset and value), presets, the identity the engine uses now and the WebView state.
+       * GET /api/v1/source-browser
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceBrowser(options) { return call('GET', '/api/v1/source-browser', undefined, options); },
+      /**
+       * Source engine status: mode, state, readiness, restarts, last error and the Cloudflare handlers (WebView, FlareSolverr).
+       * GET /api/v1/source-engine
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceEngine(options) { return call('GET', '/api/v1/source-engine', undefined, options); },
+      /**
        * Catalogue, chapter, source, cache and storage counts; refreshed at most every 15 seconds.
        * GET /api/v1/status/stats
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -376,6 +419,21 @@
        */
       restartAfterSetup(options) { return call('POST', '/api/v1/setup/restart', undefined, options); },
       /**
+       * Load every installed extension again (new headers, changed settings). Installed extensions and sign-ins stay.
+       * POST /api/v1/source-browser/restart
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      restartSources(options) { return call('POST', '/api/v1/source-browser/restart', undefined, options); },
+      /**
+       * Check an assistance item again now (in the background).
+       * POST /api/v1/attention/{attentionId}/retry
+       * @param {string} attentionId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      retryAttention(attentionId, options) { return call('POST', `/api/v1/attention/${encodeURIComponent(attentionId)}/retry`, undefined, options); },
+      /**
        * Replay an interrupted task only when replaying it cannot change data twice (read-only observations).
        * POST /api/v1/tasks/{taskId}/retry-safe
        * @param {string} taskId
@@ -391,6 +449,14 @@
        * @returns {Promise<SettingsSaveResponse>}
        */
       saveSettings(body, options) { return call('PUT', '/api/v1/settings', body, options); },
+      /**
+       * Save the source browser identity and apply it to the running engine (sources rebuild their headers).
+       * PUT /api/v1/source-browser/user-agent
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setSourceUserAgent(body, options) { return call('PUT', '/api/v1/source-browser/user-agent', body, options); },
     };
   }
 
