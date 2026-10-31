@@ -1,0 +1,71 @@
+# Integrated deployment: only AutoSourcarr + your main Suwayomi.
+# Keep actual retained config/data/source mounts and existing reader ports.
+# Tools are bundled; no helper services or Docker socket.
+# Repair requires host user namespaces and compatible AppArmor policy, if enabled.
+# Non-root identity and no-new-privileges are internal image/startup defaults.
+x-autosourcarr-security: &autosourcarr-security
+  cap_drop: [ALL]
+  security_opt:
+    - seccomp=/mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/project/security/repair-seccomp.json
+    # On AppArmor hosts, load the bundled profile on the host first, then enable:
+    # - apparmor=autosourcarr-internal
+    # For private /proc mount denial, see security/repair-host-setup.md:
+    # - systempaths=unconfined
+
+services:
+  autosourcarr:
+    <<: *autosourcarr-security
+    container_name: autosourcarr
+    env_file:
+    - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/config/autosourcarr.env
+    hostname: autosourcarr
+    image: autosourcarr:local
+    pull_policy: build
+    build:
+      context: /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/project/autosourcarr
+    logging:
+      driver: json-file
+      options:
+        max-file: '3'
+        max-size: 10m
+    ports:
+    - 30060:8282
+    restart: unless-stopped
+    volumes:
+    - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/autosourcarr-data:/data
+    - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/config:/config
+    - /mnt/hdd/storage/komga/manga:/mnt/manga-downloads:ro
+    - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/source-host:/home/suwayomi/.local/share/Tachidesk
+    working_dir: /app
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8282/api/v1/live',
+        timeout=3)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      SOURCE_ENGINE_MODE: integrated
+      SOURCE_ENGINE_UID: '568'
+      SOURCE_ENGINE_GID: '568'
+      APP_SERVICES_MODE: integrated
+    stop_grace_period: 90s
+  suwayomi:
+    image: ghcr.io/suwayomi/suwayomi-server:v2.3.2243
+    restart: unless-stopped
+    user: 568:568
+    init: true
+    environment:
+      BIND_IP: 0.0.0.0
+      BIND_PORT: '30058'
+      AUTH_MODE: none
+      WEB_UI_ENABLED: 'true'
+      TZ: Europe/Amsterdam
+    # 0.4.5: no host port. Suwayomi is reachable only inside the compose network;
+    # use "Open in WebView" on an entry in AutoSourcarr instead of Suwayomi's web page.
+    volumes:
+    - /mnt/ssd/apps/komga/automation-apps/manga/suwayomi/config:/home/suwayomi/.local/share/Tachidesk

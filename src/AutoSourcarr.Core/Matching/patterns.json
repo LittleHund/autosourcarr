@@ -1,0 +1,132 @@
+{
+  "PUNCT_RE": {
+    "pattern": "[^\\w\\s]+",
+    "ignoreCase": false,
+    "multiline": false
+  },
+  "SPACE_RE": {
+    "pattern": "\\s+",
+    "ignoreCase": false,
+    "multiline": false
+  },
+  "URL_RE": {
+    "pattern": "https?://\\S+|www\\.\\S+",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "HTML_TAG_RE": {
+    "pattern": "<[^>]+>",
+    "ignoreCase": false,
+    "multiline": false
+  },
+  "MARKDOWN_IMAGE_RE": {
+    "pattern": "!\\[[^\\]]*\\]\\([^)]*\\)",
+    "ignoreCase": false,
+    "multiline": false
+  },
+  "MARKDOWN_LINK_RE": {
+    "pattern": "\\[([^\\]]+)\\]\\([^)]*\\)",
+    "ignoreCase": false,
+    "multiline": false
+  },
+  "MARKDOWN_DECORATION_RE": {
+    "pattern": "(?:\\*\\*|\\*|__|~~|`)",
+    "ignoreCase": false,
+    "multiline": false
+  },
+  "ALT_HEADER_RE": {
+    "pattern": "(?im)^\\s*(?:\\*{0,2})?(?:alternative\\s+(?:titles?|names?)|alternate\\s+(?:titles?|names?)|alt\\.?\\s+(?:titles?|names?)|associated\\s+name(?:\\(s\\)|s)?|synonyms?|other\\s+names?|aliases?)(?:\\*{0,2})?\\s*[:\\-]?\\s*(.*)$",
+    "ignoreCase": true,
+    "multiline": true
+  },
+  "HARD_SUMMARY_SECTION_RE": {
+    "pattern": "(?i)(?:\\*{0,2})?(?:chronology\\s+of\\s+works(?:\\s+in\\s+this\\s+universe)?|official\\s+translations?|original\\s+(?:webtoon|manga|novel|manhwa|manhua)|external\\s+links?|related\\s+works?|related\\s+series|where\\s+to\\s+read)(?:\\*{0,2})?\\s*:",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "INLINE_ALIAS_SECTION_RE": {
+    "pattern": "(?i)(?:\\*{0,2})?(?:alternative\\s+(?:titles?|names?)|alternate\\s+(?:titles?|names?)|alt\\.?\\s+(?:titles?|names?)|associated\\s+name(?:\\(s\\)|s)?|synonyms?|other\\s+names?|aliases?)(?:\\*{0,2})?\\s*:",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "LINE_METADATA_RE": {
+    "pattern": "(?i)^\\s*(?:[-•]\\s*)?(?:\\*{0,2})?(?:authors?|artists?|genres?|status|serialization|publishers?|publication|type|demographic|licensed|magazine|original\\s+language|translated\\s+language|source|sources)(?:\\*{0,2})?\\s*:",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "CREDIT_LINE_RE": {
+    "pattern": "(?i)^\\s*(?:\\(|\\[)?\\s*(?:from|source|summary\\s+from|description\\s+from)\\s+[\\w .&'’\\-]+(?:\\)|\\])?\\s*\\.?\\s*$",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "STOP_HEADER_RE": {
+    "pattern": "(?m)^\\s*[A-Z][A-Za-z ()/&'’\\-]{2,40}\\s*:\\s*",
+    "ignoreCase": false,
+    "multiline": true
+  },
+  "COLOR_BRACKET_RE": {
+    "pattern": "(?i)[\\[(（【]\\s*(?:(?:full[ -]?colou?r|colou?red|colou?r\\s+(?:edition|version|ver\\.?|ver)|official\\s+colou?r|digital\\s+colou?r)|(?:カラー(?:版)?|フルカラー|彩色(?:版)?|全彩(?:版)?|컬러(?:판)?|채색(?:판)?))\\s*[\\])）】]",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "MONO_BRACKET_RE": {
+    "pattern": "(?i)[\\[(（【]\\s*(?:(?:monochrome(?:\\s+(?:edition|version|ver\\.?|ver))?|black\\s*(?:and|&)\\s*white|b\\s*&?\\s*w)|(?:モノクロ(?:版)?|白黒(?:版)?|흑백(?:판)?))\\s*[\\])）】]",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "COLOR_SUFFIX_RE": {
+    "pattern": "(?i)(?:\\s*[-:–—]\\s*(?:(?:full[ -]?colou?r|colou?red|colou?r\\s+(?:edition|version|ver\\.?|ver)|official\\s+colou?r|digital\\s+colou?r))|\\s+(?:colou?r\\s+(?:edition|version|ver\\.?|ver)|full[ -]?colou?r|official\\s+colou?r|digital\\s+colou?r)|\\s*(?:(?:カラー(?:版)?|フルカラー|彩色(?:版)?|全彩(?:版)?|컬러(?:판)?|채색(?:판)?)))\\s*$",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "MONO_SUFFIX_RE": {
+    "pattern": "(?i)(?:\\s*[-:–—]\\s*(?:(?:monochrome(?:\\s+(?:edition|version|ver\\.?|ver))?|black\\s*(?:and|&)\\s*white|b\\s*&?\\s*w))|\\s+(?:monochrome\\s+(?:edition|version|ver\\.?|ver)|black\\s*(?:and|&)\\s*white)|\\s*(?:(?:モノクロ(?:版)?|白黒(?:版)?|흑백(?:판)?)))\\s*$",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "COLOR_TITLE_RE": {
+    "pattern": "(?i)(?:[\\[(（【]\\s*(?:(?:full[ -]?colou?r|colou?red|colou?r\\s+(?:edition|version|ver\\.?|ver)|official\\s+colou?r|digital\\s+colou?r)|(?:カラー(?:版)?|フルカラー|彩色(?:版)?|全彩(?:版)?|컬러(?:판)?|채색(?:판)?))\\s*[\\])）】]|(?:\\s*[-:–—]\\s*(?:(?:full[ -]?colou?r|colou?red|colou?r\\s+(?:edition|version|ver\\.?|ver)|official\\s+colou?r|digital\\s+colou?r))|\\s+(?:colou?r\\s+(?:edition|version|ver\\.?|ver)|full[ -]?colou?r|official\\s+colou?r|digital\\s+colou?r)|\\s*(?:(?:カラー(?:版)?|フルカラー|彩色(?:版)?|全彩(?:版)?|컬러(?:판)?|채색(?:판)?)))\\s*$)",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "MONO_TITLE_RE": {
+    "pattern": "(?i)(?:[\\[(（【]\\s*(?:(?:monochrome(?:\\s+(?:edition|version|ver\\.?|ver))?|black\\s*(?:and|&)\\s*white|b\\s*&?\\s*w)|(?:モノクロ(?:版)?|白黒(?:版)?|흑백(?:판)?))\\s*[\\])）】]|(?:\\s*[-:–—]\\s*(?:(?:monochrome(?:\\s+(?:edition|version|ver\\.?|ver))?|black\\s*(?:and|&)\\s*white|b\\s*&?\\s*w))|\\s+(?:monochrome\\s+(?:edition|version|ver\\.?|ver)|black\\s*(?:and|&)\\s*white)|\\s*(?:(?:モノクロ(?:版)?|白黒(?:版)?|흑백(?:판)?)))\\s*$)",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "WEBTOON_TITLE_RE": {
+    "pattern": "(?i)(?:[\\[(（【]\\s*webtoon\\s*[\\])）】]|\\bwebtoon\\s+(?:version|edition|adaptation)\\b|\\b(?:version|edition|adaptation)\\s*:\\s*webtoon\\b|웹툰(?:판|버전)?|ウェブトゥーン(?:版)?)",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "MANGA_TITLE_RE": {
+    "pattern": "(?i)(?:[\\[(（【]\\s*manga\\s*[\\])）】]|\\bmanga\\s+(?:version|edition|adaptation)\\b|\\b(?:version|edition|adaptation)\\s*:\\s*manga\\b|漫画版|マンガ版|만화판|망가판)",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "MEDIA_SUFFIX_RE": {
+    "pattern": "(?i)\\s*(?:[\\[(（【]\\s*(?:manga|webtoon)\\s*[\\])）】]|(?:manga|webtoon)\\s+(?:version|edition|adaptation))\\s*$",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "PLACEHOLDER_TITLE_RE": {
+    "pattern": "^(?:n/?a|n\\s+a|na|none|null|unknown|untitled|no\\s+title|no\\s+(?:alternative|alternate|associated|other)\\s+(?:title|titles|name|names|synonym|synonyms|alias|aliases)|no\\s+synonyms?|no\\s+aliases?|no\\s+other\\s+stored\\s+titles)$",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "_SOURCE_SUFFIX_SEPARATOR_RE": {
+    "pattern": "\\s*(?:[-–—|·•]+)\\s*([^|–—]+?)\\s*$",
+    "ignoreCase": false,
+    "multiline": false
+  },
+  "_SOURCE_LANG_SUFFIX_RE": {
+    "pattern": "(?i)\\s*[\\[(]\\s*[a-z]{2,3}\\s*[\\])]\\s*$",
+    "ignoreCase": true,
+    "multiline": false
+  },
+  "_ALIAS_FRAGMENT_RE": {
+    "pattern": "(?i)^(?:did(?:n['’]?t)?|do(?:n['’]?t)?|does(?:n['’]?t)?|is(?:n['’]?t)?|are(?:n['’]?t)?|was(?:n['’]?t)?|were(?:n['’]?t)?|can(?:['’]?t)?|could(?:n['’]?t)?|would(?:n['’]?t)?|should(?:n['’]?t)?|won(?:['’]?t)?|right|really|still)\\b",
+    "ignoreCase": true,
+    "multiline": false
+  }
+}

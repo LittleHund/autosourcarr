@@ -1,0 +1,260 @@
+{
+  "identities": [
+    {
+      "sources": [],
+      "expected": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "sources": [
+        {
+          "id": "17",
+          "lang": "en",
+          "name": "Example"
+        }
+      ],
+      "expected": "c8d91a0f134769c7cf3314127b6a8698ae9eba8aef99dcdfcce85fd6482ff495"
+    },
+    {
+      "sources": [
+        {
+          "id": 9223372036854775807,
+          "lang": "en",
+          "name": "Large"
+        }
+      ],
+      "expected": "f164d038e203a96efc6a47b54fd0402125d34df3688a71ec30f41a1a7cc80b7e"
+    },
+    {
+      "sources": [
+        {
+          "id": "-9223372036854775808",
+          "lang": "ja",
+          "name": "\u4f5c\u54c1\ud83d\ude00"
+        }
+      ],
+      "expected": "1713cd6f14090e16606fa03463bebf938b59962407a9ed6b6313b3036fe39ba2"
+    },
+    {
+      "sources": [
+        {
+          "id": "9",
+          "lang": "en",
+          "name": "Zulu"
+        },
+        {
+          "id": "10",
+          "lang": "nl",
+          "name": "Alpha"
+        }
+      ],
+      "expected": "7eb4ff2364607df9d11a6eb13ba674f46bd93b20157fce830d38e5441d8ab7b5"
+    },
+    {
+      "sources": [
+        {
+          "id": "17",
+          "lang": null,
+          "name": null
+        }
+      ],
+      "expected": "f15342a56624eace0d228263d103b46d01592c61f75cfe6deb6d6b8b2576c1ac"
+    },
+    {
+      "sources": [
+        {
+          "id": "17"
+        }
+      ],
+      "expected": "ec53bc913360f4b78b0486d942ddb5550353c237c17aef896340035e6d584ca5"
+    },
+    {
+      "sources": [
+        {
+          "id": "17",
+          "lang": "en",
+          "name": "\u00e9"
+        },
+        {
+          "id": "17",
+          "lang": "ja",
+          "name": "\ud83d\ude00"
+        }
+      ],
+      "expected": "1fe9a519799dd7c73ce6478d7f5c44ca353e92eba2d623c2fb59a1a710c34092"
+    }
+  ],
+  "retained_apks": [
+    {
+      "name": "no-evidence",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "recorded-installed-upload",
+      "expected": {
+        "state": "selected",
+        "sha256": "616a426b2617c4befe29c2800e97dec30492633893f4e74fe3fb94bfb61142f9",
+        "basis": "recorded-installed-upload"
+      }
+    },
+    {
+      "name": "invalid-state-installing",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-state-uncertain",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-state-failed",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-completed_at-True",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-completed_at--1",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-completed_at-nan",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-completed_at-inf",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-sha256-0000000000000000000000000000000000000000000000000000000000000000",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "invalid-pkgName-eu.example.other",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "explicit-original-priority",
+      "expected": {
+        "state": "selected",
+        "sha256": "616a426b2617c4befe29c2800e97dec30492633893f4e74fe3fb94bfb61142f9",
+        "basis": "user-confirmed-original"
+      }
+    },
+    {
+      "name": "provided-mismatch-confirmed_original-False",
+      "expected": {
+        "state": "selected",
+        "sha256": "2b04b08264527f747477d5d9426991e39b35737383c321b2dc9b5cf244ad06c2",
+        "basis": "recorded-installed-upload"
+      }
+    },
+    {
+      "name": "provided-mismatch-confirmed_original-1",
+      "expected": {
+        "state": "selected",
+        "sha256": "2b04b08264527f747477d5d9426991e39b35737383c321b2dc9b5cf244ad06c2",
+        "basis": "recorded-installed-upload"
+      }
+    },
+    {
+      "name": "provided-mismatch-target_version-1.4.22",
+      "expected": {
+        "state": "selected",
+        "sha256": "2b04b08264527f747477d5d9426991e39b35737383c321b2dc9b5cf244ad06c2",
+        "basis": "recorded-installed-upload"
+      }
+    },
+    {
+      "name": "provided-mismatch-target_jar_sha256-2222222222222222222222222222222222222222222222222222222222222222",
+      "expected": {
+        "state": "selected",
+        "sha256": "2b04b08264527f747477d5d9426991e39b35737383c321b2dc9b5cf244ad06c2",
+        "basis": "recorded-installed-upload"
+      }
+    },
+    {
+      "name": "ambiguous-equal-timestamps",
+      "expected": {
+        "state": "rejected",
+        "message": "Original source upload receipts are ambiguous; no APK was selected"
+      }
+    },
+    {
+      "name": "corrupt-latest-no-fallback",
+      "expected": {
+        "state": "rejected",
+        "message": "Retained original APK failed its saved digest or package check"
+      }
+    },
+    {
+      "name": "selected-apk-wrong-package",
+      "expected": {
+        "state": "rejected",
+        "message": "Retained original APK failed its saved digest or package check"
+      }
+    },
+    {
+      "name": "oversized-receipt-skipped",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "oversized-selected-apk-refused",
+      "expected": {
+        "state": "rejected",
+        "message": "Retained source upload is unsafe, empty or oversized"
+      }
+    },
+    {
+      "name": "hardlinked-selected-apk-refused",
+      "expected": {
+        "state": "rejected",
+        "message": "Retained source upload is unsafe, empty or oversized"
+      }
+    },
+    {
+      "name": "hardlinked-receipt-skipped",
+      "expected": {
+        "state": "missing"
+      }
+    },
+    {
+      "name": "bounded-folder-scan",
+      "expected": {
+        "state": "rejected",
+        "message": "Retained upload selection exceeded its bounded receipt limit; no package was selected"
+      }
+    }
+  ],
+  "apk": "UEsDBBQAAAAIAAAAIQBVl+xRTQAAAFYAAAATAAAAQW5kcm9pZE1hbmlmZXN0LnhtbDXM2wmAMAxG4VWkA6QL1O7yU6OG3gKNULe3L8J5++CEiiYnD9sUKePi3fFDGQ0HkyHd8vYqxNO4DemNeDVRtbCLAapFEmyBj8H/r/gBUEsDBBQAAAAIAAAAIQDhRzDyEgAAABAAAAALAAAAY2xhc3Nlcy5kZXhLSa3gMjA2ZcgvykzPzEvMAQBQSwECFAAUAAAACAAAACEAVZfsUU0AAABWAAAAEwAAAAAAAAAAAAAAgAEAAAAAQW5kcm9pZE1hbmlmZXN0LnhtbFBLAQIUABQAAAAIAAAAIQDhRzDyEgAAABAAAAALAAAAAAAAAAAAAACAAX4AAABjbGFzc2VzLmRleFBLBQYAAAAAAgACAHoAAAC5AAAAAAA=",
+  "apks": {
+    "newer-upload": "UEsDBBQAAAAIAAAAIQBVl+xRTQAAAFYAAAATAAAAQW5kcm9pZE1hbmlmZXN0LnhtbDXM2wmAMAxG4VWkA6QL1O7yU6OG3gKNULe3L8J5++CEiiYnD9sUKePi3fFDGQ0HkyHd8vYqxNO4DemNeDVRtbCLAapFEmyBj8H/r/gBUEsDBBQAAAAIAAAAIQCrgHnQFgAAABQAAAALAAAAY2xhc3Nlcy5kZXhLSa3gMjA2ZchLLU8t0i0tyMlPTAEAUEsBAhQAFAAAAAgAAAAhAFWX7FFNAAAAVgAAABMAAAAAAAAAAAAAAIABAAAAAEFuZHJvaWRNYW5pZmVzdC54bWxQSwECFAAUAAAACAAAACEAq4B50BYAAAAUAAAACwAAAAAAAAAAAAAAgAF+AAAAY2xhc3Nlcy5kZXhQSwUGAAAAAAIAAgB6AAAAvQAAAAAA",
+    "one": "UEsDBBQAAAAIAAAAIQBVl+xRTQAAAFYAAAATAAAAQW5kcm9pZE1hbmlmZXN0LnhtbDXM2wmAMAxG4VWkA6QL1O7yU6OG3gKNULe3L8J5++CEiiYnD9sUKePi3fFDGQ0HkyHd8vYqxNO4DemNeDVRtbCLAapFEmyBj8H/r/gBUEsDBBQAAAAIAAAAIQAjXp6gDQAAAAsAAAALAAAAY2xhc3Nlcy5kZXhLSa3gMjA2ZcjPSwUAUEsBAhQAFAAAAAgAAAAhAFWX7FFNAAAAVgAAABMAAAAAAAAAAAAAAIABAAAAAEFuZHJvaWRNYW5pZmVzdC54bWxQSwECFAAUAAAACAAAACEAI16eoA0AAAALAAAACwAAAAAAAAAAAAAAgAF+AAAAY2xhc3Nlcy5kZXhQSwUGAAAAAAIAAgB6AAAAtAAAAAAA",
+    "two": "UEsDBBQAAAAIAAAAIQBVl+xRTQAAAFYAAAATAAAAQW5kcm9pZE1hbmlmZXN0LnhtbDXM2wmAMAxG4VWkA6QL1O7yU6OG3gKNULe3L8J5++CEiiYnD9sUKePi3fFDGQ0HkyHd8vYqxNO4DemNeDVRtbCLAapFEmyBj8H/r/gBUEsDBBQAAAAIAAAAIQC0UjjLDQAAAAsAAAALAAAAY2xhc3Nlcy5kZXhLSa3gMjA2ZSgpzwcAUEsBAhQAFAAAAAgAAAAhAFWX7FFNAAAAVgAAABMAAAAAAAAAAAAAAIABAAAAAEFuZHJvaWRNYW5pZmVzdC54bWxQSwECFAAUAAAACAAAACEAtFI4yw0AAAALAAAACwAAAAAAAAAAAAAAgAF+AAAAY2xhc3Nlcy5kZXhQSwUGAAAAAAIAAgB6AAAAtAAAAAAA",
+    "older": "UEsDBBQAAAAIAAAAIQBVl+xRTQAAAFYAAAATAAAAQW5kcm9pZE1hbmlmZXN0LnhtbDXM2wmAMAxG4VWkA6QL1O7yU6OG3gKNULe3L8J5++CEiiYnD9sUKePi3fFDGQ0HkyHd8vYqxNO4DemNeDVRtbCLAapFEmyBj8H/r/gBUEsDBBQAAAAIAAAAIQC9lOl+DwAAAA0AAAALAAAAY2xhc3Nlcy5kZXhLSa3gMjA2ZcjPSUktAgBQSwECFAAUAAAACAAAACEAVZfsUU0AAABWAAAAEwAAAAAAAAAAAAAAgAEAAAAAQW5kcm9pZE1hbmlmZXN0LnhtbFBLAQIUABQAAAAIAAAAIQC9lOl+DwAAAA0AAAALAAAAAAAAAAAAAACAAX4AAABjbGFzc2VzLmRleFBLBQYAAAAAAgACAHoAAAC2AAAAAAA=",
+    "latest": "UEsDBBQAAAAIAAAAIQBVl+xRTQAAAFYAAAATAAAAQW5kcm9pZE1hbmlmZXN0LnhtbDXM2wmAMAxG4VWkA6QL1O7yU6OG3gKNULe3L8J5++CEiiYnD9sUKePi3fFDGQ0HkyHd8vYqxNO4DemNeDVRtbCLAapFEmyBj8H/r/gBUEsDBBQAAAAIAAAAIQDMrMIHEAAAAA4AAAALAAAAY2xhc3Nlcy5kZXhLSa3gMjA2ZchJLEktLgEAUEsBAhQAFAAAAAgAAAAhAFWX7FFNAAAAVgAAABMAAAAAAAAAAAAAAIABAAAAAEFuZHJvaWRNYW5pZmVzdC54bWxQSwECFAAUAAAACAAAACEAzKzCBxAAAAAOAAAACwAAAAAAAAAAAAAAgAF+AAAAY2xhc3Nlcy5kZXhQSwUGAAAAAAIAAgB6AAAAtwAAAAAA",
+    "other-package": "UEsDBBQAAAAIAAAAIQDiocikOgAAAD4AAAATAAAAQW5kcm9pZE1hbmlmZXN0LnhtbLPJTczLTEstLlEoSEzOTkxPtVVKLdVLrUjMLchJ1csvyUgtUrKzSSwoyMlMTizJzM/Tt7PRh+mxAwBQSwMEFAAAAAgAAAAhAOFHMPISAAAAEAAAAAsAAABjbGFzc2VzLmRleEtJreAyMDZlyC/KTM/MS8wBAFBLAQIUABQAAAAIAAAAIQDiocikOgAAAD4AAAATAAAAAAAAAAAAAACAAQAAAABBbmRyb2lkTWFuaWZlc3QueG1sUEsBAhQAFAAAAAgAAAAhAOFHMPISAAAAEAAAAAsAAAAAAAAAAAAAAIABawAAAGNsYXNzZXMuZGV4UEsFBgAAAAACAAIAegAAAKYAAAAAAA=="
+  },
+  "unavailable_native_fixtures": []
+}

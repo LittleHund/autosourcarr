@@ -1,0 +1,1068 @@
+[
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [],
+      "proxy_detected": false,
+      "proxy_headers": [],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": true
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "Alice",
+      "remote-email": "alice@example.test",
+      "remote-groups": "readers, admins"
+    },
+    "expected": {
+      "key": "authelia:alice",
+      "user": "Alice",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "alice@example.test",
+      "groups": [
+        "readers",
+        "admins"
+      ],
+      "identity_headers_present": [
+        "Remote-Email",
+        "Remote-Groups",
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-email",
+        "remote-groups",
+        "remote-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "Straße"
+    },
+    "expected": {
+      "key": "authelia:strasse",
+      "user": "Straße",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "İΣς𐐀"
+    },
+    "expected": {
+      "key": "authelia:i̇σσ𐐨",
+      "user": "İΣς𐐀",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "first, second"
+    },
+    "expected": {
+      "key": "authelia:first",
+      "user": "first",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "  , second"
+    },
+    "expected": {
+      "key": "authelia:",
+      "user": "",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-email": "ALICE@EXAMPLE.TEST"
+    },
+    "expected": {
+      "key": "authelia-email:alice@example.test",
+      "user": "ALICE@EXAMPLE.TEST",
+      "header": "Remote-Email",
+      "authelia": true,
+      "email": "ALICE@EXAMPLE.TEST",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-Email"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-email"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "x-forwarded-email": "User@example.test"
+    },
+    "expected": {
+      "key": "authelia-email:user@example.test",
+      "user": "User@example.test",
+      "header": "X-Forwarded-Email",
+      "authelia": true,
+      "email": "User@example.test",
+      "groups": [],
+      "identity_headers_present": [
+        "X-Forwarded-Email"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-forwarded-email"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "x-forwarded-for": "192.0.2.1"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-forwarded-for"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "canonical",
+      "x-forwarded-user": "fallback"
+    },
+    "expected": {
+      "key": "authelia:canonical",
+      "user": "canonical",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user",
+        "x-forwarded-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "canonical",
+      "x-custom-user": "configured"
+    },
+    "expected": {
+      "key": "authelia:canonical",
+      "user": "canonical",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "x-auth-request-preferred-username": "fallback"
+    },
+    "expected": {
+      "key": "authelia:fallback",
+      "user": "fallback",
+      "header": "X-Auth-Request-Preferred-Username",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "X-Auth-Request-Preferred-Username"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-auth-request-preferred-username"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-groups": ", team, , group0,group1,group2,group3,group4,group5,group6,group7,group8,group9,group10,group11,group12,group13,group14,group15,group16,group17,group18,group19,group20,group21,group22,group23,group24,group25,group26,group27,group28,group29,group30,group31,group32,group33,group34,group35,group36,group37,group38,group39,group40,group41,group42,group43,group44,group45,group46,group47,group48,group49,group50,group51,group52,group53,group54,group55,group56,group57,group58,group59,group60,group61,group62,group63,group64,group65,group66,group67,group68,group69,group70,group71,group72,group73,group74,group75,group76,group77,group78,group79"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-Groups"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-groups"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀"
+    },
+    "expected": {
+      "key": "authelia:𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨",
+      "user": "𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [],
+      "proxy_detected": false,
+      "proxy_headers": [],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": true
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "Alice",
+      "remote-email": "alice@example.test",
+      "remote-groups": "readers, admins"
+    },
+    "expected": {
+      "key": "authelia:alice",
+      "user": "Alice",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "alice@example.test",
+      "groups": [
+        "readers",
+        "admins"
+      ],
+      "identity_headers_present": [
+        "Remote-Email",
+        "Remote-Groups",
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-email",
+        "remote-groups",
+        "remote-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "Straße"
+    },
+    "expected": {
+      "key": "authelia:strasse",
+      "user": "Straße",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "İΣς𐐀"
+    },
+    "expected": {
+      "key": "authelia:i̇σσ𐐨",
+      "user": "İΣς𐐀",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "first, second"
+    },
+    "expected": {
+      "key": "authelia:first",
+      "user": "first",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "  , second"
+    },
+    "expected": {
+      "key": "authelia:",
+      "user": "",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-email": "ALICE@EXAMPLE.TEST"
+    },
+    "expected": {
+      "key": "authelia-email:alice@example.test",
+      "user": "ALICE@EXAMPLE.TEST",
+      "header": "Remote-Email",
+      "authelia": true,
+      "email": "ALICE@EXAMPLE.TEST",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-Email"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-email"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "x-forwarded-email": "User@example.test"
+    },
+    "expected": {
+      "key": "authelia-email:user@example.test",
+      "user": "User@example.test",
+      "header": "X-Forwarded-Email",
+      "authelia": true,
+      "email": "User@example.test",
+      "groups": [],
+      "identity_headers_present": [
+        "X-Forwarded-Email"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-forwarded-email"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "x-forwarded-for": "192.0.2.1"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-forwarded-for"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "canonical",
+      "x-forwarded-user": "fallback"
+    },
+    "expected": {
+      "key": "authelia:canonical",
+      "user": "canonical",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user",
+        "x-forwarded-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "canonical",
+      "x-custom-user": "configured"
+    },
+    "expected": {
+      "key": "authelia:configured",
+      "user": "configured",
+      "header": "X-Custom-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User",
+        "X-Custom-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "x-auth-request-preferred-username": "fallback"
+    },
+    "expected": {
+      "key": "authelia:fallback",
+      "user": "fallback",
+      "header": "X-Auth-Request-Preferred-Username",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "X-Auth-Request-Preferred-Username"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-auth-request-preferred-username"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-groups": ", team, , group0,group1,group2,group3,group4,group5,group6,group7,group8,group9,group10,group11,group12,group13,group14,group15,group16,group17,group18,group19,group20,group21,group22,group23,group24,group25,group26,group27,group28,group29,group30,group31,group32,group33,group34,group35,group36,group37,group38,group39,group40,group41,group42,group43,group44,group45,group46,group47,group48,group49,group50,group51,group52,group53,group54,group55,group56,group57,group58,group59,group60,group61,group62,group63,group64,group65,group66,group67,group68,group69,group70,group71,group72,group73,group74,group75,group76,group77,group78,group79"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-Groups"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-groups"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "X-Custom-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀"
+    },
+    "expected": {
+      "key": "authelia:𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨",
+      "user": "𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "X-Custom-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [],
+      "proxy_detected": false,
+      "proxy_headers": [],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": true
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "Alice",
+      "remote-email": "alice@example.test",
+      "remote-groups": "readers, admins"
+    },
+    "expected": {
+      "key": "authelia:alice",
+      "user": "Alice",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "alice@example.test",
+      "groups": [
+        "readers",
+        "admins"
+      ],
+      "identity_headers_present": [
+        "Remote-Email",
+        "Remote-Groups",
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-email",
+        "remote-groups",
+        "remote-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "Straße"
+    },
+    "expected": {
+      "key": "authelia:strasse",
+      "user": "Straße",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "İΣς𐐀"
+    },
+    "expected": {
+      "key": "authelia:i̇σσ𐐨",
+      "user": "İΣς𐐀",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "first, second"
+    },
+    "expected": {
+      "key": "authelia:first",
+      "user": "first",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "  , second"
+    },
+    "expected": {
+      "key": "authelia:",
+      "user": "",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-email": "ALICE@EXAMPLE.TEST"
+    },
+    "expected": {
+      "key": "authelia-email:alice@example.test",
+      "user": "ALICE@EXAMPLE.TEST",
+      "header": "Remote-Email",
+      "authelia": true,
+      "email": "ALICE@EXAMPLE.TEST",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-Email"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-email"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "x-forwarded-email": "User@example.test"
+    },
+    "expected": {
+      "key": "authelia-email:user@example.test",
+      "user": "User@example.test",
+      "header": "X-Forwarded-Email",
+      "authelia": true,
+      "email": "User@example.test",
+      "groups": [],
+      "identity_headers_present": [
+        "X-Forwarded-Email"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-forwarded-email"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "x-forwarded-for": "192.0.2.1"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-forwarded-for"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "canonical",
+      "x-forwarded-user": "fallback"
+    },
+    "expected": {
+      "key": "authelia:canonical",
+      "user": "canonical",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user",
+        "x-forwarded-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "canonical",
+      "x-custom-user": "configured"
+    },
+    "expected": {
+      "key": "authelia:canonical",
+      "user": "canonical",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "x-auth-request-preferred-username": "fallback"
+    },
+    "expected": {
+      "key": "authelia:fallback",
+      "user": "fallback",
+      "header": "X-Auth-Request-Preferred-Username",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "X-Auth-Request-Preferred-Username"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "x-auth-request-preferred-username"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-groups": ", team, , group0,group1,group2,group3,group4,group5,group6,group7,group8,group9,group10,group11,group12,group13,group14,group15,group16,group17,group18,group19,group20,group21,group22,group23,group24,group25,group26,group27,group28,group29,group30,group31,group32,group33,group34,group35,group36,group37,group38,group39,group40,group41,group42,group43,group44,group45,group46,group47,group48,group49,group50,group51,group52,group53,group54,group55,group56,group57,group58,group59,group60,group61,group62,group63,group64,group65,group66,group67,group68,group69,group70,group71,group72,group73,group74,group75,group76,group77,group78,group79"
+    },
+    "expected": {
+      "key": "local:default",
+      "user": "Local user",
+      "header": "",
+      "authelia": false,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-Groups"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-groups"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  },
+  {
+    "custom_header": "Remote-User",
+    "headers": {
+      "host": "app.example.test",
+      "remote-user": "𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀"
+    },
+    "expected": {
+      "key": "authelia:𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨𐐨",
+      "user": "𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀𐐀",
+      "header": "Remote-User",
+      "authelia": true,
+      "email": "",
+      "groups": [],
+      "identity_headers_present": [
+        "Remote-User"
+      ],
+      "proxy_detected": true,
+      "proxy_headers": [
+        "remote-user"
+      ],
+      "custom_header": "Remote-User",
+      "host": "app.example.test",
+      "direct_access": false
+    }
+  }
+]

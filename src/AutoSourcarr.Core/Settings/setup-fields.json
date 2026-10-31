@@ -1,0 +1,453 @@
+[
+  {
+    "key": "MAIN_SUWAYOMI_URL",
+    "step": "library",
+    "label": "Main Suwayomi address",
+    "description": "The reader server that owns this instance’s library. Use its Docker service name and internal port, for example http://suwayomi:30058.",
+    "kind": "url",
+    "allow_empty": true
+  },
+  {
+    "key": "TZ",
+    "step": "library",
+    "label": "Time zone",
+    "description": "Used for readable times and scheduled work. Example: Europe/Amsterdam.",
+    "kind": "text",
+    "default": "Europe/Amsterdam"
+  },
+  {
+    "key": "MAIN_SUWAYOMI_DOWNLOADS_PATH",
+    "step": "library",
+    "label": "Mounted downloads folder",
+    "description": "Optional existing container path used to report downloaded sizes. This does not move files or create a Docker mount.",
+    "kind": "path",
+    "allow_empty": true,
+    "advanced": true
+  },
+  {
+    "key": "EXTENSION_STORES",
+    "step": "sources",
+    "label": "Extension repositories",
+    "description": "One HTTPS repository manifest per line. Keep your existing repositories or add Keiyoushi; sources are installed later in Discover.",
+    "kind": "repositories",
+    "file_id": "source_host"
+  },
+  {
+    "key": "SOURCE_LANGUAGES",
+    "step": "sources",
+    "label": "Languages for newly discovered sources",
+    "description": "Comma-separated codes: en for English, all for multilingual. Existing source selections stay unchanged; manage them in Sources.",
+    "kind": "languages"
+  },
+  {
+    "key": "SOURCE_AUTO_CHALLENGES",
+    "step": "sources",
+    "label": "Automatic challenge handling",
+    "description": "Use supported extension handlers and the bundled solver. Unresolved CAPTCHA/WAF pauses the website and asks for help, with at most one automatic retry an hour.",
+    "kind": "boolean"
+  },
+  {
+    "key": "CONTINUOUS_CATALOG_DISCOVERY",
+    "step": "matching",
+    "label": "Build the catalogue in the background",
+    "description": "Collect source feeds at low priority so later browsing can use saved entries. Existing source pacing still applies.",
+    "kind": "boolean"
+  },
+  {
+    "key": "AUTOMATIC_DUPLICATE_MATCHING",
+    "step": "matching",
+    "label": "Automatic duplicate matching",
+    "description": "Merge only when the existing identity and evidence checks agree. Uncertain pairs remain available for manual review.",
+    "kind": "boolean"
+  },
+  {
+    "key": "AUTO_MISSING_SOURCE_DISCOVERY",
+    "step": "matching",
+    "label": "Find additional sources",
+    "description": "Search for sources missing from an entry while retaining the strict matching rules.",
+    "kind": "boolean"
+  },
+  {
+    "key": "METADATA_IDENTITY_ENABLED",
+    "step": "matching",
+    "label": "Use metadata catalogues",
+    "description": "Consult supported identity databases to improve names, aliases and metadata. They do not supply chapter pages.",
+    "kind": "boolean"
+  },
+  {
+    "key": "METADATA_IDENTITY_INCLUDE_ADULT",
+    "step": "matching",
+    "label": "Include adult metadata results",
+    "description": "Allow identity providers to return adult entries when applicable; this does not install or enable sources.",
+    "kind": "boolean"
+  },
+  {
+    "key": "AUTO_MATCH_THRESHOLD",
+    "step": "matching",
+    "label": "Automatic title threshold",
+    "description": "Higher values are stricter. The application never allows the automatic threshold below 0.94.",
+    "kind": "number",
+    "minimum": 0.94,
+    "maximum": 1,
+    "advanced": true
+  },
+  {
+    "key": "FUZZY_REVIEW_THRESHOLD",
+    "step": "matching",
+    "label": "Candidate review threshold",
+    "description": "Lower-scoring suggestions may appear for review; they are not automatically accepted.",
+    "kind": "number",
+    "minimum": 0,
+    "maximum": 1,
+    "advanced": true
+  },
+  {
+    "key": "COLOR_DETECTION_ENABLED",
+    "step": "matching",
+    "label": "Check colored editions",
+    "description": "Use page evidence when available to keep colored and monochrome editions separate.",
+    "kind": "boolean",
+    "advanced": true
+  },
+  {
+    "key": "METADATA_IDENTITY_PROVIDERS",
+    "step": "matching",
+    "label": "Metadata providers",
+    "description": "Comma-separated provider identifiers. Keep the supplied set unless you intentionally want fewer external lookups.",
+    "kind": "providers",
+    "advanced": true
+  },
+  {
+    "key": "AUTOSOURCARR_INTERNAL_URL",
+    "step": "readers",
+    "label": "Suwayomi reader address",
+    "description": "Baked into this instance’s JAR. Normally http://autosourcarr:8282; for the private instance use http://private-autosourcarr:8282.",
+    "kind": "url"
+  },
+  {
+    "key": "AUTOSOURCARR_PUBLIC_URL",
+    "step": "readers",
+    "label": "Android reader address",
+    "description": "URL reachable from Mihon/Tachiyomi. Use HTTPS for remote access. It must point to this same AutoSourcarr instance.",
+    "kind": "url"
+  },
+  {
+    "key": "AUTOSOURCARR_READER_API_TOKEN",
+    "step": "readers",
+    "label": "Reader API key",
+    "description": "Keep the saved key or enter a replacement of 32–256 letters, digits, dots, tildes, dashes or underscores. Changing it requires rebuilding and reinstalling the APK.",
+    "kind": "secret",
+    "allow_empty": true
+  },
+  {
+    "key": "BROWSE_PAGE_SIZE",
+    "step": "performance",
+    "label": "Entries per browse page",
+    "description": "Smaller pages render sooner; larger pages show more entries at once.",
+    "kind": "integer",
+    "minimum": 1,
+    "maximum": 500
+  },
+  {
+    "key": "MAX_SOURCE_CONCURRENCY",
+    "step": "performance",
+    "label": "Concurrent source requests",
+    "description": "Maximum independent source requests. More is not always faster; keep conservative limits to avoid upstream timeouts.",
+    "kind": "integer",
+    "minimum": 1,
+    "maximum": 16
+  },
+  {
+    "key": "SOURCE_HOST_WORK_CONCURRENCY",
+    "step": "performance",
+    "label": "Source engine capacity",
+    "description": "Shared source-engine work limit. Background work retains its own smaller allowance.",
+    "kind": "integer",
+    "minimum": 1,
+    "maximum": 16
+  },
+  {
+    "key": "BACKGROUND_SOURCE_CONCURRENCY",
+    "step": "performance",
+    "label": "Background source requests",
+    "description": "Keep this below total capacity so interactive browsing and manual actions have room.",
+    "kind": "integer",
+    "minimum": 1,
+    "maximum": 8,
+    "advanced": true
+  },
+  {
+    "key": "IMPORT_RESOLVE_CONCURRENCY",
+    "step": "performance",
+    "label": "Parallel import resolution",
+    "description": "Bound concurrent import matching work; manual actions stay separate from automatic queues.",
+    "kind": "integer",
+    "minimum": 1,
+    "maximum": 8,
+    "advanced": true
+  },
+  {
+    "key": "SOURCE_REQUEST_TIMEOUT",
+    "step": "performance",
+    "label": "Source request timeout (seconds)",
+    "description": "Maximum upstream request time. Raising this cannot repair an unavailable website.",
+    "kind": "number",
+    "minimum": 1,
+    "maximum": 180,
+    "advanced": true
+  },
+  {
+    "key": "FEDERATED_OVERALL_TIMEOUT",
+    "step": "performance",
+    "label": "Browse search budget (seconds)",
+    "description": "Bound live multi-source work; previously cached entries remain available.",
+    "kind": "number",
+    "minimum": 1,
+    "maximum": 120,
+    "advanced": true
+  },
+  {
+    "key": "TRANSLATION_API_URL",
+    "step": "tools",
+    "label": "Title translation",
+    "description": "Turn built-in translation on or off. Models load on demand and are cached; translated aliases do not prove two works are identical.",
+    "kind": "translation"
+  },
+  {
+    "key": "TRANSLATION_TARGET_LANGUAGES",
+    "step": "tools",
+    "label": "Translation languages",
+    "description": "Comma-separated ja, ko and/or zh. Known aliases and transliteration still work when translation is off.",
+    "kind": "translation_languages",
+    "advanced": true
+  },
+  {
+    "key": "QUALITY_ANALYSIS_CONCURRENCY",
+    "step": "tools",
+    "label": "Parallel page quality checks",
+    "description": "On-demand page sampling uses this bounded capacity. It is not run on every browse entry.",
+    "kind": "integer",
+    "minimum": 1,
+    "maximum": 4,
+    "advanced": true
+  },
+  {
+    "key": "MAIN_SUWAYOMI_USERNAME",
+    "step": "library",
+    "label": "Suwayomi HTTP username",
+    "kind": "text",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Optional HTTP Basic authentication for the main Suwayomi connection. Leave empty when authentication is disabled; browser form login is separate."
+  },
+  {
+    "key": "MAIN_SUWAYOMI_PASSWORD",
+    "step": "library",
+    "label": "Suwayomi HTTP password",
+    "kind": "secret",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Used only for requests to the configured main Suwayomi origin. Never sent to source websites."
+  },
+  {
+    "key": "SUWAYOMI_BROWSER_URL",
+    "step": "library",
+    "label": "Suwayomi browser address",
+    "kind": "url",
+    "allow_empty": true,
+    "description": "Optional address you open on your computer, such as http://server:30058. This is separate from the Docker service address."
+  },
+  {
+    "key": "COMICVINE_API_KEY",
+    "step": "matching",
+    "label": "Comic Vine API key",
+    "kind": "secret",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Optional. Other built-in metadata lookups use public APIs and need no login. Comic Vine needs a key from its API account page."
+  },
+  {
+    "key": "REPAIR_AI_PROVIDER",
+    "step": "repair",
+    "label": "Repair AI connection",
+    "kind": "choice",
+    "options": [
+      [
+        "chatgpt",
+        "ChatGPT / Codex · account sign-in"
+      ],
+      [
+        "openai",
+        "OpenAI · API key"
+      ],
+      [
+        "claude",
+        "Claude / Anthropic · API key"
+      ],
+      [
+        "gemini",
+        "Google Gemini · API key"
+      ],
+      [
+        "openrouter",
+        "OpenRouter · API key"
+      ],
+      [
+        "ollama",
+        "Ollama · local model"
+      ],
+      [
+        "custom",
+        "Custom AI server"
+      ]
+    ],
+    "description": "ChatGPT uses official account sign-in. Other providers use their API connection; consumer subscriptions do not supply API credit. No extra repair container is needed."
+  },
+  {
+    "key": "REPAIR_AI_PROTOCOL",
+    "step": "repair",
+    "label": "Custom API format",
+    "kind": "choice",
+    "options": [
+      [
+        "responses",
+        "OpenAI Responses (Codex)"
+      ],
+      [
+        "chat_completions",
+        "OpenAI-compatible Chat Completions"
+      ],
+      [
+        "anthropic",
+        "Anthropic Messages"
+      ]
+    ],
+    "description": "Choose the format your custom server actually supports. The model must support tool calling."
+  },
+  {
+    "key": "REPAIR_AI_BASE_URL",
+    "step": "repair",
+    "label": "AI API base address",
+    "kind": "url",
+    "allow_empty": true,
+    "description": "The selected provider API base address, usually ending in /v1. Use an address reachable from AutoSourcarr; localhost means this container."
+  },
+  {
+    "key": "REPAIR_AI_MODEL",
+    "step": "repair",
+    "label": "AI model identifier",
+    "kind": "text",
+    "allow_empty": true,
+    "description": "The exact model ID available to your account or local server. Choose a coding model with tool calling. Provider presets fill the address, not a model you may not have access to."
+  },
+  {
+    "key": "REPAIR_AI_API_KEY",
+    "step": "repair",
+    "label": "AI API key",
+    "kind": "secret",
+    "allow_empty": true,
+    "description": "Optional for a local server without authentication. The key stays with the connection service and is not given to repair code."
+  },
+  {
+    "key": "REPAIR_AI_WORKSPACE_ID",
+    "step": "repair",
+    "label": "Claude workspace ID",
+    "kind": "text",
+    "allow_empty": true,
+    "description": "Optional for a workspace-scoped Claude key; required for a multi-workspace key. Copy the ID from Claude Console → Settings → Workspaces. This selects the API billing workspace, not your chat account."
+  },
+  {
+    "key": "REPAIR_AI_BROWSER_URL",
+    "step": "repair",
+    "label": "AI server / account dashboard",
+    "kind": "url",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Optional browser link to your AI server or provider dashboard. This does not change the API address or sign you in."
+  },
+  {
+    "key": "TRANSLATION_MODE",
+    "step": "tools",
+    "label": "Translation connection",
+    "kind": "choice",
+    "options": [
+      [
+        "auto",
+        "Keep existing behaviour"
+      ],
+      [
+        "builtin",
+        "Built-in LibreTranslate"
+      ],
+      [
+        "external",
+        "Separate LibreTranslate server"
+      ],
+      [
+        "off",
+        "Off"
+      ]
+    ],
+    "description": "Built-in models run inside this instance and load on demand. External mode uses the address below."
+  },
+  {
+    "key": "TRANSLATION_API_KEY",
+    "step": "tools",
+    "label": "LibreTranslate API key",
+    "kind": "secret",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Only needed if your separate translation server requires a key. The built-in service does not require one."
+  },
+  {
+    "key": "KOMGA_BROWSER_URL",
+    "step": "links",
+    "label": "Komga browser address",
+    "kind": "url",
+    "allow_empty": true,
+    "description": "Optional shortcut to your Komga library. Sign in on Komga itself; this does not configure a metadata integration."
+  },
+  {
+    "key": "KOMF_BROWSER_URL",
+    "step": "links",
+    "label": "Komf browser address",
+    "kind": "url",
+    "allow_empty": true,
+    "description": "Optional shortcut to an existing Komf web interface. Komf stays separate and uses its own configuration and credentials."
+  },
+  {
+    "key": "TRANSLATION_BROWSER_URL",
+    "step": "tools",
+    "label": "Translation server browser address",
+    "kind": "url",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Optional link to your separate translation server or account dashboard. The built-in translator has no separate login or browser interface."
+  },
+  {
+    "key": "AUTHELIA_BROWSER_URL",
+    "step": "access",
+    "label": "Authentication portal browser address",
+    "kind": "url",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Optional link to your Authelia or other authentication portal. Sign in there; AutoSourcarr does not store that account password."
+  },
+  {
+    "key": "ADMIN_TOKEN",
+    "step": "access",
+    "label": "AutoSourcarr admin token",
+    "kind": "secret",
+    "allow_empty": true,
+    "description": "Optional protection for administrative actions. After a restart, the app asks for the new token. Keep a copy before saving; this is separate from the reader key."
+  },
+  {
+    "key": "AUTHELIA_USER_HEADER",
+    "step": "access",
+    "label": "Trusted proxy identity header",
+    "kind": "text",
+    "allow_empty": true,
+    "advanced": true,
+    "description": "Optional header supplied by your trusted authentication proxy to identify users. Your proxy handles its own login; do not put your Authelia password here."
+  }
+]

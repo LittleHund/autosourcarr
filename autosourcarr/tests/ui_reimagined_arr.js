@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {previewController}=require('../app/static/reimagined-core.js');
+const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
+(async()=>{
+  const controller=previewController();
+  const old=deferred(),pending=controller.preview(()=>old.promise);
+  controller.invalidate();old.resolve({revision:'old draft'});
+  assert.equal(await pending,null,'Editing while a preview is pending must prevent its late apply action');
+  assert.equal(controller.current(),null);
+  const first=deferred(),second=deferred();
+  const a=controller.preview(()=>first.promise),b=controller.preview(()=>second.promise);
+  const reviewed={revision:'reviewed new draft'};second.resolve(reviewed);
+  assert.equal(await b,reviewed);first.resolve({revision:'superseded'});
+  assert.equal(await a,null);assert.equal(controller.current(),reviewed,'Out-of-order completion must keep the newer reviewed draft');
+  await assert.rejects(controller.preview(()=>Promise.reject(Error('incomplete evidence'))),/incomplete/);
+  assert.equal(controller.current(),null,'A failed preview cannot revive an earlier reviewed result');
+  assert.equal(await controller.preview(async()=>reviewed),reviewed);
+  controller.invalidate();assert.equal(controller.current(),null,'Closing or changing the selection revokes the current apply action');
+  console.log('Reimagined: draft edits, out-of-order previews, failures and revoked apply actions passed');
+})().catch(error=>{console.error(error);process.exitCode=1;});

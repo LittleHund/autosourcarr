@@ -1,0 +1,406 @@
+/* AutoSourcarr Reimagined. Original styles for the existing application contracts. */
+@font-face{font-family:Inter;src:url('/static/fonts/inter-latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:Inter;src:url('/static/fonts/inter-latin-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:Inter;src:url('/static/fonts/inter-latin-600-normal.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:Inter;src:url('/static/fonts/inter-latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:Fraunces;src:url('/static/fonts/fraunces-latin-400-italic.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:'JetBrains Mono';src:url('/static/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+
+html[data-ui=reimagined]{--ri-sidebar-width:220px;--header-height:56px;--activity-height:36px;--ri-header:oklch(42% .085 228);--ri-sidebar:oklch(20% .015 260);--ri-toolbar:oklch(27% .014 260);--ri-sidebar-active:oklch(29% .015 260);--ri-page-pad:32px;scroll-padding-top:120px;min-height:100%;background:var(--bg)}
+html[data-ui=reimagined][data-ri-light=true]{--ri-header:oklch(61.5% .108 227);--ri-sidebar:oklch(86% .013 260);--ri-toolbar:oklch(91% .012 260);--ri-sidebar-active:oklch(95% .008 250)}
+html[data-ui=reimagined] body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:13px;line-height:1.55;min-width:0;min-height:100vh}
+html[data-ui=reimagined] *,html[data-ui=reimagined] *::before,html[data-ui=reimagined] *::after{box-sizing:border-box}
+html[data-ui=reimagined] button,html[data-ui=reimagined] input,html[data-ui=reimagined] select,html[data-ui=reimagined] textarea{font-family:inherit;font-size:12px;border-radius:6px;min-height:34px}
+html[data-ui=reimagined] button{padding:6px 11px;background:var(--control);border:1px solid var(--line);color:var(--text);font-weight:500;cursor:pointer;transition:background-color 160ms,color 160ms,border-color 160ms}
+html[data-ui=reimagined] button:hover{background:var(--control-hover);border-color:var(--accent-border)}
+html[data-ui=reimagined] button:disabled{cursor:not-allowed;opacity:.5}
+html[data-ui=reimagined] button.primaryAction,html[data-ui=reimagined] button.goodAction{background:var(--control-hover)!important;color:var(--text)!important;border-color:var(--line)!important}
+html[data-ui=reimagined] button.primaryAction:hover,html[data-ui=reimagined] button.goodAction:hover{border-color:var(--accent)!important;color:var(--accent)!important}
+html[data-ui=reimagined] input:not([type=range]):not([type=checkbox]):not([type=radio]),html[data-ui=reimagined] select,html[data-ui=reimagined] textarea{background:var(--panel2);color:var(--text);border:1px solid color-mix(in srgb,var(--muted) 35%,var(--line));padding:7px 10px;min-width:0;max-width:100%}
+html[data-ui=reimagined] input::placeholder{color:var(--muted);opacity:.8}
+html[data-ui=reimagined] :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+html[data-ui=reimagined] a{color:var(--accent);text-decoration:none}
+html[data-ui=reimagined] a:hover{text-decoration:underline}
+.riSymbols{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+.riIcon{display:inline-block;flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.srOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.riSkip{position:fixed;z-index:500;top:-100px;left:16px;background:var(--panel);border:2px solid var(--accent);padding:10px 18px;border-radius:5px}
+.riSkip:focus{top:8px}
+
+html[data-ui=reimagined] .appHeader.riHeader{display:flex;position:fixed;inset:0 0 auto;height:56px;min-height:56px;padding:0 20px 0 0;gap:0;border-bottom:1px solid oklch(36% .075 228);background:var(--ri-header)!important;color:#f4fbfc;z-index:60;flex-wrap:nowrap}
+.riBrand{display:flex;align-items:center;flex:0 0 var(--ri-sidebar-width);padding:0 18px;gap:8px;height:100%}
+.riBrandLink{display:inline-flex;align-items:center;gap:10px;white-space:nowrap;color:#f4fbfc!important;text-decoration:none!important}
+.riBrandLink>.riAppIcon{width:32px;height:32px;object-fit:contain;flex:0 0 32px}
+html[data-ui=reimagined] .riBrand h1{font-size:15px;letter-spacing:-.025em;font-weight:600;margin:0;color:inherit}
+html[data-ui=reimagined] .riHeader button.riGlobalSearch{display:flex;align-items:center;gap:9px;width:320px;max-width:38vw;min-height:32px;padding:5px 10px;border:1px solid transparent!important;border-radius:6px;background:oklch(20% .015 260 / .4)!important;color:#d9eff2!important;font-size:12px;font-weight:400;text-align:left}
+.riGlobalSearch .riIcon{width:16px;height:16px;opacity:.85}
+.riGlobalSearch kbd{margin-left:auto;border:1px solid #ffffff45;border-radius:4px;min-width:19px;height:20px;text-align:center;font:11px/18px Inter,sans-serif;color:#d9eff2}
+html[data-ui=reimagined] .riHeader button.riGlobalSearch:hover{background:oklch(20% .015 260 / .6)!important}
+.riHeaderRight{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex:1;min-width:0;margin-left:20px}
+.riExperiment{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#b4d3df;border:1px solid #ffffff30;border-radius:5px;padding:3px 7px}
+html[data-ui=reimagined] .riHeader .riIconButton{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:0;color:inherit;border:0;background:transparent!important}
+html[data-ui=reimagined] .riHeader .riIconButton:hover{background:#ffffff1a!important}
+html[data-ui=reimagined] #health{margin:0;padding:5px 8px;min-height:28px;max-width:160px;border:0!important;border-radius:5px;background:#00000020!important;color:#e3f3f5!important;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#riPreviewBadge{font-size:10px;white-space:nowrap;color:#dcf5df}
+html[data-ui=reimagined] #riMenuToggle{display:none}
+
+.riSidebar{position:fixed;top:56px;bottom:0;left:0;width:var(--ri-sidebar-width);background:var(--ri-sidebar);border-right:1px solid color-mix(in srgb,var(--line) 50%,transparent);z-index:55;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+html[data-ui=reimagined] .appNav{display:flex;position:static;width:100%;flex-direction:column;flex-wrap:nowrap;align-items:stretch;justify-content:flex-start;flex:1;padding:10px 0 12px;gap:0;border:0;background:none;overflow:visible;white-space:normal}
+html[data-ui=reimagined] .appNav .navPrimary,html[data-ui=reimagined] .appNav .navSecondary{display:flex;flex-direction:column;gap:0;align-items:stretch;flex:none;border:0;margin:0;padding:0;width:100%}
+html[data-ui=reimagined] .appNav .navSecondary{margin-top:4px}
+.riNavLabel{padding:14px 20px 7px;text-transform:uppercase;letter-spacing:.09em;font-size:9px;font-weight:600;line-height:1.4;color:var(--muted)}
+html[data-ui=reimagined] .appNav button{position:relative;display:flex;align-items:center;justify-content:flex-start;gap:10px;width:calc(100% - 16px)!important;margin:1px 8px;padding:8px 12px!important;min-height:36px;height:auto;background:transparent!important;border:0!important;border-radius:8px;color:var(--text);font-size:12px;font-weight:500;line-height:1.5;box-shadow:none!important;text-align:left}
+html[data-ui=reimagined] .appNav button>.riIcon{width:17px;height:17px;opacity:.8}
+html[data-ui=reimagined] .appNav button:hover{background:var(--control-hover)!important;color:var(--text)!important}
+html[data-ui=reimagined] .appNav button.active{background:var(--ri-sidebar-active)!important;color:var(--text)!important;font-weight:600;box-shadow:none!important}
+html[data-ui=reimagined] .appNav button.active::before{position:absolute;left:-4px;top:calc(50% - 7px);width:2px;height:14px;border-radius:10px;background:var(--accent);content:''}
+html[data-ui=reimagined] .appNav button.riChildNav{padding:6px 12px 6px 40px!important;min-height:31px;font-size:11px;font-weight:400;color:var(--muted)}
+html[data-ui=reimagined] .appNav button.riChildNav .riIcon{width:14px;height:14px;opacity:.6}
+.appNav .taskNavBadge{display:inline-grid;place-items:center;min-width:19px;min-height:17px;padding:1px 5px;margin-left:auto;border:0;border-radius:5px;background:var(--control-hover);color:var(--accent);font:10px/1.4 'JetBrains Mono',monospace}
+.riSidebarFoot{display:flex;align-items:center;gap:9px;flex:none;padding:15px 20px;border-top:1px solid var(--line);font-size:10px;color:var(--muted)}
+.riSidebarFoot>div{display:grid;gap:1px}
+.riSidebarFoot strong{font-weight:500;color:var(--text)}
+.riSidebarFoot span{font-size:9px}
+.riInstanceDot{width:6px;height:6px;border-radius:50%;background:var(--good)}
+
+html[data-ui=reimagined] main{margin:56px 0 0 var(--ri-sidebar-width)!important;padding:0 0 calc(var(--activity-height) + 20px)!important;width:calc(100% - var(--ri-sidebar-width))!important;max-width:none;min-width:0;min-height:calc(100vh - 56px);outline:none}
+html[data-ui=reimagined] main>.tab{padding:0 var(--ri-page-pad) 28px;min-width:0;max-width:none}
+html[data-ui=reimagined] .riPageToolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;margin:0 calc(-1 * var(--ri-page-pad)) 24px;padding:8px 24px;background:var(--ri-toolbar);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.riPageActions,.riToolbarRight{display:flex;align-items:center;flex-wrap:wrap;gap:7px;min-width:0}
+html[data-ui=reimagined] .riPageToolbar .statusActions{margin:0;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+html[data-ui=reimagined] .riPageToolbar button{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:11px;background:transparent!important;border:1px solid transparent!important;padding:5px 8px;min-height:30px;white-space:nowrap}
+html[data-ui=reimagined] .riPageToolbar button:hover{background:var(--panel)!important;color:var(--accent)!important}
+html[data-ui=reimagined] .riPageToolbar .riAddButton{background:var(--panel)!important;border-color:var(--line)!important}
+html[data-ui=reimagined] .pageHeading{align-items:baseline;justify-content:space-between;gap:10px;min-height:45px;margin:0 0 20px;padding:0;background:none;border:0}
+html[data-ui=reimagined] .pageHeading h2{font-size:13px;font-weight:600;letter-spacing:0;line-height:1.5;margin:0;color:var(--text)}
+html[data-ui=reimagined] .pageHeading p{margin:3px 0 0;color:var(--muted);font:italic 15px/1.5 Fraunces,Georgia,serif;max-width:80ch}
+#riLibraryHeadingCount{font:11px/1.5 'JetBrains Mono',monospace;color:var(--muted);font-weight:400}
+.riSettingsIntro{font-size:11px;line-height:1.7;max-width:100ch;margin:-4px 0 20px}
+html[data-ui=reimagined] :is(.filterToolbar,.browseToolbar){align-items:center;justify-content:flex-start;gap:8px;flex-wrap:wrap;padding:0 0 16px;margin:0 0 18px;border:0;border-bottom:1px solid var(--line);background:none;max-width:100%}
+html[data-ui=reimagined] :is(.filterToolbar,.browseToolbar)>input{flex:1 1 220px;max-width:360px;min-width:120px}
+html[data-ui=reimagined] :is(.filterToolbar,.browseToolbar)>select{font-size:11px;max-width:190px}
+html[data-ui=reimagined] .filterToolbar>.muted{font-size:10px;margin-left:auto;flex:1 1 170px;text-align:right}
+html[data-ui=reimagined] .advancedFilters{position:relative;display:block;flex:none;padding:0;margin:0;border:0;background:none}
+html[data-ui=reimagined] .advancedFilters>summary{font-size:11px;list-style:none;padding:7px 10px;border:1px solid var(--line);background:var(--control);border-radius:6px;min-height:34px;color:var(--text)}
+html[data-ui=reimagined] .advancedFilters>summary::after{content:' ▾';color:var(--muted);margin-left:5px}
+html[data-ui=reimagined] .advancedFilters>.menuContent{position:absolute;top:calc(100% + 6px);right:0;display:grid;width:250px;min-width:0;gap:9px;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);z-index:35;box-shadow:0 12px 32px #0004}
+html[data-ui=reimagined] .advancedFilters>.menuContent>select{width:100%;max-width:100%;font-size:11px}
+html[data-ui=reimagined] .toolbarMenu>summary{display:flex;gap:6px;align-items:center;border-radius:6px;border-color:var(--line);padding:6px 10px;background:var(--control);font-size:11px;min-height:32px;color:var(--text)}
+html[data-ui=reimagined] .toolbarMenu>.menuContent{border-radius:8px;min-width:190px;z-index:40;background:var(--panel);box-shadow:0 12px 32px #0004}
+html[data-ui=reimagined] .riViewMenu .menuContent button{justify-content:flex-start;font-size:12px;text-align:left}
+html[data-ui=reimagined] .riViewMenu button[aria-pressed=true]{color:var(--accent)!important;background:var(--accent-soft)!important}
+.riSizeMenu .browsePageSizeControl{display:grid;gap:8px;margin:0;padding:0;border:0;max-width:220px}
+.riSizeMenu .browsePageSizeControl label{font-size:11px}
+html[data-ui=reimagined] .scopeChips,html[data-ui=reimagined] .browseModeBar{display:flex;gap:0;align-items:center;border-bottom:1px solid var(--line);padding:0;margin:0 0 24px;flex-wrap:wrap;background:none}
+html[data-ui=reimagined] .scopeChips button,html[data-ui=reimagined] .browseModeBar button{border:0!important;border-bottom:2px solid transparent!important;border-radius:0;background:transparent!important;color:var(--muted);padding:9px 14px;margin:0;font-size:11px;min-height:36px}
+html[data-ui=reimagined] .scopeChips button.active,html[data-ui=reimagined] .browseModeBar button.active{border-bottom-color:var(--accent)!important;color:var(--text)!important;box-shadow:none!important}
+
+.riLibraryGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,max(120px,calc(var(--browse-card-width,190px) * .8))),1fr));gap:25px 22px;align-items:start;width:100%;min-width:0}
+.riPoster{display:block;min-width:0;background:none;border:0;padding:0}
+html[data-ui=reimagined] .riPosterButton{display:flex;flex-direction:column;gap:10px;background:none!important;border:0!important;padding:0;width:100%;text-align:left;min-width:0;color:var(--text);box-shadow:none!important;border-radius:12px 12px 4px 4px}
+.riPosterArtwork{display:block;position:relative;width:100%;aspect-ratio:2/3;overflow:hidden;border-radius:11px;background:var(--panel);transition:filter 180ms,box-shadow 180ms}
+.riPosterArtwork>img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 250ms}
+.riPosterArtwork>img.riCoverMissing{display:none}
+.riPosterFallback{display:grid;place-items:center;position:absolute;inset:0;padding:24px;background:linear-gradient(145deg,var(--panel2),var(--panel));color:var(--muted);font-size:18px;text-align:center}
+.riPosterStatus{position:absolute;top:9px;left:9px;display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:20px;background:#111b26d9;color:#e3e8ee;text-transform:uppercase;letter-spacing:.05em;font:500 8px/1 Inter,sans-serif;max-width:calc(100% - 18px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riPosterStatus::before{width:4px;height:4px;background:#a3a8af;border-radius:50%;content:'';flex:none}
+.riPosterStatus.ongoing::before{background:#56b9aa}
+.riPosterStatus.finished::before{background:#9cabb3}
+.riPosterOpen{position:absolute;bottom:9px;left:9px;right:9px;display:flex;justify-content:space-between;align-items:center;gap:5px;padding:8px 10px;border-radius:7px;background:#101820df;color:#e6eef1;font-size:10px;opacity:0;transform:translateY(5px);transition:opacity 180ms,transform 180ms}
+.riPosterOpen .riIcon{width:14px;height:14px}
+.riPosterButton:is(:hover,:focus-visible) .riPosterOpen{opacity:1;transform:translateY(0)}
+.riPosterButton:is(:hover,:focus-visible) .riPosterArtwork{filter:brightness(1.07);box-shadow:0 12px 28px -10px #0008}
+.riPosterButton:hover .riPosterArtwork>img{transform:scale(1.025)}
+.riPosterInfo{display:flex;flex-direction:column;width:100%;min-width:0;gap:3px}
+.riPosterTitle{display:block;font-weight:600;font-size:12px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);letter-spacing:-.01em}
+.riPosterMeta{font-size:9px;color:var(--muted);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riPosterMeta>span{color:var(--muted);opacity:.5;margin:0 3px}
+.riPosterDescription,.riPosterSources{display:none}
+.riPosterCoverage{display:grid;gap:5px;margin-top:5px}
+.riProgress{height:3px;border-radius:10px;background:var(--line);width:100%;overflow:hidden}
+.riProgress>span{display:block;height:100%;background:var(--progress)}
+.riProgress.complete>span{background:var(--good)}
+.riProgress.unknown{background:repeating-linear-gradient(90deg,var(--line),var(--line) 5px,transparent 5px,transparent 8px)}
+.riChapterCount{font:9px/1.5 'JetBrains Mono',Consolas,monospace;color:var(--muted);font-weight:400}
+.riLibraryGrid[data-view=overview]{grid-template-columns:1fr;gap:0}
+.riLibraryGrid[data-view=overview] .riPoster{border-bottom:1px solid var(--line);padding:20px 0}
+.riLibraryGrid[data-view=overview] .riPoster:first-child{padding-top:0}
+.riLibraryGrid[data-view=overview] .riPosterButton{display:grid;grid-template-columns:100px minmax(0,1fr);align-items:start;gap:24px;border-radius:8px}
+.riLibraryGrid[data-view=overview] .riPosterArtwork{width:100px;aspect-ratio:2/3;border-radius:8px}
+.riLibraryGrid[data-view=overview] .riPosterTitle{font-size:16px;margin-bottom:4px}
+.riLibraryGrid[data-view=overview] .riPosterMeta{font-size:11px}
+.riLibraryGrid[data-view=overview] .riPosterDescription{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;font-size:12px;line-height:1.7;color:var(--muted);font-weight:400;margin:9px 0 5px;max-width:100ch}
+.riLibraryGrid[data-view=overview] .riPosterSources{display:block;color:var(--accent);font-size:10px;font-weight:400}
+.riLibraryGrid[data-view=overview] .riPosterCoverage{max-width:280px;margin-top:10px}
+.riLibraryGrid[data-view=overview] .riPosterStatus{font-size:7px;padding:4px 6px;left:5px;top:5px}
+.riLibraryGrid[data-view=overview] .riPosterOpen{display:none}
+.riEmpty{grid-column:1/-1;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:75px 24px;text-align:center;min-height:330px;color:var(--muted)}
+.riEmpty>.riIcon{width:36px;height:36px;opacity:.5;margin-bottom:20px;stroke-width:1.1}
+.riEmpty h3{font-size:18px;font-weight:500;color:var(--text);margin:0 0 8px}
+.riEmpty p{max-width:55ch;margin:0 0 20px;font-size:12px;line-height:1.8}
+
+html[data-ui=reimagined] .browseGrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,max(120px,calc(var(--browse-card-width,190px) * .8))),1fr));gap:25px 22px}
+html[data-ui=reimagined] .browseCard{padding:0!important;border:0!important;background:transparent!important;border-radius:11px 11px 3px 3px;box-shadow:none!important;overflow:visible;cursor:pointer;min-width:0;content-visibility:visible}
+html[data-ui=reimagined] .browseCoverWrap{display:block;width:100%;height:auto;aspect-ratio:2/3;border-radius:11px;overflow:hidden;background:var(--panel)}
+html[data-ui=reimagined] .browseCard .browseCover{display:block;width:100%;height:100%;aspect-ratio:2/3;object-fit:cover;border-radius:0}
+html[data-ui=reimagined] .browseCardBody{padding:10px 0 0!important;background:none!important;border:0;min-height:0}
+html[data-ui=reimagined] .browseCardBody h3{font-size:12px;font-weight:600;margin:0 0 5px;height:auto;min-height:0;max-height:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;display:block}
+html[data-ui=reimagined] .browseCardBody .browseSources{display:block;min-height:0;height:17px;max-height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9px;color:var(--muted)}
+html[data-ui=reimagined] .browseSources .titleChip{display:inline;padding:0;margin:0 6px 0 0;background:none;border:0;color:var(--muted);font-size:9px}
+html[data-ui=reimagined] .browseCardBody .cardActions{display:none}
+html[data-ui=reimagined] .browseCardBody p{display:none}
+html[data-ui=reimagined] .browseMatchBadge,html[data-ui=reimagined] .browseStatusBadge{font-size:8px;border:0;border-radius:20px;background:#101820df;color:#e6eef1;padding:4px 7px;max-width:calc(100% - 18px)}
+html[data-ui=reimagined] .browseStatusBadge{left:8px;top:8px;bottom:auto;right:auto}
+html[data-ui=reimagined] .browseMatchBadge{left:8px;bottom:8px;top:auto;right:auto}
+html[data-ui=reimagined] .browseGrid:is([data-view=overview],[data-view=table]){grid-template-columns:1fr;gap:0}
+html[data-ui=reimagined] .browseGrid:is([data-view=overview],[data-view=table]) .browseCard{display:grid;grid-template-columns:90px minmax(0,1fr);gap:20px;padding:18px 0!important;border-bottom:1px solid var(--line)!important;border-radius:0}
+html[data-ui=reimagined] .browseGrid[data-view=overview] .browseCardBody p{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:12px;color:var(--muted);line-height:1.7;max-width:95ch}
+html[data-ui=reimagined] .browseGrid:is([data-view=overview],[data-view=table]) .browseCardBody h3{font-size:15px}
+html[data-ui=reimagined] .browseGrid:is([data-view=overview],[data-view=table]) .cardActions{display:flex;margin-top:12px;gap:6px}
+html[data-ui=reimagined] .browseGrid[data-view=table] .browseCard{grid-template-columns:40px minmax(0,1fr);gap:16px;padding:12px 0!important}
+html[data-ui=reimagined] .browseGrid[data-view=table] .browseCardBody{padding:0!important;display:grid;grid-template-columns:minmax(100px,1fr) minmax(80px,.6fr) auto;align-items:center;gap:12px}
+html[data-ui=reimagined] .browseGrid[data-view=table] .browseCardBody h3{font-size:12px}
+html[data-ui=reimagined] .browseGrid[data-view=table] :is(.browseStatusBadge,.browseMatchBadge){display:none}
+html[data-ui=reimagined] .browseGrid[data-view=table] .cardActions{margin:0}
+.browserStatus{font-size:11px}
+
+/* Full-width detail pages keep the original owned inspector and scroll restoration. */
+html[data-ui=reimagined] .entryWorkspace,html[data-ui=reimagined] .browseWorkspace{display:block;min-width:0}
+html[data-ui=reimagined] .entryWorkspace:has(.inlineInspector:not([hidden]))>.tablewrap,html[data-ui=reimagined] .entryWorkspace:has(.inlineInspector:not([hidden]))>#riLibraryGrid,html[data-ui=reimagined] .browseWorkspace:has(.workbenchDrawer:not([hidden]))>.browseGrid{display:none!important}
+html[data-ui=reimagined] .entryWorkspace .inlineInspector{position:static;max-width:none;width:100%;border:0;padding:0;background:none;border-radius:0;overflow:visible}
+html[data-ui=reimagined] .workbenchDrawer{position:static;inset:auto;padding:0;max-height:none;overflow:visible;border:0;background:none;box-shadow:none}
+html[data-ui=reimagined] .workbenchDrawer .browseDetailDrawer{position:static;width:100%;max-width:none;overflow:visible;border:0;border-radius:0;box-shadow:none;background:transparent}
+html[data-ui=reimagined] .workbenchDrawer .browseInspectorBody{padding:0}
+html[data-ui=reimagined] .browseDetailHeader{padding:0 0 20px;margin:0 0 20px;border-bottom:1px solid var(--line);background:none;position:static}
+html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorTop{display:flex;align-items:flex-start;gap:24px;padding:0 0 24px;border-bottom:1px solid var(--line);margin:0 0 22px}
+html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorCover{float:none;width:calc(var(--inspector-thumb-width,120px) * 1.3333)!important;height:calc(var(--inspector-thumb-height,175px) * 1.37)!important;min-width:calc(var(--inspector-thumb-width,120px) * 1.3333);margin:0;object-fit:cover;border-radius:10px}
+html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorInfo{min-width:0;flex:1}
+html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorInfo h2{font-size:27px;font-weight:500;line-height:1.25;letter-spacing:-.03em;margin:0 0 10px}
+html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .entryDescription{font-size:12px;line-height:1.85;max-width:110ch;color:var(--muted);max-height:none;overflow:visible;margin:12px 0 20px}
+html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorGrid{grid-template-columns:minmax(0,1fr);gap:18px}
+html[data-ui=reimagined] .entryDetailSection{padding:0;background:transparent;border:0!important;border-top:1px solid var(--line)!important;border-radius:0;margin-top:15px}
+html[data-ui=reimagined] .entryDetailSection>summary{padding:14px 0;font-size:14px;font-weight:500;color:var(--text)}
+html[data-ui=reimagined] .entryDetailContent{padding:0 0 15px}
+html[data-ui=reimagined] .chapterServingRows{gap:8px}
+html[data-ui=reimagined] .chapterServingRow{border-radius:6px;background:var(--panel)}
+html[data-ui=reimagined] .browseMatchList{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+html[data-ui=reimagined] .tablewrap{border:0;border-radius:0;background:none}
+html[data-ui=reimagined] .matrixTable{font-size:11px}
+html[data-ui=reimagined] .matrixTable th{background:var(--panel2);font-size:10px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--line)}
+html[data-ui=reimagined] .matrixTable td{border-color:var(--line);background:transparent}
+html[data-ui=reimagined] .matrixTable tr:hover td{background:color-mix(in srgb,var(--text) 3%,var(--bg))}
+html[data-ui=reimagined] .matrixTable .entryCol{background:var(--bg)}
+html[data-ui=reimagined] .subbedTable .matrixLibraryCover{border-radius:5px}
+html[data-ui=reimagined] .coverageMetric{font:14px/1.5 'JetBrains Mono',monospace}
+html[data-ui=reimagined] .coverageCaption{font-size:10px}
+html[data-ui=reimagined] .publicationBadge,html[data-ui=reimagined] .publicationPill{font-size:9px;border-radius:12px;padding:3px 7px}
+
+/* Existing source, review, repair and settings forms share the same neutral surfaces. */
+html[data-ui=reimagined] :is(.statusPanel,.card,.taskCard,.sourceExtensionCard,.comparisonCard,.comparisonEvidence,.reviewDecisionBar,.importEvidenceDetails,.importReferenceDetails,.sourceHealthCard){border-color:var(--line);border-radius:8px;background:var(--panel)}
+html[data-ui=reimagined] .statusPanel{padding:20px;margin-top:16px}
+html[data-ui=reimagined] .statusPanelHeader h3{font-size:15px;font-weight:500;letter-spacing:-.015em}
+html[data-ui=reimagined] .statusPanelHeader .muted{font-size:11px}
+html[data-ui=reimagined] :is(.sourceSubtabs,.taskSubtabs,.settingsSubtabs,.manualActionSubtabs,.importStateFilters){gap:0;border-bottom:1px solid var(--line);margin:0 0 24px;padding:0;flex-wrap:wrap;background:transparent;border-radius:0}
+html[data-ui=reimagined] :is(.sourceSubtab,.taskSubtabs button,.settingsSubtab,.manualActionSubtab,.importStateFilter){padding:10px 14px;font-size:11px;border:0!important;border-bottom:2px solid transparent!important;border-radius:0;background:transparent!important;color:var(--muted);box-shadow:none!important}
+html[data-ui=reimagined] :is(.sourceSubtab,.taskSubtabs button,.settingsSubtab,.manualActionSubtab,.importStateFilter).active{border-bottom-color:var(--accent)!important;color:var(--text)!important}
+html[data-ui=reimagined] .taskSections{gap:18px}
+html[data-ui=reimagined] .taskCard{box-shadow:none;padding:15px;border:1px solid var(--line);border-left:2px solid var(--accent)}
+html[data-ui=reimagined] .taskCard h3{font-size:12px;font-weight:500}
+html[data-ui=reimagined] .taskCard .muted{font-size:10px}
+html[data-ui=reimagined] :is(.emptyTaskState,.emptyDuplicateState){border:1px solid var(--line);padding:25px 18px;background:var(--panel2);border-radius:7px;font-size:12px}
+html[data-ui=reimagined] .notice{background:var(--panel2);border-color:var(--line);border-radius:7px;color:var(--muted);font-size:11px;padding:12px 15px}
+html[data-ui=reimagined] .compareDesk,html[data-ui=reimagined] .importWorkbench{gap:24px;grid-template-columns:230px minmax(0,1fr)}
+html[data-ui=reimagined] .reviewQueue{padding:0;border:0;background:transparent;gap:3px}
+html[data-ui=reimagined] .reviewQueue button{border-color:transparent;border-radius:7px;background:none;padding:12px;font-size:11px}
+html[data-ui=reimagined] .reviewQueue button.active{background:var(--panel);border-color:var(--line)}
+html[data-ui=reimagined] .queueText strong{font-size:12px}
+html[data-ui=reimagined] .comparisonLabel{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+html[data-ui=reimagined] .comparisonHero h3{font-size:19px;font-weight:500}
+html[data-ui=reimagined] .reviewFields dd{font-size:12px}
+html[data-ui=reimagined] .manualLedger{grid-template-columns:1fr}
+html[data-ui=reimagined] .ledgerRail{position:static;flex-direction:row;background:none;border-radius:0}
+html[data-ui=reimagined] .ledgerRail button{text-align:left}
+html[data-ui=reimagined] .settingsGroup{border:0;border-bottom:1px solid var(--line);background:none;border-radius:0;padding:16px 0}
+html[data-ui=reimagined] .settingsGroup>summary{font-size:14px;font-weight:500}
+html[data-ui=reimagined] .settingsFieldGrid{gap:22px;grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-ui=reimagined] .settingsField{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:15px}
+html[data-ui=reimagined] .appearancePreview{top:80px;border-radius:10px;padding:20px}
+html[data-ui=reimagined] .activityStrip{left:var(--ri-sidebar-width);height:36px;min-height:36px;align-items:center;padding:0 24px;gap:20px;background:var(--panel2);border-top:1px solid var(--line);z-index:45}
+html[data-ui=reimagined] .activityCell{display:flex;align-items:center;gap:7px;padding:3px 0!important;min-height:28px!important;font-size:9px;color:var(--muted);background:none!important}
+html[data-ui=reimagined] .activityCell strong{font-size:9px;font-weight:500;color:var(--text)}
+html[data-ui=reimagined] .activityCell span{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px}
+
+.riStatisticsMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:24px 0}
+.riMetricCard{display:grid;grid-template-columns:1fr auto;align-items:start;gap:8px;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+.riMetricCard>.riIcon{grid-column:2;grid-row:1;color:var(--muted);width:17px;height:17px}
+.riMetricCard>span{grid-column:1;grid-row:1;font-size:11px;color:var(--muted)}
+.riMetricCard>strong{grid-column:1/-1;font:400 30px/1.5 'JetBrains Mono',monospace;letter-spacing:-.07em;margin:8px 0 0}
+.riMetricCard p{grid-column:1/-1;font-size:9px;line-height:1.6;color:var(--muted);margin:0}
+.riStatisticsPanels{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:20px 0}
+.riStatPanel{border:1px solid var(--line);border-radius:9px;background:var(--panel2);padding:24px;margin-bottom:18px}
+.riStatPanel h3{font-size:14px;font-weight:500;margin:0 0 20px}
+.riCoverageNumber{display:flex;align-items:baseline;gap:12px;margin:0 0 18px}
+.riCoverageNumber strong{font:400 34px/1.4 'JetBrains Mono',monospace;letter-spacing:-.08em;color:var(--accent)}
+.riCoverageNumber span{font-size:11px;color:var(--muted)}
+.riCoverageBar{height:9px;border-radius:8px;background:var(--line);overflow:hidden}
+.riCoverageBar>span{display:block;height:100%;background:var(--accent);border-radius:8px}
+.riChartLegend{display:flex;justify-content:space-between;gap:14px;color:var(--muted);font-size:10px;margin:13px 0 24px;flex-wrap:wrap}
+.riChartLegend strong{margin-left:8px;color:var(--text);font-weight:400;font-family:'JetBrains Mono',monospace}
+.riChartLegend i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:6px}
+.riStatPanel button{font-size:10px!important;display:inline-flex;align-items:center;gap:12px}
+.riStatPanel button .riIcon{width:13px;height:13px}
+.riPublicationRow{display:grid;grid-template-columns:85px 1fr 34px;gap:14px;align-items:center;margin:21px 0;font-size:11px;color:var(--muted)}
+.riPublicationRow>div{height:5px;background:var(--line);border-radius:7px;overflow:hidden}
+.riPublicationRow>div>span{display:block;height:100%;background:var(--progress);border-radius:7px}
+.riPublicationRow:nth-child(2)>div>span{background:var(--good)}
+.riPublicationRow:nth-child(3)>div>span{background:var(--warn)}
+.riPublicationRow strong{font:400 10px/1.5 'JetBrains Mono',monospace;text-align:right;color:var(--text)}
+.riProvenanceMetrics{display:grid;grid-template-columns:repeat(3,1fr);gap:25px;margin:25px 0 4px}
+.riProvenanceMetrics>div{display:grid;gap:6px;padding-left:18px;border-left:1px solid var(--line)}
+.riProvenanceMetrics strong{font:400 23px/1.5 'JetBrains Mono',monospace;color:var(--text);letter-spacing:-.06em}
+.riProvenanceMetrics span{font-size:10px;color:var(--muted)}
+
+html[data-ui=reimagined] .modalBackdrop{background:#080d17bb;backdrop-filter:blur(5px);padding:24px;z-index:100}
+html[data-ui=reimagined] .modalShell{border:1px solid var(--line);background:var(--panel);border-radius:12px;box-shadow:0 24px 60px #0005;color:var(--text)}
+html[data-ui=reimagined] .modalHeader{background:var(--panel);border-color:var(--line);padding:20px 24px}
+html[data-ui=reimagined] .modalHeader h2{font-size:19px;letter-spacing:-.02em;font-weight:500}
+html[data-ui=reimagined] #errorPanel{inset:75px 36px 54px calc(var(--ri-sidebar-width) + 36px);border-radius:12px;background:var(--bg);box-shadow:0 0 0 100vmax #0009;z-index:120}
+html[data-ui=reimagined] #toast{position:fixed;bottom:52px;left:auto;right:24px;max-width:min(500px,calc(100vw - 32px));border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:12px 18px;color:var(--text);font-size:12px;transform:none;box-shadow:0 6px 25px #0004;z-index:200}
+html[data-ui=reimagined] .riCommandDialog{padding:0;width:min(600px,calc(100vw - 32px));max-height:min(620px,calc(100dvh - 90px));margin:90px auto auto;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);box-shadow:0 24px 60px #0007;overflow:auto}
+.riCommandDialog::backdrop{background:#080d17b3;backdrop-filter:blur(5px)}
+.riCommandHead{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 20px;margin:0}
+.riCommandHead h2{margin:0;font-size:12px!important;font-weight:500;letter-spacing:0}
+html[data-ui=reimagined] .riCommandHead button{font-size:9px;min-height:22px;padding:1px 7px;color:var(--muted);background:none}
+.riCommandInput{display:block;padding:0 18px 15px}
+html[data-ui=reimagined] .riCommandInput input{width:100%;height:44px;font-size:14px;padding:10px 13px;border-radius:6px;background:var(--panel2)}
+.riCommandResults{padding:0 8px;min-height:0}
+html[data-ui=reimagined] .riCommandResults button{display:flex;gap:13px;align-items:center;width:100%;padding:10px;border:0!important;border-radius:7px;background:none;text-align:left;color:var(--text)}
+html[data-ui=reimagined] .riCommandResults button:hover{background:var(--control-hover)}
+.riCommandResults button>img{width:34px;height:48px;border-radius:4px;object-fit:cover}
+.riCommandResults button>span{display:grid;gap:5px;flex:1;min-width:0}
+.riCommandResults strong{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riCommandResults small{font-size:10px;color:var(--muted)}
+.riCommandResults .riIcon{width:15px;height:15px;color:var(--muted)}
+#riCommandStatus{font-size:10px;padding:14px 20px;margin:8px 0 0;border-top:1px solid var(--line)}
+
+@media(min-width:1600px){.riLibraryGrid,html[data-ui=reimagined] .browseGrid{grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:28px 24px}}
+@media(max-width:1199px){html[data-ui=reimagined]{--ri-page-pad:24px}.riLibraryGrid,html[data-ui=reimagined] .browseGrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:22px 18px}.riStatisticsMetrics{grid-template-columns:repeat(2,1fr)}html[data-ui=reimagined] .riHeaderRight{gap:8px}.riExperiment{display:none}html[data-ui=reimagined] .compareDesk,html[data-ui=reimagined] .importWorkbench{grid-template-columns:190px minmax(0,1fr);gap:16px}html[data-ui=reimagined] .comparePair{grid-template-columns:1fr}}
+@media(max-width:991px){.riStatisticsPanels{grid-template-columns:1fr}.riStatPanel{margin-bottom:0}html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorCover{width:115px!important;height:172px!important;min-width:115px}html[data-ui=reimagined] .settingsFieldGrid{grid-template-columns:1fr}html[data-ui=reimagined] .compareDesk,html[data-ui=reimagined] .importWorkbench{grid-template-columns:1fr}.riHeaderRight #riPreviewBadge{display:none}}
+@media(max-width:767px){
+  html[data-ui=reimagined]{--ri-page-pad:16px;--activity-height:36px;scroll-padding-top:80px}
+  html[data-ui=reimagined] .appHeader.riHeader{padding:0 12px;gap:10px;height:56px}
+  .riBrand{flex:0 0 auto;padding:0;gap:8px}
+  html[data-ui=reimagined] #riMenuToggle{display:inline-flex}
+  html[data-ui=reimagined] .riBrand h1{display:none}
+  html[data-ui=reimagined] .riHeader button.riGlobalSearch{max-width:none;flex:1;width:auto;min-width:110px;font-size:11px}
+  .riGlobalSearch kbd{display:none}
+  .riHeaderRight{flex:0 0 auto;margin-left:0!important;gap:5px}
+  html[data-ui=reimagined] #health{width:25px;height:25px;min-height:25px;font-size:0;padding:0}
+  html[data-ui=reimagined] #health::after{content:'';display:block;width:6px;height:6px;border-radius:50%;background:#d5edea;margin:auto}
+  .riSidebar{top:56px;width:250px;transform:translateX(-100%);transition:transform 180ms;z-index:80;box-shadow:14px 0 40px #0004}
+  .riSidebarOpen .riSidebar{transform:translateX(0)}
+  #riSidebarScrim{position:fixed;inset:56px 0 0;background:#080d17aa;z-index:75;backdrop-filter:blur(3px)}
+  .riSidebarOpen body{overflow:hidden}
+  html[data-ui=reimagined] main{margin-left:0!important;width:100%!important}
+  html[data-ui=reimagined] .riPageToolbar{padding:8px 10px;min-height:48px;gap:5px;margin-bottom:20px}
+  html[data-ui=reimagined] .riPageToolbar button{font-size:10px;padding:5px}
+  html[data-ui=reimagined] .riPageActions{gap:2px}
+  .riToolbarRight{margin-left:auto}
+  html[data-ui=reimagined] .pageHeading{margin-bottom:18px}
+  html[data-ui=reimagined] .pageHeading p{font-size:14px}
+  html[data-ui=reimagined] :is(.filterToolbar,.browseToolbar)>input{max-width:none;flex-basis:100%;font-size:12px}
+  html[data-ui=reimagined] :is(.filterToolbar,.browseToolbar)>select{min-width:140px;max-width:calc(50% - 4px);flex:1;font-size:10px}
+  html[data-ui=reimagined] .filterToolbar>.muted{font-size:9px;flex:1 1 100%;text-align:left;order:5}
+  .riLibraryGrid,html[data-ui=reimagined] .browseGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+  .riPosterTitle{font-size:12px}.riPosterMeta{font-size:8px}.riChapterCount{font-size:8px}
+  .riPosterOpen{display:none}
+  .riLibraryGrid[data-view=overview]{grid-template-columns:1fr}
+  .riLibraryGrid[data-view=overview] .riPosterButton{grid-template-columns:75px minmax(0,1fr);gap:15px}
+  .riLibraryGrid[data-view=overview] .riPosterArtwork{width:75px}
+  .riLibraryGrid[data-view=overview] .riPosterTitle{font-size:13px}
+  .riLibraryGrid[data-view=overview] .riPosterDescription{font-size:10px;-webkit-line-clamp:2;margin:5px 0}
+  .riLibraryGrid[data-view=overview] .riPosterMeta{font-size:9px}
+  .riLibraryGrid[data-view=overview] .riPosterSources{font-size:9px}
+  html[data-ui=reimagined] .browseGrid[data-view=table] .browseCardBody{grid-template-columns:1fr}
+  html[data-ui=reimagined] .browseGrid[data-view=table] .cardActions{display:none}
+  html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorTop{gap:15px;flex-wrap:wrap}
+  html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorCover{width:85px!important;height:127px!important;min-width:85px;float:none}
+  html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorInfo{flex-basis:calc(100% - 110px)}
+  html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .inspectorInfo h2{font-size:20px}
+  html[data-ui=reimagined] :is(.workbenchDrawer,.inlineInspector) .entryDescription{font-size:11px}
+  html[data-ui=reimagined] .activityStrip{left:0;padding:0 16px;gap:16px}
+  html[data-ui=reimagined] .activityCell span{max-width:90px;font-size:8px}
+  html[data-ui=reimagined] .activityCell strong{font-size:8px}
+  html[data-ui=reimagined] :is(.sourceSubtabs,.taskSubtabs,.settingsSubtabs,.manualActionSubtabs){gap:0}
+  html[data-ui=reimagined] :is(.sourceSubtab,.taskSubtabs button,.settingsSubtab,.manualActionSubtab,.importStateFilter){padding:9px 10px;font-size:10px}
+  html[data-ui=reimagined] .modalBackdrop{padding:8px}
+  html[data-ui=reimagined] .modalShell{max-width:100%;border-radius:10px}
+  html[data-ui=reimagined] .modalHeader{padding:16px}
+  html[data-ui=reimagined] #errorPanel{inset:64px 8px 44px;padding:16px}
+  .riStatisticsMetrics{gap:10px}
+  .riMetricCard{padding:16px;gap:5px}.riMetricCard>strong{font-size:25px}.riMetricCard>span{font-size:10px}.riMetricCard p{font-size:8px}
+  .riStatPanel{padding:18px}.riProvenanceMetrics{gap:14px}.riProvenanceMetrics>div{padding-left:10px}.riProvenanceMetrics strong{font-size:17px}.riProvenanceMetrics span{font-size:8px}
+  html[data-ui=reimagined] .riCommandDialog{margin-top:70px}
+}
+@media(prefers-reduced-motion:reduce){html[data-ui=reimagined] *,html[data-ui=reimagined] *::before,html[data-ui=reimagined] *::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+/* Local ownership, review and observation controls. */
+.riImprovementPanel{margin-block:20px;border-top:1px solid var(--line);padding-block:14px}
+.riImprovementPanel>summary{font-weight:650;cursor:pointer;padding-block:5px}
+.riImprovementPanel form{display:grid;gap:12px;margin-block:14px}
+.riImprovementPanel fieldset{min-width:0;border:1px solid var(--line);display:grid;gap:10px;padding:12px}
+.riImprovementPanel label{display:grid;gap:6px;min-width:0}
+.riImprovementPanel textarea,.riImprovementPanel input,.riImprovementPanel select{max-width:100%;box-sizing:border-box}
+#riInstanceBody .riImprovementPanel .riCheck,#riInstanceBody .riImprovementPanel .riRuleCheck{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#riInstanceBody .riImprovementPanel .riRuleCheck label{display:flex;align-items:center;gap:8px;flex:1}
+.riImprovementPanel .riRuleCheck>input{width:90px}
+#riInstanceBody .riImprovementPanel .riCheck input[type=checkbox],#riInstanceBody .riImprovementPanel .riRuleCheck input[type=checkbox]{width:18px;height:18px;min-height:18px;flex:0 0 18px;padding:0;margin:0}
+.riToolDialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}
+.riMediaIdentity{margin-block:20px;border-block:1px solid var(--line);padding-block:12px}
+.riMediaReference{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;margin-block:12px}
+.riMediaReference>span{grid-column:1/-1;color:var(--muted);font-size:.85rem}
+.riMediaReference input{min-width:0;width:100%;font-family:monospace;box-sizing:border-box}
+.riInlinePageSize{display:flex;align-items:center;gap:8px}
+.importUploadPanel>h3,.sourceApkInstaller>h3{margin-top:0}
+/* 0.4.1 review workspaces use existing theme tokens. */
+.riManageTabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-block:12px;overflow:auto;padding-bottom:8px}
+.riManageTabs [role=tab]{min-height:40px;white-space:nowrap}
+.riManageTabs [aria-selected=true]{border-color:var(--accent);color:var(--accent-text);background:var(--accent-soft)}
+.riManagePane[hidden],.riRepairInspector[hidden],.riRepairGroups>.taskSection[hidden],.riIdentityCatalogue[hidden]{display:none!important}
+.riManagePane{min-width:0;padding-block:8px}.riManagePane #riProfileForm{margin-block:0}
+.riIdentityColumns{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,2fr);gap:20px}
+.riIdentityColumns:has(.riIdentityCatalogue[hidden]){grid-template-columns:minmax(0,1fr)}
+.riIdentityWorkspace label{display:grid;gap:6px;margin-block:10px}
+.riIdentityWorkspace input,.riIdentityWorkspace textarea{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.riIdentityEntry{display:block;width:100%;text-align:left;margin-block:6px;overflow-wrap:anywhere;min-height:42px}
+.riIdentityEntry[aria-pressed=true]{border-color:var(--accent)}
+.riIdentityReference{padding-block:12px;border-bottom:1px solid var(--line);min-width:0}
+.riIdentityReference p,.riIdentityWorkspace [data-history] p{overflow-wrap:anywhere;white-space:pre-wrap}
+.riRepairLayout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);gap:18px;align-items:start}
+.riRepairLayout:has(.riRepairInspector[hidden]){grid-template-columns:minmax(0,1fr)}
+.riRepairQueue,.riRepairGroups,.riRepairInspector{min-width:0}
+.riRepairGroups .taskSection{padding:0;margin-block:12px;background:transparent;border:0;box-shadow:none}
+.riRepairGroups .taskSectionHead{padding-block:8px}.riRepairGroups .taskSectionHead h3{font-size:.95rem}
+.riRepairTable{min-width:0;width:100%;table-layout:fixed;border-collapse:collapse}
+.riRepairTable th,.riRepairTable td{padding:9px 6px;text-align:left;border-bottom:1px solid var(--line);overflow-wrap:anywhere;vertical-align:top}
+.riRepairTable th:first-child{width:32%}.riRepairTable th:last-child{width:98px}
+.riRepairTable button{white-space:nowrap}
+.riRepairTable th{white-space:normal}
+.riRepairTable small{display:block;color:var(--muted);font-size:.75rem}.riRepairTable tr.selected{background:var(--accent-soft)}
+.riRepairInspector{position:sticky;top:72px;background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:8px;max-height:calc(100vh - 110px);overflow:auto}
+.riRepairInspector h3,.riRepairMessage{overflow-wrap:anywhere}.riRepairInspector details{min-width:0}.riRepairInspector pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.riRepairInspector .repositoryForm{display:grid;grid-template-columns:minmax(0,1fr)}
+.riRepairInspector input,.riRepairInspector select{max-width:100%;width:100%;box-sizing:border-box;min-width:0}
+html[data-ui=reimagined] :is(#sourceRepairWatch,#sourceHealthDaily){width:18px;height:18px;min-height:18px;min-width:18px;padding:0;margin:0 8px 0 0;vertical-align:middle}
+.riQueueEmpty{padding:10px 6px;border-bottom:1px solid var(--line);margin:0}
+.riFilterSummary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-block:10px;font-size:.85rem}
+.riFilterSummary>p{flex-basis:100%;margin:0}.riFilterSummary button{min-height:36px}
+.riGalleryPolicy{min-width:0}.riGalleryPolicy form{display:grid;gap:14px}.riGalleryPolicy fieldset{margin:0;border:1px solid var(--line);padding:12px}.riGalleryPolicy [data-criteria]{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+#riInstanceBody .riGalleryPolicy label.riCheck,#riInstanceBody .riCatalogSharing label.riCheck{display:flex;align-items:center;gap:8px}
+html[data-ui=reimagined] #riInstanceBody .riGalleryPolicy .riCheck input{width:18px;height:18px;min-width:18px;min-height:18px;flex:0 0 18px;margin:0;padding:0}
+.riCatalogSharing{min-width:0}.riCatalogSharing>section{padding-block:12px}.riCatalogSharing label.riCheck{margin-block:12px}.riCatalogSharing p,.riShareItem{overflow-wrap:anywhere}
+html[data-ui=reimagined] #riInstanceBody .riCatalogSharing .riCheck input{width:18px;height:18px;min-width:18px;min-height:18px;flex:0 0 18px;margin:0;padding:0}
+.riShareTable{min-width:0;width:100%;table-layout:fixed}.riShareTable th,.riShareTable td{white-space:normal;overflow-wrap:anywhere;padding:10px 8px}.riShareTable th:first-child{width:40%}
+.riShareItem{border-bottom:1px solid var(--line);padding:16px 0}.riShareItem:last-child{border-bottom:0}.riShareItem h4{margin:0}.riShareItem p{margin-block:8px}
+html[data-ui=reimagined] #subbed:has(.riFilterSummary) [data-clear-library-filters]{display:none}
+@media(max-width:950px){.riRepairLayout,.riIdentityColumns{grid-template-columns:minmax(0,1fr)}.riRepairInspector{position:static;max-height:none}.riRepairTable th:first-child{width:30%}}
+@media(max-width:480px){.riRepairTable{font-size:.8rem}.riRepairTable th:last-child{width:90px}.riRepairTable button{padding:7px 5px}.riRepairInspector{padding:10px}.riManageTabs{gap:4px}.riManageTabs button{padding-inline:10px}}

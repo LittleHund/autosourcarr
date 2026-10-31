@@ -1,0 +1,52 @@
+# Legacy external compatibility only. Integrated deployments do not use this file.
+# Merge this service into your existing TrueNAS Custom App; replace its old builder.
+# Build logic now lives in build-in-container.sh, so no inline shell loop is needed.
+# These must be the actual separate /config directories used by the two apps.
+# Both need autosourcarr.env; preserve each existing .extension-signing directory.
+# The project path is shared, and must match the app's build context parent.
+# REQUIRED: replace /REPLACE/WITH/PRIVATE/CONFIG with private-autosourcarr's actual
+# retained host directory mounted at /config. Do not create a fresh empty directory.
+services:
+  autosourcarr-extension-builder:
+    image: ghcr.io/cirruslabs/android-sdk:35
+    container_name: autosourcarr-extension-builder
+    user: '0:0'
+    init: true
+    restart: 'no'
+    working_dir: /workspace
+    environment:
+      AUTOSOURCARR_BUILD_MODE: paired
+      AUTOSOURCARR_CONFIG_DIR: /config-main
+      AUTOSOURCARR_PRIVATE_CONFIG_DIR: /config-private
+      AUTOSOURCARR_PUBLISH_UID: '568'
+      AUTOSOURCARR_PUBLISH_GID: '568'
+    volumes:
+      - type: bind
+        source: /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/project
+        target: /workspace
+        bind: {create_host_path: false}
+      - type: bind
+        source: /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/project/config
+        target: /config-main
+        bind: {create_host_path: false}
+      - type: bind
+        source: /REPLACE/WITH/PRIVATE/CONFIG
+        target: /config-private
+        bind: {create_host_path: false}
+    entrypoint: [/bin/bash, /workspace/extension/build-in-container.sh]
+    command: []
+    logging:
+      driver: json-file
+      options:
+        max-file: '3'
+        max-size: 10m
+# Outputs: project/extension/dist-instances/autosourcarr/{*.jar,*.apk}
+#          project/extension/dist-instances/private-autosourcarr/{*.jar,*.apk}
+# Each config/extension-downloads is also published for that app's Status APK button.
+# Set AUTOSOURCARR_BUILD_OUTPUT_DIR if you mount another artifact destination.
+# Do not add an instance env_file here: the script reads the two files separately.
+# Run the completed builder again after an update: docker start -a autosourcarr-extension-builder
+# Check config without building: docker compose -f docker-compose.builder.yml run --rm autosourcarr-extension-builder --check
+# Set AUTOSOURCARR_BUILD_MODE: single and omit the private config variable/mount
+# for a single-instance build. Legacy Compose still builds one instance unless
+# the second config is supplied; it now states that explicitly in the logs.

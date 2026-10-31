@@ -1,0 +1,1293 @@
+[
+  {
+    "name": "compression-0",
+    "payload": "UEsDBBQAAAAAAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRVBVQkxJQ19MSUNFTlNFUEsDBBQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAZ3JhZGxldyMhL2Jpbi9zaApQSwMEFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdGNsYXNzIEV4YW1wbGUge31QSwECFAAUAAAAAABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAAAAAAAAAAAAAIABYgAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsFBgAAAAADAAMAtQAAAK0AAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "20fd7ec1709f8d35f496cdf48bd83b432d3dbf7f25bc00455e2e0cc81e135ac6"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ=="
+    }
+  },
+  {
+    "name": "compression-8",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "20fd7ec1709f8d35f496cdf48bd83b432d3dbf7f25bc00455e2e0cc81e135ac6"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ=="
+    }
+  },
+  {
+    "name": "compression-12",
+    "payload": "UEsDBC4AAAAMAFGIVF3As+geLwAAAA4AAAAHAAAATElDRU5TRUJaaDkxQVkmU1lRxAB/AAAFBgAaJUoAoAAhoBiEAMFgtcHxCZ8XckU4UJBRxAB/UEsDBC4AAAAMAFGIVF0dnfsEMgAAAAoAAAAHAAAAZ3JhZGxld0JaaDkxQVkmU1mtz2+1AAABUYAAECgAkGEIACAAMQZMQQMTIhoajg8XckU4UJCtz2+1UEsDBC4AAAAMAFGIVF0oZ798NgAAABAAAAAdAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RCWmg5MUFZJlNZk5RqhwAAApWAQAACACoGSEogADEDQNAgAZG04zm0ghyO8XckU4UJCTlGqHBQSwECLgAuAAAADABRiFRdwLPoHi8AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIuAC4AAAAMAFGIVF0dnfsEMgAAAAoAAAAHAAAAAAAAAAAAAACAAVQAAABncmFkbGV3UEsBAi4ALgAAAAwAUYhUXShnv3w2AAAAEAAAAB0AAAAAAAAAAAAAAIABqwAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsFBgAAAAADAAMAtQAAABwBAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "20fd7ec1709f8d35f496cdf48bd83b432d3dbf7f25bc00455e2e0cc81e135ac6"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ=="
+    }
+  },
+  {
+    "name": "compression-14",
+    "payload": "UEsDBD8AAgAOAFGIVF3As+geIAAAAA4AAAAHAAAATElDRU5TRQkEBQBdAACAAAAoFURHM4TczT+MKNGx9rGOHf/380AAUEsDBD8AAgAOAFGIVF0dnfsEHgAAAAoAAAAHAAAAZ3JhZGxldwkEBQBdAACAAAARiEJGPfQWNHMKDdObXP//3gQAAFBLAwQ/AAIADgBRiFRdKGe/fCQAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0CQQFAF0AAIAAADGbCEhj9T2fJmzkp0RKgBqswAai//8wgAAAUEsBAj8APwACAA4AUYhUXcCz6B4gAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECPwA/AAIADgBRiFRdHZ37BB4AAAAKAAAABwAAAAAAAAAAAAAAgAFFAAAAZ3JhZGxld1BLAQI/AD8AAgAOAFGIVF0oZ798JAAAABAAAAAdAAAAAAAAAAAAAACAAYgAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAADnAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "20fd7ec1709f8d35f496cdf48bd83b432d3dbf7f25bc00455e2e0cc81e135ac6"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ=="
+    }
+  },
+  {
+    "name": "zip64-directory",
+    "payload": "UEsDBC0AAAAIAFGIVF3As+ge//////////8HABQATElDRU5TRQEAEAAOAAAAAAAAAA4AAAAAAAAACwh18vF0jgdiV79gVwBQSwMELQAAAAgAUYhUXR2d+wT//////////wcAFABncmFkbGV3AQAQAAoAAAAAAAAADAAAAAAAAABTVtRPyszTL87gAgBQSwMELQAAAAgAUYhUXShnv3z//////////x0AFABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdAEAEAAQAAAAAAAAABIAAAAAAAAAS85JLC5WcK1IzC3ISVWorgUAUEsBAi0ALQAAAAgAUYhUXcCz6B7//////////wcAFAAAAAAAAAAAAIABAAAAAExJQ0VOU0UBABAADgAAAAAAAAAOAAAAAAAAAFBLAQItAC0AAAAIAFGIVF0dnfsE//////////8HABwAAAAAAAAAAACAAf////9ncmFkbGV3AQAYAAoAAAAAAAAADAAAAAAAAABHAAAAAAAAAFBLAQItAC0AAAAIAFGIVF0oZ798//////////8dABwAAAAAAAAAAACAAf////9zcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdAEAGAAQAAAAAAAAABIAAAAAAAAAjAAAAAAAAABQSwYGLAAAAAAAAAAtAC0AAAAAAAAAAAADAAAAAAAAAAMAAAAAAAAAAQEAAAAAAADtAAAAAAAAAFBLBgcAAAAA7gEAAAAAAAABAAAAUEsFBgAAAAADAAMAAQEAAO0AAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "20fd7ec1709f8d35f496cdf48bd83b432d3dbf7f25bc00455e2e0cc81e135ac6"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ=="
+    }
+  },
+  {
+    "name": "root-prefix",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAZAAAAZXh0ZW5zaW9ucy1jb21taXQvTElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAZAAAAZXh0ZW5zaW9ucy1jb21taXQvZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAALwAAAGV4dGVuc2lvbnMtY29tbWl0L3NyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAABkAAAAAAAAAAAAAAIABAAAAAGV4dGVuc2lvbnMtY29tbWl0L0xJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAAGQAAAAAAAAAAAAAAgAFFAAAAZXh0ZW5zaW9ucy1jb21taXQvZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAvAAAAAAAAAAAAAACAAYgAAABleHRlbnNpb25zLWNvbW1pdC9zcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADAOsAAADnAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "20fd7ec1709f8d35f496cdf48bd83b432d3dbf7f25bc00455e2e0cc81e135ac6"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ=="
+    }
+  },
+  {
+    "name": "selected-and-ignored",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF0Fyh24EAAAAA4AAAAZAAAAc3JjL2VuL290aGVyL3NyYy9PdGhlci5rdEvOSSwuVvAvyUgtUqiuBQBQSwMEFAAAAAgAUYhUXVqPWK8YAAAAFgAAABIAAAAuY29kZXgvY29uZmlnLnRvbWwrrswryUgtyUxWSExPzStRSM7PS8tMBwBQSwMEFAAAAAgAUYhUXT++1fYJAAAABwAAAB8AAABzcmMvZW4vZXhhbXBsZS9idWlsZC9yZXN1bHQuYXBry8svUShKLAcAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAAIAFGIVF0Fyh24EAAAAA4AAAAZAAAAAAAAAAAAAACAAbEAAABzcmMvZW4vb3RoZXIvc3JjL090aGVyLmt0UEsBAhQAFAAAAAgAUYhUXVqPWK8YAAAAFgAAABIAAAAAAAAAAAAAAIAB+AAAAC5jb2RleC9jb25maWcudG9tbFBLAQIUABQAAAAIAFGIVF0/vtX2CQAAAAcAAAAfAAAAAAAAAAAAAACAAUABAABzcmMvZW4vZXhhbXBsZS9idWlsZC9yZXN1bHQuYXBrUEsFBgAAAAAGAAYAiQEAAIYBAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "20fd7ec1709f8d35f496cdf48bd83b432d3dbf7f25bc00455e2e0cc81e135ac6"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ=="
+    }
+  },
+  {
+    "name": "unicode-build-resource",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAgIAFGIVF2MkRtrDQAAAAoAAAAdAAAAY29tbW9uL2Rvbm7DqWVzL+aXpeacrOiqni50eHQ7vPLw/CMbPsyf0QAAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAgIAFGIVF2MkRtrDQAAAAoAAAAdAAAAAAAAAAAAAACAAbEAAABjb21tb24vZG9ubsOpZXMv5pel5pys6KqeLnR4dFBLBQYAAAAABAAEAAABAAD5AAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "common/donn\u00e9es/\u65e5\u672c\u8a9e.txt": {
+          "sha256": "cb4c6fa3cca7f8d31b0475653aa3c92d1db062274a9268ea7f68412c10496a91",
+          "bytes": 10,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "70d9e541cc01dbcf6e095399760a09e12428e1c42d94001bda4c6b2c8de4f3d8"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ==",
+      "common/donn\u00e9es/\u65e5\u672c\u8a9e.txt": "w6nDn8Sw8J+YgA=="
+    }
+  },
+  {
+    "name": "unicode-key-order",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAgIAFGIVF2alWeVFAAAABIAAAAOAAAAY29tbW9uL+6AgC50eHQrKMosSyxJ1S0tTlUoTk7MSSwCAFBLAwQUAAAICABRiFRdIOH9Yw8AAAANAAAADwAAAGNvbW1vbi/wn5iALnR4dEssLilKzFEoTk7MSSwCAFBLAQIUABQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAAAAAAAAAAAACAAQAAAABMSUNFTlNFUEsBAhQAFAAAAAgAUYhUXR2d+wQMAAAACgAAAAcAAAAAAAAAAAAAAIABMwAAAGdyYWRsZXdQSwECFAAUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAAAAAAAAAAAAgAFkAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RQSwECFAAUAAAICABRiFRdmpVnlRQAAAASAAAADgAAAAAAAAAAAAAAgAGxAAAAY29tbW9uL+6AgC50eHRQSwECFAAUAAAICABRiFRdIOH9Yw8AAAANAAAADwAAAAAAAAAAAAAAgAHxAAAAY29tbW9uL/CfmIAudHh0UEsFBgAAAAAFAAUALgEAAC0BAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "common/\ue000.txt": {
+          "sha256": "669c0d5a2d716438a1770677ebe24c80045cc60e4074b530bea85825f7209e60",
+          "bytes": 18,
+          "executable": false
+        },
+        "common/\ud83d\ude00.txt": {
+          "sha256": "ff41b67613042ef7c9906053444df867777dfbeee67d66ef6ba6534d584de978",
+          "bytes": 13,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "93a62db53541c36cc546c9eacac518b44346c4a592526c0ef0942191b9692462"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ==",
+      "common/\ue000.txt": "cHJpdmF0ZS11c2Ugc2NhbGFy",
+      "common/\ud83d\ude00.txt": "YXN0cmFsIHNjYWxhcg=="
+    }
+  },
+  {
+    "name": "unicode-path-length",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAgIAFGIVF1MBw23FgAAABQAAAAmBAAAc3JjL2VuL2V4YW1wbGUvc3JjL/CfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iALmt0S85JLC5WCM3LTM5PSfVLzE1VqK4FAFBLAQIUABQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAAAAAAAAAAAACAAQAAAABMSUNFTlNFUEsBAhQAFAAAAAgAUYhUXR2d+wQMAAAACgAAAAcAAAAAAAAAAAAAAIABMwAAAGdyYWRsZXdQSwECFAAUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAAAAAAAAAAAAgAFkAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RQSwECFAAUAAAICABRiFRdTAcNtxYAAAAUAAAAJgQAAAAAAAAAAAAAgAGxAAAAc3JjL2VuL2V4YW1wbGUvc3JjL/CfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iA8J+YgPCfmIDwn5iALmt0UEsFBgAAAAAEAAQACQUAAAsFAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        },
+        "src/en/example/src/\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00.kt": {
+          "sha256": "763ee7c2091c0818925cab66fa6243d48c6ff612c160dd8d4960e66f1975c2bd",
+          "bytes": 20,
+          "executable": false
+        }
+      },
+      "id": "8511c1710a81796be87bc61d7a2877aa5aa7d273c2bd44ba38716a43d46b8705"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ==",
+      "src/en/example/src/\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00.kt": "Y2xhc3MgVW5pY29kZU5hbWUge30="
+    }
+  },
+  {
+    "name": "wrapper-jar",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF1OmGlgFgAAABQAAAAhAAAAZ3JhZGxlL3dyYXBwZXIvZ3JhZGxlLXdyYXBwZXIuamFyKyhNyslMVkgqzcxJUSgvSiwoSC0CAFBLAQIUABQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAAAAAAAAAAAACAAQAAAABMSUNFTlNFUEsBAhQAFAAAAAgAUYhUXR2d+wQMAAAACgAAAAcAAAAAAAAAAAAAAIABMwAAAGdyYWRsZXdQSwECFAAUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAAAAAAAAAAAAgAFkAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RQSwECFAAUAAAACABRiFRdTphpYBYAAAAUAAAAIQAAAAAAAAAAAAAAgAGxAAAAZ3JhZGxlL3dyYXBwZXIvZ3JhZGxlLXdyYXBwZXIuamFyUEsFBgAAAAAEAAQABAEAAAYBAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradle/wrapper/gradle-wrapper.jar": {
+          "sha256": "a2d9ff8aa208a550310e96ffed1eb888b3ff5748f6d3f207c506ac11ac80ae9f",
+          "bytes": 20,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "cd6249737ed1262d8a69a2b8c2724aacb7dba7e73886bcdca40dbef23d7dc97c"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ==",
+      "gradle/wrapper/gradle-wrapper.jar": "cHVibGljIGJ1aWxkIHdyYXBwZXI="
+    }
+  },
+  {
+    "name": "empty-source",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdAAAAAAIAAAAAAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0AwBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXQAAAAACAAAAAAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsFBgAAAAADAAMAtQAAAKEAAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0,
+          "executable": false
+        }
+      },
+      "id": "17088c0b4eb5d4ff0e940113726ba9e40c0382a9f58aa8707a3449bf35e551b4"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": ""
+    }
+  },
+  {
+    "name": "normalized-path",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF0dLrQ7CAAAAAYAAAAUAAAAY29tbW9uLy9yZXNvdXJjZS50eHQrKE3KyUwGAFBLAQIUABQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAAAAAAAAAAAACAAQAAAABMSUNFTlNFUEsBAhQAFAAAAAgAUYhUXR2d+wQMAAAACgAAAAcAAAAAAAAAAAAAAIABMwAAAGdyYWRsZXdQSwECFAAUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAAAAAAAAAAAAgAFkAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RQSwECFAAUAAAACABRiFRdHS60OwgAAAAGAAAAFAAAAAAAAAAAAAAAgAGxAAAAY29tbW9uLy9yZXNvdXJjZS50eHRQSwUGAAAAAAQABAD3AAAA6wAAAAAA",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "common/resource.txt": {
+          "sha256": "efa1f375d76194fa51a3556a97e641e61685f914d446979da50a551a4333ffd7",
+          "bytes": 6,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "07469cea03363dd047f0349bae0800fa822eb8eb3d9165fd3fb6a3d90fc79e1f"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ==",
+      "common/resource.txt": "cHVibGlj"
+    }
+  },
+  {
+    "name": "jvm-overlay",
+    "payload": "UEsDBBQAAAAIAFGIVF0oZ798EgAAABAAAAAQAAAAc3JjL0V4YW1wbGUuamF2YUvOSSwuVnCtSMwtyElVqK4FAFBLAwQUAAAACABRiFRd921RNhAAAAAOAAAADgAAAGxpYi9CdWlsZC5qYXZhS85JLC5WcCrNzElRqK4FAFBLAwQUAAAACABRiFRdZBpw4dcAAABoAQAAGQAAAC5hdXRvc291cmNhcnItc291cmNlLmpzb26NULtuwzAM/BfOqYQ0nbz3K4oiYGTCZmxJhkgZMYL8e6kk8FxBy93hHuAdIin2qAjdHShk2UQpQgcT8ZarjAwHoJtSEs7pPPPFtKP7Mnbi1Bso5kqipQal3uiY+zqTCc5ALjxwatmFliysuWwmjaqLdN4PrGO9uJCj3/v83iYfkmsJZDmFVm6UefGfDx5Wv1KZcTu/cgS6H5AS/PcN4zKTu+KK8HuABcOEQ9tM1U2YsCenGEZbFNntexzZf1mfkwIvzXNdo0Freg+067jPU6uXMFK0yx4ff1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAQAAAAAAAAAAAAAACAAQAAAABzcmMvRXhhbXBsZS5qYXZhUEsBAhQAFAAAAAgAUYhUXfdtUTYQAAAADgAAAA4AAAAAAAAAAAAAAIABQAAAAGxpYi9CdWlsZC5qYXZhUEsBAhQAFAAAAAgAUYhUXWQacOHXAAAAaAEAABkAAAAAAAAAAAAAAIABfAAAAC5hdXRvc291cmNhcnItc291cmNlLmpzb25QSwUGAAAAAAMAAwDBAAAAigEAAAAA",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "recipe": "jvm",
+      "kind": "reconstructed",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "overlay_sources": [
+        "src/Example.java"
+      ],
+      "extension_lib": "1.4"
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "recipe": "jvm",
+      "kind": "reconstructed",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "extension_lib": "1.4",
+      "overlay_sources": [
+        "src/Example.java"
+      ],
+      "schema": 1,
+      "files": {
+        "lib/Build.java": {
+          "sha256": "4b6f3a99cc6628dc6e4fc8b307f592059daffce99a0ebe54b773b15c9ee2e9d4",
+          "bytes": 14,
+          "executable": false
+        },
+        "src/Example.java": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "34743c171e4579230b2c34c511e6f408cfb124deac9081ef74e2dce8a4f64cba"
+    },
+    "contents": {
+      "src/Example.java": "Y2xhc3MgRXhhbXBsZSB7fQ==",
+      "lib/Build.java": "Y2xhc3MgQnVpbGQge30="
+    }
+  },
+  {
+    "name": "reject-../escape.kt",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAMAAAALi4vZXNjYXBlLmt0K67MK8lILclMVihKzUpNLklNUcjMKygtAQBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXShnv3wSAAAAEAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAgAUYhUXYC8iE8aAAAAGAAAAAwAAAAAAAAAAAAAAIABsQAAAC4uL2VzY2FwZS5rdFBLBQYAAAAABAAEAO8AAAD1AAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-/absolute.kt",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAMAAAAL2Fic29sdXRlLmt0K67MK8lILclMVihKzUpNLklNUcjMKygtAQBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXShnv3wSAAAAEAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAgAUYhUXYC8iE8aAAAAGAAAAAwAAAAAAAAAAAAAAIABsQAAAC9hYnNvbHV0ZS5rdFBLBQYAAAAABAAEAO8AAAD1AAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-C:/secret.kt",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAMAAAAQzovc2VjcmV0Lmt0K67MK8lILclMVihKzUpNLklNUcjMKygtAQBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXShnv3wSAAAAEAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAgAUYhUXYC8iE8aAAAAGAAAAAwAAAAAAAAAAAAAAIABsQAAAEM6L3NlY3JldC5rdFBLBQYAAAAABAAEAO8AAAD1AAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-dir\\escape.kt",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAANAAAAZGlyXGVzY2FwZS5rdCuuzCvJSC3JTFYoSs1KTS5JTVHIzCsoLQEAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAAIAFGIVF2AvIhPGgAAABgAAAANAAAAAAAAAAAAAACAAbEAAABkaXJcZXNjYXBlLmt0UEsFBgAAAAAEAAQA8AAAAPYAAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-.env",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAEAAAALmVudiuuzCvJSC3JTFYoSs1KTS5JTVHIzCsoLQEAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAAIAFGIVF2AvIhPGgAAABgAAAAEAAAAAAAAAAAAAACAAbEAAAAuZW52UEsFBgAAAAAEAAQA5wAAAO0AAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-auth.json",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAJAAAAYXV0aC5qc29uK67MK8lILclMVihKzUpNLklNUcjMKygtAQBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXShnv3wSAAAAEAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAgAUYhUXYC8iE8aAAAAGAAAAAkAAAAAAAAAAAAAAIABsQAAAGF1dGguanNvblBLBQYAAAAABAAEAOwAAADyAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-cookies.json",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAMAAAAY29va2llcy5qc29uK67MK8lILclMVihKzUpNLklNUcjMKygtAQBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXShnv3wSAAAAEAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAgAUYhUXYC8iE8aAAAAGAAAAAwAAAAAAAAAAAAAAIABsQAAAGNvb2tpZXMuanNvblBLBQYAAAAABAAEAO8AAAD1AAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-local.properties",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAQAAAAbG9jYWwucHJvcGVydGllcyuuzCvJSC3JTFYoSs1KTS5JTVHIzCsoLQEAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAAIAFGIVF2AvIhPGgAAABgAAAAQAAAAAAAAAAAAAACAAbEAAABsb2NhbC5wcm9wZXJ0aWVzUEsFBgAAAAAEAAQA8wAAAPkAAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-secrets.properties",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAASAAAAc2VjcmV0cy5wcm9wZXJ0aWVzK67MK8lILclMVihKzUpNLklNUcjMKygtAQBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXShnv3wSAAAAEAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAgAUYhUXYC8iE8aAAAAGAAAABIAAAAAAAAAAAAAAIABsQAAAHNlY3JldHMucHJvcGVydGllc1BLBQYAAAAABAAEAPUAAAD7AAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-credentials.json",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAQAAAAY3JlZGVudGlhbHMuanNvbiuuzCvJSC3JTFYoSs1KTS5JTVHIzCsoLQEAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAAIAFGIVF2AvIhPGgAAABgAAAAQAAAAAAAAAAAAAACAAbEAAABjcmVkZW50aWFscy5qc29uUEsFBgAAAAAEAAQA8wAAAPkAAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-source.apk",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAKAAAAc291cmNlLmFwayuuzCvJSC3JTFYoSs1KTS5JTVHIzCsoLQEAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAAIAFGIVF2AvIhPGgAAABgAAAAKAAAAAAAAAAAAAACAAbEAAABzb3VyY2UuYXBrUEsFBgAAAAAEAAQA7QAAAPMAAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-code.dex",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAIAAAAY29kZS5kZXgrrswryUgtyUxWKErNSk0uSU1RyMwrKC0BAFBLAQIUABQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAAAAAAAAAAAACAAQAAAABMSUNFTlNFUEsBAhQAFAAAAAgAUYhUXR2d+wQMAAAACgAAAAcAAAAAAAAAAAAAAIABMwAAAGdyYWRsZXdQSwECFAAUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAAAAAAAAAAAAgAFkAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RQSwECFAAUAAAACABRiFRdgLyITxoAAAAYAAAACAAAAAAAAAAAAAAAgAGxAAAAY29kZS5kZXhQSwUGAAAAAAQABADrAAAA8QAAAAAA",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-classes/X.class",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAPAAAAY2xhc3Nlcy9YLmNsYXNzK67MK8lILclMVihKzUpNLklNUcjMKygtAQBQSwECFAAUAAAACABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAgAUYhUXShnv3wSAAAAEAAAAB0AAAAAAAAAAAAAAIABZAAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAgAUYhUXYC8iE8aAAAAGAAAAA8AAAAAAAAAAAAAAIABsQAAAGNsYXNzZXMvWC5jbGFzc1BLBQYAAAAABAAEAPIAAAD4AAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "reject-lib/source.jar",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF2AvIhPGgAAABgAAAAOAAAAbGliL3NvdXJjZS5qYXIrrswryUgtyUxWKErNSk0uSU1RyMwrKC0BAFBLAQIUABQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAAAAAAAAAAAACAAQAAAABMSUNFTlNFUEsBAhQAFAAAAAgAUYhUXR2d+wQMAAAACgAAAAcAAAAAAAAAAAAAAIABMwAAAGdyYWRsZXdQSwECFAAUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAAAAAAAAAAAAgAFkAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RQSwECFAAUAAAACABRiFRdgLyITxoAAAAYAAAADgAAAAAAAAAAAAAAgAGxAAAAbGliL3NvdXJjZS5qYXJQSwUGAAAAAAQABADxAAAA9wAAAAAA",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "metadata-ecosystem-28",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": {},
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "metadata-recipe-29",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": [],
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "metadata-kind-30",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": [],
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "metadata-feedback-31",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "feedback": "private"
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "metadata-origin-32",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://user:secret@github.com/a/b"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "metadata-origin-33",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/a/b?token=synthetic"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "metadata-overlay_sources-34",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLBQYAAAAAAwADALUAAACxAAAAAAA=",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "overlay_sources": [
+        "src/Missing.java"
+      ]
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "wire-nul",
+    "payload": "UEsDBBQAAAAIAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRQsIdfLxdI4HYle/YFcAUEsDBBQAAAAIAFGIVF0dnfsEDAAAAAoAAAAHAAAAZ3JhZGxld1NW1E/KzNMvzuACAFBLAwQUAAAACABRiFRdKGe/fBIAAAAQAAAAHQAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0S85JLC5WcK1IzC3ISVWorgUAUEsDBBQAAAAIAFGIVF37OSuCBQAAAAMAAAANAAAAbnVsAGhpZGRlbi5rdEtKTAEAUEsBAhQAFAAAAAgAUYhUXcCz6B4OAAAADgAAAAcAAAAAAAAAAAAAAIABAAAAAExJQ0VOU0VQSwECFAAUAAAACABRiFRdHZ37BAwAAAAKAAAABwAAAAAAAAAAAAAAgAEzAAAAZ3JhZGxld1BLAQIUABQAAAAIAFGIVF0oZ798EgAAABAAAAAdAAAAAAAAAAAAAACAAWQAAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdFBLAQIUABQAAAAIAFGIVF37OSuCBQAAAAMAAAANAAAAAAAAAAAAAACAAbEAAABudWwAaGlkZGVuLmt0UEsFBgAAAAAEAAQA8AAAAOEAAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "crc-tamper",
+    "payload": "UEsDBBQAAAAAAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRUNPUlJVUFRMSUNFTlNFUEsDBBQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAZ3JhZGxldyMhL2Jpbi9zaApQSwMEFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdGNsYXNzIEV4YW1wbGUge31QSwECFAAUAAAAAABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAAAAAAAAAAAAAIABYgAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsFBgAAAAADAAMAtQAAAK0AAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "link",
+    "payload": "UEsDBBQAAAAAAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRVBVQkxJQ19MSUNFTlNFUEsDBBQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAZ3JhZGxldyMhL2Jpbi9zaApQSwMEFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdGNsYXNzIEV4YW1wbGUge31QSwMEFAAAAAAAAAAhADyxHgoIAAAACAAAAAoAAABjb21tb24vYmFkL3ByaXZhdGVQSwECFAAUAAAAAABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAAAAAAAAAAAAAIABYgAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAAAAAAhADyxHgoIAAAACAAAAAoAAAAAAAAAAAAAAP+hrQAAAGNvbW1vbi9iYWRQSwUGAAAAAAQABADtAAAA3QAAAAAA",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "fifo",
+    "payload": "UEsDBBQAAAAAAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRVBVQkxJQ19MSUNFTlNFUEsDBBQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAZ3JhZGxldyMhL2Jpbi9zaApQSwMEFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdGNsYXNzIEV4YW1wbGUge31QSwMEFAAAAAAAAAAhADyxHgoIAAAACAAAAAoAAABjb21tb24vYmFkL3ByaXZhdGVQSwECFAAUAAAAAABRiFRdwLPoHg4AAAAOAAAABwAAAAAAAAAAAAAAgAEAAAAATElDRU5TRVBLAQIUABQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAAAAAAAAAAACAATMAAABncmFkbGV3UEsBAhQAFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAAAAAAAAAAAAAIABYgAAAHNyYy9lbi9leGFtcGxlL3NyYy9FeGFtcGxlLmt0UEsBAhQAFAAAAAAAAAAhADyxHgoIAAAACAAAAAoAAAAAAAAAAAAAAKQRrQAAAGNvbW1vbi9iYWRQSwUGAAAAAAQABADtAAAA3QAAAAAA",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "name": "cp437-name",
+    "payload": "UEsDBBQAAAAAAFGIVF3As+geDgAAAA4AAAAHAAAATElDRU5TRVBVQkxJQ19MSUNFTlNFUEsDBBQAAAAAAFGIVF0dnfsECgAAAAoAAAAHAAAAZ3JhZGxldyMhL2Jpbi9zaApQSwMEFAAAAAAAUYhUXShnv3wQAAAAEAAAAB0AAABzcmMvZW4vZXhhbXBsZS9zcmMvRXhhbXBsZS5rdGNsYXNzIEV4YW1wbGUge31QSwMEFAAAAAAAUYhUXQCyEQoLAAAACwAAAAwAAABjb21tb24vgi50eHRsZWdhY3kgbmFtZVBLAQIUABQAAAAAAFGIVF3As+geDgAAAA4AAAAHAAAAAAAAAAAAAACAAQAAAABMSUNFTlNFUEsBAhQAFAAAAAAAUYhUXR2d+wQKAAAACgAAAAcAAAAAAAAAAAAAAIABMwAAAGdyYWRsZXdQSwECFAAUAAAAAABRiFRdKGe/fBAAAAAQAAAAHQAAAAAAAAAAAAAAgAFiAAAAc3JjL2VuL2V4YW1wbGUvc3JjL0V4YW1wbGUua3RQSwECFAAUAAAAAABRiFRdALIRCgsAAAALAAAADAAAAAAAAAAAAAAAgAGtAAAAY29tbW9uL4IudHh0UEsFBgAAAAAEAAQA7wAAAOIAAAAAAA==",
+    "metadata": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    "valid": true,
+    "manifest": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "recipe": "gradle",
+      "kind": "upstream",
+      "origin": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "schema": 1,
+      "files": {
+        "LICENSE": {
+          "sha256": "f7024169a41c78878a46fbfe4f94bc509145c0b2876245a1f9b975342ee64ea1",
+          "bytes": 14,
+          "executable": false
+        },
+        "common/\u00e9.txt": {
+          "sha256": "aac4c827ce56aa7f59b948c441e1597d1728bf00694f981ecda13f301078f996",
+          "bytes": 11,
+          "executable": false
+        },
+        "gradlew": {
+          "sha256": "a8076d3d28d21e02012b20eaf7dbf75409a6277134439025f282e368e3305abf",
+          "bytes": 10,
+          "executable": true
+        },
+        "src/en/example/src/Example.kt": {
+          "sha256": "f651cac89b8678333791dc9663cb935efae80171ab89e41bb662d1c72b40c362",
+          "bytes": 16,
+          "executable": false
+        }
+      },
+      "id": "eda9e51ca8c874871732a85c0a49b7398722853acb35d346459774dbdb6a66f0"
+    },
+    "contents": {
+      "LICENSE": "UFVCTElDX0xJQ0VOU0U=",
+      "gradlew": "IyEvYmluL3NoCg==",
+      "src/en/example/src/Example.kt": "Y2xhc3MgRXhhbXBsZSB7fQ==",
+      "common/\u00e9.txt": "bGVnYWN5IG5hbWU="
+    }
+  }
+]

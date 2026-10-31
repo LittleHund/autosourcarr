@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+
+<html data-ui="reimagined" lang="en">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>AutoSourcarr</title>
+<link href="/static/ui.css?v=0.4.5" rel="stylesheet"/>
+<link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico?v=0.4.5"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icons/app-icon-32.png?v=0.4.5"/>
+<link rel="apple-touch-icon" sizes="192x192" href="/static/icons/app-icon-192.png?v=0.4.5"/></head>
+<body>
+<svg class="riSymbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="ri-book" viewBox="0 0 24 24"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H3V4h1Zm9 3a3 3 0 0 1 3-3h5v15h-5a4 4 0 0 0-3 2"/></symbol><symbol id="ri-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="ri-import" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5"/></symbol><symbol id="ri-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></symbol><symbol id="ri-copy" viewBox="0 0 24 24"><path d="M8 8h12v12H8zM4 16V4h12"/></symbol><symbol id="ri-split" viewBox="0 0 24 24"><path d="M5 3v4a5 5 0 0 0 5 5h4a5 5 0 0 1 5 5v4M5 21v-4a5 5 0 0 1 5-5M15 17l4 4 4-4M1 17l4 4 4-4"/></symbol><symbol id="ri-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6M4 3h16v18H4z"/></symbol><symbol id="ri-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol><symbol id="ri-tool" viewBox="0 0 24 24"><path d="m14 6 4 4M5 20l-1-1a2 2 0 0 1 0-3l9-9a6 6 0 0 1 7-4l-4 4 3 3 4-4a6 6 0 0 1-7 7l-8 8a2 2 0 0 1-3-1Z"/></symbol><symbol id="ri-wanted" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M19 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></symbol><symbol id="ri-source" viewBox="0 0 24 24"><path d="M4 4h16v6H4zM4 14h16v6H4zM7 7h.01M7 17h.01M11 7h6M11 17h6"/></symbol><symbol id="ri-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3ZM12 9v4M12 17h.01"/></symbol><symbol id="ri-stats" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></symbol><symbol id="ri-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 3 2 3 1 3 3 1 3 3 3-3 3-1 1-3 2-3-2-3-3-1-1-3Zm6 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></symbol><symbol id="ri-system" viewBox="0 0 24 24"><path d="M4 4h16v12H4zM8 21h8M12 16v5"/></symbol><symbol id="ri-search" viewBox="0 0 24 24"><path d="m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/></symbol><symbol id="ri-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="ri-sun" viewBox="0 0 24 24"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/></symbol><symbol id="ri-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5L4 10M5 12a7 7 0 0 0 12 5l3-3"/></symbol><symbol id="ri-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol><symbol id="ri-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol></svg>
+<a class="riSkip" href="#mainContent">Skip to content</a>
+<header class="appHeader riHeader">
+  <div class="riBrand"><button id="riMenuToggle" class="riIconButton" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="riSidebar"><svg class="riIcon" aria-hidden="true"><use href="#ri-menu"/></svg></button><a href="#/series" class="riBrandLink"><img class="riAppIcon" src="/static/icons/app-icon-64.png?v=0.4.5" width="32" height="32" alt=""/><h1>AutoSourcarr</h1></a></div>
+  <button type="button" id="riSearchOpen" class="riGlobalSearch"><svg class="riIcon" aria-hidden="true"><use href="#ri-search"/></svg><span>Search your library</span><kbd>/</kbd></button>
+  <div class="riHeaderRight"><span id="riPreviewBadge" hidden>Sample preview</span><button type="button" class="riIconButton" id="riThemeToggle" aria-label="Switch light or dark appearance" title="Switch light or dark appearance"><svg class="riIcon" aria-hidden="true"><use href="#ri-sun"/></svg></button><button aria-controls="errorPanel" aria-expanded="false" class="pill healthButton" id="health" title="Open errors and diagnostics" type="button">checking…</button></div>
+</header>
+<div id="riSidebarScrim" hidden></div>
+<aside id="riSidebar" class="riSidebar" aria-label="Application navigation">
+<nav class="appNav" aria-label="Main navigation">
+<div class="navPrimary">
+<span class="riNavLabel">Library</span>
+<button type="button" data-tab="subbed" data-route="/series" ><svg class="riIcon" aria-hidden="true"><use href="#ri-book"/></svg><span>Manga</span></button>
+<button type="button" data-tab="browse" data-route="/add" class="riChildNav"><svg class="riIcon" aria-hidden="true"><use href="#ri-plus"/></svg><span>Add new</span></button>
+<button type="button" data-tab="imports" data-route="/imports" class="riChildNav" title="Mihon / Tachiyomi backup imports"><svg class="riIcon" aria-hidden="true"><use href="#ri-import"/></svg><span>Library import</span></button>
+<span class="riNavLabel">Workspace</span>
+<button type="button" data-tab="matrix" data-route="/matching" ><svg class="riIcon" aria-hidden="true"><use href="#ri-grid"/></svg><span>Match matrix</span></button>
+<button type="button" data-tab="duplicates" data-route="/duplicates" class="riChildNav"><svg class="riIcon" aria-hidden="true"><use href="#ri-copy"/></svg><span>Duplicates</span></button>
+<button type="button" data-tab="mixed-entries" data-route="/mixed" class="riChildNav"><svg class="riIcon" aria-hidden="true"><use href="#ri-split"/></svg><span>Mixed entries</span></button>
+<button type="button" data-tab="manual-actions" data-route="/decisions" class="riChildNav"><svg class="riIcon" aria-hidden="true"><use href="#ri-check"/></svg><span>Saved decisions</span></button>
+<button type="button" class="riChildNav" data-instance-tool="identities"><svg class="riIcon" aria-hidden="true"><use href="#ri-copy"/></svg><span>Identity review</span></button>
+<span class="riNavLabel">Automation</span>
+<button type="button" data-tab="tasks" data-route="/activity" class="tasksNavButton"><svg class="riIcon" aria-hidden="true"><use href="#ri-activity"/></svg><span>Tasks</span><span class="taskNavBadge" hidden id="taskNavBadge">0</span></button>
+<button type="button" class="riChildNav" data-instance-tool="history"><svg class="riIcon" aria-hidden="true"><use href="#ri-list"/></svg><span>History</span></button>
+<button type="button" class="riChildNav" data-instance-tool="queue"><svg class="riIcon" aria-hidden="true"><use href="#ri-import"/></svg><span>Download queue</span></button>
+<button type="button" data-tab="tasks" data-route="/activity/repairs" class="riChildNav"><svg class="riIcon" aria-hidden="true"><use href="#ri-tool"/></svg><span>Source repairs</span></button>
+<button type="button" data-tab="subbed" data-route="/wanted" ><svg class="riIcon" aria-hidden="true"><use href="#ri-wanted"/></svg><span>Wanted</span></button>
+<button type="button" data-tab="sources" data-route="/sources" ><svg class="riIcon" aria-hidden="true"><use href="#ri-source"/></svg><span>Sources</span></button>
+<button type="button" data-tab="attention" data-route="/attention" ><svg class="riIcon" aria-hidden="true"><use href="#ri-alert"/></svg><span>Needs attention</span><span class="taskNavBadge" hidden id="attentionNavBadge">0</span></button>
+</div>
+<div class="navSecondary">
+<span class="riNavLabel">Instance</span>
+<button type="button" data-tab="statistics" data-route="/statistics" ><svg class="riIcon" aria-hidden="true"><use href="#ri-stats"/></svg><span>Statistics</span></button>
+<button type="button" data-tab="settings" data-route="/settings" class="settingsNavButton" aria-label="Settings"><svg class="riIcon" aria-hidden="true"><use href="#ri-settings"/></svg><span>Settings</span></button>
+<button type="button" class="riChildNav" data-instance-tool="backups"><svg class="riIcon" aria-hidden="true"><use href="#ri-import"/></svg><span>Backup &amp; restore</span></button>
+<button type="button" class="riChildNav" data-instance-tool="sharing"><svg class="riIcon" aria-hidden="true"><use href="#ri-copy"/></svg><span>Database sharing</span></button>
+<button type="button" class="riChildNav" data-instance-tool="research"><svg class="riIcon" aria-hidden="true"><use href="#ri-list"/></svg><span>Freshness &amp; performance</span></button>
+<button type="button" data-tab="about" data-route="/system" ><svg class="riIcon" aria-hidden="true"><use href="#ri-system"/></svg><span>System</span></button>
+</div>
+</nav>
+<div class="riSidebarFoot"><span class="riInstanceDot"></span><div><strong>AutoSourcarr</strong><span>v0.4.5</span></div></div>
+</aside>
+
+<main id="mainContent" tabindex="-1">
+<section aria-labelledby="errorPanelTitle" aria-live="polite" aria-modal="true" class="errorPanel" hidden="" id="errorPanel" role="dialog">
+<div class="errorPanelHead">
+<div>
+<span class="eyebrow">Errors &amp; diagnostics</span>
+<h2 id="errorPanelTitle">Errors &amp; diagnostics</h2>
+<p class="muted" id="errorPanelSummary">Loading current connection state and recent AutoSourcarr errors…</p>
+</div>
+<div class="statusActions">
+<button id="refreshErrors" type="button">Refresh</button><button id="exportErrors" type="button">Download diagnostic logs (.txt)</button>
+<button hidden="" id="clearResolvedErrors" type="button">Clear resolved history</button>
+<button id="closeErrors" type="button">Close</button>
+</div>
+</div>
+<div aria-label="Diagnostic history" class="scopeChips" id="diagnosticFilters" role="group"><button class="active" data-diagnostic-filter="active">Active <span id="diagnosticActiveCount">0</span></button><button data-diagnostic-filter="resolved">Resolved history <span id="diagnosticResolvedCount">0</span></button></div><div class="errorConnectionSummary" id="errorConnectionSummary"></div>
+<p class="muted" id="errorExportStatus" role="status"></p><div class="errorList" id="errorList"></div>
+</section>
+<section class="tab" id="matrix"><div class="pageHeading"><div><h2>Match matrix</h2><p class="muted">Compare source coverage and review individual matches.</p></div><div class="statusActions"></div></div>
+<div class="toolbar wrap filterToolbar">
+<input aria-label="Search titles" id="matrixSearch" placeholder="Search known entries"/>
+<select aria-label="Filter entries by connected source" id="matrixSource"><option value="">All connected sources</option></select>
+<select aria-label="Exact source count" id="matrixMinMatches"><option value="">Any source match count</option></select>
+<select aria-label="Exact entry-record count" id="matrixEntryMatches" title="Filter by the total number of concrete manga/source records attached to an entry"><option value="">Any entry match count</option></select>
+<button id="loadMatrix">Apply</button>
+<span class="muted" id="matrixCount"></span>
+<details class="advancedFilters"><summary>Filters</summary><div class="menuContent"><select aria-label="Any main title state" id="matrixTitleState"><option value="any">Any main title state</option><option value="manual">Manually renamed</option><option value="automatic">Automatic main title</option></select><select aria-label="Any match status" id="matrixStatus"><option value="any">Any match status</option><option value="gaps">Has no-match gaps</option><option value="full">Matched on every shown source</option><option value="manual">Has manual match</option><option value="duplicates">Possible duplicate</option><option value="multiple_records">Multiple records on one source</option></select><select aria-label="Any publication status" id="matrixPublicationStatus"><option value="any">Any publication status</option><option value="ongoing">Ongoing</option><option value="finished">Finished / completed</option><option value="hiatus">Hiatus</option><option value="cancelled">Cancelled</option><option value="licensed">Licensed</option><option value="unknown">Unknown</option></select><select aria-label="Recently updated" id="matrixSort"><option value="updated">Recently updated</option><option value="matches">Most matches</option><option value="title">Title</option></select></div></details></div>
+<div class="entryWorkspace"><div class="tablewrap"><table class="matrixTable" id="matrixTable"></table></div><div aria-label="Entry details" class="inlineInspector" hidden="" id="matrixInspector" tabindex="-1"></div></div>
+</section>
+<section class="tab browseTab" id="browse">
+<div class="pageHeading">
+<div>
+<h2>Add new manga</h2>
+<p class="muted">Discover titles across your enabled sources.</p>
+</div>
+<div class="statusActions">
+<details class="toolbarMenu"><summary>Maintenance</summary><div class="menuContent"><button id="refreshBrowseMetadata">Repair missing metadata</button><button id="refreshBrowseLive">Refresh current page from sources</button></div></details></div>
+</div>
+<div class="browseModeBar">
+<button class="browseMode active" data-mode="POPULAR">Popular</button>
+<button class="browseMode" data-mode="LATEST">Latest</button>
+<button class="browseMode" data-mode="SEARCH">Search</button>
+</div>
+<div class="toolbar wrap browseToolbar">
+<input aria-label="Search titles and aliases" id="browseSearch" placeholder="Search titles and aliases"/>
+<select aria-label="Source" id="browseSource"><option value="">All enabled sources</option></select>
+<select aria-label="Filter entries by connected source" id="browseConnectedSource" title="Inspect saved entries linked to a source, including additional records and unavailable sources"><option value="">Any connected source</option></select>
+<div aria-label="Entries per page controls" class="browsePageSizeControl">
+<label for="browsePageSize">Entries per page</label>
+<select aria-label="Quick entries-per-page size" id="browsePageSizePreset">
+<option value="">Default</option>
+<option value="25">25</option>
+<option value="50">50</option>
+<option value="100">100</option>
+<option value="200">200</option>
+<option value="500">500</option>
+</select>
+<input aria-label="Custom entries per page" id="browsePageSize" inputmode="numeric" max="500" min="1" placeholder="Custom 1–500" step="1" type="number"/>
+<button id="applyBrowsePageSize" type="button">Apply size</button>
+</div>
+<button id="runBrowse">Browse</button>
+<details class="advancedFilters"><summary>Filters</summary><div class="menuContent"><select aria-label="All enabled languages" id="browseLanguage"><option value="">All enabled languages</option></select><select aria-label="Any match count" id="browseMatchCount"><option value="">Any match count</option></select><select aria-label="Extension order / relevance" id="browseSort"><option value="relevance">Extension order / relevance</option><option value="sources">Most matched sources</option><option value="title">Title</option></select></div></details></div>
+<div class="browserStatus muted" id="browseStatus"></div>
+<div class="browseWorkspace"><div class="browseGrid" id="browseGrid"></div><div class="browseInspectorBackdrop workbenchDrawer" hidden="" id="browseInspectorBackdrop">
+<aside aria-labelledby="browseInspectorTitle" aria-modal="false" class="browseDetailDrawer" id="browseInspector" role="dialog">
+<div class="modalHeader browseDetailHeader">
+<div><h2 id="browseInspectorTitle">Entry details</h2><div class="muted" id="browseInspectorSubtitle">Browse details</div></div>
+<button aria-label="Close" class="ghost" id="closeBrowseInspector">Close</button>
+</div>
+<div class="browseInspectorBody" id="browseInspectorBody"><div class="muted">Select an entry to view its details.</div></div>
+</aside>
+</div></div>
+<div class="browserPager browsePager"><button id="browsePrev">Previous</button><span id="browsePage">Page 1</span><button id="browseNext">Next</button></div>
+</section>
+<section class="tab active" id="subbed"><div class="pageHeading"><div><h2 id="riLibraryHeading">Manga <span id="riLibraryHeadingCount"></span></h2><p class="muted">Your library, connected across sources.</p></div><div class="statusActions"><button class="goodAction" id="searchAllSubbed">Search all</button><button id="repairUnmatchedSubbed" title="Recover the first safely verified source for subscribed entries with no active source records">Repair unmatched</button><button id="loadSubbed">Refresh library</button></div></div>
+<div class="toolbar wrap filterToolbar">
+<input aria-label="Search titles" id="subbedSearch" placeholder="Search subscribed entries"/>
+<select aria-label="Filter entries by connected source" id="subbedSource"><option value="">All connected sources</option></select>
+<input id="subbedMinMatches" type="number" min="0" step="1" aria-label="Exact source count" placeholder="Exact source count"/>
+<input id="subbedEntryMatches" type="number" min="0" step="1" aria-label="Exact entry-record count" placeholder="Exact entry-record count"/>
+<span class="muted" id="subbedCount"></span>
+<details class="advancedFilters"><summary>Filters</summary><div class="menuContent"><select aria-label="Any main title state" id="subbedTitleState"><option value="any">Any main title state</option><option value="manual">Manually renamed</option><option value="automatic">Automatic main title</option></select><select aria-label="Any match status" id="subbedStatus"><option value="any">Any match status</option><option value="gaps">Has no-match gaps</option><option value="full">Matched on every shown source</option><option value="manual">Has manual match</option><option value="duplicates">Possible duplicate</option><option value="multiple_records">Multiple records on one source</option></select><select aria-label="Any publication status" id="subbedPublicationStatus"><option value="any">Any publication status</option><option value="ongoing">Ongoing</option><option value="finished">Finished / completed</option><option value="hiatus">Hiatus</option><option value="cancelled">Cancelled</option><option value="licensed">Licensed</option><option value="unknown">Unknown</option></select><select aria-label="Recently updated" id="subbedSort"><option value="updated">Recently updated</option><option value="matches">Most matches</option><option value="title">Title</option></select></div></details></div>
+<div class="notice" hidden="" id="subbedNotice"></div><p id="riWantedExplanation" hidden>Missing downloads require exact checked main-library chapters. Source gaps describe incomplete alternatives. Unchecked, deferred or verification-required observations stay separate.</p>
+<div aria-label="Library scope" class="scopeChips" role="group"><button class="active" data-library-scope="all">All</button><button data-library-scope="unmatched">Needs a match</button><button data-library-scope="missing_downloads">Missing downloads</button><button data-library-scope="source_gaps">Source gaps</button><button data-library-scope="verification">Verification needed</button><button data-library-scope="monitored">Monitored</button><button data-library-scope="catalog">Saved catalog</button></div><div class="entryWorkspace riLibraryWorkspace"><div id="riLibraryGrid" class="riLibraryGrid" aria-label="Manga library" hidden></div><div class="tablewrap"><table class="matrixTable" id="subbedTable"></table></div><div aria-label="Entry details" class="inlineInspector" hidden="" id="subbedInspector" tabindex="-1"></div></div>
+<div class="riLibraryPager" aria-label="Library pages"><button id="riLibraryPrevious" disabled>Previous</button><span id="riLibraryPage">Page 1</span><button id="riLibraryNext" disabled>Next</button><label>Per page <select id="riLibraryPageSize"><option value="30">30</option><option value="60" selected>60</option><option value="120">120</option></select></label></div>
+</section>
+<section class="tab duplicatesTab" id="duplicates">
+<div class="pageHeading">
+<div>
+<h2>Duplicates</h2>
+<p class="muted">Compare the evidence, then decide whether two entries are the same work.</p>
+</div>
+<div class="statusActions">
+<button id="refreshDuplicates">Refresh</button><button type="button" data-instance-tool="review">Evidence &amp; bulk review</button>
+<button type="button" class="riChildNav" data-instance-tool="identities"><svg class="riIcon" aria-hidden="true"><use href="#ri-check"/></svg><span>Identity review</span></button>
+<details class="toolbarMenu"><summary>Automation &amp; repair</summary><div class="menuContent"><button class="primaryAction" id="runAutomaticDuplicates">Run automatic sweep</button><button id="autoMergeDuplicates">Preview safe merges</button><button id="unmatchDuplicates">Unmatch wrongly merged</button></div></details></div>
+</div>
+<div class="toolbar wrap" aria-label="Duplicate views"><button type="button" id="duplicatePossibleView" aria-pressed="true">Possible duplicates</button><button type="button" id="duplicateHistoryView" aria-pressed="false">Automatically combined</button></div>
+<div id="duplicateCandidatesPanel">
+<div class="notice" id="duplicateAutomationStatus" style="margin-bottom:10px">Automatic duplicate matching status loading…</div>
+<div aria-label="Duplicate subscription filter" class="duplicateScopeTabs" role="tablist">
+<button aria-selected="true" class="duplicateScopeFilter active" data-duplicate-scope="subbed" id="duplicateScopeSubbed" role="tab">Subbed <span id="duplicateScopeSubbedCount">0</span></button>
+<button aria-selected="false" class="duplicateScopeFilter" data-duplicate-scope="unsubbed" id="duplicateScopeUnsubbed" role="tab">Unsubbed <span id="duplicateScopeUnsubbedCount">0</span></button>
+</div>
+<div class="toolbar wrap">
+<input aria-label="Filter by any title, alias or entry ID" id="duplicateSearch" placeholder="Filter by any title, alias or entry ID"/>
+<select aria-label="Any candidate count" id="duplicateSize"><option value="">Any candidate count</option><option value="1">1 possible duplicate</option><option value="2">2 possible duplicates</option><option value="3">3+ possible duplicates</option></select>
+<span class="muted" id="duplicateCount"></span>
+</div>
+<div class="duplicateGroups" id="duplicateGroups"></div>
+</div>
+<div id="duplicateHistoryPanel" hidden>
+<p class="muted">Recorded automatic merges, newest first. Before-merge snapshots describe the original entries; the current entry may have changed since. Older releases may not have saved complete details.</p>
+<div class="toolbar wrap"><input type="search" id="mergeHistoryQuery" placeholder="Search original titles or entry ID" aria-label="Search automatic merge history"><button type="button" id="mergeHistorySearch">Search / refresh</button><button type="button" id="mergeHistoryPrevious">Previous</button><span id="mergeHistoryCount" role="status"></span><button type="button" id="mergeHistoryNext">Next</button></div>
+<div id="mergeHistoryList"></div>
+</div>
+</section>
+<section class="tab" id="mixed-entries">
+<div class="pageHeading"><div><h2>Mixed entries</h2><p class="muted">Inspect one entry that may contain source records from different works.</p></div><div class="statusActions"><button id="mixedRefresh" type="button">Refresh</button></div></div>
+<div class="toolbar wrap"><input id="mixedSearch" type="search" placeholder="Search entry or source title" aria-label="Search mixed entries"/><select id="mixedFilter" aria-label="Mixed entry review status"><option value="needs_review">Needs review</option><option value="reviewed">Reviewed</option><option value="all">All multi-record entries</option></select><button id="mixedApply" type="button">Apply</button><span id="mixedSummary" class="muted" role="status"></span></div>
+<div class="toolbar"><button id="mixedPrevious" type="button">Previous</button><span id="mixedPageLabel" class="muted"></span><button id="mixedNext" type="button">Next</button></div>
+<div class="compareDesk mixedDesk"><div id="mixedQueue" class="reviewQueue" aria-label="Entries to inspect"></div><div id="mixedDetail" class="compareContent" aria-live="polite"></div></div>
+</section>
+<section class="tab manualGroupsTab manualActionsTab" id="manual-actions">
+<div class="pageHeading">
+<div>
+<h2>Saved decisions</h2>
+<p class="muted">Find your saved decisions and the records they affect.</p>
+</div>
+<div class="statusActions"><button id="refreshManualActions">Refresh</button><button id="resetAllManualActions" class="dangerAction">Reset all manual actions…</button></div>
+</div>
+<p id="manualActionsStatus" class="browserStatus muted" role="status" hidden></p>
+<div class="manualLedger"><div aria-label="Manual action types" class="manualActionSubtabs ledgerRail" role="tablist">
+<button class="manualActionSubtab active" data-manual-action-subtab="matches" type="button">Matches / groups <span class="miniBadge" id="manualActionMatchesCount">0</span></button>
+<button class="manualActionSubtab" data-manual-action-subtab="titles" type="button">Titles <span class="miniBadge" id="manualActionTitlesCount">0</span></button>
+<button class="manualActionSubtab" data-manual-action-subtab="separate" type="button">Separate entries <span class="miniBadge" id="manualActionSeparateCount">0</span></button>
+<button class="manualActionSubtab" data-manual-action-subtab="chapters" type="button">Rejected chapters <span class="miniBadge" id="manualActionChapterCount">0</span></button>
+<button class="manualActionSubtab" data-manual-action-subtab="tags" type="button">Tags</button>
+<button class="manualActionSubtab" data-manual-action-subtab="duplicates" type="button">Duplicate decisions <span class="miniBadge" id="manualActionDuplicateCount">0</span></button>
+</div><div class="ledgerContent"><div class="toolbar" id="manualLedgerSearch"><input aria-label="Search manual decisions" id="manualActionSearch" placeholder="Search decisions by title or source" type="search"/><span class="muted" id="manualSearchCount"></span></div><div class="manualActionPanel active" data-manual-action-panel="matches">
+<div class="toolbar wrap manualActionPanelToolbar"><details class="toolbarMenu"><summary>Bulk actions</summary><div class="menuContent"><button class="dangerAction" id="resetManualGroups">Reset groups</button><button class="dangerAction" id="resetManualMatches">Reset manual matches</button></div></details>
+<span class="muted">Manual source bindings survive a normal database reset.</span>
+</div>
+<div class="browserStatus muted" id="manualGroupsSummary">Loading manual matches…</div>
+<div class="manualGroupsList" id="manualGroupsList"></div>
+<div class="statusPanel manualSinglesPanel">
+<div class="statusPanelHeader"><h3>Individual persistent manual matches</h3><span class="muted">A second manual match on the same entry automatically turns these into a group.</span></div>
+<div class="manualSinglesList" id="manualSinglesList"></div>
+</div>
+</div><div class="manualActionPanel" data-manual-action-panel="titles">
+<div class="browserStatus muted" id="manualTitlesSummary">Loading manual titles…</div>
+<div class="manualActionList" id="manualTitlesList"></div>
+</div><div class="manualActionPanel" data-manual-action-panel="separate">
+<div class="browserStatus muted" id="manualSeparateSummary">Loading separate-entry decisions…</div>
+<div class="manualActionList" id="manualSeparateList"></div>
+</div><div class="manualActionPanel" data-manual-action-panel="chapters">
+<div class="browserStatus muted" id="manualChapterSummary">Loading rejected chapters…</div>
+<div class="manualActionList" id="manualChapterList"></div>
+</div><div class="manualActionPanel" data-manual-action-panel="duplicates">
+<div class="browserStatus muted" id="manualDuplicateSummary">Loading duplicate decisions…</div>
+<div class="manualActionList" id="manualDuplicateList"></div>
+</div><div class="manualActionPanel" data-manual-action-panel="tags" id="tagReviewPanel">
+<div class="toolbar wrap"><div class="grow"><h3>Tags &amp; synonyms</h3><p class="muted">Review how source tags are grouped. Keeping tags separate prevents a suggested synonym from joining them.</p></div><button id="refreshTags" type="button">Refresh tags</button><button id="reindexTags" type="button">Read tags from saved metadata</button></div>
+<p id="tagReviewStatus" role="status" class="muted">Open Tags to inspect saved source metadata.</p>
+<section class="card tagManualReview"><h3>Match or separate any two tags</h3><p class="muted">Choose the original tags. Their namespaces remain visible so an artist is not confused with a subject.</p><div class="tagPickerPair">
+<form id="tagLeftForm"><label for="tagLeftSearch">First tag</label><div class="toolbar"><input id="tagLeftSearch" type="search" maxlength="200" placeholder="Search tags"/><button type="submit">Find</button></div><select id="tagLeftSelect" size="5" aria-label="First tag results"></select><p id="tagLeftSelection" class="muted">No tag selected.</p></form>
+<form id="tagRightForm"><label for="tagRightSearch">Second tag</label><div class="toolbar"><input id="tagRightSearch" type="search" maxlength="200" placeholder="Search tags"/><button type="submit">Find</button></div><select id="tagRightSelect" size="5" aria-label="Second tag results"></select><p id="tagRightSelection" class="muted">No tag selected.</p></form>
+</div><div class="toolbar wrap"><button id="tagSame" class="primaryAction" type="button" disabled>Same meaning</button><button id="tagDifferent" type="button" disabled>Keep separate</button><button id="tagClear" type="button" disabled>Clear decision</button></div></section>
+<details class="tagReviewSection" open><summary>Suggested synonyms</summary><div id="tagSuggestions" class="tagDecisionList"></div></details>
+<details class="tagReviewSection"><summary>Saved tag decisions</summary><div id="tagDecisions" class="tagDecisionList"></div></details>
+<details class="tagReviewSection" open><summary>Tag catalog</summary><form id="tagCatalogForm" class="toolbar wrap"><input id="tagCatalogSearch" type="search" maxlength="200" aria-label="Search tag catalog" placeholder="Search names and aliases"/><button type="submit">Search</button><span id="tagCatalogStatus" class="muted" role="status"></span></form><div id="tagCatalog" class="tagCatalog"></div><div class="browserPager"><button id="tagPrevious" type="button">Previous</button><span id="tagPageLabel"></span><button id="tagNext" type="button">Next</button></div></details>
+</div></div></div>
+</section>
+<section aria-labelledby="attentionTitle" class="tab" id="attention">
+<div class="pageHeading"><div><h2 id="attentionTitle">Needs attention</h2><p class="muted">Complete source verification in the shared WebView, then retry. Other sources keep working.</p></div><button id="refreshAttention" type="button">Refresh</button></div>
+<p id="attentionSummary" role="status">Checking for sources that need your help…</p>
+<div class="attentionItems" id="attentionItems"></div>
+</section>
+<section class="tab" id="sources"><div class="pageHeading"><div><h2>Sources</h2><p class="muted">Install sources, manage repositories and open their shared-session WebView.</p></div><div class="statusActions"><button id="openSourceWebview" type="button">Open WebView</button></div></div>
+<div aria-label="Sources sections" class="sourceSubtabs" role="tablist">
+<button class="sourceSubtab active" data-source-subtab="installed" type="button">Installed</button>
+<button class="sourceSubtab" data-source-subtab="health" type="button">Health</button>
+<button class="sourceSubtab" data-source-subtab="manage" type="button">Discover <span class="miniBadge" hidden="" id="sourceUpdateBadge"></span></button>
+<button class="sourceSubtab" data-source-subtab="repositories" type="button">Repositories</button>
+<button class="sourceSubtab" data-source-subtab="maintenance" type="button">Repair AI</button></div>
+<div class="sourceSubpanel" id="sourceMaintenancePanel">
+<div class="toolbar wrap"><h3 class="grow">Repair AI</h3><button id="openRepairSetup" type="button">AI setup &amp; account</button></div>
+<p id="repairAIStatus" role="status">Open Repair AI to check this instance's account.</p>
+<details id="repairSetupPanel"><summary>AI setup and account</summary>
+<p class="muted">This instance keeps its own repair AI provider, account and login details.</p>
+<button id="configureRepairAI" type="button">Configure repair AI</button>
+<p class="muted">Choose the repair AI provider and connect or check its account here. Source execution and job evidence are in Tasks → Repairs.</p>
+<div class="repairAccountCard">
+<h4>Repair AI account</h4>
+<p id="repairControlStatus" role="status">Checking this instance’s built-in repair process…</p><div id="repairAccountDiagnostics" aria-live="polite"></div>
+<div class="toolbar wrap">
+<button id="repairTestAI" type="button" hidden>Test AI connection</button>
+<button type="button" id="repairLogin">Sign in with ChatGPT</button>
+<button type="button" id="repairCheckLogin">Check saved login</button>
+<button type="button" id="repairLogout">Sign out</button>
+<button type="button" id="repairCancelLogin" hidden>Cancel sign-in</button>
+<button type="button" id="repairCleanup" hidden>Retry account cleanup</button>
+</div>
+<div id="repairDeviceLogin" hidden>
+<p><a id="repairDeviceLink" href="https://auth.openai.com/codex/device" target="_blank" rel="noopener noreferrer">Open sign-in page</a>. Enter this one-time code on that page when it appears: <strong id="repairDeviceCode"></strong>.</p>
+<p id="repairDeviceExpiry" class="muted"></p>
+<p class="muted">Only use this code if you started sign-in here. You may need to enable device-code login in your ChatGPT security settings.</p>
+</div></div>
+
+</details>
+<button id="openSourceRepairTasks" type="button">Open Tasks → Repairs</button>
+</div>
+<div class="sourceSubpanel" id="sourceHealthPanel">
+<div class="toolbar wrap"><h3 class="grow">Source health</h3><button id="refreshSourceHealth" type="button">Refresh results</button><button id="checkEnabledSourceHealth" type="button">Check enabled sources</button><button id="sourceHealthTasks" type="button">Open Tasks</button></div>
+<label><input id="sourceHealthDaily" type="checkbox"/> Check enabled sources daily</label>
+<p class="muted">Daily checks wait for browser idle. Manual checks run on demand. Each check samples the catalog, search, metadata, cover, chapter list and one page image; it does not verify every title or chapter.</p>
+<p id="sourceHealthStatus" role="status" aria-live="polite">Open Health to load recorded results.</p>
+<label>Filter <select id="sourceHealthFilter"><option value="all">All installed sources</option><option value="attention">Needs checking or attention</option><option value="working">Passed samples</option></select></label>
+<div class="sourceHealthTableWrap"><table id="sourceHealthTable"><thead><tr><th>Source / language</th><th>Last result</th><th>Last checked</th><th>Last successful check</th><th>Last repair installed</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+<details id="sourceHealthDetails" hidden><summary>Source check evidence and recent history</summary><div id="sourceHealthEvidence"></div></details>
+</div>
+<div class="sourceSubpanel active" id="sourceInstalledPanel">
+<div class="toolbar wrap"><button id="syncSources">Sync sources</button><button id="scanAdditionalRecords">Find extra source records</button><select aria-label="All source variants" id="sourceAvailability"><option value="all">All source variants</option><option value="available">Available only</option><option value="unavailable">Unavailable only</option></select><span class="muted">One row per website. Select languages, display group, and serving priority. Official/community chapter status is detected from the source and chapter metadata.</span></div>
+<!-- Source display groups evolved into shared-priority Source groups in v0.2.80. -->
+<details id="matchingPoliciesPanel" class="settingsGroup"><summary>Automatic matching rules</summary>
+<p>Choose requirements for a source or a group. Internal means the same source ID; external means different source IDs, including sources in the same group.</p>
+<p class="muted">Source overrides replace group defaults for that direction. Every selected check must pass, alongside the built-in identity, edition and matching safeguards. Missing evidence goes to review. Cross-source matches must satisfy both sides. These settings affect future automatic matches and merges; existing records and manual choices stay as they are.</p>
+<div class="toolbar wrap"><label>Configure <select id="matchingPolicyTarget" aria-label="Source or group matching rules"></select></label><button type="button" id="matchingPolicyReload">Reload rules</button></div>
+<p id="matchingPolicyStatus" role="status"></p><div id="matchingPolicyForms" class="matchingPolicyGrid"></div>
+<details id="matchingPresetPanel"><summary>Create and edit matching presets</summary>
+<p class="muted">Presets are saved in this instance. Editing or deleting a preset leaves applied rules unchanged. Select it in a direction’s draft and Save that direction to apply it.</p>
+<div class="toolbar wrap"><label>Preset <select id="matchingPresetTarget"><option value="">New preset</option></select></label><button id="matchingPresetReload" type="button">Reload presets</button></div>
+<form id="matchingPresetForm" class="matchingPolicyCard">
+<label>Name <input id="matchingPresetName" name="presetName" type="text" maxlength="80" required placeholder="e.g. My creator checks"></label>
+<label>Description <textarea id="matchingPresetDescription" name="presetDescription" maxlength="500" rows="2"></textarea></label>
+<label>Automatic matching <select id="matchingPresetMode" name="mode"><option value="custom">Require selected checks</option><option value="off">Disabled</option></select></label>
+<fieldset id="matchingPresetChecks"><legend>Required evidence</legend>
+<label class="matchingPolicyCheck"><input type="checkbox" name="title" checked><span>Native title similarity</span><input aria-label="Preset title minimum percent" name="titlePercent" type="number" min="94" max="100" step="1" value="97">%</label>
+<label class="matchingPolicyCheck"><input type="checkbox" name="summary"><span>Summary similarity</span><input aria-label="Preset summary minimum percent" name="summaryPercent" type="number" min="1" max="100" step="1" value="90">%</label>
+<label class="matchingPolicyCheck"><input type="checkbox" name="author"><span>Author / artist similarity</span><input aria-label="Preset creator minimum percent" name="authorPercent" type="number" min="1" max="100" step="1" value="90">%</label>
+<label class="matchingPolicyCheck"><input type="checkbox" name="tags"><span>Informative tag overlap</span><input aria-label="Preset informative tag minimum percent" name="tagsPercent" type="number" min="1" max="100" step="1" value="70">%</label>
+</fieldset>
+<p class="muted">All checked evidence is required. The 94% title floor and identity/edition safeguards always apply.</p>
+<div class="toolbar wrap"><button id="matchingPresetSave" type="submit">Create preset</button><button id="matchingPresetClone" type="button" hidden>Save as new</button><button id="matchingPresetDelete" type="button" hidden>Delete preset</button></div>
+<p id="matchingPresetStatus" role="status"></p>
+</form></details>
+</details>
+<div class="sourceGroupPanel"><div class="toolbar wrap"><strong>Source groups</strong><input aria-label="e.g. Scans" id="newSourceGroupName" placeholder="e.g. Scans"/><button onclick="createSourceGroup()" type="button">Create group</button><span class="muted">Every source in a group shares one priority and one Matrix/Subbed group column, while keeping its own search and chapter records.</span></div><div class="sourceGroupManager" id="sourceGroupManager"></div></div>
+<div class="tablewrap"><table id="sourcesTable"></table></div>
+</div>
+<div class="sourceSubpanel" id="sourceManagePanel">
+<div class="toolbar wrap sourceManageToolbar">
+<input aria-label="Search source extensions" autocomplete="off" id="sourceExtensionSearch" placeholder="Search source extensions" type="search"/>
+<select aria-label="All languages" id="sourceExtensionLanguage"><option value="all">All languages</option></select>
+<button id="refreshSourceExtensions">Refresh catalog</button>
+<span class="muted" id="sourceExtensionSummary">Open this tab to load extension management.</span>
+</div>
+<section class="sourceApkInstaller" aria-labelledby="sourceApkHeading"><h3 id="sourceApkHeading">Install an extension APK</h3>
+<div id="sourceApkDropZone" class="sourceApkDropZone"><p>Drop source extension APK files here, or choose files.</p><button id="sourceApkBrowse" type="button">Choose APK files</button><input id="sourceApkFiles" type="file" accept=".apk,application/vnd.android.package-archive" multiple hidden/>
+<p class="muted">Only install extension files you trust. Files install one at a time in this instance's source engine.</p></div>
+<p id="sourceApkStatus" role="status" aria-live="polite"></p><ul id="sourceApkResults" class="sourceApkResults"></ul><button id="sourceApkClear" type="button" hidden>Clear completed results</button></section>
+<div class="sourceStoreStrip" id="sourceExtensionStores"></div>
+<div class="sourceExtensionSections" id="sourceExtensionSections">
+<details class="sourceExtensionSection sourceUpdatesSection" data-source-section="updates" hidden="" id="sourceExtensionUpdatesSection" open="">
+<summary><span>Updates <span class="sectionCount" id="sourceExtensionUpdatesCount">0</span></span><button class="primaryAction" id="updateAllSourceExtensions" onclick="event.preventDefault();event.stopPropagation();updateAllManagedSourceExtensions()" type="button">Update all</button></summary>
+<div class="sourceExtensionGrid" id="sourceExtensionUpdatesList"></div>
+</details>
+<details class="sourceExtensionSection" data-source-section="installed" id="sourceExtensionInstalledSection" open="">
+<summary><span>Installed <span class="sectionCount" id="sourceExtensionInstalledCount">0</span></span></summary>
+<div class="sourceExtensionGrid" id="sourceExtensionInstalledList"></div>
+</details>
+<details class="sourceExtensionSection" data-source-section="available" id="sourceExtensionAvailableSection" open="">
+<summary><span>Not installed <span class="sectionCount" id="sourceExtensionAvailableCount">0</span></span></summary>
+<div class="sourceExtensionGrid" id="sourceExtensionAvailableList"></div>
+</details>
+<details class="sourceExtensionSection" data-source-section="orphaned" id="sourceOrphanedPanel"><summary><span>Orphaned <span class="sectionCount" id="sourceOrphanCount">…</span></span></summary><div class="orphanSectionBody">
+<div class="toolbar wrap"><h3 class="grow">Orphaned sources</h3><button id="refreshSourceOrphans" type="button">Collect from repository history</button><button id="reloadSourceOrphans" type="button">Refresh list</button></div>
+<p class="muted">Original sources recovered from Keiyoushi history. Install a retained package, or use the repair worker to rebuild and check its original code when the old download is missing. Compilation alone does not confirm that a source works.</p><p id="sourceOrphanStatus" role="status"></p><input id="sourceOrphanSearch" type="search" placeholder="Search archived sources or language" aria-label="Search archived sources"/><div id="sourceOrphanList" class="sourceExtensionGrid orphanGrid"></div>
+</div></details>
+<details class="sourceExtensionSection" data-source-section="installed-orphan" id="sourceInstalledOrphanPanel"><summary><span>Installed orphan <span class="sectionCount" id="sourceInstalledOrphanCount">…</span></span></summary><div class="orphanSectionBody">
+<div class="toolbar wrap"><h3 class="grow">Installed orphan sources</h3><button id="reloadInstalledOrphans" type="button">Refresh list</button><button id="openOrphanRepairs" type="button">Source repair jobs</button></div>
+<p class="muted">Installed archived sources stay here, including repaired versions. Repairs need working titles, metadata, chapters and pages before they can be installed.</p><p id="sourceInstalledOrphanStatus" role="status"></p><input id="sourceInstalledOrphanSearch" type="search" placeholder="Search installed orphan sources" aria-label="Search installed orphan sources"/><div id="sourceInstalledOrphanList" class="sourceExtensionGrid orphanGrid"></div>
+</div></details>
+</div>
+</div>
+<div class="sourceSubpanel" id="sourceRepositoriesPanel">
+<div class="toolbar wrap"><h3 class="grow">Repositories</h3><button id="refreshRepositories" type="button">Refresh</button><button id="restartRepositorySources" type="button" disabled>Apply saved repositories</button><button class="goodAction" id="showRepositoryForm" type="button">Add repository</button></div>
+<p class="muted">Manage extension stores used by your private source engine.</p>
+<div class="browserStatus" id="repositoryStatus" role="status"></div>
+<div class="repositoryList" id="repositoryList"></div>
+<form class="repositoryForm" hidden="" id="repositoryForm">
+<h3>Add repository</h3><label for="repositoryUrl">Repository or extension-store URL</label>
+<div class="toolbar wrap"><input autocomplete="off" class="grow" id="repositoryUrl" placeholder="https://…/index.pb" required="" type="url"/><button id="previewRepository" type="submit">Preview</button></div>
+<p class="muted">Modern stores and supported legacy repositories. Keiyoushi is the default suggestion.</p>
+<button class="ghost" id="useKeiyoushi" type="button">Use Keiyoushi URL</button>
+<div class="repositoryPreview" hidden="" id="repositoryPreview"></div>
+</form>
+</div></section>
+<section class="tab statusTab" id="about">
+<div class="pageHeading statusHeading">
+<div>
+<span class="eyebrow">System status</span>
+<h2 id="statusHeadline">Checking AutoSourcarr…</h2>
+<div class="statusVersionLine">Version <strong id="statusVersion">…</strong></div>
+<div class="muted" id="statusHeadlineSub">Loading the parts that affect browsing and matching.</div>
+</div>
+<div class="statusActions">
+<button id="refreshStatus">Refresh</button>
+<button id="downloadDiagnostics" type="button">Download diagnostic logs</button>
+</div>
+</div>
+<div class="apkDownloadPanel"><div><strong>Android extension</strong><p id="apkDownloadStatus" role="status">Checking the current APK…</p><p class="muted" hidden="" id="apkBuildHelp">Choose Build reader extensions. Uses this instance’s saved reader settings and existing signing key.</p></div><button class="primaryAction" disabled="" id="downloadApk" type="button">Download current APK</button></div><div class="toolbar wrap"><button id="buildReaderExtensions" type="button" disabled>Build reader extensions</button><button id="configureReaderBuild" type="button">Review reader settings</button><button id="cancelReaderBuild" type="button" hidden>Cancel build</button><button id="downloadJar" type="button" disabled>Download current JAR</button><span id="readerBuildStatus" role="status"></span></div><div id="readerBuildPreflight" aria-live="polite"><p class="muted">Open Status to check reader build readiness.</p></div><div class="attentionGrid" id="statusAttention"></div>
+<div class="statusPrimaryGrid">
+<div class="statusPanel">
+<div class="statusPanelHeader"><h3>Connections</h3><span class="muted">Can AutoSourcarr reach everything it needs?</span></div>
+<div class="simpleStatusList" id="statusOverview"></div>
+</div>
+<div class="statusPanel">
+<div class="statusPanelHeader"><h3>Catalog review</h3><span class="muted">Items that may need a decision from you.</span></div>
+<div class="simpleMetricList" id="statusCatalog"></div>
+</div>
+<div class="statusPanel">
+<div class="statusPanelHeader"><h3>Storage</h3><span class="muted">AutoSourcarr, database and manga download disk usage.</span></div>
+<div class="simpleMetricList" id="statusStorage"></div>
+</div>
+<div class="statusPanel">
+<div class="statusPanelHeader"><h3>Cache &amp; speed</h3><span class="muted">Data already available without waiting for websites.</span></div>
+<div class="simpleMetricList" id="statusCache"></div>
+</div>
+</div>
+<section class="statusPanel"><div class="statusPanelHeader"><h3>Source engine</h3><button onclick="loadSourceEngine()">Refresh engine status</button></div><p id="sourceEngineStatus" role="status">Open Status to check the source runtime.</p><p class="muted">WebView shares the source engine’s cookies. One WebView can be used at a time.</p><p id="sourceChallengeStatus" role="status"></p><button onclick="retrySourceChallenges()">Retry verification setup</button><button onclick="openSourceWebview()">Open WebView</button></section>
+<details class="statusAdvanced">
+<summary>More details</summary>
+<div class="statusAdvancedBody">
+<div class="statusSection"><div class="sectionHeading"><h3>Publication status</h3></div><div class="statusBreakdown" id="statusPublication"></div></div>
+<div class="statusSection"><div class="sectionHeading"><h3>Sources &amp; chapter coverage</h3></div><div class="metricGrid" id="statusSources"></div></div>
+<div class="statusSection"><div class="sectionHeading"><h3>Performance settings</h3></div><div class="metricGrid" id="statusPerformance"></div></div>
+<details class="card statusRaw"><summary>Raw JSON</summary><pre id="statusJson"></pre></details>
+</div>
+</details>
+<details class="statusAdvanced maintenanceSection"><summary>Maintenance</summary><div class="menuContent"><button id="refreshFeeds">Refresh browse cache</button><button id="resetCovers">Reset covers</button><button class="dangerAction" id="resetDatabase">Reset database</button><button class="dangerAction" id="fullReset">Full reset</button></div></details></section>
+<section class="tab importsTab" id="imports">
+<div class="pageHeading">
+<div>
+<h2>Library import</h2>
+<p class="muted">Resolve backup entries and add them to your main Suwayomi library.</p>
+</div>
+<div class="statusActions"><button class="goodAction" id="showImportUpload" type="button">Import backup</button><button id="refreshImports">Refresh</button><details class="toolbarMenu"><summary>Import actions</summary><div class="menuContent"><button id="resetImportManualAutoresolve">Reset import manual autoresolve</button><button id="resetImportRejections">Reset rejected matches</button><button class="dangerAction" id="clearImportHistory">Clear history</button></div></details></div>
+</div>
+<section class="statusPanel backupImportPanel importUploadPanel" aria-labelledby="backupImportHeading">
+<div class="statusPanelHeader">
+<h3 id="backupImportHeading">Import a Mihon / Tachiyomi backup</h3>
+<span class="muted">Add-only migration into the real main Suwayomi library through the corresponding AutoSourcarr entries. Existing Subbed entries are skipped.</span>
+</div>
+<div class="backupImportControls">
+<input accept=".tachibk,.proto.gz,.gz,application/gzip,application/octet-stream" aria-label="backupImportFile" id="backupImportFile" type="file"/>
+<button class="goodAction" id="importBackup">Decode + add to main Suwayomi library</button>
+</div>
+<div class="muted" id="backupImportStatus">The uploaded backup is decoded to temporary readable JSON, added directly to the main Suwayomi library through AutoSourcarr, then the temporary backup/conversion files are deleted.</div>
+</section>
+<div class="toolbar wrap importToolbar">
+<label>Import <select id="importRunSelect"><option value="">No imports yet</option></select></label>
+<div class="muted" id="importRunSummary"></div>
+</div>
+<div class="importStateFilters" id="importStateFilters">
+<button class="importStateFilter active" data-state="all">All <span id="importCountAll">0</span></button>
+<button class="importStateFilter" data-state="unresolved">Unresolved <span id="importCountUnresolved">0</span></button>
+<button class="importStateFilter" data-state="added">Added <span id="importCountAdded">0</span></button>
+<button class="importStateFilter" data-state="existing">Existing <span id="importCountExisting">0</span></button>
+<button class="importStateFilter" data-state="failed">Failed <span id="importCountFailed">0</span></button>
+<button class="importStateFilter" data-state="skipped">Skipped <span id="importCountSkipped">0</span></button>
+</div>
+<details class="advancedFilters importAdvancedFilters"><summary>Review filters</summary><div class="menuContent"><div class="importReviewFilterRow">
+<span class="muted importFilterLabel">Review filters</span>
+<div class="importStateFilters importReviewFilters" id="importReviewFilters">
+<button class="importReviewFilter active" data-review="all">All review <span id="importReviewCount-all">0</span></button>
+<button class="importReviewFilter" data-review="has_candidates">Has possible match <span id="importReviewCount-has_candidates">0</span></button>
+<button class="importReviewFilter" data-review="no_candidates">No possible match <span id="importReviewCount-no_candidates">0</span></button>
+<button class="importReviewFilter" data-review="searching">Searching <span id="importReviewCount-searching">0</span></button>
+<button class="importReviewFilter" data-review="has_reference">Source reference found <span id="importReviewCount-has_reference">0</span></button>
+<button class="importReviewFilter" data-review="no_reference">No source reference <span id="importReviewCount-no_reference">0</span></button>
+<button class="importReviewFilter" data-review="has_english">Has English hint <span id="importReviewCount-has_english">0</span></button>
+<button class="importReviewFilter" data-review="no_english">No English hint <span id="importReviewCount-no_english">0</span></button>
+</div>
+</div></div></details>
+<div class="browserPager importPager"><button id="importPrev" type="button">Previous</button><span aria-live="polite" id="importPageLabel">0 items</span><button id="importNext" type="button">Next</button></div>
+<div class="browserStatus muted" id="importItemsStatus"></div>
+<div class="importWorkbench"><div aria-label="Import items" class="reviewQueue" id="importQueue"></div><div class="importItems" id="importItems"></div></div>
+</section>
+<section class="tab tasksTab" id="tasks">
+<div class="pageHeading">
+<div>
+<h2>Tasks</h2>
+<p class="muted">Track your actions and automatic work independently.</p>
+</div>
+<div class="statusActions"><button id="refreshTasks">Refresh</button><button class="dangerAction" id="clearTaskHistory">Clear history</button></div>
+</div>
+<div class="browserStatus muted" id="tasksSummary">No background tasks running.</div>
+<div class="taskSubtabs" role="tablist" aria-label="Task sections"><button data-task-section="general" class="active" type="button">General</button><button data-task-section="repairs" type="button">Repairs <span id="repairTaskSectionCount">0</span></button></div>
+<div id="tasksGeneralPanel" class="taskSubpanel active">
+<div aria-label="General task origin" class="scopeChips" id="taskLaneFilters" role="group"><button class="active" data-task-lane="all">All</button><button data-task-lane="manual">Your actions</button><button data-task-lane="automatic">Automatic</button></div>
+<div class="taskSections">
+<section class="taskSection"><div class="taskSectionHead"><h3>Ongoing</h3><span class="muted" id="tasksRunningCount">0</span></div><div class="tasksList" id="tasksRunningList"></div></section>
+<section class="taskSection"><div class="taskSectionHead"><h3>Completed</h3><span class="muted" id="tasksCompletedCount">0</span></div><div class="tasksList" id="tasksCompletedList"></div></section>
+<section class="taskSection"><div class="taskSectionHead"><h3>Failed</h3><span class="muted" id="tasksFailedCount">0</span></div><div class="tasksList" id="tasksFailedList"></div></section>
+</div>
+</div>
+<div id="tasksRepairsPanel" class="taskSubpanel">
+<div id="sourceRepairWorkspace">
+<div class="toolbar wrap"><h3 class="grow">Source repairs</h3><button id="rollbackSourceRepair" type="button" hidden>Roll back last repair</button><button id="refreshSourceRepairs" type="button">Refresh repairs</button><button id="openSourceRawArchive" type="button">Source code archive</button><button id="openRepairAI" type="button">Repair AI setup</button></div>
+<p id="sourceRepairStatus" role="status">Open Repairs to check readiness.</p>
+<details id="repairToolsPanel"><summary>Source repair readiness</summary><button id="repairPrepare" type="button">Check repair tools</button><p id="repairToolStatus" role="status"></p><div id="repairIsolation"></div></details>
+<label><input id="sourceRepairWatch" type="checkbox"/> Check missing sources daily (uses your selected AI provider)</label><p id="sourceRepairWatchStatus" class="muted">Off by default. At most one new source per day and one attempt per source each week. New validated repairs install automatically; uncertain website moves wait for review.</p>
+<details id="sourceRepairFormSection"><summary>Start a source repair</summary>
+<form id="sourceRepairForm" class="repositoryForm">
+<label>Installed source <select id="sourceRepairPackage" required><option value="">Load installed sources…</option></select></label>
+<label>Original APK for repair (optional) <input id="sourceRepairOriginalApk" type="file" accept=".apk,application/vnd.android.package-archive"/></label>
+<label><input id="sourceRepairOriginalConfirmed" type="checkbox"/> I confirm this is the APK used to install the selected source version.</label>
+<div><button id="attachSourceRepairOriginalApk" type="button">Attach original APK</button><p class="muted">Attach the APK used for this installed version. Your installed source and settings stay in place. Start a new repair after attaching it.</p><p id="sourceRepairOriginalStatus" role="status" aria-live="polite"></p></div>
+<label>Original project module <input id="sourceRepairModule" placeholder="src/en/mangafire (or . for a standalone project)"/></label>
+<label>Source commit (optional) <input id="sourceRepairRevision" pattern="[0-9a-f]{40}" placeholder="Full commit hash; leave empty for current maintained code"/></label>
+<label>What stopped working? <textarea id="sourceRepairIssue" required minlength="10" maxlength="6000" rows="3" placeholder="Describe the failure and a public example title. Do not include tokens, cookies or private data."></textarea></label>
+<p class="muted">The original ecosystem code is retained before repair. If it is missing, provide the project or choose Unavailable to reconstruct the installed binary. One repair runs at a time; code and your description use the selected AI provider’s allowance. Validated repairs install automatically; uncertain website moves wait for review. Installed is separate from your Fixed confirmation.</p>
+<button type="submit" class="primaryAction">Back up and check source</button>
+<button id="openSelectedSourceRaw" type="button">View / provide original source code</button>
+</form></details>
+<details id="sourceRawInput" hidden><summary>Original source code</summary>
+<p id="sourceRawStatus" role="status" aria-live="polite"></p>
+<label>Installed source <select id="sourceRawInstalledPackage"><option value="">Choose Source code archive to load installed sources…</option></select></label>
+<div class="toolbar wrap"><button id="refreshSourceRawProject" type="button">Refresh code status</button><button id="discoverSourceRawProject" type="button">Find upstream code</button><button id="downloadSourceRawProject" type="button">Download retained code</button><button id="replaceSourceRawProject" type="button">Provide different raw code</button></div>
+<div class="repositoryForm">
+<label>Original project module <input id="sourceRawModule" placeholder="src/en/example or ."/></label>
+<label>Source project ZIP (up to 32 MiB) <input id="sourceRawProject" type="file" accept=".zip,application/zip"/></label>
+<button id="provideSourceRawProject" type="button">Retain project code</button>
+<label>Known ecosystem project <select id="sourceRawKnownProject"><option value="">Choose a project, or enter a custom repository below</option><option value="https://github.com/keiyoushi/extensions-source">Keiyoushi extensions-source (candidate code)</option></select></label>
+<label>Original code repository (optional) <input id="sourceRawRepository" type="url" placeholder="https://github.com/original-owner/source-project"/></label>
+<label>Original source commit (optional) <input id="sourceRawRevision" pattern="[0-9a-f]{40}" placeholder="Full original commit hash"/></label>
+<button id="fetchSourceRawProject" type="button">Fetch upstream code</button>
+<button id="sourceRawsUnavailable" type="button">Unavailable — reconstruct installed source</button>
+</div><p class="muted">Public repository code is archived in /data/sources/raw. Uploaded and reconstructed code stays private to this instance. Only the raw-code folder may be shared; installed binaries, source settings, accounts, feedback and working/revert history remain private. Reconstruction may lose comments or fail to compile; it is labelled as derived code.</p>
+</details>
+</div>
+<div aria-label="Repair origin" class="scopeChips" role="group"><button class="active" data-repair-lane="all" aria-pressed="true">All repairs</button><button data-repair-lane="manual" aria-pressed="false">Your repairs</button><button data-repair-lane="automatic" aria-pressed="false">Automatic repairs</button></div>
+<p id="taskRepairStatus" role="status" class="muted"></p>
+<p id="repairInputsHelp" class="muted">Download source inputs on a blocked APK-comparison job to inspect its exact saved APK and JAR. Share this original package archive privately. Separate account, cookie, settings and library files are excluded; diagnostic text stays redacted.</p>
+<div class="taskSections">
+<section class="taskSection"><div class="taskSectionHead"><h3>Ongoing repairs</h3><span id="repairTasksRunningCount">0</span></div><div class="tasksList" id="repairTasksRunningList"></div></section>
+<section class="taskSection"><div class="taskSectionHead"><h3>Completed / ready for review</h3><span id="repairTasksCompletedCount">0</span></div><div class="tasksList" id="repairTasksCompletedList"></div></section>
+<section class="taskSection"><div class="taskSectionHead"><h3>Failed / blocked</h3><span id="repairTasksFailedCount">0</span></div><div class="tasksList" id="repairTasksFailedList"></div></section>
+</div>
+<details class="repairTaskEvidence" id="sourceRepairDetails" hidden><summary>Repair evidence and session</summary><pre id="sourceRepairEvidence"></pre></details>
+</div>
+</section>
+<section class="tab settingsTab" id="settings">
+<div class="pageHeading">
+<div>
+<h2>Settings</h2>
+<p class="muted">Personal appearance and persistent application configuration.</p>
+</div>
+<button id="runSetup" type="button">Run setup again</button>
+<p class="muted">Review connections, reader access, repair AI, performance and companion-app links. Use Configure repair AI to choose a provider and connect its account.</p>
+<div class="statusActions settingsConfigAction">
+<button id="reloadSettings">Reload from files</button>
+<button class="goodAction" id="saveSettings">Save current file</button>
+</div>
+</div>
+<div aria-label="Settings sections" class="settingsSubtabs" role="tablist">
+<button class="settingsSubtab active" data-settings-subtab="customization" type="button">Customization</button>
+<button class="settingsSubtab" data-settings-subtab="configuration" type="button">Application settings</button>
+<button class="settingsSubtab" data-settings-subtab="services" type="button">Services</button>
+<button class="settingsSubtab" data-settings-subtab="browser" type="button">Source browser</button>
+</div>
+<div class="settingsSubpane active" id="settingsCustomizationPane"><div class="browserStatus muted" id="preferenceSaveState" role="status">Preferences load from your user profile.</div>
+<button hidden="" id="retryPreferenceSave" type="button">Retry saving preferences</button><div class="appearanceWorkspace"><div class="appearanceControls"><details class="statusPanel appearanceSettingsPanel" data-customization-section="theme" data-default-open="true" open="">
+<summary class="statusPanelHeader"><h3>Theme</h3><span class="muted" id="uiPreferenceUser">Loading user preferences…</span></summary>
+<p class="muted">Choose a style, then its accent colors. Your choices apply across every tab.</p>
+<h4>Color placement</h4><div aria-label="Theme style" class="themeStylePicker" role="radiogroup"><button aria-checked="false" class="styleChoice" data-theme-style="neutral" role="radio" type="button"><strong>Neutral</strong><small>Neutral chrome with colored selections</small></button><button aria-checked="false" class="styleChoice" data-theme-style="tonal" role="radio" type="button"><strong>Tonal panels</strong><small>Secondary-colored panels with primary outlines</small></button><button aria-checked="false" class="styleChoice" data-theme-style="dual" role="radio" type="button"><strong>Dual accents</strong><small>Separate border, card and evidence colors</small></button><button aria-checked="false" class="styleChoice" data-theme-style="paper" role="radio" type="button"><strong>Paper &amp; ink</strong><small>Warm light surfaces with deep accents</small></button><button aria-checked="false" class="styleChoice" data-theme-style="graphite" role="radio" type="button"><strong>Graphite</strong><small>Almost black chrome with quiet highlights</small></button><button aria-checked="false" class="styleChoice" data-theme-style="aurora" role="radio" type="button"><strong>Aurora</strong><small>Two-color chrome and subtly tinted blocks</small></button></div><label class="cardFillControl" for="cardFill">Card backgrounds <select id="cardFill"><option value="accent">Secondary color</option><option value="neutral">Neutral</option></select></label><label class="accentStrengthControl">Color strength <input id="accentStrength" max="50" min="10" type="range" value="25"/><output for="accentStrength" id="accentStrengthValue">25%</output></label><h4>Primary · borders and actions</h4><div aria-label="AutoSourcarr color theme" class="themePicker" id="themePicker" role="radiogroup">
+<button aria-checked="false" class="themeChoice" data-theme="blue" role="radio" type="button"><span class="themeSwatch themeSwatchBlue"></span>Blue</button>
+<button aria-checked="false" class="themeChoice" data-theme="amber" role="radio" type="button"><span class="themeSwatch themeSwatchAmber"></span>Amber</button>
+<button aria-checked="false" class="themeChoice" data-theme="emerald" role="radio" type="button"><span class="themeSwatch themeSwatchEmerald"></span>Emerald</button>
+<button aria-checked="false" class="themeChoice" data-theme="violet" role="radio" type="button"><span class="themeSwatch themeSwatchViolet"></span>Violet</button>
+<button aria-checked="false" class="themeChoice" data-theme="rose" role="radio" type="button"><span class="themeSwatch themeSwatchRose"></span>Rose</button>
+<button aria-checked="false" class="themeChoice" data-theme="cyan" role="radio" type="button"><span class="themeSwatch themeSwatchCyan"></span>Cyan</button>
+<button aria-checked="false" class="themeChoice" data-theme="custom" role="radio" type="button"><span class="themeSwatch themeSwatchCustom" id="customThemePreview"></span>Custom</button>
+</div>
+<div class="customThemeControls" id="customThemeControls"><label>Color picker<input aria-label="Custom primary color" id="customThemePicker" type="color" value="#ff2d78"/></label>
+<label>HEX<input autocomplete="off" id="customThemeHex" maxlength="7" spellcheck="false" type="text" value="#FF2D78"/></label>
+<label>R<input id="customThemeR" max="255" min="0" step="1" type="number" value="255"/></label>
+<label>G<input id="customThemeG" max="255" min="0" step="1" type="number" value="45"/></label>
+<label>B<input id="customThemeB" max="255" min="0" step="1" type="number" value="120"/></label>
+<button class="goodAction" id="applyCustomTheme" type="button">Apply custom color</button>
+</div>
+<p class="muted customThemeHint">Primary colors card borders and actions. Secondary colors card backgrounds. Dual accents adds a third color for evidence.</p><div class="secondaryThemeControls" id="secondaryThemeControls"><label>Secondary · card color<input aria-label="Secondary accent color" id="secondaryThemePicker" type="color" value="#eeb392"/></label><label>HEX<input autocomplete="off" id="secondaryThemeHex" maxlength="7" spellcheck="false" value="#EEB392"/></label><span class="muted">Colors card backgrounds across every tab. Color strength adjusts the tint.</span></div><div class="secondaryThemeControls" hidden="" id="tertiaryThemeControls"><label>Tertiary · evidence panels<input aria-label="Tertiary evidence color" id="tertiaryThemePicker" type="color" value="#eeb392"/></label><label>HEX<input autocomplete="off" id="tertiaryThemeHex" maxlength="7" spellcheck="false" value="#EEB392"/></label><span class="muted">Dual accents adds this third color to evidence panels only.</span></div>
+</details><details class="statusPanel appearanceSettingsPanel" data-customization-section="covers" data-default-open="false">
+<summary class="statusPanelHeader"><h3>Cover and thumbnail size</h3></summary><button id="resetThumbnailSizes" type="button">Reset sizes</button>
+<p class="muted">Main covers changes Browse, Subbed, the main Matrix entry, review cards and title lists. Matched Matrix entries have their own size.</p>
+<div class="thumbnailSettings">
+<div class="thumbnailSetting"><label for="thumbnailScale">Main covers and thumbnails</label><input id="thumbnailScale" max="200" min="50" step="5" type="range" value="100"/><output for="thumbnailScale" id="thumbnailScaleValue">100%</output></div>
+<div class="thumbnailSetting"><label for="matchedThumbnailScale">Matched Matrix entries</label><input id="matchedThumbnailScale" max="200" min="50" step="5" type="range" value="125"/><output for="matchedThumbnailScale" id="matchedThumbnailScaleValue">125%</output></div>
+<div class="thumbnailPreview"><figure><div aria-hidden="true" class="mainThumbnailSample coverPlaceholder">Cover</div><figcaption>Main entry</figcaption></figure><figure><div aria-hidden="true" class="matchedThumbnailSample coverPlaceholder">Cover</div><figcaption>Matched entry</figcaption></figure></div>
+</div></details><details class="statusPanel appearanceSettingsPanel" data-customization-section="density" data-default-open="false">
+<summary class="statusPanelHeader"><h3>Interface density</h3><span class="muted">Saved per user</span></summary>
+<div aria-label="Interface density" class="themePicker" role="radiogroup">
+<button aria-checked="false" class="densityChoice" data-density="comfortable" role="radio" type="button">Comfortable</button>
+<button aria-checked="false" class="densityChoice" data-density="compact" role="radio" type="button">Compact</button>
+</div>
+</details></div><aside aria-label="Appearance preview" class="appearancePreview"><h3>Preview</h3><p class="muted">These controls use the same palette as the app.</p><div class="previewRow"><strong>Selected library entry</strong><span class="tag manual">Manual match</span><span class="muted">3 sources · chapter coverage available</span></div><div class="previewEvidence"><strong>Matching evidence · tertiary color</strong><p>Dual accents gives evidence its own third color; ordinary cards keep the secondary color.</p></div><div class="previewActions"><button class="goodAction" disabled="" type="button">Primary action</button><button disabled="" type="button">Secondary action</button></div><div class="previewSemantic"><span class="semanticGood">Completed</span><span class="semanticWarn">Needs attention</span><span class="semanticBad">Failed</span></div><p class="muted">Status colors stay recognizable in every theme.</p></aside></div>
+<details class="statusPanel appearanceSettingsPanel" data-customization-section="identity" data-default-open="false"><summary>Authelia preference identity</summary>
+<div class="statusPanelHeader"><h3>Authelia preference identity</h3><span class="muted" id="uiIdentityState">Checking forwarded headers…</span></div>
+<div class="identityDiagnostics muted" id="uiIdentityDiagnostics"></div>
+<details class="identityHelp"><summary>NGINX / Nginx Proxy Manager forwarding example</summary><pre><code>auth_request_set $user $upstream_http_remote_user;
+auth_request_set $email $upstream_http_remote_email;
+auth_request_set $groups $upstream_http_remote_groups;
+proxy_set_header Remote-User $user;
+proxy_set_header Remote-Email $email;
+proxy_set_header Remote-Groups $groups;</code></pre><p class="muted">These are the exact variables/headers used by the existing AutoSourcarr Authelia/Nginx Proxy Manager block. Access AutoSourcarr through that proxied hostname; opening the backend IP/port directly bypasses Authelia, so no <code>Remote-User</code> header can exist.</p></details>
+</details>
+</div>
+<div class="settingsSubpane" hidden id="settingsServicesPane">
+<p class="muted">Tools run inside this AutoSourcarr instance. Browsing remains available while a build, repair or language-model preparation runs.</p>
+<div id="internalServices" class="serviceGrid" aria-live="polite"></div><button id="refreshInternalServices" type="button">Refresh services</button>
+</div>
+<div class="settingsSubpane" hidden id="settingsBrowserPane">
+<div class="toolbar wrap"><p class="muted grow">Shared source browser settings. Changes apply to the integrated source process.</p><button id="refreshSourceBrowser" type="button">Refresh status</button><button id="openSettingsWebview" type="button">Open WebView</button></div>
+<p id="sourceBrowserOperation" class="notice" role="status" aria-live="polite">Loading source browser…</p>
+<div class="sourceBrowserGrid">
+<section class="statusPanel"><h3>CAPTCHA and Cloudflare handling</h3><p id="browserChallengeStatus" class="muted">Checking supported solvers…</p><p>Supported challenges are handled automatically. If a source still needs human verification, it appears in Needs attention and retries at most once an hour. The integrated image includes challenge handling. Use Services to check readiness. Sites requiring human verification still need your assistance.</p><button id="checkBrowserChallenges" type="button">Check automatic handlers</button><button id="openSolverSettings" type="button">Solver connection settings</button><button id="browserNeedsAttention" type="button">Needs attention</button></section>
+<section class="statusPanel"><h3>User agent</h3><p class="muted">Choose the browser identity sent to sources. Applying or resetting it briefly restarts the source process.</p><label for="sourceUserAgentPreset">Browser identity</label><select id="sourceUserAgentPreset" disabled><option value="default">Engine default (reset)</option></select><label for="sourceUserAgentValue">User-agent string</label><textarea id="sourceUserAgentValue" rows="3" maxlength="1024" spellcheck="false" readonly></textarea><p class="muted" id="sourceUserAgentRuntime">Current runtime identity is being checked.</p><p class="muted">An extension with its own headers may override this value. Cloudflare solvers may use their own matching user agent and cookies.</p><div class="toolbar wrap"><button id="applySourceUserAgent" class="goodAction" type="button" disabled>Apply and restart sources</button><button id="resetSourceUserAgent" type="button" disabled>Reset to engine default</button></div></section>
+<section class="statusPanel"><h3>Cookies and WebView data</h3><p>Clear source website cookies, sign-ins, local storage and WebView cache. This also resets the configured solver session if reachable.</p><p class="muted">Source extensions, library databases, downloads and application settings are retained. Open source WebViews will close and sources will restart.</p><button class="dangerAction" id="clearSourceBrowserData" type="button" disabled>Clear source cookies and WebView data</button></section>
+</div></div>
+<div class="settingsSubpane" hidden="" id="settingsConfigurationPane"><label class="settingsSearchLabel">Find a setting<input id="settingsSearch" placeholder="Search settings by name or description" type="search"/></label>
+<div class="notice settingsRestartNotice">
+      Saving changes updates this instance's retained configuration. Application settings require an AutoSourcarr restart; supported setup settings apply when Finish completes. Saved source repositories can be applied from Sources without restarting the app.
+    </div>
+<details class="statusPanel databaseStoragePanel"><summary>Storage &amp; database maintenance</summary>
+<div class="statusPanelHeader"><h3>Database storage</h3><span class="muted" id="databaseStorageState">Loading…</span></div>
+<div class="toolbar wrap">
+<input aria-label="Absolute mounted container path, e.g. /database" class="grow" id="databaseStoragePath" placeholder="Absolute mounted container path, e.g. /database"/>
+<button id="moveDatabaseStorage">Move databases</button>
+</div>
+<div class="muted" id="databaseStorageDetail">AutoSourcarr copies and verifies both SQLite databases, briefly quiesces DB writes for a final sync, then switches live. The old files stay as a safety copy until the next redeploy verifies the new location.</div>
+</details>
+<div class="settingsFileTabs" id="settingsFileTabs"></div>
+<div class="browserStatus muted" id="settingsFileStatus"></div>
+<div class="settingsGroups" id="settingsGroups"></div>
+<div class="settingsBottomBar">
+<span class="muted" id="settingsDirtyState">No unsaved changes</span>
+<button class="goodAction" id="saveSettingsBottom">Save current file</button>
+</div>
+</div>
+</section>
+<section class="tab" id="statistics" aria-labelledby="riStatisticsHeading">
+<div class="pageHeading"><div><h2 id="riStatisticsHeading">Statistics</h2><p class="muted">A closer look at your library and its sources.</p></div><div class="statusActions"><button id="riRefreshStatistics" type="button">Refresh</button></div></div>
+<p class="muted" id="riStatisticsStatus" role="status">Loading instance statistics…</p>
+<div id="riStatisticsMetrics" class="riStatisticsMetrics"></div>
+<div class="riStatisticsPanels"><section class="riStatPanel"><h3>Source coverage</h3><div id="riCoverageChart"></div></section><section class="riStatPanel"><h3>Publication status</h3><div id="riPublicationChart"></div></section></div>
+<section class="riStatPanel"><h3>Chapter provenance</h3><p class="muted">Every chapter keeps its candidates and the history of the source that served it.</p><div id="riProvenanceMetrics" class="riProvenanceMetrics"></div></section>
+</section>
+</main><footer aria-label="Activity" class="activityStrip"><button class="activityCell" id="activityManual" type="button"><strong>Your actions</strong><span id="activityManualText">Loading…</span></button><button class="activityCell" id="activityAutomatic" type="button"><strong>Automatic</strong><span id="activityAutomaticText">Loading…</span></button></footer>
+<div class="modalBackdrop" hidden="" id="autoMergePreviewModal">
+<div aria-labelledby="autoMergePreviewTitle" aria-modal="true" class="modalShell autoMergePreviewShell" role="dialog">
+<div class="modalHeader"><div><h2 id="autoMergePreviewTitle">Confirm automatic duplicate merges</h2><div class="muted" id="autoMergePreviewSubtitle">Review every pair AutoSourcarr currently considers safe to merge.</div></div><button aria-label="Close" class="iconButton" id="closeAutoMergePreview">×</button></div>
+<div class="autoMergePreviewBody" id="autoMergePreviewBody"><div class="muted">Loading merge preview…</div></div>
+<div class="autoMergePreviewActions"><button id="cancelAutoMergePreview">Cancel</button><button class="goodAction" id="confirmAutoMergePreview">Confirm and merge</button></div>
+</div>
+</div>
+<div class="modalBackdrop" hidden="" id="duplicateManagerModal">
+<div aria-labelledby="duplicateManagerTitle" aria-modal="true" class="modalShell duplicateManagerShell" role="dialog">
+<div class="modalHeader"><div><h2 id="duplicateManagerTitle">Duplicate manager</h2><div class="muted" id="duplicateManagerSubtitle">Compare possible duplicates for this entry.</div></div><button aria-label="Close" class="iconButton" id="closeDuplicateManager">×</button></div>
+<div class="duplicateManagerBody" id="duplicateManagerBody"></div>
+</div>
+</div>
+<div class="modalBackdrop" hidden="" id="unmatchDuplicatesModal">
+<div aria-labelledby="unmatchDuplicatesTitle" aria-modal="true" class="modalShell duplicateSplitShell" role="dialog">
+<div class="modalHeader"><div><h2 id="unmatchDuplicatesTitle">Unmatch wrongly merged duplicates</h2><div class="muted">Choose a merged entry, then select only the source record(s) that belong to the other work.</div></div><button aria-label="Close" class="iconButton" id="closeUnmatchDuplicates">×</button></div>
+<div class="duplicateSplitToolbar"><input aria-label="Search merged entries" id="unmatchDuplicateSearch" placeholder="Search merged entries"/><button id="reloadUnmatchDuplicates">Refresh list</button></div>
+<div class="duplicateSplitList" id="unmatchDuplicateList"></div>
+</div>
+</div>
+<div class="modalBackdrop" hidden="" id="matchBrowser">
+<div aria-labelledby="matchBrowserTitle" aria-modal="true" class="modalShell" role="dialog">
+<div class="modalHeader">
+<div><h2 id="matchBrowserTitle">Edit match</h2><div class="muted" id="matchBrowserSubtitle"></div></div>
+<button aria-label="Close" class="iconButton" id="closeMatchBrowser">×</button>
+</div>
+<div class="matchTarget" id="matchTarget"></div>
+<div class="browserToolbar">
+<label>Source / language <select id="matchSource"></select></label>
+<input aria-label="Search this source" id="matchSearch" placeholder="Search this source"/>
+<button id="runMatchSearch">Search</button>
+<button class="danger" hidden="" id="clearCurrentMatch">Clear current match</button>
+</div>
+<div class="muted browserStatus" id="matchSearchStatus"></div>
+<div class="mangaGrid" id="matchResults"></div>
+<div class="browserPager"><button id="matchPrev">Previous</button><span id="matchPage">Page 1</span><button id="matchNext">Next</button></div>
+</div>
+</div>
+<div id="sourcePreferencesModal" class="modalBackdrop" hidden>
+<section class="modalShell sourcePreferencesShell" role="dialog" aria-modal="true" aria-labelledby="sourcePreferencesTitle" tabindex="-1">
+<div class="modalHeader"><div><h2 id="sourcePreferencesTitle">Source settings</h2><p class="muted">Preferences provided by the installed extension.</p></div><button id="sourcePreferencesClose" type="button" aria-label="Close source settings">×</button></div>
+<label class="sourcePreferenceLanguage">Source / language <select id="sourcePreferencesVariant"></select></label>
+<p id="sourcePreferencesStatus" role="status" aria-live="polite"></p>
+<form id="sourcePreferencesForm"><div id="sourcePreferencesFields"></div><div class="toolbar wrap sourcePreferenceActions"><button id="sourcePreferencesSave" class="primaryAction" type="submit" disabled>Save changes</button><button id="sourcePreferencesDiscard" type="button" disabled>Discard unsaved changes</button><button id="sourcePreferencesReload" type="button">Reload settings</button></div></form>
+</section></div>
+<div id="setupModal" class="modalBackdrop" hidden>
+<section class="modalShell setupShell" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+<div class="modalHeader"><div><small id="setupProgress"></small><h2 id="setupTitle" tabindex="-1">Set up AutoSourcarr</h2></div><button id="setupCancel" type="button">Cancel setup</button></div>
+<div id="setupBody"></div><p id="setupError" role="alert"></p><button id="setupReload" type="button" hidden>Reload saved settings</button>
+<div class="setupActions"><button id="setupBack" type="button">Back</button><button id="setupNext" class="primaryAction" type="button">Continue</button></div>
+</section></div>
+<dialog id="riSearchDialog" class="riCommandDialog" aria-labelledby="riSearchTitle">
+<form method="dialog" class="riCommandHead"><h2 id="riSearchTitle">Search library</h2><button aria-label="Close search" value="close" type="submit">Esc</button></form>
+<label class="riCommandInput"><span class="srOnly">Title, alias or portable media ID</span><input type="search" id="riCommandQuery" autocomplete="off" placeholder="Search titles or paste an ASC Media ID…"/></label>
+<div id="riCommandResults" class="riCommandResults" role="list" aria-label="Search results"></div><p id="riCommandStatus" class="muted" role="status">Type to search your saved catalog.</p>
+</dialog>
+<dialog id="riInstanceDialog" class="riToolDialog" aria-labelledby="riInstanceTitle"><header><h2 id="riInstanceTitle">Instance tools</h2><button id="riInstanceClose" type="button">Close</button></header><div id="riInstanceBody"></div><footer><p id="riInstanceStatus" role="status"></p></footer></dialog>
+<div id="toast" role="status"></div>
+<script src="/static/confirmation-dialog.js?v=0.4.5"></script>
+<script src="/static/workbench.js?v=0.4.5"></script><script src="/static/app.js?v=0.4.5"></script><script src="/static/mixed-entries.js?v=0.4.5"></script><script src="/static/repair-login.js?v=0.4.5"></script><script src="/static/source-repairs.js?v=0.4.5"></script><script src="/static/tag-review.js?v=0.4.5"></script><script src="/static/orphan-sources.js?v=0.4.5"></script><script src="/static/source-controls.js?v=0.4.5"></script>
+<script src="/static/internal-services.js?v=0.4.5"></script><script src="/static/navigation-state.js?v=0.4.5"></script>
+<script src="/static/matching-review.js?v=0.4.5"></script>
+<script src="/static/repair-isolation.js?v=0.4.5"></script>
+<script src="/static/repair-tasks.js?v=0.4.5"></script>
+<script src="/static/source-raws.js?v=0.4.5"></script>
+<script src="/static/repair-queue.js?v=0.4.5"></script>
+<script src="/static/source-health.js?v=0.4.5"></script>
+<script src="/static/setup.js?v=0.4.5"></script>
+<script src="/static/reimagined-core.js?v=0.4.5"></script>
+<script src="/static/library-controller.js?v=0.4.5"></script>
+<script src="/static/manage-tabs.js?v=0.4.5"></script>
+<script src="/static/identity-review.js?v=0.4.5"></script>
+<script src="/static/manage-entry.js?v=0.4.5"></script>
+<script src="/static/gallery-policy.js?v=0.4.5"></script>
+<script src="/static/catalog-sharing.js?v=0.4.5"></script>
+<script src="/static/instance-tools.js?v=0.4.5"></script>
+<script src="/static/reimagined-controls.js?v=0.4.5"></script>
+<script src="/static/reimagined.js?v=0.4.5"></script>
+<script src="/static/filter-summary.js?v=0.4.5"></script>
+</body></html>

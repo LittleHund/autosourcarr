@@ -1,0 +1,2177 @@
+[
+  {
+    "kind": "repository",
+    "argument": "https://github.com/keiyoushi/extensions-source",
+    "valid": true,
+    "result": {
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "host": "github.com",
+      "path": "keiyoushi/extensions-source",
+      "resolve_url": "https://api.github.com/repos/keiyoushi/extensions-source/commits/HEAD"
+    }
+  },
+  {
+    "kind": "repository",
+    "argument": "https://github.com/OWNER/project.git/",
+    "valid": true,
+    "result": {
+      "repository": "https://github.com/OWNER/project",
+      "host": "github.com",
+      "path": "OWNER/project",
+      "resolve_url": "https://api.github.com/repos/OWNER/project/commits/HEAD"
+    }
+  },
+  {
+    "kind": "repository",
+    "argument": "https://gitlab.com/group/sub/repo",
+    "valid": true,
+    "result": {
+      "repository": "https://gitlab.com/group/sub/repo",
+      "host": "gitlab.com",
+      "path": "group/sub/repo",
+      "resolve_url": "https://gitlab.com/api/v4/projects/group%2Fsub%2Frepo/repository/commits/HEAD"
+    }
+  },
+  {
+    "kind": "repository",
+    "argument": "https://github.com/a/b/../c",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "repository",
+    "argument": "https://github.com/a/./b",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "repository",
+    "argument": "https://github.com/a//b",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "repository",
+    "argument": "https://github.com/a/b/tree/main",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "repository",
+    "argument": "https://unknown.example/a/b",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "repository",
+    "argument": "https://user:secret@github.com/a/b",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "repository",
+    "argument": "http://github.com/a/b",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "repository",
+    "argument": "https://github.com/a/b?key=synthetic",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+    "valid": true,
+    "result": true
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+    "valid": true,
+    "result": {
+      "owner": "keiyoushi",
+      "repository": "https://github.com/keiyoushi/extensions",
+      "readme": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/README.md",
+      "index": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+    }
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json",
+    "valid": true,
+    "result": true
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json",
+    "valid": true,
+    "result": {
+      "owner": "keiyoushi",
+      "repository": "https://github.com/keiyoushi/extensions",
+      "readme": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/README.md",
+      "index": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+    }
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json",
+    "valid": true,
+    "result": true
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json",
+    "valid": true,
+    "result": {
+      "owner": "keiyoushi",
+      "repository": "https://github.com/keiyoushi/extensions",
+      "readme": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/README.md",
+      "index": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+    }
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json",
+    "valid": true,
+    "result": false
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json",
+    "valid": true,
+    "result": {
+      "owner": "publisher",
+      "repository": "https://github.com/publisher/extensions",
+      "readme": "https://raw.githubusercontent.com/publisher/extensions/repo/README.md",
+      "index": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+    }
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://github.com/publisher/extensions/raw/repo/index.pb",
+    "valid": true,
+    "result": false
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://github.com/publisher/extensions/raw/repo/index.pb",
+    "valid": true,
+    "result": {
+      "owner": "publisher",
+      "repository": "https://github.com/publisher/extensions",
+      "readme": "https://raw.githubusercontent.com/publisher/extensions/repo/README.md",
+      "index": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+    }
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://github.com/other/extensions/raw/repo/index.pb",
+    "valid": true,
+    "result": false
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://github.com/other/extensions/raw/repo/index.pb",
+    "valid": true,
+    "result": {
+      "owner": "other",
+      "repository": "https://github.com/other/extensions",
+      "readme": "https://raw.githubusercontent.com/other/extensions/repo/README.md",
+      "index": "https://raw.githubusercontent.com/other/extensions/repo/index.min.json"
+    }
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb",
+    "valid": true,
+    "result": false
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb",
+    "valid": true,
+    "result": {
+      "owner": "keiyoushi",
+      "repository": "https://github.com/keiyoushi/extensions",
+      "readme": "https://raw.githubusercontent.com/keiyoushi/extensions/notrepo/README.md",
+      "index": "https://raw.githubusercontent.com/keiyoushi/extensions/notrepo/index.min.json"
+    }
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://github.com/keiyoushi/extensions/raw/repo/index.pb?download=1",
+    "valid": true,
+    "result": true
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://github.com/keiyoushi/extensions/raw/repo/index.pb?download=1",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.pb#bad",
+    "valid": true,
+    "result": false
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.pb#bad",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "known-index",
+    "argument": "http://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb",
+    "valid": true,
+    "result": false
+  },
+  {
+    "kind": "index-project",
+    "argument": "http://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb",
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "known-index",
+    "argument": "https://keiyoushi.example/index.pb",
+    "valid": true,
+    "result": false
+  },
+  {
+    "kind": "index-project",
+    "argument": "https://keiyoushi.example/index.pb",
+    "valid": true,
+    "result": null
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.all.nhentai",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.all.nhentai",
+      "version": "1.4.23",
+      "module": "src/all/nhentai",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "org.example.custom",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "org.example.custom",
+      "version": "1.4.23",
+      "module": ".",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/refs/heads/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://raw.githubusercontent.com/publisher/extensions/repo/index.min.json"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/publisher/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/other/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "The original code repository is not declared by this source. Provide its project ZIP/repository or choose Unavailable; no similar source was substituted."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.fancy_name",
+        "versionName": "1.4.23",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/notrepo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.fancy_name",
+      "version": "1.4.23",
+      "module": "src/en/fancy_name",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": null
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": false
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "index_url": "https://github.com/keiyoushi/extensions/raw/repo/index.pb",
+      "basis": "known-repository"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "needs-input",
+      "reason": "This source was installed locally. Provide its original raw project or choose Unavailable to reconstruct the actual installed code."
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true,
+      "supplied": {
+        "repository": "https://github.com/keiyoushi/extensions-source"
+      }
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "tachiyomi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "",
+      "basis": "user-provided"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true,
+      "supplied": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "module": "src/en/example",
+        "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "ecosystem": "keiyoushi"
+      }
+    },
+    "valid": true,
+    "result": {
+      "package": "eu.kanade.tachiyomi.extension.en.example",
+      "version": "1.4.23",
+      "module": "src/en/example",
+      "ecosystem": "keiyoushi",
+      "state": "known",
+      "repository": "https://github.com/keiyoushi/extensions-source",
+      "revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "basis": "user-provided"
+    }
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true,
+      "supplied": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "revision": "short"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true,
+      "supplied": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "extra": "not allowed"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  },
+  {
+    "kind": "origin",
+    "argument": {
+      "extension": {
+        "pkgName": "eu.kanade.tachiyomi.extension.en.example",
+        "versionName": "1.4.23",
+        "orphan_reason": "manual-upload",
+        "storeIndexUrl": "https://github.com/keiyoushi/extensions/raw/repo/index.pb"
+      },
+      "manual": true,
+      "supplied": {
+        "repository": "https://github.com/keiyoushi/extensions-source",
+        "module": "../bad"
+      }
+    },
+    "valid": false,
+    "error": "ValueError"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "path": "sample.png",
+    "width": 8,
+    "height": 6,
+    "bytes": 83
+  },
+  {
+    "path": "sample.jpg",
+    "width": 8,
+    "height": 6,
+    "bytes": 650
+  },
+  {
+    "path": "sample.webp",
+    "width": 8,
+    "height": 6,
+    "bytes": 86
+  },
+  {
+    "path": "sample.gif",
+    "width": 8,
+    "height": 6,
+    "bytes": 276
+  },
+  {
+    "path": "sample.bmp",
+    "width": 8,
+    "height": 6,
+    "bytes": 198
+  },
+  {
+    "path": "sample.avif",
+    "width": 8,
+    "height": 6,
+    "bytes": 332
+  }
+]

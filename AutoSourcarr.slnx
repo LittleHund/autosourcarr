@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AutoSourcarr.Api/AutoSourcarr.Api.csproj" />
+    <Project Path="src/AutoSourcarr.Core/AutoSourcarr.Core.csproj" />
+    <Project Path="src/AutoSourcarr.Host/AutoSourcarr.Host.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj" />
+  </Folder>
+</Solution>

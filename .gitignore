@@ -1,0 +1,24 @@
+# runtime and private data — never committed
+runtime-config/
+retained-env/
+data/
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.env
+!*.env.example
+!config/*.env.example
+config/autosourcarr.env
+config/source-host.env
+# build output
+bin/
+obj/
+.vs/
+*.user
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+conversion-export/
+lockfiles.txt

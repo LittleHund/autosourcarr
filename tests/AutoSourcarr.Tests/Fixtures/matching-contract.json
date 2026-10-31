@@ -1,0 +1,3608 @@
+[
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "One-Punch Man"
+    },
+    "expected": "one punch man"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ＯＮＥ　ＰＩＥＣＥ"
+    },
+    "expected": "one piece"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "One-Punch Man"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ワンパンマン"
+    },
+    "expected": "wanpanman"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "ワンパンマン"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "One Punch Man"
+    },
+    "expected": "one punch man"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "One Punch Man"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "One-Punch Man",
+      "b": "One Punch Man"
+    },
+    "expected": 1.0
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "One-Punch Man",
+      "b": "ワンパンマン"
+    },
+    "expected": 0.5454545454545454
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "ワンパンマン",
+      "b": "One Punch Man"
+    },
+    "expected": 0.5454545454545454
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "ワンパンマン",
+      "b": "ワンパンマン"
+    },
+    "expected": 1.0
+  },
+  {
+    "function": "best_title_score",
+    "arguments": {
+      "left": [
+        "One-Punch Man",
+        "ワンパンマン"
+      ],
+      "right": [
+        "One Punch Man",
+        "ワンパンマン"
+      ]
+    },
+    "expected": [
+      1.0,
+      2
+    ]
+  },
+  {
+    "function": "best_description_score",
+    "arguments": {
+      "candidate": "",
+      "existing": []
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "score_match",
+    "arguments": {
+      "candidate_titles": [
+        "One-Punch Man",
+        "ワンパンマン"
+      ],
+      "entry_titles": [
+        "One Punch Man",
+        "ワンパンマン"
+      ],
+      "candidate_author": "",
+      "entry_author": "",
+      "candidate_description": "",
+      "entry_descriptions": []
+    },
+    "expected": {
+      "score": 1.0,
+      "reason": "two-title corroboration",
+      "title_score": 1.0,
+      "description_score": 0.0
+    }
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Wanpanman"
+    },
+    "expected": "wanpanman"
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "One-Punch Man"
+    },
+    "expected": false
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Wanpanman"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Wanpanman"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Description here\n\nAlternative titles: One-Punch Man | Wanpanman\nStatus: Ongoing"
+    },
+    "expected": [
+      "One-Punch Man",
+      "Wanpanman"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Completely Different Localized Title"
+    },
+    "expected": "completely different localized title"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Completely Different Localized Title"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Another Translation"
+    },
+    "expected": "another translation"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Another Translation"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "Completely Different Localized Title",
+      "b": "Another Translation"
+    },
+    "expected": 0.36363636363636365
+  },
+  {
+    "function": "best_title_score",
+    "arguments": {
+      "left": [
+        "Completely Different Localized Title"
+      ],
+      "right": [
+        "Another Translation"
+      ]
+    },
+    "expected": [
+      0.36363636363636365,
+      0
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": "a veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "A"
+    },
+    "expected": "a"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "veteran"
+    },
+    "expected": "veteran"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "adventurer"
+    },
+    "expected": "adventurer"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "wakes"
+    },
+    "expected": "wakes"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "in"
+    },
+    "expected": "in"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "a"
+    },
+    "expected": "a"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "city"
+    },
+    "expected": "city"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "where"
+    },
+    "expected": "where"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "magic"
+    },
+    "expected": "magic"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "has"
+    },
+    "expected": "has"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "vanished"
+    },
+    "expected": "vanished"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "and"
+    },
+    "expected": "and"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "must"
+    },
+    "expected": "must"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "uncover"
+    },
+    "expected": "uncover"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "why"
+    },
+    "expected": "why"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "the"
+    },
+    "expected": "the"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "old"
+    },
+    "expected": "old"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "guilds"
+    },
+    "expected": "guilds"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "disappeared"
+    },
+    "expected": "disappeared"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "before"
+    },
+    "expected": "before"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "same"
+    },
+    "expected": "same"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "disaster"
+    },
+    "expected": "disaster"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "reaches"
+    },
+    "expected": "reaches"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "his"
+    },
+    "expected": "his"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "new"
+    },
+    "expected": "new"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "family"
+    },
+    "expected": "family"
+  },
+  {
+    "function": "clean_summary",
+    "arguments": {
+      "value": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+  },
+  {
+    "function": "is_meaningful_summary",
+    "arguments": {
+      "value": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": "a seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "seasoned"
+    },
+    "expected": "seasoned"
+  },
+  {
+    "function": "clean_summary",
+    "arguments": {
+      "value": "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+  },
+  {
+    "function": "is_meaningful_summary",
+    "arguments": {
+      "value": "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_description",
+    "arguments": {
+      "value": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": "a veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family"
+  },
+  {
+    "function": "normalize_description",
+    "arguments": {
+      "value": "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": "a seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family"
+  },
+  {
+    "function": "description_similarity",
+    "arguments": {
+      "a": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family.",
+      "b": "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+    },
+    "expected": 0.9727891156462585
+  },
+  {
+    "function": "best_description_score",
+    "arguments": {
+      "candidate": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family.",
+      "existing": [
+        "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+      ]
+    },
+    "expected": 0.9727891156462585
+  },
+  {
+    "function": "score_match",
+    "arguments": {
+      "candidate_titles": [
+        "Completely Different Localized Title"
+      ],
+      "entry_titles": [
+        "Another Translation"
+      ],
+      "candidate_author": "",
+      "entry_author": "",
+      "candidate_description": "A veteran adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family.",
+      "entry_descriptions": [
+        "A seasoned adventurer wakes in a city where magic has vanished and must uncover why the old guilds disappeared before the same disaster reaches his new family."
+      ]
+    },
+    "expected": {
+      "score": 0.995,
+      "reason": "description>=90%",
+      "title_score": 0.36363636363636365,
+      "description_score": 0.9727891156462585
+    }
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Unrelated A"
+    },
+    "expected": "unrelated a"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Unrelated A"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Unrelated B"
+    },
+    "expected": "unrelated b"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Unrelated B"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "Unrelated A",
+      "b": "Unrelated B"
+    },
+    "expected": 0.9090909090909091
+  },
+  {
+    "function": "best_title_score",
+    "arguments": {
+      "left": [
+        "Unrelated A"
+      ],
+      "right": [
+        "Unrelated B"
+      ]
+    },
+    "expected": [
+      0.9090909090909091,
+      0
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "A hero fights monsters."
+    },
+    "expected": "a hero fights monsters"
+  },
+  {
+    "function": "clean_summary",
+    "arguments": {
+      "value": "A hero fights monsters."
+    },
+    "expected": "A hero fights monsters."
+  },
+  {
+    "function": "is_meaningful_summary",
+    "arguments": {
+      "value": "A hero fights monsters."
+    },
+    "expected": false
+  },
+  {
+    "function": "description_similarity",
+    "arguments": {
+      "a": "A hero fights monsters.",
+      "b": "A hero fights monsters."
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "best_description_score",
+    "arguments": {
+      "candidate": "A hero fights monsters.",
+      "existing": [
+        "A hero fights monsters."
+      ]
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "score_match",
+    "arguments": {
+      "candidate_titles": [
+        "Unrelated A"
+      ],
+      "entry_titles": [
+        "Unrelated B"
+      ],
+      "candidate_author": "",
+      "entry_author": "",
+      "candidate_description": "A hero fights monsters.",
+      "entry_descriptions": [
+        "A hero fights monsters."
+      ]
+    },
+    "expected": {
+      "score": 0.9090909090909091,
+      "reason": "title",
+      "title_score": 0.9090909090909091,
+      "description_score": 0.0
+    }
+  },
+  {
+    "function": "looks_english",
+    "arguments": {
+      "title": "+99 Reinforced Wooden Stick"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "+99 Reinforced Wooden Stick"
+    },
+    "expected": "99 reinforced wooden stick"
+  },
+  {
+    "function": "looks_romanized_japanese",
+    "arguments": {
+      "title": "+99 Reinforced Wooden Stick"
+    },
+    "expected": false
+  },
+  {
+    "function": "looks_preferred_english",
+    "arguments": {
+      "title": "+99 Reinforced Wooden Stick"
+    },
+    "expected": true
+  },
+  {
+    "function": "looks_english",
+    "arguments": {
+      "title": "100-mankai no Suki o Ageru"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "100-mankai no Suki o Ageru"
+    },
+    "expected": "100 mankai no suki o ageru"
+  },
+  {
+    "function": "looks_romanized_japanese",
+    "arguments": {
+      "title": "100-mankai no Suki o Ageru"
+    },
+    "expected": true
+  },
+  {
+    "function": "looks_preferred_english",
+    "arguments": {
+      "title": "100-mankai no Suki o Ageru"
+    },
+    "expected": false
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "No alternative titles."
+    },
+    "expected": "no alternative titles"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "No alternative titles."
+    },
+    "expected": false
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "No alternative titles.",
+      "b": "No alternative titles."
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "No associated names"
+    },
+    "expected": "no associated names"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "No associated names"
+    },
+    "expected": false
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "No associated names",
+      "b": "No associated names"
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "N/A"
+    },
+    "expected": "n a"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "N/A"
+    },
+    "expected": false
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "N/A",
+      "b": "N/A"
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Unknown"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Unknown"
+    },
+    "expected": false
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "Unknown",
+      "b": "Unknown"
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Associated Name(s): No alternative titles.\nStatus: Ongoing"
+    },
+    "expected": []
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "King"
+    },
+    "expected": "king"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "King"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_single_word_title",
+    "arguments": {
+      "value": "King"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_match_evidence_title",
+    "arguments": {
+      "value": "King",
+      "title_type": "manual",
+      "primary": false
+    },
+    "expected": false
+  },
+  {
+    "function": "is_match_evidence_title",
+    "arguments": {
+      "value": "King",
+      "title_type": "description-alias",
+      "primary": false
+    },
+    "expected": false
+  },
+  {
+    "function": "is_match_evidence_title",
+    "arguments": {
+      "value": "King",
+      "title_type": "source",
+      "primary": false
+    },
+    "expected": true
+  },
+  {
+    "function": "is_match_evidence_title",
+    "arguments": {
+      "value": "King",
+      "title_type": "source-variant",
+      "primary": false
+    },
+    "expected": true
+  },
+  {
+    "function": "is_match_evidence_title",
+    "arguments": {
+      "value": "King",
+      "title_type": "",
+      "primary": true
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "The Returned King"
+    },
+    "expected": "the returned king"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "The Returned King"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_single_word_title",
+    "arguments": {
+      "value": "The Returned King"
+    },
+    "expected": false
+  },
+  {
+    "function": "is_match_evidence_title",
+    "arguments": {
+      "value": "The Returned King",
+      "title_type": "manual",
+      "primary": false
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "When civil engineering student Suho Kim falls asleep reading a fantasy novel, he wakes up as Lloyd Frontera and uses his engineering knowledge to save a family in debt."
+    },
+    "expected": "when civil engineering student suho kim falls asleep reading a fantasy novel he wakes up as lloyd frontera and uses his engineering knowledge to save a family in debt"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "When"
+    },
+    "expected": "when"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "civil"
+    },
+    "expected": "civil"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "engineering"
+    },
+    "expected": "engineering"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "student"
+    },
+    "expected": "student"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Suho"
+    },
+    "expected": "suho"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Kim"
+    },
+    "expected": "kim"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "falls"
+    },
+    "expected": "falls"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "asleep"
+    },
+    "expected": "asleep"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "reading"
+    },
+    "expected": "reading"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "fantasy"
+    },
+    "expected": "fantasy"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "novel"
+    },
+    "expected": "novel"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "he"
+    },
+    "expected": "he"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "up"
+    },
+    "expected": "up"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "as"
+    },
+    "expected": "as"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Lloyd"
+    },
+    "expected": "lloyd"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Frontera"
+    },
+    "expected": "frontera"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "uses"
+    },
+    "expected": "uses"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "knowledge"
+    },
+    "expected": "knowledge"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "to"
+    },
+    "expected": "to"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "save"
+    },
+    "expected": "save"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "debt"
+    },
+    "expected": "debt"
+  },
+  {
+    "function": "clean_summary",
+    "arguments": {
+      "value": "When **civil engineering student Suho Kim** falls asleep reading a *fantasy novel*, he wakes up as **Lloyd Frontera** and uses his engineering knowledge to save a family in debt. (From [LINE Webtoon](/group/line-webtoon)) Chronology of works in this universe: \"[Other Work](/series/other)\" -> \"[Later Work](/series/later)\" **Original Webtoon:** [Naver Webtoon](https://comic.naver.com/example) **Official Translations:** [English](https://www.webtoons.com/example)"
+    },
+    "expected": "When civil engineering student Suho Kim falls asleep reading a fantasy novel, he wakes up as Lloyd Frontera and uses his engineering knowledge to save a family in debt."
+  },
+  {
+    "function": "clean_summary",
+    "arguments": {
+      "value": "When civil engineering student Suho Kim falls asleep reading a fantasy novel, he wakes up as Lloyd Frontera and uses his engineering knowledge to save a family in debt."
+    },
+    "expected": "When civil engineering student Suho Kim falls asleep reading a fantasy novel, he wakes up as Lloyd Frontera and uses his engineering knowledge to save a family in debt."
+  },
+  {
+    "function": "is_meaningful_summary",
+    "arguments": {
+      "value": "When civil engineering student Suho Kim falls asleep reading a fantasy novel, he wakes up as Lloyd Frontera and uses his engineering knowledge to save a family in debt."
+    },
+    "expected": true
+  },
+  {
+    "function": "clean_summary",
+    "arguments": {
+      "value": "Associated Names: No alternative titles. Official Translations: https://example.invalid"
+    },
+    "expected": ""
+  },
+  {
+    "function": "is_meaningful_summary",
+    "arguments": {
+      "value": "Associated Names: No alternative titles. Official Translations: https://example.invalid"
+    },
+    "expected": false
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam"
+    },
+    "expected": "spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "spam"
+    },
+    "expected": "spam"
+  },
+  {
+    "function": "clean_summary",
+    "arguments": {
+      "value": "spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam "
+    },
+    "expected": ""
+  },
+  {
+    "function": "is_meaningful_summary",
+    "arguments": {
+      "value": "spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam "
+    },
+    "expected": false
+  },
+  {
+    "function": "description_similarity",
+    "arguments": {
+      "a": "spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam ",
+      "b": "spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam spam "
+    },
+    "expected": 0.0
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "+99 Wooden Stick"
+    },
+    "expected": "99 wooden stick"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "+99 Wooden Stick"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "99 Hardened Wooden Stick"
+    },
+    "expected": "99 hardened wooden stick"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "99 Hardened Wooden Stick"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "99강화나무몽둥이"
+    },
+    "expected": "99ganghwanamumongdungi"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "99강화나무몽둥이"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "99 Reinforced Wood Stick"
+    },
+    "expected": "99 reinforced wood stick"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "99 Reinforced Wood Stick"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "+99 Wooden Stick"
+    },
+    "expected": false
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "99 Hardened Wooden Stick"
+    },
+    "expected": false
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "99강화나무몽둥이"
+    },
+    "expected": false
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "99 Reinforced Wood Stick"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: +99 Wooden Stick , 99 Hardened Wooden Stick, 99강화나무몽둥이, 99 Reinforced Wood Stick\nStatus: Ongoing"
+    },
+    "expected": [
+      "+99 Wooden Stick",
+      "99 Hardened Wooden Stick",
+      "99강화나무몽둥이",
+      "99 Reinforced Wood Stick"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "My Wife"
+    },
+    "expected": "my wife"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "My Wife"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "I"
+    },
+    "expected": "i"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "I"
+    },
+    "expected": false
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "My Wife, the Demon Queen"
+    },
+    "expected": "my wife the demon queen"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "I, Who Became a Legendary Boss"
+    },
+    "expected": "i who became a legendary boss"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "My Wife, the Demon Queen"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "My Wife, the Demon Queen"
+    },
+    "expected": false
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "I, Who Became a Legendary Boss"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "I, Who Became a Legendary Boss"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: My Wife, the Demon Queen | I, Who Became a Legendary Boss\nStatus: Ongoing"
+    },
+    "expected": [
+      "My Wife, the Demon Queen",
+      "I, Who Became a Legendary Boss"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "\"Skill Lender\" Get Back His Pride: Before I Started Lending"
+    },
+    "expected": "skill lender get back his pride before i started lending"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "\"Skill Lender\" Get Back His Pride: Before I Started Lending"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "I Told You This Loan Charges 10% Interest Every 10 Days"
+    },
+    "expected": "i told you this loan charges 10 interest every 10 days"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "I Told You This Loan Charges 10% Interest Every 10 Days"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "\"Skill Lender\" Get Back His Pride: Before I Started Lending, I Told You This Loan Charges 10% Interest Every 10 Days, Right?"
+    },
+    "expected": "skill lender get back his pride before i started lending i told you this loan charges 10 interest every 10 days right"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "\"Skill Lender\" Get Back His Pride: Before I Started Lending, I Told You This Loan Charges 10% Interest Every 10 Days, Right?"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "\"Skill Lender\" Get Back His Pride: Before I Started Lending, I Told You This Loan Charges 10% Interest Every 10 Days, Right?"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: \"Skill Lender\" Get Back His Pride: Before I Started Lending, I Told You This Loan Charges 10% Interest Every 10 Days, Right?\nStatus: Ongoing"
+    },
+    "expected": [
+      "\"Skill Lender\" Get Back His Pride: Before I Started Lending, I Told You This Loan Charges 10% Interest Every 10 Days, Right?"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Skill Lender's Retrieving (Tale) ～I Told You It's 10% Per 10 Days at First, Didn't I～"
+    },
+    "expected": "skill lender s retrieving tale i told you it s 10 per 10 days at first didn t i"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Skill Lender's Retrieving (Tale) ～I Told You It's 10% Per 10 Days at First, Didn't I～"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Skill Lender's Retrieving (Tale) ～I Told You It's 10% Per 10 Days at First, Didn't I～"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: Skill Lender's Retrieving (Tale) ～I Told You It's 10% Per 10 Days at First, Didn't I～\nStatus: Ongoing"
+    },
+    "expected": [
+      "Skill Lender's Retrieving (Tale) ～I Told You It's 10% Per 10 Days at First, Didn't I～"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Skill Lender's Retrieving Tale ~I Told You It's 10% Per 10 Days at First, Didn't I?~"
+    },
+    "expected": "skill lender s retrieving tale i told you it s 10 per 10 days at first didn t i"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Skill Lender's Retrieving Tale ~I Told You It's 10% Per 10 Days at First, Didn't I?~"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Skill Lender's Retrieving Tale ~I Told You It's 10% Per 10 Days at First, Didn't I?~"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: Skill Lender's Retrieving Tale ~I Told You It's 10% Per 10 Days at First, Didn't I?~\nStatus: Ongoing"
+    },
+    "expected": [
+      "Skill Lender's Retrieving Tale ~I Told You It's 10% Per 10 Days at First, Didn't I?~"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Skill Lender's Retrieving Tale 〜I Told You It's 10% Per 10 Days at First, Didn't I?〜"
+    },
+    "expected": "skill lender s retrieving tale i told you it s 10 per 10 days at first didn t i"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Skill Lender's Retrieving Tale 〜I Told You It's 10% Per 10 Days at First, Didn't I?〜"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Skill Lender's Retrieving Tale 〜I Told You It's 10% Per 10 Days at First, Didn't I?〜"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: Skill Lender's Retrieving Tale 〜I Told You It's 10% Per 10 Days at First, Didn't I?〜\nStatus: Ongoing"
+    },
+    "expected": [
+      "Skill Lender's Retrieving Tale 〜I Told You It's 10% Per 10 Days at First, Didn't I?〜"
+    ]
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: +99 Wooden Stick, 99 Hardened Wooden Stick, Skill Lender's Retrieving (Tale) ～I Told You It's 10% Per 10 Days at First, Didn't I～\nStatus: Ongoing"
+    },
+    "expected": [
+      "+99 Wooden Stick",
+      "99 Hardened Wooden Stick",
+      "Skill Lender's Retrieving (Tale) ～I Told You It's 10% Per 10 Days at First, Didn't I～"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Bleach"
+    },
+    "expected": "bleach"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Bleach"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "Bleach",
+      "b": "Bleach"
+    },
+    "expected": 1.0
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Solo Leveling"
+    },
+    "expected": "solo leveling"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Solo Leveling"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "Solo Leveling",
+      "b": "Solo Leveling"
+    },
+    "expected": 1.0
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Demon King"
+    },
+    "expected": "demon king"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Demon King"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "King",
+      "b": "Demon King"
+    },
+    "expected": 0.5714285714285714
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "The Demon King Returns"
+    },
+    "expected": "the demon king returns"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "The Demon King Returns"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "Demon King",
+      "b": "The Demon King Returns"
+    },
+    "expected": 0.625
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Solo Leveling Side Story"
+    },
+    "expected": "solo leveling side story"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Solo Leveling Side Story"
+    },
+    "expected": true
+  },
+  {
+    "function": "title_similarity",
+    "arguments": {
+      "a": "Solo Leveling",
+      "b": "Solo Leveling Side Story"
+    },
+    "expected": 0.7027027027027026
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Overlord of Sichuan"
+    },
+    "expected": "overlord of sichuan"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Overlord of Sichuan"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "The Iron Overlord of Sichuan"
+    },
+    "expected": "the iron overlord of sichuan"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "The Iron Overlord of Sichuan"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "Overlord of Sichuan",
+      "b": "The Iron Overlord of Sichuan"
+    },
+    "expected": 0.8085106382978724
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "God of War"
+    },
+    "expected": "god of war"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "God of War"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "The God of War"
+    },
+    "expected": "the god of war"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "The God of War"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "God of War",
+      "b": "The God of War"
+    },
+    "expected": 0.8333333333333335
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Bride of the War God"
+    },
+    "expected": "bride of the war god"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Bride of the War God"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "God of War",
+      "b": "Bride of the War God"
+    },
+    "expected": 0.5333333333333333
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Return of the War God"
+    },
+    "expected": "return of the war god"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Return of the War God"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "God of War",
+      "b": "Return of the War God"
+    },
+    "expected": 0.4516129032258065
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Beast Taming Evolution"
+    },
+    "expected": "beast taming evolution"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Beast Taming Evolution"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Global Beast Tamer: I Can See the Path of Evolution"
+    },
+    "expected": "global beast tamer i can see the path of evolution"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Global Beast Tamer: I Can See the Path of Evolution"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "Beast Taming Evolution",
+      "b": "Global Beast Tamer: I Can See the Path of Evolution"
+    },
+    "expected": 0.5833333333333333
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "Solo Leveling",
+      "b": "Solo Leveling Side Story"
+    },
+    "expected": 0.7027027027027026
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "Solo Leveling",
+      "b": "Solo Leveling"
+    },
+    "expected": 1.0
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Didn't I?~"
+    },
+    "expected": "didn t i"
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Didn't I?~"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Didn't I?~"
+    },
+    "expected": true
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: Didn't I?~"
+    },
+    "expected": []
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Right?~"
+    },
+    "expected": "right"
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Right?~"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Right?~"
+    },
+    "expected": true
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: Right?~"
+    },
+    "expected": []
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Didn't I?～"
+    },
+    "expected": "didn t i"
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Didn't I?～"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Didn't I?～"
+    },
+    "expected": true
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: Didn't I?～"
+    },
+    "expected": []
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Right?〜"
+    },
+    "expected": "right"
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Right?〜"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Right?〜"
+    },
+    "expected": true
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Alternative titles: Right?〜"
+    },
+    "expected": []
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special (Colored)"
+    },
+    "expected": "colored"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special - Full Color"
+    },
+    "expected": "colored"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "Some Manga (Monochrome)"
+    },
+    "expected": "monochrome"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "Colorful Days"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special (Colored)"
+    },
+    "expected": "A Returner's Magic Should Be Special"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special"
+    },
+    "expected": "a returner s magic should be special"
+  },
+  {
+    "function": "normalized_color_base",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special (Colored)"
+    },
+    "expected": "a returner s magic should be special"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special"
+    },
+    "expected": "A Returner's Magic Should Be Special"
+  },
+  {
+    "function": "normalized_color_base",
+    "arguments": {
+      "value": "A Returner's Magic Should Be Special"
+    },
+    "expected": "a returner s magic should be special"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "Colored Pencil"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "Colored Pencil"
+    },
+    "expected": "Colored Pencil"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "The Colored Lands"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "The Colored Lands"
+    },
+    "expected": "The Colored Lands"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "Work Colored"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "Work Colored"
+    },
+    "expected": "Work Colored"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "Black and White World"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "Black and White World"
+    },
+    "expected": "Black and White World"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "Work - Colored"
+    },
+    "expected": "colored"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "Work - Colored"
+    },
+    "expected": "Work"
+  },
+  {
+    "function": "title_color_variant",
+    "arguments": {
+      "value": "[Colored] Work"
+    },
+    "expected": "colored"
+  },
+  {
+    "function": "color_base_title",
+    "arguments": {
+      "value": "[Colored] Work"
+    },
+    "expected": "Work"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ManhuaUS"
+    },
+    "expected": "manhuaus"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Manhuaus"
+    },
+    "expected": "manhuaus"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Son-in-Law Does Cheap Cultivation"
+    },
+    "expected": "son in law does cheap cultivation"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Son-in-Law Does Cheap Cultivation"
+    },
+    "expected": true
+  },
+  {
+    "function": "strip_known_source_suffix",
+    "arguments": {
+      "value": "Son-in-Law Does Cheap Cultivation – Manhuaus",
+      "source_names": [
+        "ManhuaUS"
+      ]
+    },
+    "expected": "Son-in-Law Does Cheap Cultivation"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "MangaFire"
+    },
+    "expected": "mangafire"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "MangaFire (EN)"
+    },
+    "expected": "mangafire en"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Hero Returns"
+    },
+    "expected": "hero returns"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Hero Returns"
+    },
+    "expected": true
+  },
+  {
+    "function": "strip_known_source_suffix",
+    "arguments": {
+      "value": "Hero Returns | MangaFire",
+      "source_names": [
+        "MangaFire (EN)"
+      ]
+    },
+    "expected": "Hero Returns"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "War"
+    },
+    "expected": "war"
+  },
+  {
+    "function": "strip_known_source_suffix",
+    "arguments": {
+      "value": "Love – War",
+      "source_names": [
+        "ManhuaUS"
+      ]
+    },
+    "expected": "Love – War"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "I Became a Student at the"
+    },
+    "expected": "i became a student at the"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "I Became a Student at the Transcension Academy"
+    },
+    "expected": "i became a student at the transcension academy"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Became a Student at Transcendental Academy"
+    },
+    "expected": "became a student at transcendental academy"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "I Became a Student at the Transcension Academy"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "I Became a Student at the Transcension Academy"
+    },
+    "expected": false
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Became a Student at Transcendental Academy"
+    },
+    "expected": true
+  },
+  {
+    "function": "is_alias_fragment",
+    "arguments": {
+      "value": "Became a Student at Transcendental Academy"
+    },
+    "expected": false
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Associated Names: I Became a Student at the\nTranscension Academy | Became a Student at Transcendental Academy\nStatus: Ongoing"
+    },
+    "expected": [
+      "I Became a Student at the Transcension Academy",
+      "Became a Student at Transcendental Academy"
+    ]
+  },
+  {
+    "function": "extract_alt_titles",
+    "arguments": {
+      "description": "Associated Names: I Became a Student at the\nStatus: Ongoing"
+    },
+    "expected": []
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "保持 元の作品"
+    },
+    "expected": "bao chi yuan nozuo pin"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "保持 元の作品"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "保持 元の作品"
+    },
+    "expected": "保持 元の作品"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "保持 元の作品"
+    },
+    "expected": "bao chi yuan nozuo pin"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "İ ı ß ſ K"
+    },
+    "expected": "i i ss s k"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "İ ı ß ſ K"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "İ ı ß ſ K"
+    },
+    "expected": "İ ı ß s K"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "İ ı ß s K"
+    },
+    "expected": "i i ss s k"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "İ ı ß ſ K"
+    },
+    "expected": "i i ss s k"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "王様の本"
+    },
+    "expected": "wang yang noben"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "王様の本"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "王様の本"
+    },
+    "expected": "王様の本"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "王様の本"
+    },
+    "expected": "wang yang noben"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "한글 제목"
+    },
+    "expected": "hangeul jemog"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "한글 제목"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "한글 제목"
+    },
+    "expected": "한글 제목"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "한글 제목"
+    },
+    "expected": "hangeul jemog"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "الكتاب الجميل"
+    },
+    "expected": "lktb ljmyl"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "الكتاب الجميل"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "الكتاب الجميل"
+    },
+    "expected": "الكتاب الجميل"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "الكتاب الجميل"
+    },
+    "expected": "lktb ljmyl"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Colored Pencil"
+    },
+    "expected": "colored pencil"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "Colored Pencil"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "Colored Pencil"
+    },
+    "expected": "Colored Pencil"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "Colored Pencil"
+    },
+    "expected": "colored pencil"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "My Work (Full Color)"
+    },
+    "expected": "my work full color"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "My Work (Full Color)"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "My Work (Full Color)"
+    },
+    "expected": "My Work (Full Color"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "My Work (Full Color"
+    },
+    "expected": "my work full color"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "My Work (Full Color)"
+    },
+    "expected": "my work full color"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "My Work (Manga)"
+    },
+    "expected": "my work manga"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "My Work (Manga)"
+    },
+    "expected": "manga"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "My Work (Manga)"
+    },
+    "expected": "My Work"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "My Work"
+    },
+    "expected": "my work"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "My Work (Manga)"
+    },
+    "expected": "my work"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "My Work [Webtoon]"
+    },
+    "expected": "my work webtoon"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "My Work [Webtoon]"
+    },
+    "expected": "webtoon"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "My Work [Webtoon]"
+    },
+    "expected": "My Work"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "My Work [Webtoon]"
+    },
+    "expected": "my work"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "emoji 😀 title"
+    },
+    "expected": "emoji title"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "emoji 😀 title"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "emoji 😀 title"
+    },
+    "expected": "emoji 😀 title"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "emoji 😀 title"
+    },
+    "expected": "emoji title"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Å & Øresund"
+    },
+    "expected": "a and oresund"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "Å & Øresund"
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "Å & Øresund"
+    },
+    "expected": "Å & Øresund"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Å & Øresund"
+    },
+    "expected": "a and oresund"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "Å & Øresund"
+    },
+    "expected": "a and oresund"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "  spaced\u001ctitle  "
+    },
+    "expected": "spaced title"
+  },
+  {
+    "function": "title_media_variant",
+    "arguments": {
+      "value": "  spaced\u001ctitle  "
+    },
+    "expected": "unknown"
+  },
+  {
+    "function": "media_base_title",
+    "arguments": {
+      "value": "  spaced\u001ctitle  "
+    },
+    "expected": "spaced\u001ctitle"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "spaced\u001ctitle"
+    },
+    "expected": "spaced title"
+  },
+  {
+    "function": "normalized_media_base",
+    "arguments": {
+      "value": "  spaced\u001ctitle  "
+    },
+    "expected": "spaced title"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "A. J. Smith"
+    },
+    "expected": "a j smith"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Alice Jane Smith"
+    },
+    "expected": "alice jane smith"
+  },
+  {
+    "function": "name_similarity",
+    "arguments": {
+      "a": "A. J. Smith",
+      "b": "Alice Jane Smith"
+    },
+    "expected": 0.72
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "山田 太郎"
+    },
+    "expected": "shan tian tai lang"
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Yamada Taro"
+    },
+    "expected": "yamada taro"
+  },
+  {
+    "function": "name_similarity",
+    "arguments": {
+      "a": "山田 太郎",
+      "b": "Yamada Taro"
+    },
+    "expected": 0.3448275862068966
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "Real Work Title"
+    },
+    "expected": "real work title"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "Real Work Title"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "God of War",
+      "b": "Real Work Title"
+    },
+    "expected": 0.24
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "Real Work Title",
+      "b": "The God of War"
+    },
+    "expected": 0.27586206896551724
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "Real Work Title",
+      "b": "Real Work Title"
+    },
+    "expected": 1.0
+  },
+  {
+    "function": "best_automatic_title_score",
+    "arguments": {
+      "left": [
+        "God of War",
+        "Real Work Title"
+      ],
+      "right": [
+        "The God of War",
+        "Real Work Title"
+      ]
+    },
+    "expected": [
+      1.0,
+      "Real Work Title",
+      "Real Work Title"
+    ]
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ecfabdeccfacbafecdfcecaadfcbdabd ca e fcc bea ceaeda fc cdefcec"
+    },
+    "expected": "ecfabdeccfacbafecdfcecaadfcbdabd ca e fcc bea ceaeda fc cdefcec"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "ecfabdeccfacbafecdfcecaadfcbdabd ca e fcc bea ceaeda fc cdefcec"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ccea  bddab bdaccebae bd  cacaed beeceaecbcdac bc ecbc edc acae ce db  eaddc"
+    },
+    "expected": "ccea bddab bdaccebae bd cacaed beeceaecbcdac bc ecbc edc acae ce db eaddc"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "ccea  bddab bdaccebae bd  cacaed beeceaecbcdac bc ecbc edc acae ce db  eaddc"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "ecfabdeccfacbafecdfcecaadfcbdabd ca e fcc bea ceaeda fc cdefcec",
+      "b": "ccea  bddab bdaccebae bd  cacaed beeceaecbcdac bc ecbc edc acae ce db  eaddc"
+    },
+    "expected": 0.5294117647058824
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "dbecbcbaacbac c cbb b e cfebbbd e a daf bef cc aacaeaa faaddff "
+    },
+    "expected": "dbecbcbaacbac c cbb b e cfebbbd e a daf bef cc aacaeaa faaddff"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "dbecbcbaacbac c cbb b e cfebbbd e a daf bef cc aacaeaa faaddff "
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " baededeceedcbdbcbdbce ece aabaeebbccbbbebe addea  acaa adebdcdd ac de bce e"
+    },
+    "expected": "baededeceedcbdbcbdbce ece aabaeebbccbbbebe addea acaa adebdcdd ac de bce e"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " baededeceedcbdbcbdbce ece aabaeebbccbbbebe addea  acaa adebdcdd ac de bce e"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "dbecbcbaacbac c cbb b e cfebbbd e a daf bef cc aacaeaa faaddff ",
+      "b": " baededeceedcbdbcbdbce ece aabaeebbccbbbebe addea  acaa adebdcdd ac de bce e"
+    },
+    "expected": 0.4705882352941176
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "cbccdecec ffcd e bbafecbfaeca fcdceeedebb ffdccabfaaccd ccabffc"
+    },
+    "expected": "cbccdecec ffcd e bbafecbfaeca fcdceeedebb ffdccabfaaccd ccabffc"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "cbccdecec ffcd e bbafecbfaeca fcdceeedebb ffdccabfaaccd ccabffc"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "eedab eb  da dcaeecbeac  dee deaa cc cdaabdcc  bd  a a ce a bbdddeabdc debeb"
+    },
+    "expected": "eedab eb da dcaeecbeac dee deaa cc cdaabdcc bd a a ce a bbdddeabdc debeb"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "eedab eb  da dcaeecbeac  dee deaa cc cdaabdcc  bd  a a ce a bbdddeabdc debeb"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "cbccdecec ffcd e bbafecbfaeca fcdceeedebb ffdccabfaaccd ccabffc",
+      "b": "eedab eb  da dcaeecbeac  dee deaa cc cdaabdcc  bd  a a ce a bbdddeabdc debeb"
+    },
+    "expected": 0.45925925925925926
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "eedc  ebeedc cf abfaaaaeb d ea d bfeb cfaafeddac bef bfdcbbef d"
+    },
+    "expected": "eedc ebeedc cf abfaaaaeb d ea d bfeb cfaafeddac bef bfdcbbef d"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "eedc  ebeedc cf abfaaaaeb d ea d bfeb cfaafeddac bef bfdcbbef d"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "cebbc abed aca  bddccb dbede dededaaaabcbaa  dacadc eac bbdadaedbbedeedeebcd"
+    },
+    "expected": "cebbc abed aca bddccb dbede dededaaaabcbaa dacadc eac bbdadaedbbedeedeebcd"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "cebbc abed aca  bddccb dbede dededaaaabcbaa  dacadc eac bbdadaedbbedeedeebcd"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "eedc  ebeedc cf abfaaaaeb d ea d bfeb cfaafeddac bef bfdcbbef d",
+      "b": "cebbc abed aca  bddccb dbede dededaaaabcbaa  dacadc eac bbdadaedbbedeedeebcd"
+    },
+    "expected": 0.4852941176470588
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " dbcf d bacadeedcadcaefdcfdfbdffd caeb ef  abebfbfcbdcbcaefa aba"
+    },
+    "expected": "dbcf d bacadeedcadcaefdcfdfbdffd caeb ef abebfbfcbdcbcaefa aba"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " dbcf d bacadeedcadcaefdcfdfbdffd caeb ef  abebfbfcbdcbcaefa aba"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "aaeeadb cbabc acbba  baed c a bbddbaacddcbbcee edebee dababddbcbad c eecebccc"
+    },
+    "expected": "aaeeadb cbabc acbba baed c a bbddbaacddcbbcee edebee dababddbcbad c eecebccc"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "aaeeadb cbabc acbba  baed c a bbddbaacddcbbcee edebee dababddbcbad c eecebccc"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": " dbcf d bacadeedcadcaefdcfdfbdffd caeb ef  abebfbfcbdcbcaefa aba",
+      "b": "aaeeadb cbabc acbba  baed c a bbddbaacddcbbcee edebee dababddbcbad c eecebccc"
+    },
+    "expected": 0.4782608695652174
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " c  dfdeadfedbe  dcdfbbeacfefaacdecbacbce  b bdceacbcabdfbecccfb"
+    },
+    "expected": "c dfdeadfedbe dcdfbbeacfefaacdecbacbce b bdceacbcabdfbecccfb"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " c  dfdeadfedbe  dcdfbbeacfefaacdecbacbce  b bdceacbcabdfbecccfb"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " ed eabd abdbecbeccdd ccbedc dbadeeeadeeedeadabbdedd  bbdebdebdbececaace aeed"
+    },
+    "expected": "ed eabd abdbecbeccdd ccbedc dbadeeeadeeedeadabbdedd bbdebdebdbececaace aeed"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " ed eabd abdbecbeccdd ccbedc dbadeeeadeeedeadabbdedd  bbdebdebdbececaace aeed"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": " c  dfdeadfedbe  dcdfbbeacfefaacdecbacbce  b bdceacbcabdfbecccfb",
+      "b": " ed eabd abdbecbeccdd ccbedc dbadeeeadeeedeadabbdedd  bbdebdebdbececaace aeed"
+    },
+    "expected": 0.48888888888888893
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "bcbddfba b bffcb  fa daaebebacaf dddeec efaccae f faaeba aecdfcd"
+    },
+    "expected": "bcbddfba b bffcb fa daaebebacaf dddeec efaccae f faaeba aecdfcd"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "bcbddfba b bffcb  fa daaebebacaf dddeec efaccae f faaeba aecdfcd"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "eedad aaacdedaadb dac  acaabc   cdebcbdaadeebedbedebc b eabdcab dbedeeddb db "
+    },
+    "expected": "eedad aaacdedaadb dac acaabc cdebcbdaadeebedbedebc b eabdcab dbedeeddb db"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "eedad aaacdedaadb dac  acaabc   cdebcbdaadeebedbedebc b eabdcab dbedeeddb db "
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "bcbddfba b bffcb  fa daaebebacaf dddeec efaccae f faaeba aecdfcd",
+      "b": "eedad aaacdedaadb dac  acaabc   cdebcbdaadeebedbedebc b eabdcab dbedeeddb db "
+    },
+    "expected": 0.4558823529411765
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ffdfbeaa feecceecfb  afddaffffdcb dffbebfeefabbcddbc abbfbddac b"
+    },
+    "expected": "ffdfbeaa feecceecfb afddaffffdcb dffbebfeefabbcddbc abbfbddac b"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "ffdfbeaa feecceecfb  afddaffffdcb dffbebfeefabbcddbc abbfbddac b"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "adbd adad dacbccceceec daedbeebbcaaa   baeac bbd b bbc c deedcbbaddadbac ebda"
+    },
+    "expected": "adbd adad dacbccceceec daedbeebbcaaa baeac bbd b bbc c deedcbbaddadbac ebda"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "adbd adad dacbccceceec daedbeebbcaaa   baeac bbd b bbc c deedcbbaddadbac ebda"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "ffdfbeaa feecceecfb  afddaffffdcb dffbebfeefabbcddbc abbfbddac b",
+      "b": "adbd adad dacbccceceec daedbeebbcaaa   baeac bbd b bbc c deedcbbaddadbac ebda"
+    },
+    "expected": 0.4782608695652174
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "dbcffac  dcdddecd affbeedefccadfffbaafbeea fee cbab eafd abebcbcf"
+    },
+    "expected": "dbcffac dcdddecd affbeedefccadfffbaafbeea fee cbab eafd abebcbcf"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "dbcffac  dcdddecd affbeedefccadfffbaafbeea fee cbab eafd abebcbcf"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "aeeaddcddac deeebbdabc babecbacdacabd ab aedddbaaa abaebdb aeebacedcebe be ded"
+    },
+    "expected": "aeeaddcddac deeebbdabc babecbacdacabd ab aedddbaaa abaebdb aeebacedcebe be ded"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "aeeaddcddac deeebbdabc babecbacdacabd ab aedddbaaa abaebdb aeebacedcebe be ded"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "dbcffac  dcdddecd affbeedefccadfffbaafbeea fee cbab eafd abebcbcf",
+      "b": "aeeaddcddac deeebbdabc babecbacdacabd ab aedddbaaa abaebdb aeebacedcebe be ded"
+    },
+    "expected": 0.45070422535211263
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "bfede aab bdebd  fec d eafcafadfacdacfa fbcffbbcedbbcccadade befe"
+    },
+    "expected": "bfede aab bdebd fec d eafcafadfacdacfa fbcffbbcedbbcccadade befe"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "bfede aab bdebd  fec d eafcafadfacdacfa fbcffbbcedbbcccadade befe"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "cd dcae bda c bbdec aeeabaeeccdc b deddcbb  caac  dbdae  cbeae eaaecedecc abb "
+    },
+    "expected": "cd dcae bda c bbdec aeeabaeeccdc b deddcbb caac dbdae cbeae eaaecedecc abb"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "cd dcae bda c bbdec aeeabaeeccdc b deddcbb  caac  dbdae  cbeae eaaecedecc abb "
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "bfede aab bdebd  fec d eafcafadfacdacfa fbcffbbcedbbcccadade befe",
+      "b": "cd dcae bda c bbdec aeeabaeeccdc b deddcbb  caac  dbdae  cbeae eaaecedecc abb "
+    },
+    "expected": 0.4782608695652174
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "eaa eeffcaa cecaebdfbcdedbcaeedeb dfc cdadafc ee bdc fc fabff d c"
+    },
+    "expected": "eaa eeffcaa cecaebdfbcdedbcaeedeb dfc cdadafc ee bdc fc fabff d c"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "eaa eeffcaa cecaebdfbcdedbcaeedeb dfc cdadafc ee bdc fc fabff d c"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "decbaaabbddb dbdc adbd dec ab aaddbaecbdcedaeedccbddddeace eaea    aabddbaecee"
+    },
+    "expected": "decbaaabbddb dbdc adbd dec ab aaddbaecbdcedaeedccbddddeace eaea aabddbaecee"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "decbaaabbddb dbdc adbd dec ab aaddbaecbdcedaeedccbddddeace eaea    aabddbaecee"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "eaa eeffcaa cecaebdfbcdedbcaeedeb dfc cdadafc ee bdc fc fabff d c",
+      "b": "decbaaabbddb dbdc adbd dec ab aaddbaecbdcedaeedccbddddeace eaea    aabddbaecee"
+    },
+    "expected": 0.5
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "cfeabaffbeaacade dbaccdfeae cdbbec aba   bbccecfdfacfbfb ecdeebcb"
+    },
+    "expected": "cfeabaffbeaacade dbaccdfeae cdbbec aba bbccecfdfacfbfb ecdeebcb"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "cfeabaffbeaacade dbaccdfeae cdbbec aba   bbccecfdfacfbfb ecdeebcb"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " ccdebace cbabea ec bda ecdd aeb eaac aeaceacdeeddceabede a cab  aaaed  bacbee"
+    },
+    "expected": "ccdebace cbabea ec bda ecdd aeb eaac aeaceacdeeddceabede a cab aaaed bacbee"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " ccdebace cbabea ec bda ecdd aeb eaac aeaceacdeeddceabede a cab  aaaed  bacbee"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "cfeabaffbeaacade dbaccdfeae cdbbec aba   bbccecfdfacfbfb ecdeebcb",
+      "b": " ccdebace cbabea ec bda ecdd aeb eaac aeaceacdeeddceabede a cab  aaaed  bacbee"
+    },
+    "expected": 0.5217391304347826
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "bca d dcfbae ecacbadcdd aaabd fabbdeeead af efacaafc cdefbab ecbabadefa be eddf fb  caadfbe eaeadcbd acd acbabcab dcb cbbccaa a"
+    },
+    "expected": "bca d dcfbae ecacbadcdd aaabd fabbdeeead af efacaafc cdefbab ecbabadefa be eddf fb caadfbe eaeadcbd acd acbabcab dcb cbbccaa a"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "bca d dcfbae ecacbadcdd aaabd fabbdeeead af efacaafc cdefbab ecbabadefa be eddf fb  caadfbe eaeadcbd acd acbabcab dcb cbbccaa a"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " acdecdac ddcededddaecbaa cc a  daddceacbd dcebbcea aababa   cabe ee  b a abaabeeaaedace   dbbebc  dae cc e bceccc e aadab dced  e dd cbed c"
+    },
+    "expected": "acdecdac ddcededddaecbaa cc a daddceacbd dcebbcea aababa cabe ee b a abaabeeaaedace dbbebc dae cc e bceccc e aadab dced e dd cbed c"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " acdecdac ddcededddaecbaa cc a  daddceacbd dcebbcea aababa   cabe ee  b a abaabeeaaedace   dbbebc  dae cc e bceccc e aadab dced  e dd cbed c"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "bca d dcfbae ecacbadcdd aaabd fabbdeeead af efacaafc cdefbab ecbabadefa be eddf fb  caadfbe eaeadcbd acd acbabcab dcb cbbccaa a",
+      "b": " acdecdac ddcededddaecbaa cc a  daddceacbd dcebbcea aababa   cabe ee  b a abaabeeaaedace   dbbebc  dae cc e bceccc e aadab dced  e dd cbed c"
+    },
+    "expected": 0.5136186770428015
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "edfdcdbecebacceaddfed ebbaec f ffebdecbfaddeb  cdaa a acecafdd bbfdbbfcbdfe bd dfcdeeeeca bfebcfbef faaccedcccd a aefcdbbfbaaca"
+    },
+    "expected": "edfdcdbecebacceaddfed ebbaec f ffebdecbfaddeb cdaa a acecafdd bbfdbbfcbdfe bd dfcdeeeeca bfebcfbef faaccedcccd a aefcdbbfbaaca"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "edfdcdbecebacceaddfed ebbaec f ffebdecbfaddeb  cdaa a acecafdd bbfdbbfcbdfe bd dfcdeeeeca bfebcfbef faaccedcccd a aefcdbbfbaaca"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "caebdcceebbeedcee edbdae eccdcdeceebdbb  d aebbcacbccdbdbcceae daecd  bcdcded aadebeddcaeabaccae  ad bdcccdcdeabcecbbe ade ab bbdabe  bbadad"
+    },
+    "expected": "caebdcceebbeedcee edbdae eccdcdeceebdbb d aebbcacbccdbdbcceae daecd bcdcded aadebeddcaeabaccae ad bdcccdcdeabcecbbe ade ab bbdabe bbadad"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "caebdcceebbeedcee edbdae eccdcdeceebdbb  d aebbcacbccdbdbcceae daecd  bcdcded aadebeddcaeabaccae  ad bdcccdcdeabcecbbe ade ab bbdabe  bbadad"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "edfdcdbecebacceaddfed ebbaec f ffebdecbfaddeb  cdaa a acecafdd bbfdbbfcbdfe bd dfcdeeeeca bfebcfbef faaccedcccd a aefcdbbfbaaca",
+      "b": "caebdcceebbeedcee edbdae eccdcdeceebdbb  d aebbcacbccdbdbcceae daecd  bcdcded aadebeddcaeabaccae  ad bdcccdcdeabcecbbe ade ab bbdabe  bbadad"
+    },
+    "expected": 0.5190839694656488
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "fe d deaebcec a  ca ccbbcb cbefca daae  cafcdda deffcbacdaacdefbfa ffdf fcdefdfabf e bbecdbdbebbfe  daacfeceddaca dddddaf  bfce"
+    },
+    "expected": "fe d deaebcec a ca ccbbcb cbefca daae cafcdda deffcbacdaacdefbfa ffdf fcdefdfabf e bbecdbdbebbfe daacfeceddaca dddddaf bfce"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "fe d deaebcec a  ca ccbbcb cbefca daae  cafcdda deffcbacdaacdefbfa ffdf fcdefdfabf e bbecdbdbebbfe  daacfeceddaca dddddaf  bfce"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "caebd bebbaa c b be  aaabcbaeebd dbb dba dccdaaddebd cdb a ebddebc daecb ebbebea badcd cdabcadebdebeeecdbaacbebcab c eead c dbea dc bcaa cdb"
+    },
+    "expected": "caebd bebbaa c b be aaabcbaeebd dbb dba dccdaaddebd cdb a ebddebc daecb ebbebea badcd cdabcadebdebeeecdbaacbebcab c eead c dbea dc bcaa cdb"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "caebd bebbaa c b be  aaabcbaeebd dbb dba dccdaaddebd cdb a ebddebc daecb ebbebea badcd cdabcadebdebeeecdbaacbebcab c eead c dbea dc bcaa cdb"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "fe d deaebcec a  ca ccbbcb cbefca daae  cafcdda deffcbacdaacdefbfa ffdf fcdefdfabf e bbecdbdbebbfe  daacfeceddaca dddddaf  bfce",
+      "b": "caebd bebbaa c b be  aaabcbaeebd dbb dba dccdaaddebd cdb a ebddebc daecb ebbebea badcd cdabcadebdebeeecdbaacbebcab c eead c dbea dc bcaa cdb"
+    },
+    "expected": 0.5114503816793894
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ffd aafafeedbcdadbfd fe aaefafeedceacefaea ea bbbfadedf edfbbbdcfbe bdedfeceb dffdaecbc eedacbaa ddefdfcccbcfbbfbece bd fbbbfda"
+    },
+    "expected": "ffd aafafeedbcdadbfd fe aaefafeedceacefaea ea bbbfadedf edfbbbdcfbe bdedfeceb dffdaecbc eedacbaa ddefdfcccbcfbbfbece bd fbbbfda"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "ffd aafafeedbcdadbfd fe aaefafeedceacefaea ea bbbfadedf edfbbbdcfbe bdedfeceb dffdaecbc eedacbaa ddefdfcccbcfbbfbece bd fbbbfda"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " eaceebae cc daeeabb ebaad  edcedadddaaabda a a ecbdcccdbceaac a adadccececbdebceb  aecddbbc aabc edcecdeca b ceecbdd dcaaced eacba  e ce da"
+    },
+    "expected": "eaceebae cc daeeabb ebaad edcedadddaaabda a a ecbdcccdbceaac a adadccececbdebceb aecddbbc aabc edcecdeca b ceecbdd dcaaced eacba e ce da"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " eaceebae cc daeeabb ebaad  edcedadddaaabda a a ecbdcccdbceaac a adadccececbdebceb  aecddbbc aabc edcecdeca b ceecbdd dcaaced eacba  e ce da"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "ffd aafafeedbcdadbfd fe aaefafeedceacefaea ea bbbfadedf edfbbbdcfbe bdedfeceb dffdaecbc eedacbaa ddefdfcccbcfbbfbece bd fbbbfda",
+      "b": " eaceebae cc daeeabb ebaad  edcedadddaaabda a a ecbdcccdbceaac a adadccececbdebceb  aecddbbc aabc edcecdeca b ceecbdd dcaaced eacba  e ce da"
+    },
+    "expected": 0.48669201520912553
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ddbeffcdaecddca daeae afebaccdfaababae  dbdfcd adbe cdbfce dfccbc bfccebbfcdebcbbacbda  daefdecf af e  bbcbbacad  ac dbffddbccdd"
+    },
+    "expected": "ddbeffcdaecddca daeae afebaccdfaababae dbdfcd adbe cdbfce dfccbc bfccebbfcdebcbbacbda daefdecf af e bbcbbacad ac dbffddbccdd"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "ddbeffcdaecddca daeae afebaccdfaababae  dbdfcd adbe cdbfce dfccbc bfccebbfcdebcbbacbda  daefdecf af e  bbcbbacad  ac dbffddbccdd"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " b ccb aadecbcea ccdecc dacbdaebdaa  eacbd ebbeddabdebbaadceebcdcddccadcceecba baae b eceadb  bdeabb acabd cddcaa  caeecbee aaededdd db dbbdb"
+    },
+    "expected": "b ccb aadecbcea ccdecc dacbdaebdaa eacbd ebbeddabdebbaadceebcdcddccadcceecba baae b eceadb bdeabb acabd cddcaa caeecbee aaededdd db dbbdb"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " b ccb aadecbcea ccdecc dacbdaebdaa  eacbd ebbeddabdebbaadceebcdcddccadcceecba baae b eceadb  bdeabb acabd cddcaa  caeecbee aaededdd db dbbdb"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "ddbeffcdaecddca daeae afebaccdfaababae  dbdfcd adbe cdbfce dfccbc bfccebbfcdebcbbacbda  daefdecf af e  bbcbbacad  ac dbffddbccdd",
+      "b": " b ccb aadecbcea ccdecc dacbdaebdaa  eacbd ebbeddabdebbaadceebcdcddccadcceecba baae b eceadb  bdeabb acabd cddcaa  caeecbee aaededdd db dbbdb"
+    },
+    "expected": 0.5057471264367817
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "fbfe baacecbeddcddfbabcacefac f  efacccabe de  eafbebfb fcbcd ebafcde efbacbebabefc ebbedfcfaaddddfcdadaadecfefdfccabcffdcfb cbe"
+    },
+    "expected": "fbfe baacecbeddcddfbabcacefac f efacccabe de eafbebfb fcbcd ebafcde efbacbebabefc ebbedfcfaaddddfcdadaadecfefdfccabcffdcfb cbe"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "fbfe baacecbeddcddfbabcacefac f  efacccabe de  eafbebfb fcbcd ebafcde efbacbebabefc ebbedfcfaaddddfcdadaadecfefdfccabcffdcfb cbe"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "b c ce a cbbcdcdccceaba   bcabbcdecabbaee aeddd cbcaaecceaaa b edda aaedceddac a  deaba eadaacdaeadaadd c cd bed ce dac db dcbdbdcbbe  a a ab"
+    },
+    "expected": "b c ce a cbbcdcdccceaba bcabbcdecabbaee aeddd cbcaaecceaaa b edda aaedceddac a deaba eadaacdaeadaadd c cd bed ce dac db dcbdbdcbbe a a ab"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "b c ce a cbbcdcdccceaba   bcabbcdecabbaee aeddd cbcaaecceaaa b edda aaedceddac a  deaba eadaacdaeadaadd c cd bed ce dac db dcbdbdcbbe  a a ab"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "fbfe baacecbeddcddfbabcacefac f  efacccabe de  eafbebfb fcbcd ebafcde efbacbebabefc ebbedfcfaaddddfcdadaadecfefdfccabcffdcfb cbe",
+      "b": "b c ce a cbbcdcdccceaba   bcabbcdecabbaee aeddd cbcaaecceaaa b edda aaedceddac a  deaba eadaacdaeadaadd c cd bed ce dac db dcbdbdcbbe  a a ab"
+    },
+    "expected": 0.48669201520912553
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "bdb cdbcdeffaabafaefccdd  ac  f daddddf c ea abafaa fcaabbfa abe ecfcaffebececfaf bbdddcbdc fbdaf bafccffdbebaf ffbbcfbbdfeeeba "
+    },
+    "expected": "bdb cdbcdeffaabafaefccdd ac f daddddf c ea abafaa fcaabbfa abe ecfcaffebececfaf bbdddcbdc fbdaf bafccffdbebaf ffbbcfbbdfeeeba"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "bdb cdbcdeffaabafaefccdd  ac  f daddddf c ea abafaa fcaabbfa abe ecfcaffebececfaf bbdddcbdc fbdaf bafccffdbebaf ffbbcfbbdfeeeba "
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " ccdcdd ddddcc c eddcdbbb eabdceee eb ba ebabcecbbbc   eeeddcde ed abeccdecabbdac d dcabcce eddddaacdaab ada eeab cd eec acebe daaaeddda daad"
+    },
+    "expected": "ccdcdd ddddcc c eddcdbbb eabdceee eb ba ebabcecbbbc eeeddcde ed abeccdecabbdac d dcabcce eddddaacdaab ada eeab cd eec acebe daaaeddda daad"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " ccdcdd ddddcc c eddcdbbb eabdceee eb ba ebabcecbbbc   eeeddcde ed abeccdecabbdac d dcabcce eddddaacdaab ada eeab cd eec acebe daaaeddda daad"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "bdb cdbcdeffaabafaefccdd  ac  f daddddf c ea abafaa fcaabbfa abe ecfcaffebececfaf bbdddcbdc fbdaf bafccffdbebaf ffbbcfbbdfeeeba ",
+      "b": " ccdcdd ddddcc c eddcdbbb eabdceee eb ba ebabcecbbbc   eeeddcde ed abeccdecabbdac d dcabcce eddddaacdaab ada eeab cd eec acebe daaaeddda daad"
+    },
+    "expected": 0.4638783269961977
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "acabbeaabea ccbdc e eeabdfcfcecfcceddcfbecdacdaccecbadd  eaaee ecaf f dd  bbf  bbceffaafebfe d cadfada defcba ac c  cecddebbde f"
+    },
+    "expected": "acabbeaabea ccbdc e eeabdfcfcecfcceddcfbecdacdaccecbadd eaaee ecaf f dd bbf bbceffaafebfe d cadfada defcba ac c cecddebbde f"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "acabbeaabea ccbdc e eeabdfcfcecfcceddcfbecdacdaccecbadd  eaaee ecaf f dd  bbf  bbceffaafebfe d cadfada defcba ac c  cecddebbde f"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " ebbaaaea aecdd bababdceeceacabaead  d ceccaedaaecdddeaebbd bbaaabeadacedde cebd bec a e beeeebebd a daccdeec bcecb ac acdddebdbac dbbbdce be"
+    },
+    "expected": "ebbaaaea aecdd bababdceeceacabaead d ceccaedaaecdddeaebbd bbaaabeadacedde cebd bec a e beeeebebd a daccdeec bcecb ac acdddebdbac dbbbdce be"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " ebbaaaea aecdd bababdceeceacabaead  d ceccaedaaecdddeaebbd bbaaabeadacedde cebd bec a e beeeebebd a daccdeec bcecb ac acdddebdbac dbbbdce be"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "acabbeaabea ccbdc e eeabdfcfcecfcceddcfbecdacdaccecbadd  eaaee ecaf f dd  bbf  bbceffaafebfe d cadfada defcba ac c  cecddebbde f",
+      "b": " ebbaaaea aecdd bababdceeceacabaead  d ceccaedaaecdddeaebbd bbaaabeadacedde cebd bec a e beeeebebd a daccdeec bcecb ac acdddebdbac dbbbdce be"
+    },
+    "expected": 0.5399239543726235
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "bae dcfc d  fbdecccaaabcfbbfb eeeabfa be ffbddbaf cffecbbdbaad eeaaea db cffa befdfec e  fcbed aea defcbbab ef ccd a ec aaafa af "
+    },
+    "expected": "bae dcfc d fbdecccaaabcfbbfb eeeabfa be ffbddbaf cffecbbdbaad eeaaea db cffa befdfec e fcbed aea defcbbab ef ccd a ec aaafa af"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "bae dcfc d  fbdecccaaabcfbbfb eeeabfa be ffbddbaf cffecbbdbaad eeaaea db cffa befdfec e  fcbed aea defcbbab ef ccd a ec aaafa af "
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "d ceeeabdbeaebbdeaaeeede  dadccbbadbdc  bbb abbc eccc eddcbcdab c a aeeeac d aebe  dc cacebcbebeb aeccdabebdbeccdebcedeb daadcaababcceeda dbdc"
+    },
+    "expected": "d ceeeabdbeaebbdeaaeeede dadccbbadbdc bbb abbc eccc eddcbcdab c a aeeeac d aebe dc cacebcbebeb aeccdabebdbeccdebcedeb daadcaababcceeda dbdc"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "d ceeeabdbeaebbdeaaeeede  dadccbbadbdc  bbb abbc eccc eddcbcdab c a aeeeac d aebe  dc cacebcbebeb aeccdabebdbeccdebcedeb daadcaababcceeda dbdc"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "bae dcfc d  fbdecccaaabcfbbfb eeeabfa be ffbddbaf cffecbbdbaad eeaaea db cffa befdfec e  fcbed aea defcbbab ef ccd a ec aaafa af ",
+      "b": "d ceeeabdbeaebbdeaaeeede  dadccbbadbdc  bbb abbc eccc eddcbcdab c a aeeeac d aebe  dc cacebcbebeb aeccdabebdbeccdebcedeb daadcaababcceeda dbdc"
+    },
+    "expected": 0.49056603773584906
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "e afeffafcddee b bd c adeedaaffef d deceddcfaabacfca   de ee  fcabacda afaaaedbbfebfaa bf fadacadfdbfbf abdddaebabecdedaa bbbc c "
+    },
+    "expected": "e afeffafcddee b bd c adeedaaffef d deceddcfaabacfca de ee fcabacda afaaaedbbfebfaa bf fadacadfdbfbf abdddaebabecdedaa bbbc c"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "e afeffafcddee b bd c adeedaaffef d deceddcfaabacfca   de ee  fcabacda afaaaedbbfebfaa bf fadacadfdbfbf abdddaebabecdedaa bbbc c "
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "ed  bdee daddd abcaab c bedcabcccd a   cbcccdbceecdcbecceaadaeedbbae bebdcdbcd d a addabeb bdc a edcaaaebadcbabeaab ac be beddae d da baeccbec"
+    },
+    "expected": "ed bdee daddd abcaab c bedcabcccd a cbcccdbceecdcbecceaadaeedbbae bebdcdbcd d a addabeb bdc a edcaaaebadcbabeaab ac be beddae d da baeccbec"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "ed  bdee daddd abcaab c bedcabcccd a   cbcccdbceecdcbecceaadaeedbbae bebdcdbcd d a addabeb bdc a edcaaaebadcbabeaab ac be beddae d da baeccbec"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "e afeffafcddee b bd c adeedaaffef d deceddcfaabacfca   de ee  fcabacda afaaaedbbfebfaa bf fadacadfdbfbf abdddaebabecdedaa bbbc c ",
+      "b": "ed  bdee daddd abcaab c bedcabcccd a   cbcccdbceecdcbecceaadaeedbbae bebdcdbcd d a addabeb bdc a edcaaaebadcbabeaab ac be beddae d da baeccbec"
+    },
+    "expected": 0.5
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "dfaedbcdeedcceeb  badabc deeeaeedfdd  eeb aefc ce abfabab cf edfbeaacbfaebe  effcc cceadcabecfbe ddc baeaadebacebaeabdddbaeabf cd"
+    },
+    "expected": "dfaedbcdeedcceeb badabc deeeaeedfdd eeb aefc ce abfabab cf edfbeaacbfaebe effcc cceadcabecfbe ddc baeaadebacebaeabdddbaeabf cd"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "dfaedbcdeedcceeb  badabc deeeaeedfdd  eeb aefc ce abfabab cf edfbeaacbfaebe  effcc cceadcabecfbe ddc baeaadebacebaeabdddbaeabf cd"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " ded ebe aeda decbbbeda daaecebcc daad aadcbebdb dcaabacbebabede e  cbadaccdcbccbddec bccdeec eccdcd ebd  d bee   eddeaad badccddeaebaecabddca"
+    },
+    "expected": "ded ebe aeda decbbbeda daaecebcc daad aadcbebdb dcaabacbebabede e cbadaccdcbccbddec bccdeec eccdcd ebd d bee eddeaad badccddeaebaecabddca"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " ded ebe aeda decbbbeda daaecebcc daad aadcbebdb dcaabacbebabede e  cbadaccdcbccbddec bccdeec eccdcd ebd  d bee   eddeaad badccddeaebaecabddca"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "dfaedbcdeedcceeb  badabc deeeaeedfdd  eeb aefc ce abfabab cf edfbeaacbfaebe  effcc cceadcabecfbe ddc baeaadebacebaeabdddbaeabf cd",
+      "b": " ded ebe aeda decbbbeda daaecebcc daad aadcbebdb dcaabacbebabede e  cbadaccdcbccbddec bccdeec eccdcd ebd  d bee   eddeaad badccddeaebaecabddca"
+    },
+    "expected": 0.5247148288973384
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "dbcbbbc a cca defbbebdac af eefbabbd eeddefbdbd ae acdd cbdcebec bcf fbebfebffeeaafdacaffbddccebc e dffacaccdebeedfbaceefaacefffe"
+    },
+    "expected": "dbcbbbc a cca defbbebdac af eefbabbd eeddefbdbd ae acdd cbdcebec bcf fbebfebffeeaafdacaffbddccebc e dffacaccdebeedfbaceefaacefffe"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "dbcbbbc a cca defbbebdac af eefbabbd eeddefbdbd ae acdd cbdcebec bcf fbebfebffeeaafdacaffbddccebc e dffacaccdebeedfbaceefaacefffe"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " cdebbebcbae aecaaabadce  cb  dceeee  ec ecabebd c a eca a debcecead dbaeeac abb bcccbbebdadabdbd d  bbbddc ecabcd eedcecebebadaccc dbaee ade "
+    },
+    "expected": "cdebbebcbae aecaaabadce cb dceeee ec ecabebd c a eca a debcecead dbaeeac abb bcccbbebdadabdbd d bbbddc ecabcd eedcecebebadaccc dbaee ade"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " cdebbebcbae aecaaabadce  cb  dceeee  ec ecabebd c a eca a debcecead dbaeeac abb bcccbbebdadabdbd d  bbbddc ecabcd eedcecebebadaccc dbaee ade "
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "dbcbbbc a cca defbbebdac af eefbabbd eeddefbdbd ae acdd cbdcebec bcf fbebfebffeeaafdacaffbddccebc e dffacaccdebeedfbaceefaacefffe",
+      "b": " cdebbebcbae aecaaabadce  cb  dceeee  ec ecabebd c a eca a debcecead dbaeeac abb bcccbbebdadabdbd d  bbbddc ecabcd eedcecebebadaccc dbaee ade "
+    },
+    "expected": 0.5056603773584906
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "dbb fcabbeaece dcb f faaebfec caaeeabf  cbfdf b cbaffc cfeedcefbbdbeccdffeacac bfaacbdfaedef  cadefdcfbeaeee eeffed efebfcee fb aa bdb  cffba eceb cdabed f ac eebcebaafefeabecfbdbceae eebfeacacc dcdbffcafffcedbaceeeabcfaaaefabfebfaa afeccdafdff cfe efaecaaa  dbdabeddcdc    abdec ecc d fdff eaffcba ecf  fc fdfaabeafbeaabbbaefbcabccbaababda ebb  aaffebe cf fdeebffcbed aadaccaccce cedbdbfdffef bfbdfdaaafdaefc b bdafcc cad bdcef dbccedfebabafdea c  fb cdfdccdce dccfaebfdeaeebeaaecfeff a ffdaaf d  edbadecfdedea"
+    },
+    "expected": "dbb fcabbeaece dcb f faaebfec caaeeabf cbfdf b cbaffc cfeedcefbbdbeccdffeacac bfaacbdfaedef cadefdcfbeaeee eeffed efebfcee fb aa bdb cffba eceb cdabed f ac eebcebaafefeabecfbdbceae eebfeacacc dcdbffcafffcedbaceeeabcfaaaefabfebfaa afeccdafdff cfe efaecaaa dbdabeddcdc abdec ecc d fdff eaffcba ecf fc fdfaabeafbeaabbbaefbcabccbaababda ebb aaffebe cf fdeebffcbed aadaccaccce cedbdbfdffef bfbdfdaaafdaefc b bdafcc cad bdcef dbccedfebabafdea c fb cdfdccdce dccfaebfdeaeebeaaecfeff a ffdaaf d edbadecfdedea"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "dbb fcabbeaece dcb f faaebfec caaeeabf  cbfdf b cbaffc cfeedcefbbdbeccdffeacac bfaacbdfaedef  cadefdcfbeaeee eeffed efebfcee fb aa bdb  cffba eceb cdabed f ac eebcebaafefeabecfbdbceae eebfeacacc dcdbffcafffcedbaceeeabcfaaaefabfebfaa afeccdafdff cfe efaecaaa  dbdabeddcdc    abdec ecc d fdff eaffcba ecf  fc fdfaabeafbeaabbbaefbcabccbaababda ebb  aaffebe cf fdeebffcbed aadaccaccce cedbdbfdffef bfbdfdaaafdaefc b bdafcc cad bdcef dbccedfebabafdea c  fb cdfdccdce dccfaebfdeaeebeaaecfeff a ffdaaf d  edbadecfdedea"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " beb eaaecaea  bde aeedabbdba e ecaacebcadcdbae bcbadbeecca d caabaeaaeeaea ae cc   edcddeb  b  cbbceabebaebdbe cebb bacecaebaedcedcdadbdc  cdac aee abad bdbd  cd ebbebbdbb decdccddcdbacdbdbceecbea acecaecabcabcad  bd abbb bdaaecb dacbcaaebddebd cbcea  ddaac acaaa   cbcee cbdbede acbeecdbebdd e bae acccce daeaecdeacaaddeeebcae ebdcad daddca  dddadcddeb deaccbeab cbedaeedceeeaaed  bbcbcae bbcdc debddb cbeaccbdceeabbadab bdaebd c d aeade babddc  cced  ae ebded dbcb  a bddbacaeaedbcaeaaceeabaeddadecb cc bddcb eacccccb a  "
+    },
+    "expected": "beb eaaecaea bde aeedabbdba e ecaacebcadcdbae bcbadbeecca d caabaeaaeeaea ae cc edcddeb b cbbceabebaebdbe cebb bacecaebaedcedcdadbdc cdac aee abad bdbd cd ebbebbdbb decdccddcdbacdbdbceecbea acecaecabcabcad bd abbb bdaaecb dacbcaaebddebd cbcea ddaac acaaa cbcee cbdbede acbeecdbebdd e bae acccce daeaecdeacaaddeeebcae ebdcad daddca dddadcddeb deaccbeab cbedaeedceeeaaed bbcbcae bbcdc debddb cbeaccbdceeabbadab bdaebd c d aeade babddc cced ae ebded dbcb a bddbacaeaedbcaeaaceeabaeddadecb cc bddcb eacccccb a"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " beb eaaecaea  bde aeedabbdba e ecaacebcadcdbae bcbadbeecca d caabaeaaeeaea ae cc   edcddeb  b  cbbceabebaebdbe cebb bacecaebaedcedcdadbdc  cdac aee abad bdbd  cd ebbebbdbb decdccddcdbacdbdbceecbea acecaecabcabcad  bd abbb bdaaecb dacbcaaebddebd cbcea  ddaac acaaa   cbcee cbdbede acbeecdbebdd e bae acccce daeaecdeacaaddeeebcae ebdcad daddca  dddadcddeb deaccbeab cbedaeedceeeaaed  bbcbcae bbcdc debddb cbeaccbdceeabbadab bdaebd c d aeade babddc  cced  ae ebded dbcb  a bddbacaeaedbcaeaaceeabaeddadecb cc bddcb eacccccb a  "
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "dbb fcabbeaece dcb f faaebfec caaeeabf  cbfdf b cbaffc cfeedcefbbdbeccdffeacac bfaacbdfaedef  cadefdcfbeaeee eeffed efebfcee fb aa bdb  cffba eceb cdabed f ac eebcebaafefeabecfbdbceae eebfeacacc dcdbffcafffcedbaceeeabcfaaaefabfebfaa afeccdafdff cfe efaecaaa  dbdabeddcdc    abdec ecc d fdff eaffcba ecf  fc fdfaabeafbeaabbbaefbcabccbaababda ebb  aaffebe cf fdeebffcbed aadaccaccce cedbdbfdffef bfbdfdaaafdaefc b bdafcc cad bdcef dbccedfebabafdea c  fb cdfdccdce dccfaebfdeaeebeaaecfeff a ffdaaf d  edbadecfdedea",
+      "b": " beb eaaecaea  bde aeedabbdba e ecaacebcadcdbae bcbadbeecca d caabaeaaeeaea ae cc   edcddeb  b  cbbceabebaebdbe cebb bacecaebaedcedcdadbdc  cdac aee abad bdbd  cd ebbebbdbb decdccddcdbacdbdbceecbea acecaecabcabcad  bd abbb bdaaecb dacbcaaebddebd cbcea  ddaac acaaa   cbcee cbdbede acbeecdbebdd e bae acccce daeaecdeacaaddeeebcae ebdcad daddca  dddadcddeb deaccbeab cbedaeedceeeaaed  bbcbcae bbcdc debddb cbeaccbdceeabbadab bdaebd c d aeade babddc  cced  ae ebded dbcb  a bddbacaeaedbcaeaaceeabaeddadecb cc bddcb eacccccb a  "
+    },
+    "expected": 0.5154228855721392
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "edaaccdeafca efecceebdc c dbdfffa dabbdbdcbdabdabeee dfd dc c bdcb baaadacabddbdeaacaadf eacccddeaad cc eeb ac cecbeced eec  ffcddbbbbdfcfbfd bcf fbdcb  faddbabca cfc adcbdbbdabdeaaccbaad  dddbfaaba a fbb ddbabaccdb addbcc d dddfbcbdceefeecfca eaacf feacfddaab cb a fcbacbcf d acfbcbbfade  fbba dfebbdfec dd ffeb e bffdddaddceaea aecea eebcbf bb dd  bcdadebeeccbfbedfabebccebeeadeefaecefb bbbfb edadbedbedbfbbf dcad bedbebadbd baabeaf ffbbbacfdafbdadfafa e bbfcf ddcacaedeaebc febd cebace deddbfe fefbfabeaccecf"
+    },
+    "expected": "edaaccdeafca efecceebdc c dbdfffa dabbdbdcbdabdabeee dfd dc c bdcb baaadacabddbdeaacaadf eacccddeaad cc eeb ac cecbeced eec ffcddbbbbdfcfbfd bcf fbdcb faddbabca cfc adcbdbbdabdeaaccbaad dddbfaaba a fbb ddbabaccdb addbcc d dddfbcbdceefeecfca eaacf feacfddaab cb a fcbacbcf d acfbcbbfade fbba dfebbdfec dd ffeb e bffdddaddceaea aecea eebcbf bb dd bcdadebeeccbfbedfabebccebeeadeefaecefb bbbfb edadbedbedbfbbf dcad bedbebadbd baabeaf ffbbbacfdafbdadfafa e bbfcf ddcacaedeaebc febd cebace deddbfe fefbfabeaccecf"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "edaaccdeafca efecceebdc c dbdfffa dabbdbdcbdabdabeee dfd dc c bdcb baaadacabddbdeaacaadf eacccddeaad cc eeb ac cecbeced eec  ffcddbbbbdfcfbfd bcf fbdcb  faddbabca cfc adcbdbbdabdeaaccbaad  dddbfaaba a fbb ddbabaccdb addbcc d dddfbcbdceefeecfca eaacf feacfddaab cb a fcbacbcf d acfbcbbfade  fbba dfebbdfec dd ffeb e bffdddaddceaea aecea eebcbf bb dd  bcdadebeeccbfbedfabebccebeeadeefaecefb bbbfb edadbedbedbfbbf dcad bedbebadbd baabeaf ffbbbacfdafbdadfafa e bbfcf ddcacaedeaebc febd cebace deddbfe fefbfabeaccecf"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "abecddabbdac bbdbecc ed  ddcddcecbccabb caacbdbba   c ccacee eadeaec ddbbbdabaadb dbedaaa eedecedacdabbbeccbcabc cabbbb dcebcee ccaacb  bed bdecea adceeaaebdceacbdbdeaaced b dbcece dda cebe bddedd acbd bce cbcccbcacc dddba eabdbb cacbbcbbacba ceabbeaeddcceccdcec  c bbcebbcbc   eaeebad ede deeccbc  cadbedadd ebdcb edbdbcdeeedb decaabcaaeceeacbd eac aeadaeabaebeddebebceaddbbadb  ebeeeea ecabbb d  ecbccdeaed ceaaad   deacceabbeeacdbaeaddbbbbdbecdd c edab  deccabcdadeeebe ecbbaeabcecdecdbccbaeccbd aea bc ac dc de bccbebc d"
+    },
+    "expected": "abecddabbdac bbdbecc ed ddcddcecbccabb caacbdbba c ccacee eadeaec ddbbbdabaadb dbedaaa eedecedacdabbbeccbcabc cabbbb dcebcee ccaacb bed bdecea adceeaaebdceacbdbdeaaced b dbcece dda cebe bddedd acbd bce cbcccbcacc dddba eabdbb cacbbcbbacba ceabbeaeddcceccdcec c bbcebbcbc eaeebad ede deeccbc cadbedadd ebdcb edbdbcdeeedb decaabcaaeceeacbd eac aeadaeabaebeddebebceaddbbadb ebeeeea ecabbb d ecbccdeaed ceaaad deacceabbeeacdbaeaddbbbbdbecdd c edab deccabcdadeeebe ecbbaeabcecdecdbccbaeccbd aea bc ac dc de bccbebc d"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "abecddabbdac bbdbecc ed  ddcddcecbccabb caacbdbba   c ccacee eadeaec ddbbbdabaadb dbedaaa eedecedacdabbbeccbcabc cabbbb dcebcee ccaacb  bed bdecea adceeaaebdceacbdbdeaaced b dbcece dda cebe bddedd acbd bce cbcccbcacc dddba eabdbb cacbbcbbacba ceabbeaeddcceccdcec  c bbcebbcbc   eaeebad ede deeccbc  cadbedadd ebdcb edbdbcdeeedb decaabcaaeceeacbd eac aeadaeabaebeddebebceaddbbadb  ebeeeea ecabbb d  ecbccdeaed ceaaad   deacceabbeeacdbaeaddbbbbdbecdd c edab  deccabcdadeeebe ecbbaeabcecdecdbccbaeccbd aea bc ac dc de bccbebc d"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "edaaccdeafca efecceebdc c dbdfffa dabbdbdcbdabdabeee dfd dc c bdcb baaadacabddbdeaacaadf eacccddeaad cc eeb ac cecbeced eec  ffcddbbbbdfcfbfd bcf fbdcb  faddbabca cfc adcbdbbdabdeaaccbaad  dddbfaaba a fbb ddbabaccdb addbcc d dddfbcbdceefeecfca eaacf feacfddaab cb a fcbacbcf d acfbcbbfade  fbba dfebbdfec dd ffeb e bffdddaddceaea aecea eebcbf bb dd  bcdadebeeccbfbedfabebccebeeadeefaecefb bbbfb edadbedbedbfbbf dcad bedbebadbd baabeaf ffbbbacfdafbdadfafa e bbfcf ddcacaedeaebc febd cebace deddbfe fefbfabeaccecf",
+      "b": "abecddabbdac bbdbecc ed  ddcddcecbccabb caacbdbba   c ccacee eadeaec ddbbbdabaadb dbedaaa eedecedacdabbbeccbcabc cabbbb dcebcee ccaacb  bed bdecea adceeaaebdceacbdbdeaaced b dbcece dda cebe bddedd acbd bce cbcccbcacc dddba eabdbb cacbbcbbacba ceabbeaeddcceccdcec  c bbcebbcbc   eaeebad ede deeccbc  cadbedadd ebdcb edbdbcdeeedb decaabcaaeceeacbd eac aeadaeabaebeddebebceaddbbadb  ebeeeea ecabbb d  ecbccdeaed ceaaad   deacceabbeeacdbaeaddbbbbdbecdd c edab  deccabcdadeeebe ecbbaeabcecdecdbccbaeccbd aea bc ac dc de bccbebc d"
+    },
+    "expected": 0.5191740412979351
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " af ffc ecdce fbd cbee c acdf cdaaee cebdcfadcffcaad dbdff bbcabcdfaaecf bfdedcdcfcfadcc deaccc a ec a daeddaabebbdfdddeaddfabb dc bbc afac efdf dbffdb ecdaefacfbea cfdeeacc faeffddffcafeeffaadebbecad cfa bcacfeedddbadf  bdcdfcffc eebfadafcbb cdd aaabccdeadfbdbbefc bfeeca cbcb db cfb ffabcdabdd c dc ec e dc a eecaaedebc ecaab  afddeaf cbbeaaff fccefcacaaebaadece eceaadfe dfdfccbdadadbcbdfcafdafc fb  dcadaaabdaefe f bffbcfc dabcfef b  cafae aebacae acfaabadb cafdfcf cadceaeac baabeedcfebeeaabbfd bbb  cfecac"
+    },
+    "expected": "af ffc ecdce fbd cbee c acdf cdaaee cebdcfadcffcaad dbdff bbcabcdfaaecf bfdedcdcfcfadcc deaccc a ec a daeddaabebbdfdddeaddfabb dc bbc afac efdf dbffdb ecdaefacfbea cfdeeacc faeffddffcafeeffaadebbecad cfa bcacfeedddbadf bdcdfcffc eebfadafcbb cdd aaabccdeadfbdbbefc bfeeca cbcb db cfb ffabcdabdd c dc ec e dc a eecaaedebc ecaab afddeaf cbbeaaff fccefcacaaebaadece eceaadfe dfdfccbdadadbcbdfcafdafc fb dcadaaabdaefe f bffbcfc dabcfef b cafae aebacae acfaabadb cafdfcf cadceaeac baabeedcfebeeaabbfd bbb cfecac"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " af ffc ecdce fbd cbee c acdf cdaaee cebdcfadcffcaad dbdff bbcabcdfaaecf bfdedcdcfcfadcc deaccc a ec a daeddaabebbdfdddeaddfabb dc bbc afac efdf dbffdb ecdaefacfbea cfdeeacc faeffddffcafeeffaadebbecad cfa bcacfeedddbadf  bdcdfcffc eebfadafcbb cdd aaabccdeadfbdbbefc bfeeca cbcb db cfb ffabcdabdd c dc ec e dc a eecaaedebc ecaab  afddeaf cbbeaaff fccefcacaaebaadece eceaadfe dfdfccbdadadbcbdfcafdafc fb  dcadaaabdaefe f bffbcfc dabcfef b  cafae aebacae acfaabadb cafdfcf cadceaeac baabeedcfebeeaabbfd bbb  cfecac"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "dcaeebcdd becdbaddd  dccaebecbdbcababbccba b cc  d  c e  ec d e bdccb edbdebcabbaa   abaaaeadedccddcd   de daae ababeddddeaaaee cdcaacd  c cbecd baaadc c dadebaacbc e  babaebadedbdddc c eeade c cccc a bdd ccdbaa  bedaaacbeaecaeedcbcccdccaaa  a eabbdeae b b bdcebea  adc dcbacdacd acaad bdb  cadedebeeeccca edccdabbe  cbcbde  d dbabcdd da ae bccca bc adea bcc  a cbc dcda eceb  bb dc ea cdedaed d badadacd cadd dcabdbdcdcce adccb eacbbcddaadcaaeced  cebd bedc a ea cd adbabdceddeeaeded cada ebbbded b d ec c  eb  b  aeec   dd"
+    },
+    "expected": "dcaeebcdd becdbaddd dccaebecbdbcababbccba b cc d c e ec d e bdccb edbdebcabbaa abaaaeadedccddcd de daae ababeddddeaaaee cdcaacd c cbecd baaadc c dadebaacbc e babaebadedbdddc c eeade c cccc a bdd ccdbaa bedaaacbeaecaeedcbcccdccaaa a eabbdeae b b bdcebea adc dcbacdacd acaad bdb cadedebeeeccca edccdabbe cbcbde d dbabcdd da ae bccca bc adea bcc a cbc dcda eceb bb dc ea cdedaed d badadacd cadd dcabdbdcdcce adccb eacbbcddaadcaaeced cebd bedc a ea cd adbabdceddeeaeded cada ebbbded b d ec c eb b aeec dd"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "dcaeebcdd becdbaddd  dccaebecbdbcababbccba b cc  d  c e  ec d e bdccb edbdebcabbaa   abaaaeadedccddcd   de daae ababeddddeaaaee cdcaacd  c cbecd baaadc c dadebaacbc e  babaebadedbdddc c eeade c cccc a bdd ccdbaa  bedaaacbeaecaeedcbcccdccaaa  a eabbdeae b b bdcebea  adc dcbacdacd acaad bdb  cadedebeeeccca edccdabbe  cbcbde  d dbabcdd da ae bccca bc adea bcc  a cbc dcda eceb  bb dc ea cdedaed d badadacd cadd dcabdbdcdcce adccb eacbbcddaadcaaeced  cebd bedc a ea cd adbabdceddeeaeded cada ebbbded b d ec c  eb  b  aeec   dd"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": " af ffc ecdce fbd cbee c acdf cdaaee cebdcfadcffcaad dbdff bbcabcdfaaecf bfdedcdcfcfadcc deaccc a ec a daeddaabebbdfdddeaddfabb dc bbc afac efdf dbffdb ecdaefacfbea cfdeeacc faeffddffcafeeffaadebbecad cfa bcacfeedddbadf  bdcdfcffc eebfadafcbb cdd aaabccdeadfbdbbefc bfeeca cbcb db cfb ffabcdabdd c dc ec e dc a eecaaedebc ecaab  afddeaf cbbeaaff fccefcacaaebaadece eceaadfe dfdfccbdadadbcbdfcafdafc fb  dcadaaabdaefe f bffbcfc dabcfef b  cafae aebacae acfaabadb cafdfcf cadceaeac baabeedcfebeeaabbfd bbb  cfecac",
+      "b": "dcaeebcdd becdbaddd  dccaebecbdbcababbccba b cc  d  c e  ec d e bdccb edbdebcabbaa   abaaaeadedccddcd   de daae ababeddddeaaaee cdcaacd  c cbecd baaadc c dadebaacbc e  babaebadedbdddc c eeade c cccc a bdd ccdbaa  bedaaacbeaecaeedcbcccdccaaa  a eabbdeae b b bdcebea  adc dcbacdacd acaad bdb  cadedebeeeccca edccdabbe  cbcbde  d dbabcdd da ae bccca bc adea bcc  a cbc dcda eceb  bb dc ea cdedaed d badadacd cadd dcabdbdcdcce adccb eacbbcddaadcaaeced  cebd bedc a ea cd adbabdceddeeaeded cada ebbbded b d ec c  eb  b  aeec   dd"
+    },
+    "expected": 0.5194029850746269
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": "aea caf dba adeaf d dcaeebfbabeaacbcc acfe b fdbab ec b abdd  eeabafca cbfaeeafcca eb cdba b afdceabedacffaabbffbebfa bedeeed b dbfab dafe  aeadfebcc aafcdffd aedeaf  db dcaceccecfeaab eeec c eefda fda  dd cbdcefe acafcfe ba ebbaafaf ebf afabfbbdc dffddbad de  b ffdbcadf c  fcffeeac febceafaabeb abffdcb ec c ebaaffbab ffb eadcfdeac a aaa fe bdcccd dfafb dceeaeafcceaa  ccab eaaceeebcabffaaefcdd ce cccedbabd aafdbbfceffacaeedddeb bdcd cbb  eafcfdeadea   fefcecef ffbbfe fedabeeebaeb ddbfeaede aaaa b bfdebddaa"
+    },
+    "expected": "aea caf dba adeaf d dcaeebfbabeaacbcc acfe b fdbab ec b abdd eeabafca cbfaeeafcca eb cdba b afdceabedacffaabbffbebfa bedeeed b dbfab dafe aeadfebcc aafcdffd aedeaf db dcaceccecfeaab eeec c eefda fda dd cbdcefe acafcfe ba ebbaafaf ebf afabfbbdc dffddbad de b ffdbcadf c fcffeeac febceafaabeb abffdcb ec c ebaaffbab ffb eadcfdeac a aaa fe bdcccd dfafb dceeaeafcceaa ccab eaaceeebcabffaaefcdd ce cccedbabd aafdbbfceffacaeedddeb bdcd cbb eafcfdeadea fefcecef ffbbfe fedabeeebaeb ddbfeaede aaaa b bfdebddaa"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": "aea caf dba adeaf d dcaeebfbabeaacbcc acfe b fdbab ec b abdd  eeabafca cbfaeeafcca eb cdba b afdceabedacffaabbffbebfa bedeeed b dbfab dafe  aeadfebcc aafcdffd aedeaf  db dcaceccecfeaab eeec c eefda fda  dd cbdcefe acafcfe ba ebbaafaf ebf afabfbbdc dffddbad de  b ffdbcadf c  fcffeeac febceafaabeb abffdcb ec c ebaaffbab ffb eadcfdeac a aaa fe bdcccd dfafb dceeaeafcceaa  ccab eaaceeebcabffaaefcdd ce cccedbabd aafdbbfceffacaeedddeb bdcd cbb  eafcfdeadea   fefcecef ffbbfe fedabeeebaeb ddbfeaede aaaa b bfdebddaa"
+    },
+    "expected": true
+  },
+  {
+    "function": "normalize_title",
+    "arguments": {
+      "value": " daaeaa cdbbedbdaaab cd a babc eea  bbaaadeadbacde ccabbeacc eeacaeeccb cdbc  bedeea bbecdbea cbebcb aceaeeab dbdcdda dedbaca eaa eacbbadcbba e daebdedb edcbaadbcdb  ce ebecdced abed cd cdc ccb aabcc ee deadedceab c b   a bebcbbcddea bb bededbc abddaedecee eacaaca ccb daeeeeb adecbaeea bdec e daeeba  ebca cacceccbd a ceeaddceedaeae  ddcdc ccdedcdae cbc becbea acecddd bececdcbba bceecbdaeeccedbaeed aadebddbbaaae dbbddde badaeab ed daecedd ccaeabdecc  edd cdb  cbaade bc ddeade cc debabbbdaa d d ceacaeade ec dccedec dbeae"
+    },
+    "expected": "daaeaa cdbbedbdaaab cd a babc eea bbaaadeadbacde ccabbeacc eeacaeeccb cdbc bedeea bbecdbea cbebcb aceaeeab dbdcdda dedbaca eaa eacbbadcbba e daebdedb edcbaadbcdb ce ebecdced abed cd cdc ccb aabcc ee deadedceab c b a bebcbbcddea bb bededbc abddaedecee eacaaca ccb daeeeeb adecbaeea bdec e daeeba ebca cacceccbd a ceeaddceedaeae ddcdc ccdedcdae cbc becbea acecddd bececdcbba bceecbdaeeccedbaeed aadebddbbaaae dbbddde badaeab ed daecedd ccaeabdecc edd cdb cbaade bc ddeade cc debabbbdaa d d ceacaeade ec dccedec dbeae"
+  },
+  {
+    "function": "is_meaningful_title",
+    "arguments": {
+      "value": " daaeaa cdbbedbdaaab cd a babc eea  bbaaadeadbacde ccabbeacc eeacaeeccb cdbc  bedeea bbecdbea cbebcb aceaeeab dbdcdda dedbaca eaa eacbbadcbba e daebdedb edcbaadbcdb  ce ebecdced abed cd cdc ccb aabcc ee deadedceab c b   a bebcbbcddea bb bededbc abddaedecee eacaaca ccb daeeeeb adecbaeea bdec e daeeba  ebca cacceccbd a ceeaddceedaeae  ddcdc ccdedcdae cbc becbea acecddd bececdcbba bceecbdaeeccedbaeed aadebddbbaaae dbbddde badaeab ed daecedd ccaeabdecc  edd cdb  cbaade bc ddeade cc debabbbdaa d d ceacaeade ec dccedec dbeae"
+    },
+    "expected": true
+  },
+  {
+    "function": "automatic_title_similarity",
+    "arguments": {
+      "a": "aea caf dba adeaf d dcaeebfbabeaacbcc acfe b fdbab ec b abdd  eeabafca cbfaeeafcca eb cdba b afdceabedacffaabbffbebfa bedeeed b dbfab dafe  aeadfebcc aafcdffd aedeaf  db dcaceccecfeaab eeec c eefda fda  dd cbdcefe acafcfe ba ebbaafaf ebf afabfbbdc dffddbad de  b ffdbcadf c  fcffeeac febceafaabeb abffdcb ec c ebaaffbab ffb eadcfdeac a aaa fe bdcccd dfafb dceeaeafcceaa  ccab eaaceeebcabffaaefcdd ce cccedbabd aafdbbfceffacaeedddeb bdcd cbb  eafcfdeadea   fefcecef ffbbfe fedabeeebaeb ddbfeaede aaaa b bfdebddaa",
+      "b": " daaeaa cdbbedbdaaab cd a babc eea  bbaaadeadbacde ccabbeacc eeacaeeccb cdbc  bedeea bbecdbea cbebcb aceaeeab dbdcdda dedbaca eaa eacbbadcbba e daebdedb edcbaadbcdb  ce ebecdced abed cd cdc ccb aabcc ee deadedceab c b   a bebcbbcddea bb bededbc abddaedecee eacaaca ccb daeeeeb adecbaeea bdec e daeeba  ebca cacceccbd a ceeaddceedaeae  ddcdc ccdedcdae cbc becbea acecddd bececdcbba bceecbdaeeccedbaeed aadebddbbaaae dbbddde badaeab ed daecedd ccaeabdecc  edd cdb  cbaade bc ddeade cc debabbbdaa d d ceacaeade ec dccedec dbeae"
+    },
+    "expected": 0.5339901477832512
+  }
+]

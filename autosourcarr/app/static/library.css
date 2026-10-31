@@ -1,0 +1,28 @@
+/* Paged library and native instance-tool surfaces share the shell theme. */
+.riPosterActions{padding:0 10px 10px;display:flex;justify-content:space-between;gap:8px}
+.riPosterActions button{font-size:12px;width:100%}
+.riLibraryPager{display:flex;align-items:center;justify-content:center;gap:14px;padding:22px 0;flex-wrap:wrap}
+.riLibraryPager label{display:flex;align-items:center;gap:8px}
+.riToolDialog{width:min(1000px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:0;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px}
+.riToolDialog::backdrop{background:#0009}
+.riToolDialog>header,.riToolDialog>footer{padding:16px 22px;background:var(--panel);display:flex;align-items:center;gap:16px}
+.riToolDialog>header h2{flex:1;margin:0;font-size:20px}
+.riToolDialog>header button{flex:0 0 auto}
+#riInstanceBody{padding:22px;overflow:auto;max-height:calc(100dvh - 180px)}
+#riInstanceBody>h3:first-child{margin-top:0}
+#riInstanceBody label{display:block;margin:14px 0;color:var(--muted)}
+#riInstanceBody label input,#riInstanceBody label select,#riInstanceBody textarea{display:block;width:100%;margin-top:6px;box-sizing:border-box;min-width:0}
+#riInstanceBody table{width:100%;border-collapse:collapse}
+#riInstanceBody td,#riInstanceBody th{padding:12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+#riInstanceBody td button{margin:3px}
+#riInstanceStatus{margin:0;overflow-wrap:anywhere}
+.riToolActions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.riFacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 20px;border-block:1px solid var(--line);padding:14px 0}
+.riFact{display:flex;flex-direction:column;gap:4px}.riFact>span{color:var(--muted);font-size:12px}.riFact>strong{font-size:15px}
+.riBackupRow{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}
+.riTableScroll{overflow-x:auto;max-width:100%}
+#riWantedExplanation{padding:10px 14px;margin:10px 0;border-left:3px solid var(--accent);color:var(--muted);font-size:13px}
+#subbed>.scopeChips{flex-wrap:nowrap;overflow-x:auto;max-width:100%;white-space:nowrap}
+#subbed>.scopeChips button{flex:0 0 auto}
+@media(max-width:767px){.riToolDialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.riToolDialog>header,.riToolDialog>footer,#riInstanceBody{padding:14px}.riFacts{grid-template-columns:1fr}.riBackupRow{align-items:flex-start;flex-direction:column}.riToolDialog>header h2{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.riToolDialog *{scroll-behavior:auto}}

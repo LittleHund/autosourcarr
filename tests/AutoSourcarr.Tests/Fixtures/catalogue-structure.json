@@ -1,0 +1,1007 @@
+{
+  "scope": "released origins SQL and reliability only; no full native metadata/matching or service claim",
+  "stamp": "2026-10-21T00:00:00+00:00",
+  "origins": [
+    {
+      "name": "ordinary-move",
+      "seed": [
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(10,1,'n:1',1,'Target','now','now')",
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(20,2,'n:2',1,'Old','now','now')",
+        "INSERT INTO chapter_candidates(id,virtual_chapter_id,source_id,source_name,source_manga_id,source_chapter_id,name,chapter_number,first_seen,last_seen) VALUES(100,10,'17','Fixture',111,1001,'Target',1,'now','now'),(200,20,'17','Fixture',112,2001,'Old',1,'now','now')",
+        "INSERT INTO candidate_pages VALUES(100,0,'https://images.invalid/target','now'),(200,0,'https://images.invalid/old','now')",
+        "INSERT INTO origin_history(virtual_chapter_id,candidate_id,source_id,source_name,source_manga_id,source_chapter_id,served_at,reason) VALUES(10,100,'17','Fixture',111,1001,'now','fixture'),(20,200,'17','Fixture',112,2001,'now','fixture')"
+      ],
+      "before": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 20,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          },
+          {
+            "id": 20,
+            "entry_id": 2,
+            "chapter_key": "n:2",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Old",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          }
+        ]
+      },
+      "after": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 20,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          },
+          {
+            "id": 20,
+            "entry_id": 1,
+            "chapter_key": "n:2",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Old",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "2026-10-21T00:00:00+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "name": "collision-old-served",
+      "seed": [
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(10,1,'n:1',1,'Target','now','now')",
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(20,2,'n:1',1,'Old','now','now')",
+        "INSERT INTO chapter_candidates(id,virtual_chapter_id,source_id,source_name,source_manga_id,source_chapter_id,name,chapter_number,first_seen,last_seen) VALUES(100,10,'17','Fixture',111,1001,'Target',1,'now','now'),(200,20,'17','Fixture',112,2001,'Old',1,'now','now')",
+        "INSERT INTO candidate_pages VALUES(100,0,'https://images.invalid/target','now'),(200,0,'https://images.invalid/old','now')",
+        "INSERT INTO origin_history(virtual_chapter_id,candidate_id,source_id,source_name,source_manga_id,source_chapter_id,served_at,reason) VALUES(10,100,'17','Fixture',111,1001,'now','fixture'),(20,200,'17','Fixture',112,2001,'now','fixture')",
+        "INSERT INTO served_origin VALUES(20,200,'now','old')"
+      ],
+      "before": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 20,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [
+          {
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "selected_at": "now",
+            "reason": "old"
+          }
+        ],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          },
+          {
+            "id": 20,
+            "entry_id": 2,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Old",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          }
+        ]
+      },
+      "after": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 10,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [
+          {
+            "virtual_chapter_id": 10,
+            "candidate_id": 200,
+            "selected_at": "now",
+            "reason": "old"
+          }
+        ],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          }
+        ]
+      }
+    },
+    {
+      "name": "collision-target-served",
+      "seed": [
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(10,1,'n:1',1,'Target','now','now')",
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(20,2,'n:1',1,'Old','now','now')",
+        "INSERT INTO chapter_candidates(id,virtual_chapter_id,source_id,source_name,source_manga_id,source_chapter_id,name,chapter_number,first_seen,last_seen) VALUES(100,10,'17','Fixture',111,1001,'Target',1,'now','now'),(200,20,'17','Fixture',112,2001,'Old',1,'now','now')",
+        "INSERT INTO candidate_pages VALUES(100,0,'https://images.invalid/target','now'),(200,0,'https://images.invalid/old','now')",
+        "INSERT INTO origin_history(virtual_chapter_id,candidate_id,source_id,source_name,source_manga_id,source_chapter_id,served_at,reason) VALUES(10,100,'17','Fixture',111,1001,'now','fixture'),(20,200,'17','Fixture',112,2001,'now','fixture')",
+        "INSERT INTO served_origin VALUES(10,100,'now','target')",
+        "INSERT INTO served_origin VALUES(20,200,'now','old')"
+      ],
+      "before": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 20,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [
+          {
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "selected_at": "now",
+            "reason": "target"
+          },
+          {
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "selected_at": "now",
+            "reason": "old"
+          }
+        ],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          },
+          {
+            "id": 20,
+            "entry_id": 2,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Old",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          }
+        ]
+      },
+      "after": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 10,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [
+          {
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "selected_at": "now",
+            "reason": "target"
+          }
+        ],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          }
+        ]
+      }
+    },
+    {
+      "name": "independent-gallery-slot",
+      "seed": [
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(10,1,'n:1',1,'Target','now','now')",
+        "INSERT INTO virtual_chapters(id,entry_id,chapter_key,chapter_number,display_name,created_at,updated_at) VALUES(20,2,'g:upload',1,'Old','now','now')",
+        "INSERT INTO chapter_candidates(id,virtual_chapter_id,source_id,source_name,source_manga_id,source_chapter_id,name,chapter_number,first_seen,last_seen) VALUES(100,10,'17','Fixture',111,1001,'Target',1,'now','now'),(200,20,'17','Fixture',112,2001,'Old',1,'now','now')",
+        "INSERT INTO candidate_pages VALUES(100,0,'https://images.invalid/target','now'),(200,0,'https://images.invalid/old','now')",
+        "INSERT INTO origin_history(virtual_chapter_id,candidate_id,source_id,source_name,source_manga_id,source_chapter_id,served_at,reason) VALUES(10,100,'17','Fixture',111,1001,'now','fixture'),(20,200,'17','Fixture',112,2001,'now','fixture')"
+      ],
+      "before": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 20,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          },
+          {
+            "id": 20,
+            "entry_id": 2,
+            "chapter_key": "g:upload",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Old",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          }
+        ]
+      },
+      "after": {
+        "candidate_pages": [
+          {
+            "candidate_id": 100,
+            "page_index": 0,
+            "private_url": "https://images.invalid/target",
+            "updated_at": "now"
+          },
+          {
+            "candidate_id": 200,
+            "page_index": 0,
+            "private_url": "https://images.invalid/old",
+            "updated_at": "now"
+          }
+        ],
+        "chapter_candidate_rejections": [],
+        "chapter_candidates": [
+          {
+            "id": 100,
+            "virtual_chapter_id": 10,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Target",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          },
+          {
+            "id": 200,
+            "virtual_chapter_id": 20,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_match_id": null,
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "source_chapter_url": "",
+            "source_order": 0,
+            "source_chapter_index": -1,
+            "name": "Old",
+            "chapter_number": 2.0,
+            "volume_number": -1.0,
+            "upload_date": 0,
+            "scanlator": "",
+            "page_count": 0,
+            "quality_score": null,
+            "active": 1,
+            "first_seen": "now",
+            "last_seen": "now"
+          }
+        ],
+        "origin_history": [
+          {
+            "id": 1,
+            "virtual_chapter_id": 10,
+            "candidate_id": 100,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 111,
+            "source_chapter_id": 1001,
+            "served_at": "now",
+            "reason": "fixture"
+          },
+          {
+            "id": 2,
+            "virtual_chapter_id": 20,
+            "candidate_id": 200,
+            "source_id": "17",
+            "source_name": "Fixture",
+            "source_manga_id": 112,
+            "source_chapter_id": 2001,
+            "served_at": "now",
+            "reason": "fixture"
+          }
+        ],
+        "quality_samples": [],
+        "served_origin": [],
+        "source_record_scans": [],
+        "virtual_chapters": [
+          {
+            "id": 10,
+            "entry_id": 1,
+            "chapter_key": "n:1",
+            "chapter_number": 1.0,
+            "volume_number": -1.0,
+            "display_name": "Target",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "now"
+          },
+          {
+            "id": 20,
+            "entry_id": 1,
+            "chapter_key": "g:upload",
+            "chapter_number": 2.0,
+            "volume_number": -1.0,
+            "display_name": "Old",
+            "hidden": 0,
+            "created_at": "now",
+            "updated_at": "2026-10-21T00:00:00+00:00"
+          }
+        ]
+      }
+    }
+  ],
+  "ranking": [
+    {
+      "left": {
+        "description": "\ud83d\ude00"
+      },
+      "right": {
+        "description": "aa"
+      },
+      "survivor": 2
+    },
+    {
+      "left": {
+        "locked": 1
+      },
+      "right": {
+        "description": "long summary"
+      },
+      "survivor": 1
+    },
+    {
+      "left": {
+        "titles": 2
+      },
+      "right": {
+        "titles": 1
+      },
+      "survivor": 1
+    },
+    {
+      "left": {},
+      "right": {},
+      "survivor": 1
+    }
+  ]
+}

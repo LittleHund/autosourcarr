@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/AutoSourcarr.Api/AutoSourcarr.Api.csproj" />
+    <ProjectReference Include="../../src/AutoSourcarr.Core/AutoSourcarr.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+    <None Update="Fixtures/**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../native/source-owner.c" Link="NativeInputs/source-owner.c" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../native/source-owner.h" Link="NativeInputs/source-owner.h" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../native/source-observation.c" Link="NativeInputs/source-observation.c" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../native/source-observation.h" Link="NativeInputs/source-observation.h" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../native/container-entry.c" Link="NativeInputs/container-entry.c" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,55 @@
+[
+  {
+    "input": "# comment\nA=unquoted\nB=\"double\\nline\"\nC='single\\nline'\n",
+    "expected": {
+      "A": "unquoted",
+      "B": "double\nline",
+      "C": "single\\nline"
+    }
+  },
+  {
+    "input": "export A=value # trailing comment\nB=some#thing\nC= # empty/comment case\nBARE\n",
+    "expected": {
+      "A": "value",
+      "B": "some#thing",
+      "C": "",
+      "BARE": null
+    }
+  },
+  {
+    "input": "A='quote\\' and slash\\\\'\nB=\"tab\\ttext\"\nC=保持\n",
+    "expected": {
+      "A": "quote' and slash\\",
+      "B": "tab\ttext",
+      "C": "保持"
+    }
+  },
+  {
+    "input": "A='multiline\nvalue'\r\nB=last\r\n",
+    "expected": {
+      "A": "multiline\nvalue",
+      "B": "last"
+    }
+  },
+  {
+    "input": "A=old\nA=new\nB=${A}\nC=${MISSING:-default}\n",
+    "expected": {
+      "A": "new",
+      "B": "${A}",
+      "C": "${MISSING:-default}"
+    }
+  },
+  {
+    "input": "BROKEN=\"unterminated\nA=value\n",
+    "expected": {
+      "A": "value"
+    }
+  },
+  {
+    "input": "A=one\nBROKEN=\"closed\" extra\nC=three\n",
+    "expected": {
+      "A": "one",
+      "C": "three"
+    }
+  }
+]

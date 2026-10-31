@@ -1,0 +1,100 @@
+# Complete four-service example: use instead of docker-compose.yml.
+# Preserve actual mounts. Both AutoSourcarr instances listen internally on 8282.
+# Non-root identity and no-new-privileges are internal image/startup defaults.
+x-autosourcarr-security: &autosourcarr-security
+  cap_drop: [ALL]
+  security_opt:
+    - seccomp=./security/repair-seccomp.json
+    # On AppArmor hosts, load the bundled profile on the host first, then enable:
+    # - apparmor=autosourcarr-internal
+    # For private /proc mount denial, see security/repair-host-setup.md:
+    # - systempaths=unconfined
+
+services:
+  autosourcarr:
+    <<: *autosourcarr-security
+    build:
+      context: ./autosourcarr
+    container_name: autosourcarr
+    restart: unless-stopped
+    ports:
+    - 30060:8282
+    volumes:
+    - ${DATA_ROOT:-./runtime}/autosourcarr-data:/data
+    - ${AUTOSOURCARR_CONFIG_ROOT:-./runtime-config}:/config
+    - ${DATA_ROOT:-./runtime}/source-host:/home/suwayomi/.local/share/Tachidesk
+    env_file:
+    - ${AUTOSOURCARR_CONFIG_ROOT:-./runtime-config}/autosourcarr.env
+    networks: &id001
+    - autosourcarr
+    image: autosourcarr:local
+    pull_policy: build
+    environment:
+      SOURCE_ENGINE_MODE: integrated
+      APP_SERVICES_MODE: integrated
+      SOURCE_ENGINE_UID: '568'
+      SOURCE_ENGINE_GID: '568'
+      MAIN_SUWAYOMI_URL: http://suwayomi:30058
+    stop_grace_period: 90s
+  suwayomi:
+    image: ghcr.io/suwayomi/suwayomi-server:v2.3.2243
+    restart: unless-stopped
+    user: 568:568
+    init: true
+    environment:
+      BIND_IP: 0.0.0.0
+      BIND_PORT: '30058'
+      AUTH_MODE: none
+      WEB_UI_ENABLED: 'true'
+      TZ: Europe/Amsterdam
+    # 0.4.5: no host port. Suwayomi is reachable only inside the compose network;
+    # use "Open in WebView" on an entry in AutoSourcarr instead of Suwayomi's web page.
+    volumes:
+    - ${DATA_ROOT:-./runtime}/suwayomi:/home/suwayomi/.local/share/Tachidesk
+    networks: *id001
+  private-autosourcarr:
+    <<: *autosourcarr-security
+    build:
+      context: ./autosourcarr
+    container_name: private-autosourcarr
+    restart: unless-stopped
+    ports:
+    - 30061:8282
+    volumes:
+    - ${PRIVATE_DATA_ROOT:-./private-runtime}/autosourcarr-data:/data
+    - ${PRIVATE_CONFIG_ROOT:-./private-config}:/config
+    - ${PRIVATE_DATA_ROOT:-./private-runtime}/source-host:/home/suwayomi/.local/share/Tachidesk
+    env_file:
+    - ${PRIVATE_CONFIG_ROOT:-./private-config}/autosourcarr.env
+    networks:
+    - autosourcarr
+    image: autosourcarr:local
+    pull_policy: build
+    environment:
+      SOURCE_ENGINE_MODE: integrated
+      APP_SERVICES_MODE: integrated
+      SOURCE_ENGINE_UID: '568'
+      SOURCE_ENGINE_GID: '568'
+      MAIN_SUWAYOMI_URL: http://private-suwayomi:30058
+    stop_grace_period: 90s
+    hostname: private-autosourcarr
+  private-suwayomi:
+    image: ghcr.io/suwayomi/suwayomi-server:v2.3.2243
+    restart: unless-stopped
+    user: 568:568
+    init: true
+    environment:
+      BIND_IP: 0.0.0.0
+      BIND_PORT: '30058'
+      AUTH_MODE: none
+      WEB_UI_ENABLED: 'true'
+      TZ: Europe/Amsterdam
+    # 0.4.5: no host port. Suwayomi is reachable only inside the compose network;
+    # use "Open in WebView" on an entry in AutoSourcarr instead of Suwayomi's web page.
+    volumes:
+    - ${PRIVATE_DATA_ROOT:-./private-runtime}/suwayomi:/home/suwayomi/.local/share/Tachidesk
+    networks:
+    - autosourcarr
+networks:
+  autosourcarr:
+    name: autosourcarr

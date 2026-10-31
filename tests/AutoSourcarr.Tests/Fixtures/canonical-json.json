@@ -1,0 +1,1587 @@
+[
+  {
+    "input_json": "null",
+    "canonical": "null",
+    "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+  },
+  {
+    "input_json": "true",
+    "canonical": "true",
+    "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+  },
+  {
+    "input_json": "false",
+    "canonical": "false",
+    "sha256": "fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa"
+  },
+  {
+    "input_json": "0",
+    "canonical": "0",
+    "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+  },
+  {
+    "input_json": "9007199254740993",
+    "canonical": "9007199254740993",
+    "sha256": "a1c367c29158357e62a3ff5d3e800fb7698a22396439dbc0a9d4929322afd35d"
+  },
+  {
+    "input_json": "0.0",
+    "canonical": "0.0",
+    "sha256": "8aed642bf5118b9d3c859bd4be35ecac75b6e873cce34e7b6f554b06f75550d7"
+  },
+  {
+    "input_json": "-0.0",
+    "canonical": "-0.0",
+    "sha256": "c26617c7ccbcaa6631b45d851b8cf56e21d2ca624bdb1193afdbd4b560702cec"
+  },
+  {
+    "input_json": "1.0",
+    "canonical": "1.0",
+    "sha256": "d0ff5974b6aa52cf562bea5921840c032a860a91a3512f7fe8f768f6bbe005f6"
+  },
+  {
+    "input_json": "0.0001",
+    "canonical": "0.0001",
+    "sha256": "e539aebac7fd2ed8aba8854fedeaa65436962f8ee1c82341b394698f085b6496"
+  },
+  {
+    "input_json": "1e-05",
+    "canonical": "1e-05",
+    "sha256": "5a9530d3c6d5faad6ba8afe16fb8e438df23865128370b2ec14ef622bb5f2ec9"
+  },
+  {
+    "input_json": "1e-06",
+    "canonical": "1e-06",
+    "sha256": "1187132475a4431d8ce6b306fecd75b877993db3279c7769716dacb5ed57e6b7"
+  },
+  {
+    "input_json": "1000000000000000.0",
+    "canonical": "1000000000000000.0",
+    "sha256": "c02731631f61648f06ba5501a9c68e2b0a9186a934ff45f40ab28eb6f3673021"
+  },
+  {
+    "input_json": "1e+16",
+    "canonical": "1e+16",
+    "sha256": "a144838520595009e7daf5aff8472573f9ce6a4bcd8c30673675618883464ab0"
+  },
+  {
+    "input_json": "1.7976931348623157e+308",
+    "canonical": "1.7976931348623157e+308",
+    "sha256": "c2784e1abd6317452708f3fbf9641c16b959561bc621a1d408c23a20aa2cb585"
+  },
+  {
+    "input_json": "5e-324",
+    "canonical": "5e-324",
+    "sha256": "c46e7ca1be4c8734f373a56530787288fa2058d73d07855e9247e949f811a42a"
+  },
+  {
+    "input_json": "\"\\u6e90 Stra\\u00dfe \\ud83d\\ude42\\n\\\"\\\\\\u0000\\u007f\"",
+    "canonical": "\"\\u6e90 Stra\\u00dfe \\ud83d\\ude42\\n\\\"\\\\\\u0000\\u007f\"",
+    "sha256": "97d5c4581bb72b3036970f86e90fbba46d8348a8a92d201eec670ab5bc8748c4"
+  },
+  {
+    "input_json": "{\"z\": 1.0, \"a\": [\"\\u6e90\", true, null, -0.0]}",
+    "canonical": "{\"a\":[\"\\u6e90\",true,null,-0.0],\"z\":1.0}",
+    "sha256": "53d3eb25b7214dcd7f349fc3b2ee20bf2463bd0d83521442b0c252f1990d9d68"
+  },
+  {
+    "input_json": "{\"schema\": 1, \"package\": \"eu.kanade.example\", \"created_at\": 100000.0}",
+    "canonical": "{\"created_at\":100000.0,\"package\":\"eu.kanade.example\",\"schema\":1}",
+    "sha256": "f3761edff8efe1eb25f064518c2d82d5ec3e12bc97177500e0b59f9eef10c625"
+  },
+  {
+    "input_json": "{\"number\": 3.6512422964421465e-244}",
+    "canonical": "{\"number\":3.6512422964421465e-244}",
+    "sha256": "b15d4f9b815f2fbabc21f9e66b26bed05412f99a63f485b23bcdf9c7283faac4"
+  },
+  {
+    "input_json": "{\"number\": 7.965107247901096e-145}",
+    "canonical": "{\"number\":7.965107247901096e-145}",
+    "sha256": "5707606e5d8b0d77fb3fd23fc78f85cc362e48c2cfb272f93ceadf3b4ab6d8db"
+  },
+  {
+    "input_json": "{\"number\": -3.1085014386712454e-83}",
+    "canonical": "{\"number\":-3.1085014386712454e-83}",
+    "sha256": "5fd13f7f155c5efd351d9ee50c8c06b7acb6f484c213105c3ba139be839ffde9"
+  },
+  {
+    "input_json": "{\"number\": -1.9219509609461368e+220}",
+    "canonical": "{\"number\":-1.9219509609461368e+220}",
+    "sha256": "62c40cca12e4128a36afa275dcb0d4338730e596248387decd4381f6dacb705e"
+  },
+  {
+    "input_json": "{\"number\": 6.171495262685961e+187}",
+    "canonical": "{\"number\":6.171495262685961e+187}",
+    "sha256": "0906c4094521f43d08ebbd1ed5bde97b4e86d992ea76db060ca4920e4acd56ca"
+  },
+  {
+    "input_json": "{\"number\": 2.0052273330557167e-50}",
+    "canonical": "{\"number\":2.0052273330557167e-50}",
+    "sha256": "d8da8548815d7db12492f83a2aa2f1bda047f17e3a696d63e040f398cc6668d2"
+  },
+  {
+    "input_json": "{\"number\": -9.32952621385471e+150}",
+    "canonical": "{\"number\":-9.32952621385471e+150}",
+    "sha256": "80abbdbe0a4553692514d50b137dd5595fef2c4be9eaf41bdc4de71535fb488f"
+  },
+  {
+    "input_json": "{\"number\": -1.2857274406484351e-27}",
+    "canonical": "{\"number\":-1.2857274406484351e-27}",
+    "sha256": "aead4d6c7980da17ae83d8203bdddd262b996e177bdce6ed51cdc1ec42867861"
+  },
+  {
+    "input_json": "{\"number\": -4.8591278717436964e+23}",
+    "canonical": "{\"number\":-4.8591278717436964e+23}",
+    "sha256": "c0136877ecf6ec92e48382988874536579e6f002c759fccb78523d07fb8a0942"
+  },
+  {
+    "input_json": "{\"number\": 3.383690923729988e+62}",
+    "canonical": "{\"number\":3.383690923729988e+62}",
+    "sha256": "db02cc77476549885d99927a223d9e8eb91319aa86b6267a8703fabcf0a6c6aa"
+  },
+  {
+    "input_json": "{\"number\": 6.153844491874688e+53}",
+    "canonical": "{\"number\":6.153844491874688e+53}",
+    "sha256": "c0267ce0344616e75667fb197f7f207369f7d3a24ff1b0b24cdd50ec17c86aca"
+  },
+  {
+    "input_json": "{\"number\": -1.7566168720833814e+84}",
+    "canonical": "{\"number\":-1.7566168720833814e+84}",
+    "sha256": "293f545682ec7b1220e8e66140994e3fcd63c6bc091e90adc56c74898c8fd244"
+  },
+  {
+    "input_json": "{\"number\": -1.1802065993371886e-93}",
+    "canonical": "{\"number\":-1.1802065993371886e-93}",
+    "sha256": "f529da9ea466045b7b99b9942c8c4327825bb32ebdf7c4265c2faa8f2e30b8ea"
+  },
+  {
+    "input_json": "{\"number\": 2.115279114776799e+32}",
+    "canonical": "{\"number\":2.115279114776799e+32}",
+    "sha256": "814868134d434dbcfeb07dfbc800df0ed3046e456f90c7c4dd5f3cbf27a37eba"
+  },
+  {
+    "input_json": "{\"number\": 5.673948383032415e-164}",
+    "canonical": "{\"number\":5.673948383032415e-164}",
+    "sha256": "fb8d605fc5e2f16a516d8cb9367618365fa40b7809baef5bd967ede598433123"
+  },
+  {
+    "input_json": "{\"number\": 2.898852771492534e+90}",
+    "canonical": "{\"number\":2.898852771492534e+90}",
+    "sha256": "ea9b23e2583d6cf9087f62aa240db1e0c990205251938f9a8ce6c0e313de68e4"
+  },
+  {
+    "input_json": "{\"number\": -1.8505378424900643e+272}",
+    "canonical": "{\"number\":-1.8505378424900643e+272}",
+    "sha256": "364a694a461978373ccd66e7f0dc7aebd3a0f6f374b1dcf47804b17a11a347c4"
+  },
+  {
+    "input_json": "{\"number\": 1.936444888353546e+59}",
+    "canonical": "{\"number\":1.936444888353546e+59}",
+    "sha256": "c409c8b873af0c1dddf158461cd92e8563e09c2ddf974df1e8c1ee06aa2e6336"
+  },
+  {
+    "input_json": "{\"number\": -6.304281596607387e+93}",
+    "canonical": "{\"number\":-6.304281596607387e+93}",
+    "sha256": "1a736151c1b1d1833d640072f18be8bb1218068bc4cbd5b8b73e72595704de06"
+  },
+  {
+    "input_json": "{\"number\": -2.0344373208320205e-112}",
+    "canonical": "{\"number\":-2.0344373208320205e-112}",
+    "sha256": "d302840a2afc42760bc0231775bfbb7b82d205a5a1c6bd64203001b59b33d91c"
+  },
+  {
+    "input_json": "{\"number\": -6.43556665158642}",
+    "canonical": "{\"number\":-6.43556665158642}",
+    "sha256": "e8f4e3cb8a63a810740b7f58f070f216d124c0beff8ebb7f8474385808235b82"
+  },
+  {
+    "input_json": "{\"number\": 1.1036849848610296e+18}",
+    "canonical": "{\"number\":1.1036849848610296e+18}",
+    "sha256": "a02730bd81e3f45dc1c39070d71115c25545ff1723cb5ef2d7050eab61f8872a"
+  },
+  {
+    "input_json": "{\"number\": 1.2756669280714236e+302}",
+    "canonical": "{\"number\":1.2756669280714236e+302}",
+    "sha256": "498d44f5b44194bb1715e0c2b75cb3f43b6ae4e7c05bd577af19da4fa6bbcceb"
+  },
+  {
+    "input_json": "{\"number\": -6.264868084664923e+271}",
+    "canonical": "{\"number\":-6.264868084664923e+271}",
+    "sha256": "1994fa94e72de7c3f7456f9eea9fd3a9bbca2566637f1cd29da07f7801ef35e2"
+  },
+  {
+    "input_json": "{\"number\": 0.0016133878857806224}",
+    "canonical": "{\"number\":0.0016133878857806224}",
+    "sha256": "4e6cf8be3b5266d858a47e997c71f23d297a2df2bfd8a5223755acdf827f8fa2"
+  },
+  {
+    "input_json": "{\"number\": 8.81717595598447e-40}",
+    "canonical": "{\"number\":8.81717595598447e-40}",
+    "sha256": "fc7f61f77fcf2c738492e24d5b8c019ae4b0af2fcbc5493a5f7e4b12e592400e"
+  },
+  {
+    "input_json": "{\"number\": 3.130653148440558e-198}",
+    "canonical": "{\"number\":3.130653148440558e-198}",
+    "sha256": "de0d4abb5fd9cf13060a2949a93a646b65ddb04acb624a00bc0633ccf9e11ba8"
+  },
+  {
+    "input_json": "{\"number\": 3.8074221496544823e+127}",
+    "canonical": "{\"number\":3.8074221496544823e+127}",
+    "sha256": "66451a741876dc49699695934ebeea51f7e93f1fe90fc826a2fe385f0ed9f39f"
+  },
+  {
+    "input_json": "{\"number\": 4.943603820805617e-103}",
+    "canonical": "{\"number\":4.943603820805617e-103}",
+    "sha256": "1476ed0c822c17a67bc11851465696251d2282b912a668e5efe3415ff5dac896"
+  },
+  {
+    "input_json": "{\"number\": 1.5316007000991189e+308}",
+    "canonical": "{\"number\":1.5316007000991189e+308}",
+    "sha256": "f40147a7c395188c3fa03c432c62349b633e77d822a79415599326983b731653"
+  },
+  {
+    "input_json": "{\"number\": -9.618214303821646e+85}",
+    "canonical": "{\"number\":-9.618214303821646e+85}",
+    "sha256": "e63ccee165ca114ef0e50ba2834891c226e25460ec2cf5713756f70d594afc35"
+  },
+  {
+    "input_json": "{\"number\": 1.927029122605098e-206}",
+    "canonical": "{\"number\":1.927029122605098e-206}",
+    "sha256": "e247f4fa98472eb964a425b4f7a49ce90e48095fd7212a567f602662d18d1d2c"
+  },
+  {
+    "input_json": "{\"number\": -5.995973195857844e+162}",
+    "canonical": "{\"number\":-5.995973195857844e+162}",
+    "sha256": "4f76d2d58dc4f7cf78bb4be97d8766c1eeb23bd65184307006aa7b8a633514bf"
+  },
+  {
+    "input_json": "{\"number\": 4.6962457056537724e-296}",
+    "canonical": "{\"number\":4.6962457056537724e-296}",
+    "sha256": "755b696caa2d9aca88c8e92f37e4b0eb4cffc0d9f8c7ecbdd1afa2d3ef0790dd"
+  },
+  {
+    "input_json": "{\"number\": 2.5481640286828194e+216}",
+    "canonical": "{\"number\":2.5481640286828194e+216}",
+    "sha256": "920bfba107b14d1b9a552af6069868ea70a11fd6b6550d6c22979c10f90cc81a"
+  },
+  {
+    "input_json": "{\"number\": 7.418730119592354e+186}",
+    "canonical": "{\"number\":7.418730119592354e+186}",
+    "sha256": "49ac95e20cfdb18139657fb663c8b3b88ade95836fae9a3056531bd0e9270101"
+  },
+  {
+    "input_json": "{\"number\": -4.570476940198511e-173}",
+    "canonical": "{\"number\":-4.570476940198511e-173}",
+    "sha256": "7f5363ec7a301db8afbbfe73589ba2d645dfcc14fb96b9824e0bf6884a551635"
+  },
+  {
+    "input_json": "{\"number\": 6.39189408168834e+292}",
+    "canonical": "{\"number\":6.39189408168834e+292}",
+    "sha256": "e35cb2732380a409b25c90660e34308e1000fbd65f74884ad7e19541f0d342ee"
+  },
+  {
+    "input_json": "{\"number\": -2.4725633336047067e+165}",
+    "canonical": "{\"number\":-2.4725633336047067e+165}",
+    "sha256": "014c367e4225a857126a1866d91eb8581bb019012a3c6a292d0869e047d7d764"
+  },
+  {
+    "input_json": "{\"number\": -1.0329994935607457e+232}",
+    "canonical": "{\"number\":-1.0329994935607457e+232}",
+    "sha256": "5ca3474acc01294a46d93bebd2751379203ac30888ec0e8b08a997a0ed3192fc"
+  },
+  {
+    "input_json": "{\"number\": -1.493615817355542e+121}",
+    "canonical": "{\"number\":-1.493615817355542e+121}",
+    "sha256": "fc3e22a33ca2ab347300823fd054ba8ca220184bb39802296295e193a38123df"
+  },
+  {
+    "input_json": "{\"number\": -9.15898208088052e-281}",
+    "canonical": "{\"number\":-9.15898208088052e-281}",
+    "sha256": "c473088c1f63eccb2418d087713ef9cdc0872b9e14d8b750ff7b7c3d9d269d3e"
+  },
+  {
+    "input_json": "{\"number\": 2.9697208321829482e+305}",
+    "canonical": "{\"number\":2.9697208321829482e+305}",
+    "sha256": "be8e25d5dd597d8402e5f064e5b5049e3fb318fcb68d36dcee7f4c3e18d0ef41"
+  },
+  {
+    "input_json": "{\"number\": -1.3752846247105832e+178}",
+    "canonical": "{\"number\":-1.3752846247105832e+178}",
+    "sha256": "9030dc87a7088ec383721e264cf1bd374c1a2ce02e03fa47b1d0a55a9d96f14f"
+  },
+  {
+    "input_json": "{\"number\": -5.376022645778708e+40}",
+    "canonical": "{\"number\":-5.376022645778708e+40}",
+    "sha256": "5c7508ea76916bda3acd6edfd8f9c49f6c6c3e7c0da48d88a6e1dff20eb216cb"
+  },
+  {
+    "input_json": "{\"number\": -1.0590653913942141e-240}",
+    "canonical": "{\"number\":-1.0590653913942141e-240}",
+    "sha256": "690cc5ebf11c1516771b222625c9670089aabe6f3c4e4d7f4f5082114082412b"
+  },
+  {
+    "input_json": "{\"number\": 2.342637600498855e-212}",
+    "canonical": "{\"number\":2.342637600498855e-212}",
+    "sha256": "87c06ab1353bffcfb200c3b312eaafc05c271e58e98bc98cfb35c5ddac12c1d6"
+  },
+  {
+    "input_json": "{\"number\": 4.070300188643244e+103}",
+    "canonical": "{\"number\":4.070300188643244e+103}",
+    "sha256": "f049710852d077abe43786803145b2d67dde5691a8ee5ccfe49bc0a3fae76741"
+  },
+  {
+    "input_json": "{\"number\": -5.251643037599488e+22}",
+    "canonical": "{\"number\":-5.251643037599488e+22}",
+    "sha256": "7384f1d98b52922e5518e4b567fabeaaf634d4c2ae386ffe64992288f85fa570"
+  },
+  {
+    "input_json": "{\"number\": -6.284654241364242e-148}",
+    "canonical": "{\"number\":-6.284654241364242e-148}",
+    "sha256": "7641cbbd359633c479d26442f7a65fae6cb312427b0c4b44d064d799d521219b"
+  },
+  {
+    "input_json": "{\"number\": -5.818230266050184e+24}",
+    "canonical": "{\"number\":-5.818230266050184e+24}",
+    "sha256": "89b891cb013a43ec6209aef12c1c2da0ce760ccbf48a1c90219f802b3f09112d"
+  },
+  {
+    "input_json": "{\"number\": 4.8214337328867326e+42}",
+    "canonical": "{\"number\":4.8214337328867326e+42}",
+    "sha256": "72d102a536d05d0911b41590991b55394aad9447f3a3d6c27474e0044a6f607c"
+  },
+  {
+    "input_json": "{\"number\": -3.6586998665415905e+18}",
+    "canonical": "{\"number\":-3.6586998665415905e+18}",
+    "sha256": "3d6e5e6f8cc4a36cb249d756acf217809ab4f40fd60222ce17f05527f726cb07"
+  },
+  {
+    "input_json": "{\"number\": -8.891916094952175e-159}",
+    "canonical": "{\"number\":-8.891916094952175e-159}",
+    "sha256": "9ca30d838a02e28929d1060d714e3da7b96006d48730a30bf5cca2cc9ee61056"
+  },
+  {
+    "input_json": "{\"number\": -1.3897511776801828e-260}",
+    "canonical": "{\"number\":-1.3897511776801828e-260}",
+    "sha256": "dc60ab4b6f709764553ea9eaa99709acf109eca7c3c1968287bad37d684a701d"
+  },
+  {
+    "input_json": "{\"number\": 7.446538798151036e-52}",
+    "canonical": "{\"number\":7.446538798151036e-52}",
+    "sha256": "ab81864db7743c89f98ab3f47397a8e0c0ca2573a566661c90a161b5334d8e38"
+  },
+  {
+    "input_json": "{\"number\": -1.846912223101317e-124}",
+    "canonical": "{\"number\":-1.846912223101317e-124}",
+    "sha256": "054c9e6fc19f231f2c0ec7fdd56ac55266ec9786eb5bb7814fb3f276726c893b"
+  },
+  {
+    "input_json": "{\"number\": 553.2652875672534}",
+    "canonical": "{\"number\":553.2652875672534}",
+    "sha256": "ef9ae9955dac6ea402ae45c7ee4390aa847a06685cb93838539e34cc89d9594f"
+  },
+  {
+    "input_json": "{\"number\": -4.015515585061004e+104}",
+    "canonical": "{\"number\":-4.015515585061004e+104}",
+    "sha256": "1dba81921361ffed8e4d608c37476ccf098ab8627969c14aa23af6d9e1105a1c"
+  },
+  {
+    "input_json": "{\"number\": 2.1249833196289454e-44}",
+    "canonical": "{\"number\":2.1249833196289454e-44}",
+    "sha256": "b4e93aabfe6e4fb921a4d72220ce37857317c4d394b5848e9ed566c97f54e508"
+  },
+  {
+    "input_json": "{\"number\": 3.215089953979521e-180}",
+    "canonical": "{\"number\":3.215089953979521e-180}",
+    "sha256": "3d84b2689b2a5eba63e204a1cc3b161d58ed951e87ad11732106e745ea5ec62f"
+  },
+  {
+    "input_json": "{\"number\": -6.410055375765202e-113}",
+    "canonical": "{\"number\":-6.410055375765202e-113}",
+    "sha256": "4124e47efed5885754a6d595d07ff1b32867ca7680839eaf739a98873b5b4cfc"
+  },
+  {
+    "input_json": "{\"number\": -31621780.271455877}",
+    "canonical": "{\"number\":-31621780.271455877}",
+    "sha256": "5321c89d8ed653c39709c80b7607fc52b246c9e9a05b1aed1e25b498df1a3d9e"
+  },
+  {
+    "input_json": "{\"number\": 2.0119224595971407e-230}",
+    "canonical": "{\"number\":2.0119224595971407e-230}",
+    "sha256": "54714f0096e8c48a3cbd4affb174c07b1dcae9e6cfc3bc48aa9fe7cdb2bf9868"
+  },
+  {
+    "input_json": "{\"number\": 3.5177457942177536e+142}",
+    "canonical": "{\"number\":3.5177457942177536e+142}",
+    "sha256": "bd59402fa57d00ce69f68ce3ec3c3d71ba865f7b65d2de02227d85aab28cfc6a"
+  },
+  {
+    "input_json": "{\"number\": -4.31668837766638e-277}",
+    "canonical": "{\"number\":-4.31668837766638e-277}",
+    "sha256": "a5396bdfa2d7fd35f7984367d8f5f19288840d7973b9dcdedce89d463b956b8e"
+  },
+  {
+    "input_json": "{\"number\": 1.6028659203766684e-87}",
+    "canonical": "{\"number\":1.6028659203766684e-87}",
+    "sha256": "80e748f9a593625887e4e7164fe1a07cf7ada627574ce3c56f164e31977013db"
+  },
+  {
+    "input_json": "{\"number\": -5.091749143931495e-307}",
+    "canonical": "{\"number\":-5.091749143931495e-307}",
+    "sha256": "169b613dc32c27957b7ef1ab4bbc44c1d089beba5767a281b0f814b8cd274d68"
+  },
+  {
+    "input_json": "{\"number\": 2.4339451928660087e-23}",
+    "canonical": "{\"number\":2.4339451928660087e-23}",
+    "sha256": "b5ed366683b1cf18553139e9ec68532e9e86a6f6bf586151cd8c54935aa2fabb"
+  },
+  {
+    "input_json": "{\"number\": 6.737269885718605e-105}",
+    "canonical": "{\"number\":6.737269885718605e-105}",
+    "sha256": "852ed381675d97cad96d6141df46e28023078b05a3e6124a399507f05d934b9b"
+  },
+  {
+    "input_json": "{\"number\": 4.949082806534883e+232}",
+    "canonical": "{\"number\":4.949082806534883e+232}",
+    "sha256": "292c8f1d256564f0aff4f11fb8479147c724ac83e7d81782cfaef4f72e0296b2"
+  },
+  {
+    "input_json": "{\"number\": -7.892149977852378e-203}",
+    "canonical": "{\"number\":-7.892149977852378e-203}",
+    "sha256": "312dc1aa9a7e8a10cb861c902b60b3775ff9c66ad1a6051f89d2dfc55bf282c3"
+  },
+  {
+    "input_json": "{\"number\": -1.5959752465928026e-64}",
+    "canonical": "{\"number\":-1.5959752465928026e-64}",
+    "sha256": "dac32256727712c657f686acd0cb326bd5a744c8710dcdb0506b402c6e33d17f"
+  },
+  {
+    "input_json": "{\"number\": -4.304588179614745e+201}",
+    "canonical": "{\"number\":-4.304588179614745e+201}",
+    "sha256": "659f072e9bebc26e526e09dd6835d6d14c418c21e958502c9b37515017d298bc"
+  },
+  {
+    "input_json": "{\"number\": -9.353066705718862e+64}",
+    "canonical": "{\"number\":-9.353066705718862e+64}",
+    "sha256": "e4a92e8c71ccee29351ca66ff0c8d3377434338011894e29f95cf26fac024d85"
+  },
+  {
+    "input_json": "{\"number\": 7.040488951208924e-126}",
+    "canonical": "{\"number\":7.040488951208924e-126}",
+    "sha256": "e93344f2a6c2e60a54afa964e9cecd88cbdfe9b7f6a8149e7aa4f0127908691c"
+  },
+  {
+    "input_json": "{\"number\": 2.9150756580785467e-103}",
+    "canonical": "{\"number\":2.9150756580785467e-103}",
+    "sha256": "e2db763ce0e7fe8c47ef1fd7ccc8739589c285b576d534d209f111858fcc6ff2"
+  },
+  {
+    "input_json": "{\"number\": -7.506380202604387e+32}",
+    "canonical": "{\"number\":-7.506380202604387e+32}",
+    "sha256": "15efcb2fae7888af9666aff655266e94ccab74b1bf9e9e9ada7f00150321d8cb"
+  },
+  {
+    "input_json": "{\"number\": 1.5141383234252098e-46}",
+    "canonical": "{\"number\":1.5141383234252098e-46}",
+    "sha256": "205fbb6b45b76bf69e1d1a58818a04c9d118f1373e9ac51b85d0269e910fedc1"
+  },
+  {
+    "input_json": "{\"number\": -1.7629966101325964e+176}",
+    "canonical": "{\"number\":-1.7629966101325964e+176}",
+    "sha256": "206a916c7cd3c8ac31bbe54ce000e6b6f30661183a4eb8de0da97bbe4f56aa2f"
+  },
+  {
+    "input_json": "{\"number\": 1.4248980567672946e-246}",
+    "canonical": "{\"number\":1.4248980567672946e-246}",
+    "sha256": "c3b839b9bcdf6b28f4100e3bb079f6429fbd91a4f196107cf59197afcfbaaeaa"
+  },
+  {
+    "input_json": "{\"number\": -2.7928269144403247e+212}",
+    "canonical": "{\"number\":-2.7928269144403247e+212}",
+    "sha256": "2490eb5d13e504ff856b2721625d3daa1d086322872a902f822cd4bb8aac0aac"
+  },
+  {
+    "input_json": "{\"number\": -6.564346989702244e+41}",
+    "canonical": "{\"number\":-6.564346989702244e+41}",
+    "sha256": "5d7e7adb40e24328657178adce6e93422e6fb78d7c6e33211a1377d66a3b2b22"
+  },
+  {
+    "input_json": "{\"number\": 8.209493236363242e-250}",
+    "canonical": "{\"number\":8.209493236363242e-250}",
+    "sha256": "4b5e11dcf6efc5554a59cf34e4e16917c69197a7dc9d344160f172137db89432"
+  },
+  {
+    "input_json": "{\"number\": -8.871093501335062e+105}",
+    "canonical": "{\"number\":-8.871093501335062e+105}",
+    "sha256": "8407d25fcb6549d62807f36c837c5fad46b16efd226e64d1379a2d9419939dcf"
+  },
+  {
+    "input_json": "{\"number\": -6.697505384045244e+149}",
+    "canonical": "{\"number\":-6.697505384045244e+149}",
+    "sha256": "fd723d492404ab6c8174f61aae4f7d35a2c88454a90400b20c50769e432e54d4"
+  },
+  {
+    "input_json": "{\"number\": -1.0960024878370673e-167}",
+    "canonical": "{\"number\":-1.0960024878370673e-167}",
+    "sha256": "f1a487e9b25323f49c392a8408a9494f3a8afb075cca00f2229c68ac9885fae7"
+  },
+  {
+    "input_json": "{\"number\": 7.101240614526987e-63}",
+    "canonical": "{\"number\":7.101240614526987e-63}",
+    "sha256": "dc5eda1916061aac34f28eb0034ac3cb49b315f6325ff1612a570cda39fb7088"
+  },
+  {
+    "input_json": "{\"number\": -5.041144438076506e+280}",
+    "canonical": "{\"number\":-5.041144438076506e+280}",
+    "sha256": "c97f1688e28760151c4ce3a509e8d8ee690b592d22b03d7a0439cf81f0ee15a6"
+  },
+  {
+    "input_json": "{\"number\": 8.443908161867971e+307}",
+    "canonical": "{\"number\":8.443908161867971e+307}",
+    "sha256": "1eccab20dc3d3fbccaa312ed4f58117a56f9352cd32c7f1c5c854e483e3e59e0"
+  },
+  {
+    "input_json": "{\"number\": 6891781.647828056}",
+    "canonical": "{\"number\":6891781.647828056}",
+    "sha256": "984df998150a70481519ef081fdaa464a2beea8ca6c9f03cd40752b81fedaf3f"
+  },
+  {
+    "input_json": "{\"number\": -1.004165009991636e+133}",
+    "canonical": "{\"number\":-1.004165009991636e+133}",
+    "sha256": "a2af8641e169e49aca50422aa1a39f1e56d8f753630825d53fb4d809222dee4b"
+  },
+  {
+    "input_json": "{\"number\": -6.177778037796355e+62}",
+    "canonical": "{\"number\":-6.177778037796355e+62}",
+    "sha256": "70222414fa22488fe446521ab77c3e783d5cfae70e486efed8d44d0d97551740"
+  },
+  {
+    "input_json": "{\"number\": -4.630950599639012e+47}",
+    "canonical": "{\"number\":-4.630950599639012e+47}",
+    "sha256": "767150679d4823b124112a7d7cc69fdc3c88a370ec2ba4d7a45df240f03ac9eb"
+  },
+  {
+    "input_json": "{\"number\": 3.2043440236005778e+72}",
+    "canonical": "{\"number\":3.2043440236005778e+72}",
+    "sha256": "438f2f5cfefddfa6a28160c50f9b0837fd95a289c777866caedc6b9a128242b0"
+  },
+  {
+    "input_json": "{\"number\": 2.6242777513277936e-180}",
+    "canonical": "{\"number\":2.6242777513277936e-180}",
+    "sha256": "ff546bcec49fc68b298e8e298d7e6e1cade6be3c8b181dc4d061d071b96375dd"
+  },
+  {
+    "input_json": "{\"number\": -1.24409306851044e-219}",
+    "canonical": "{\"number\":-1.24409306851044e-219}",
+    "sha256": "bb17332defe90e0016892be21dba72955a85972b368a2e9e5e55d99a42370f07"
+  },
+  {
+    "input_json": "{\"number\": 3.560884209766905e+62}",
+    "canonical": "{\"number\":3.560884209766905e+62}",
+    "sha256": "5d1b9bd7423bafc9b080a486e2264017b449c1ab32b2f8b5025c212e68e0c4fd"
+  },
+  {
+    "input_json": "{\"number\": -5.812207669093052e-216}",
+    "canonical": "{\"number\":-5.812207669093052e-216}",
+    "sha256": "eff1e30a31aa33b8dc649890abde859f83598e732e97dd6501efad970a96427a"
+  },
+  {
+    "input_json": "{\"number\": 1.6576611492273222e-186}",
+    "canonical": "{\"number\":1.6576611492273222e-186}",
+    "sha256": "1c0a9d265ada1e2fc4883b361845cc1f30041e738e729177daa048990e4b310f"
+  },
+  {
+    "input_json": "{\"number\": 9.452095199056248e+225}",
+    "canonical": "{\"number\":9.452095199056248e+225}",
+    "sha256": "51b6d7d803ee694fefeee135d4725f15de882e40576f5712c012af127011f2a8"
+  },
+  {
+    "input_json": "{\"number\": 1.2788215345080728e-190}",
+    "canonical": "{\"number\":1.2788215345080728e-190}",
+    "sha256": "5c687b6b3205785ced38e3e5ad51a7e3987cd98ba8bdfa72853c8cc55457691e"
+  },
+  {
+    "input_json": "{\"number\": -2.710589696724358e-153}",
+    "canonical": "{\"number\":-2.710589696724358e-153}",
+    "sha256": "1d0d7238f0d5beeda64a1047eb317cad0143f9e798220f9d19369a72c59a2bc1"
+  },
+  {
+    "input_json": "{\"number\": 3.469153564569772e-105}",
+    "canonical": "{\"number\":3.469153564569772e-105}",
+    "sha256": "fd0b022118eb1edd788361282ed565deeca2d471398854a197e5cbdc03cda3fc"
+  },
+  {
+    "input_json": "{\"number\": -3.33064978239178e-89}",
+    "canonical": "{\"number\":-3.33064978239178e-89}",
+    "sha256": "463a322d7ad467244c7b2b14e0879aaa97791e68f7d4969c589647217db6231a"
+  },
+  {
+    "input_json": "{\"number\": -1.5467538808567092e+107}",
+    "canonical": "{\"number\":-1.5467538808567092e+107}",
+    "sha256": "800cbd065425267d2a798ff5ad14aaca8bcb03f83bf62080d49f8c33ac378cca"
+  },
+  {
+    "input_json": "{\"number\": 1.3162436324945062e-190}",
+    "canonical": "{\"number\":1.3162436324945062e-190}",
+    "sha256": "bc0e6cc42efe998ff73666c51e316925982d63a78ee5bea4a266b8d9a4e7c698"
+  },
+  {
+    "input_json": "{\"number\": -6.24997392382424e+36}",
+    "canonical": "{\"number\":-6.24997392382424e+36}",
+    "sha256": "a5d2b64efe9eb380c9081b71210c054a1a64204b36f4cb5064e782561442c401"
+  },
+  {
+    "input_json": "{\"number\": 5.483258377245745e+200}",
+    "canonical": "{\"number\":5.483258377245745e+200}",
+    "sha256": "38413cd971eeef9c08daf14fecda779fc07eb250cb83581ce227961b52f63737"
+  },
+  {
+    "input_json": "{\"number\": -1.6221784767966786e-150}",
+    "canonical": "{\"number\":-1.6221784767966786e-150}",
+    "sha256": "e325fd165f352b40af2e96e26be3e844367615fe3eb9732f488bbe5881955168"
+  },
+  {
+    "input_json": "{\"number\": 1.7217147360824224e+121}",
+    "canonical": "{\"number\":1.7217147360824224e+121}",
+    "sha256": "53422cb340d9b1c75ea002c4697d20e68284aaae10b18467d255818bdb1bf88b"
+  },
+  {
+    "input_json": "{\"number\": -7.944078481413029e+119}",
+    "canonical": "{\"number\":-7.944078481413029e+119}",
+    "sha256": "e21b1baf98ed25cdb10bdc8b9377074e72a440abcb80b1895d38b5dfc99f7eb6"
+  },
+  {
+    "input_json": "{\"number\": -5.090703746048789e+92}",
+    "canonical": "{\"number\":-5.090703746048789e+92}",
+    "sha256": "f81429f0b33ebf321e4a633ccb38e0b3f3d03e7332a59bea7cb04e95b23c9c41"
+  },
+  {
+    "input_json": "{\"number\": 1.857832892803979e-87}",
+    "canonical": "{\"number\":1.857832892803979e-87}",
+    "sha256": "bb49d359f34e0606e634f7dcefd6c824e018500d6b937b857bcceb623e267937"
+  },
+  {
+    "input_json": "{\"number\": 1.3364267258974297e+192}",
+    "canonical": "{\"number\":1.3364267258974297e+192}",
+    "sha256": "4f31258375b92aec2cd30feaf0701e6ca9b68bea305a94480d1a54e7c2ba5f45"
+  },
+  {
+    "input_json": "{\"number\": 9.710808703162954e-50}",
+    "canonical": "{\"number\":9.710808703162954e-50}",
+    "sha256": "d487501fa30c00fd00f00eeba546efa54ba99b001c16a4f0414a91dd6133e5a5"
+  },
+  {
+    "input_json": "{\"number\": -1.240240773364957e-307}",
+    "canonical": "{\"number\":-1.240240773364957e-307}",
+    "sha256": "fda6ec1a539d795811f4f73133384d0ec1eed139058cb3b053632dbde2418733"
+  },
+  {
+    "input_json": "{\"number\": 2.7975703766736583e-74}",
+    "canonical": "{\"number\":2.7975703766736583e-74}",
+    "sha256": "4d7964b17a163c0ef02f8f3cbd3f2d0f72b2d5ab2fbd17d652ef2dad8c546439"
+  },
+  {
+    "input_json": "{\"number\": 1.2960397233185235e+49}",
+    "canonical": "{\"number\":1.2960397233185235e+49}",
+    "sha256": "98b2e0aaab433425a9b69eb61819af9055a1643c4a6a0a68b867756944cde29f"
+  },
+  {
+    "input_json": "{\"number\": 4.47564845581843e+48}",
+    "canonical": "{\"number\":4.47564845581843e+48}",
+    "sha256": "ffc521727c2761ae0252863390e7e2487707dff9e81a4012dff310188c273330"
+  },
+  {
+    "input_json": "{\"number\": -26317632.708516356}",
+    "canonical": "{\"number\":-26317632.708516356}",
+    "sha256": "75f60543adffc235dae0a9df4243a62556cb03b022b49db324ff4f276c032d40"
+  },
+  {
+    "input_json": "{\"number\": 1.875789212436132e-200}",
+    "canonical": "{\"number\":1.875789212436132e-200}",
+    "sha256": "828fd0cfbe5656ad1c20b4dd786abd11b713f708dc4a19d936284a44e70504d5"
+  },
+  {
+    "input_json": "{\"number\": -8.08229589454445e-75}",
+    "canonical": "{\"number\":-8.08229589454445e-75}",
+    "sha256": "61825ff944ac09ad22752e54a14bf7596f978b5aad8dcce74031117719fd34df"
+  },
+  {
+    "input_json": "{\"number\": 6.824011912759742e+289}",
+    "canonical": "{\"number\":6.824011912759742e+289}",
+    "sha256": "4b20da551aa271630776d77289865ddb1874fdc44578f5269b47f8b7ab6fc0d6"
+  },
+  {
+    "input_json": "{\"number\": -6.882833712900141e-182}",
+    "canonical": "{\"number\":-6.882833712900141e-182}",
+    "sha256": "a2cbfb14b588858e280522df91e5434fd075ef94d91c30d060f8f6996d5cbc3e"
+  },
+  {
+    "input_json": "{\"number\": -9.990071969700874e-82}",
+    "canonical": "{\"number\":-9.990071969700874e-82}",
+    "sha256": "4ea430208a81207a804404f5dd1f24aefcfb50aac22be895eedc0882cb04caa0"
+  },
+  {
+    "input_json": "{\"number\": -1.0175235855385912e+290}",
+    "canonical": "{\"number\":-1.0175235855385912e+290}",
+    "sha256": "1e96a55171a67ece0bbb53f0448408fb68e8d11f193455eb8330999fa084b228"
+  },
+  {
+    "input_json": "{\"number\": -4.935472656857468e-240}",
+    "canonical": "{\"number\":-4.935472656857468e-240}",
+    "sha256": "0ceb59fc7bd0e795f8a1c1cf4ae6bb5e9161d88c9186b4f38fe8235311c20f01"
+  },
+  {
+    "input_json": "{\"number\": -1.0981963049748584e+284}",
+    "canonical": "{\"number\":-1.0981963049748584e+284}",
+    "sha256": "7a1a70d811ae489b7a8f3405367920c717beb4af9636ba90aa39629b46322efe"
+  },
+  {
+    "input_json": "{\"number\": -7.259700388706631e-25}",
+    "canonical": "{\"number\":-7.259700388706631e-25}",
+    "sha256": "78b176803527c31c446c2324fa1dd56cc86059d005afd3a4a7e00c23ed92029d"
+  },
+  {
+    "input_json": "{\"number\": 8.094318563151738e+267}",
+    "canonical": "{\"number\":8.094318563151738e+267}",
+    "sha256": "ef23118c29db77336fc42e48338fc608123ed306eada3b6a49b8a8691782eaca"
+  },
+  {
+    "input_json": "{\"number\": -4.803525335834683e-227}",
+    "canonical": "{\"number\":-4.803525335834683e-227}",
+    "sha256": "2874d1535fa855a30940e0d50d9089d7b3e29f71c744ab9018c9fa45d24b3412"
+  },
+  {
+    "input_json": "{\"number\": -2.265647155448751e-237}",
+    "canonical": "{\"number\":-2.265647155448751e-237}",
+    "sha256": "5f85f0f966e9eadeae41180c9c25686449191fada768af189c4abf5e5071b373"
+  },
+  {
+    "input_json": "{\"number\": -1.6048752422405934e+187}",
+    "canonical": "{\"number\":-1.6048752422405934e+187}",
+    "sha256": "7d625261dc997832b97b5ddc863afa8152642b666b2754b3c133b000df819d5b"
+  },
+  {
+    "input_json": "{\"number\": 2.3238853324188714e-273}",
+    "canonical": "{\"number\":2.3238853324188714e-273}",
+    "sha256": "2e5ac6da83c0d0285b8c5269d05c11cd632f0a74faa865b73a1aa65d5a9ae074"
+  },
+  {
+    "input_json": "{\"number\": 8.413928863330115e+86}",
+    "canonical": "{\"number\":8.413928863330115e+86}",
+    "sha256": "dcfe9176cb7a5104cb5c2bde385680c1c93cba70e8b2e071ddc391033cbca9a6"
+  },
+  {
+    "input_json": "{\"number\": 30.552922624341292}",
+    "canonical": "{\"number\":30.552922624341292}",
+    "sha256": "af0ef0d08c6a9b04939bd86345073aa0c956ec857c420a8557e1eaa05e928b2b"
+  },
+  {
+    "input_json": "{\"number\": -2.173416593332223e-177}",
+    "canonical": "{\"number\":-2.173416593332223e-177}",
+    "sha256": "200259251198483f2b9d18a85e890cf2df5345303a04493a53846ca27ca7726e"
+  },
+  {
+    "input_json": "{\"number\": 3.0026863333440552e+168}",
+    "canonical": "{\"number\":3.0026863333440552e+168}",
+    "sha256": "dbbd4b7f2926053a1ae4a2772c79e3fba81d1950dabe8fdd563cc72730be2b0c"
+  },
+  {
+    "input_json": "{\"number\": 1.9140370410289937e+134}",
+    "canonical": "{\"number\":1.9140370410289937e+134}",
+    "sha256": "e869f92090dacd263149783267bef372c64f878bf7b8783b7723a7fda6d2ad8f"
+  },
+  {
+    "input_json": "{\"number\": 1.9807255620034425e-284}",
+    "canonical": "{\"number\":1.9807255620034425e-284}",
+    "sha256": "e5d7d97a949ca4fcdcfca7ef2e6bce7b15050fd86e5c17c18c65f6d8a2e30b9a"
+  },
+  {
+    "input_json": "{\"number\": 2.289171882168245e+61}",
+    "canonical": "{\"number\":2.289171882168245e+61}",
+    "sha256": "118906d27857aff524c19d5d2493a23e1702ae0bbc217b4fc689f325b69026be"
+  },
+  {
+    "input_json": "{\"number\": 1.8382313506735013e+47}",
+    "canonical": "{\"number\":1.8382313506735013e+47}",
+    "sha256": "f8c5acbad293b6a1a4edda74a9d3594e3b67ce4273bf0bb22ccaa6cb850c49f4"
+  },
+  {
+    "input_json": "{\"number\": -1.1489051999470635e-63}",
+    "canonical": "{\"number\":-1.1489051999470635e-63}",
+    "sha256": "4d70fd521a7a23b977ad81e9ee1e0346ff6696f5985b98315916b3836edf5788"
+  },
+  {
+    "input_json": "{\"number\": -1.4001852758368943e-254}",
+    "canonical": "{\"number\":-1.4001852758368943e-254}",
+    "sha256": "6cf2e23c9291b9e6c013e145587f32f97d151e2ac5a1aa26c584f3cd5a41c9ec"
+  },
+  {
+    "input_json": "{\"number\": 7.47811278430677e+195}",
+    "canonical": "{\"number\":7.47811278430677e+195}",
+    "sha256": "027852ab1c64be27cd8a8f37e09b7c1c81352499adf6577d46e80d68f69ab9b1"
+  },
+  {
+    "input_json": "{\"number\": -3.2028247099248055e-274}",
+    "canonical": "{\"number\":-3.2028247099248055e-274}",
+    "sha256": "e1a4b08fb7066f612916e0d13f008a8e3c835f2dcaa04d902db4fe79f28309c7"
+  },
+  {
+    "input_json": "{\"number\": 9.194389803923125e-57}",
+    "canonical": "{\"number\":9.194389803923125e-57}",
+    "sha256": "7a1bd3316333d69f5902e181a9ed96287d6580253632514b076a667a29a94958"
+  },
+  {
+    "input_json": "{\"number\": 4.5893259577414225e+257}",
+    "canonical": "{\"number\":4.5893259577414225e+257}",
+    "sha256": "99da7df96b80a1a58f1152a9136fd53c294baa055239fa29bb6ea64847b102d4"
+  },
+  {
+    "input_json": "{\"number\": -2.3054041785710353e-45}",
+    "canonical": "{\"number\":-2.3054041785710353e-45}",
+    "sha256": "e51e16a5b3be967df894339886ac1848772a55e158b09524c1d70f62b2b51f66"
+  },
+  {
+    "input_json": "{\"number\": -1.686219589561577e-12}",
+    "canonical": "{\"number\":-1.686219589561577e-12}",
+    "sha256": "a9dc6494ba742b1be025ab25f6252e8241d55b84d689ebf860d36361cc2470eb"
+  },
+  {
+    "input_json": "{\"number\": 1.0509223795704492e-78}",
+    "canonical": "{\"number\":1.0509223795704492e-78}",
+    "sha256": "70534ebad172c287631a7169d18eef4d8d3e0a21b568f920f40172fe9b214727"
+  },
+  {
+    "input_json": "{\"number\": 9.114575675593722e+232}",
+    "canonical": "{\"number\":9.114575675593722e+232}",
+    "sha256": "383db265578bfea28754d10e05efdaf55c9f87cf99a5d6e89139afd505a42168"
+  },
+  {
+    "input_json": "{\"number\": 1.015219025249304e-41}",
+    "canonical": "{\"number\":1.015219025249304e-41}",
+    "sha256": "bde2da7501cc2c81eaffb52d05f00ba6d43e11483a8367bc86269334a939efc0"
+  },
+  {
+    "input_json": "{\"number\": -4.6323051395291866e+175}",
+    "canonical": "{\"number\":-4.6323051395291866e+175}",
+    "sha256": "02b7422829c48a3201de35b387952eeecaa7220093e35d6f128699ba778595fb"
+  },
+  {
+    "input_json": "{\"number\": 3.739109633501279e-136}",
+    "canonical": "{\"number\":3.739109633501279e-136}",
+    "sha256": "4d1da2293ed4cad9731b1dd6de643bdf54833e9c9c68db58d20bad1b2e459d7b"
+  },
+  {
+    "input_json": "{\"number\": -1.0625111994066906e-112}",
+    "canonical": "{\"number\":-1.0625111994066906e-112}",
+    "sha256": "2ca91330adffa43a481c31476dd5a15f9c0ae9a608a4b7e35ffcfe4ee8b2f86e"
+  },
+  {
+    "input_json": "{\"number\": 5.810266707659437e+252}",
+    "canonical": "{\"number\":5.810266707659437e+252}",
+    "sha256": "e58534543081cc85aa7d20349ca28e0086773d2db254e2171ccbfb4169628e6c"
+  },
+  {
+    "input_json": "{\"number\": -5.237169167265239e-173}",
+    "canonical": "{\"number\":-5.237169167265239e-173}",
+    "sha256": "d47a0c6e8700b9c6ddc4f3a66859860c10dfe32abe1fdc8b0fb42a27e8cc3760"
+  },
+  {
+    "input_json": "{\"number\": 17.00785279390573}",
+    "canonical": "{\"number\":17.00785279390573}",
+    "sha256": "eb192b4467017cddc65507fdede5f8eede04f225ca93a517f7cb2d2619d670e1"
+  },
+  {
+    "input_json": "{\"number\": 2.9037248210049684e-307}",
+    "canonical": "{\"number\":2.9037248210049684e-307}",
+    "sha256": "b932ae4440dacd0815de1be4bdc7974975ca4e0242fa7e7d14f62abf13d27ed2"
+  },
+  {
+    "input_json": "{\"number\": -7.744144967514823e+101}",
+    "canonical": "{\"number\":-7.744144967514823e+101}",
+    "sha256": "6e1577dee03897e0dd5d71bd8ab3eb38613b8a998a54553c3e84cb96f794dfb2"
+  },
+  {
+    "input_json": "{\"number\": -1.3589354194397744e-236}",
+    "canonical": "{\"number\":-1.3589354194397744e-236}",
+    "sha256": "faec62f92ca651e535271e27da679d523c86bfd9d58988e31b8b2b4a38107c7a"
+  },
+  {
+    "input_json": "{\"number\": -7.342214862923812e+71}",
+    "canonical": "{\"number\":-7.342214862923812e+71}",
+    "sha256": "d3e08893d0cd104c7bfe9454a47ccc375d06c54f1ae003d2a87aea38fc1f2e61"
+  },
+  {
+    "input_json": "{\"number\": -7.662281166559883e-158}",
+    "canonical": "{\"number\":-7.662281166559883e-158}",
+    "sha256": "800e7a29d4d3017a8ebb88fa9833dee0e1baac05337a35c8fcc1e3acb2dee3f4"
+  },
+  {
+    "input_json": "{\"number\": 1.0833616538519035e+198}",
+    "canonical": "{\"number\":1.0833616538519035e+198}",
+    "sha256": "91a01d5d17d78fa32169d2ccb305b4b8352bd43fec0305e7992c2bb1971ddf2f"
+  },
+  {
+    "input_json": "{\"number\": -1.529348039011831e-297}",
+    "canonical": "{\"number\":-1.529348039011831e-297}",
+    "sha256": "d0318866d10eabc7526bd3689a8390c69ddd35b8b10a967a47d30f3053bf1b53"
+  },
+  {
+    "input_json": "{\"number\": 2.9591361366933365e-131}",
+    "canonical": "{\"number\":2.9591361366933365e-131}",
+    "sha256": "bb32ac39ed8186a93266b254c883c999f568bb242f4bd64017a24281bef3c668"
+  },
+  {
+    "input_json": "{\"number\": -9.600214014629583e+116}",
+    "canonical": "{\"number\":-9.600214014629583e+116}",
+    "sha256": "2de78850177e4ed64634317b9884316364fba6abebb408085768e0df9ab638c8"
+  },
+  {
+    "input_json": "{\"number\": 9.348992466991962e+156}",
+    "canonical": "{\"number\":9.348992466991962e+156}",
+    "sha256": "0df8c4493c72c2bd205e6128f8c17c8a77a1f9ff79e2f678f2fcdf4335f425db"
+  },
+  {
+    "input_json": "{\"number\": 3.0997734324239673e-246}",
+    "canonical": "{\"number\":3.0997734324239673e-246}",
+    "sha256": "2e4edcbe49f192f5517c4c442ad6dd81fb30e0d193a9a409eae7286adbf0d137"
+  },
+  {
+    "input_json": "{\"number\": -2.832786969046519e+72}",
+    "canonical": "{\"number\":-2.832786969046519e+72}",
+    "sha256": "12524b49e1c2b741ea55d3c87943fee2679db025a200da32e9a76992f2e7cf84"
+  },
+  {
+    "input_json": "{\"number\": -4.297193676215035e-150}",
+    "canonical": "{\"number\":-4.297193676215035e-150}",
+    "sha256": "f5397b65fb6232ecb4099e88b7d2f55a6b3d55f6ffd51d5e01060ce1c596ca87"
+  },
+  {
+    "input_json": "{\"number\": -1.843794854590238e-286}",
+    "canonical": "{\"number\":-1.843794854590238e-286}",
+    "sha256": "a9aa36725a9d044a0eb18b63096ead38c1e18ccd4343023baba67911175108d4"
+  },
+  {
+    "input_json": "{\"number\": -4.555774057741465e-126}",
+    "canonical": "{\"number\":-4.555774057741465e-126}",
+    "sha256": "3a29c014f2dc0c7b05204608b88b6bbbbf85c1700b23ae9bae9075f4b4c4f2e3"
+  },
+  {
+    "input_json": "{\"number\": -5.736778615752517e-247}",
+    "canonical": "{\"number\":-5.736778615752517e-247}",
+    "sha256": "8f73c1eb2e14aa9dd5bc1856e0dad242de01185ee7a1dad1a67f3f99b09c2887"
+  },
+  {
+    "input_json": "{\"number\": -1.04842469759076e+129}",
+    "canonical": "{\"number\":-1.04842469759076e+129}",
+    "sha256": "98b09c738dc6feec21afa9e5d01c2363d0d9370961c3ea9fd1c684bb9673ccba"
+  },
+  {
+    "input_json": "{\"number\": 1.1839464725713894e-49}",
+    "canonical": "{\"number\":1.1839464725713894e-49}",
+    "sha256": "2655dcf87c9a7359a67cd8f7bb276e4f59f0059458e29405a6d0f5f9da28f8d1"
+  },
+  {
+    "input_json": "{\"number\": -3.6170513695705103e+93}",
+    "canonical": "{\"number\":-3.6170513695705103e+93}",
+    "sha256": "cfa94237817710a1ed4e8a63e969361f0ffd0f8a8447aa2f4e54d09d0cc55aca"
+  },
+  {
+    "input_json": "{\"number\": 6.082614288629823e-21}",
+    "canonical": "{\"number\":6.082614288629823e-21}",
+    "sha256": "c2be8a04387ed458815f4be3f158295f3868bcbf0a9001e50723a6292abe2236"
+  },
+  {
+    "input_json": "{\"number\": -5.945942878104467e-172}",
+    "canonical": "{\"number\":-5.945942878104467e-172}",
+    "sha256": "aa97420e3d1088be1ed15f8e55942c420804b92d0326f5d4eb29edfdf5865487"
+  },
+  {
+    "input_json": "{\"number\": 1.9346224241610564e-268}",
+    "canonical": "{\"number\":1.9346224241610564e-268}",
+    "sha256": "631ba632f72bdb31023d670b8a623f4535f3c036879996399b5878ce9fca93a9"
+  },
+  {
+    "input_json": "{\"number\": 5.594292425638331e+116}",
+    "canonical": "{\"number\":5.594292425638331e+116}",
+    "sha256": "49d46063992f0652a612bfa37e82b8440f6737a358af098106927fc1f4728c1f"
+  },
+  {
+    "input_json": "{\"number\": 9.040521745046057e+203}",
+    "canonical": "{\"number\":9.040521745046057e+203}",
+    "sha256": "7aff8101da9a9c11e26945e05158f5b8094fc7e695c30958b61111f4efa346cf"
+  },
+  {
+    "input_json": "{\"number\": -2.554034632669342e+151}",
+    "canonical": "{\"number\":-2.554034632669342e+151}",
+    "sha256": "94f9e5b4428ee9320dae1ef5bd408128c0bcf8da54f2b5906a9ff213506d9ecb"
+  },
+  {
+    "input_json": "{\"number\": -9.177851898105204e+208}",
+    "canonical": "{\"number\":-9.177851898105204e+208}",
+    "sha256": "4221d518a46608d43860ff428d7db2b3002898eb0c7b929ddc9beaaa2dbb6449"
+  },
+  {
+    "input_json": "{\"number\": -6.148266844619943e-107}",
+    "canonical": "{\"number\":-6.148266844619943e-107}",
+    "sha256": "320daacf3c6984b855a8c15faf141d37105da519db3f4bc8e290f91ee49b4f6f"
+  },
+  {
+    "input_json": "{\"number\": -1.8075899897937759e+81}",
+    "canonical": "{\"number\":-1.8075899897937759e+81}",
+    "sha256": "6a26579d76ec90e6a15e2cc0f78ad0057857624fc03c3d26feb9fecc6f7b92f0"
+  },
+  {
+    "input_json": "{\"number\": -2.6328730300029583e+298}",
+    "canonical": "{\"number\":-2.6328730300029583e+298}",
+    "sha256": "bd562912cc761e8ff71cd5a242415b73cbaf39f253450a4438e095f02f573e56"
+  },
+  {
+    "input_json": "{\"number\": -2.485642994838948e-282}",
+    "canonical": "{\"number\":-2.485642994838948e-282}",
+    "sha256": "d39527596c871faf7fdfa399fa82e28e00135fd24f944d3e6dd85c1090a0a013"
+  },
+  {
+    "input_json": "{\"number\": -1.7530270503610017e+26}",
+    "canonical": "{\"number\":-1.7530270503610017e+26}",
+    "sha256": "f4870e3d21a375effd2d5569158f52afd9b516eb59fbbd1e030e791167861d04"
+  },
+  {
+    "input_json": "{\"number\": 1.522861823638733e+237}",
+    "canonical": "{\"number\":1.522861823638733e+237}",
+    "sha256": "946efd84252eeb1580d4ec40d88a3a44cc79e2c1a6f47cf30700bd0e1f9427f9"
+  },
+  {
+    "input_json": "{\"number\": -4.953647499225388e+111}",
+    "canonical": "{\"number\":-4.953647499225388e+111}",
+    "sha256": "e19ae4aa6c0d6ebb87f3285850e066e5b845c4cb05b12fcda31de4ba059ba1b1"
+  },
+  {
+    "input_json": "{\"number\": -1.3474297760817536e-247}",
+    "canonical": "{\"number\":-1.3474297760817536e-247}",
+    "sha256": "d8c41717ad2286d642115f0ac643ad50a94d93c5421d83135cd54a1bcc273102"
+  },
+  {
+    "input_json": "{\"number\": -6.492153717169055e+298}",
+    "canonical": "{\"number\":-6.492153717169055e+298}",
+    "sha256": "e95894001f30d76af45eb8a30a2977108866741ff8d807e47754cc500b8ece97"
+  },
+  {
+    "input_json": "{\"number\": -1.8268015911176048e-218}",
+    "canonical": "{\"number\":-1.8268015911176048e-218}",
+    "sha256": "38b29f18222d5a5715d184d9cc7e406a565ce43ad114c25489619c9d46708c22"
+  },
+  {
+    "input_json": "{\"number\": 2.773907794252367e-89}",
+    "canonical": "{\"number\":2.773907794252367e-89}",
+    "sha256": "8960b606a04248dab347aa583b99b1d40a5e8ecc3b9b1d4cc56d1a8fc55dfe45"
+  },
+  {
+    "input_json": "{\"number\": 2.425457659620065e-293}",
+    "canonical": "{\"number\":2.425457659620065e-293}",
+    "sha256": "f51272aa314ed89968f35d320e6a06c32bbf57a0ec88f74d2770d62fc23bcb25"
+  },
+  {
+    "input_json": "{\"number\": -2.9013062069218066e+103}",
+    "canonical": "{\"number\":-2.9013062069218066e+103}",
+    "sha256": "797eddb67de465614af839beea45b8ed4e47fa1f59c4da6a95d303d2b4493782"
+  },
+  {
+    "input_json": "{\"number\": -3.3000803313223223e-152}",
+    "canonical": "{\"number\":-3.3000803313223223e-152}",
+    "sha256": "fc67501977671fc398c97a70964e55bf4939be1b7c48525b7e5e2a1ab6d13537"
+  },
+  {
+    "input_json": "{\"number\": -1.2292051717258058e+101}",
+    "canonical": "{\"number\":-1.2292051717258058e+101}",
+    "sha256": "af02583ad5c8cf545dcce454956259679bfb4fada2d0f167a185dd98723da1fa"
+  },
+  {
+    "input_json": "{\"number\": 4.957264772602432e-212}",
+    "canonical": "{\"number\":4.957264772602432e-212}",
+    "sha256": "a71a8eda546860108787beccade5dc941d93604c7db83e47dec0eef258a9b4ed"
+  },
+  {
+    "input_json": "{\"number\": 2.265579462615774e+303}",
+    "canonical": "{\"number\":2.265579462615774e+303}",
+    "sha256": "1f611d9dbf4645ec0840ba6744bee26b83b0426eb89ef0686787daaee209d497"
+  },
+  {
+    "input_json": "{\"number\": -2.489157003710005e+82}",
+    "canonical": "{\"number\":-2.489157003710005e+82}",
+    "sha256": "64eec6250292067c850514090f2b75ac69cf529fc0613df36e9c129b0f892b25"
+  },
+  {
+    "input_json": "{\"number\": -6.49873551038235e+268}",
+    "canonical": "{\"number\":-6.49873551038235e+268}",
+    "sha256": "78cf3d1664efb11781fb02a43d5d63d59be4b39add954ca7cfa817805f230be9"
+  },
+  {
+    "input_json": "{\"number\": 4.054124803361129e-243}",
+    "canonical": "{\"number\":4.054124803361129e-243}",
+    "sha256": "14a28059122534c5cc062c39ab7d3f78d1598a75d4f028e799e00a2f6fbd272c"
+  },
+  {
+    "input_json": "{\"number\": -0.37048100167034054}",
+    "canonical": "{\"number\":-0.37048100167034054}",
+    "sha256": "a432752b1bcec0cc6353ec306c9bb3deabb2d3b5f8ae6d270eb0d01801f7f1cd"
+  },
+  {
+    "input_json": "{\"number\": -2.389741915605826e+184}",
+    "canonical": "{\"number\":-2.389741915605826e+184}",
+    "sha256": "b892fee3573f72559d38550a5b16592fb9106e7400869a1f81588a0cb6865afc"
+  },
+  {
+    "input_json": "{\"number\": -197489406786.60162}",
+    "canonical": "{\"number\":-197489406786.60162}",
+    "sha256": "b37d14e9c85a2ae9a7837166a3fbd4e56701a10536052414b749f5f7cd54420e"
+  },
+  {
+    "input_json": "{\"number\": 4.675453261347567e-247}",
+    "canonical": "{\"number\":4.675453261347567e-247}",
+    "sha256": "48375737921b8ddfae482411ecfa8aa862bc5699345c41fda081b1d754edf735"
+  },
+  {
+    "input_json": "{\"number\": -2.508744983524506e-247}",
+    "canonical": "{\"number\":-2.508744983524506e-247}",
+    "sha256": "2357bdf25176100365ef44f8e0489be7b90e2695f9f905c64d7f13efaddaba6e"
+  },
+  {
+    "input_json": "{\"number\": -1.1193117626317203e+218}",
+    "canonical": "{\"number\":-1.1193117626317203e+218}",
+    "sha256": "3811873a093ce95f28cef71a59cf1d63b108757620689712dfc320e78aeddb2a"
+  },
+  {
+    "input_json": "{\"number\": 1.92620843833381e-195}",
+    "canonical": "{\"number\":1.92620843833381e-195}",
+    "sha256": "e84a31f1a4fe65acda561d3a7dd28209bdc5623357bcd1d5522640af5643ad0c"
+  },
+  {
+    "input_json": "{\"number\": 3.07094797238626e+207}",
+    "canonical": "{\"number\":3.07094797238626e+207}",
+    "sha256": "aa36101cc519ce4dd9d2bf78790e176240073b0010b9f3d5cc38e393c87866ce"
+  },
+  {
+    "input_json": "{\"number\": 7.146564324842577e+142}",
+    "canonical": "{\"number\":7.146564324842577e+142}",
+    "sha256": "7e1d57fcc0fdf54c8c72e06cb85f3d2696050570c58b2b5fb3827be8a9f940f7"
+  },
+  {
+    "input_json": "{\"number\": -1.726889478190893e-98}",
+    "canonical": "{\"number\":-1.726889478190893e-98}",
+    "sha256": "0f72e5653fd227c5891e227422078e4c286c75f1509f7bcf8ca1d2f41deafd04"
+  },
+  {
+    "input_json": "{\"number\": 3.736613811605566e-240}",
+    "canonical": "{\"number\":3.736613811605566e-240}",
+    "sha256": "9003a1637941cbf65b3ffa362f38fd528203a5c7da90368b442bf0f361f4bbdb"
+  },
+  {
+    "input_json": "{\"number\": -7.599192972230604e-47}",
+    "canonical": "{\"number\":-7.599192972230604e-47}",
+    "sha256": "f31c0a482936b88adedf07ce0d77d6b754b713b8b9009bd2e9d2fef7e5f1c6ab"
+  },
+  {
+    "input_json": "{\"number\": 2.1288303781444415e+156}",
+    "canonical": "{\"number\":2.1288303781444415e+156}",
+    "sha256": "fa890ec297d0ff14133cd08bafd465f41ba8976c06ee5183cba83796ddf44f25"
+  },
+  {
+    "input_json": "{\"number\": 1.0130327981812037e+215}",
+    "canonical": "{\"number\":1.0130327981812037e+215}",
+    "sha256": "6ecb078de69726ac9753ca1bbfc51ce720d4045f361a028e4a627bee953513b6"
+  },
+  {
+    "input_json": "{\"number\": -5.760149703269978e-245}",
+    "canonical": "{\"number\":-5.760149703269978e-245}",
+    "sha256": "40c1baa4522736b0bd4109b4eb4eecb8fd430ec9e5de89793d02e7a5e6e5e6c2"
+  },
+  {
+    "input_json": "{\"number\": -1.8341196600545473e-72}",
+    "canonical": "{\"number\":-1.8341196600545473e-72}",
+    "sha256": "31235d56860bc710b3f4f9c6b3d5feefbfa8d2a245998b9b3da2042760295a39"
+  },
+  {
+    "input_json": "{\"number\": 1.0068081776442019e+176}",
+    "canonical": "{\"number\":1.0068081776442019e+176}",
+    "sha256": "52d0fd7a1081bb22d7fdc0cc842ad7481933e9ec9985d0959078215882b14489"
+  },
+  {
+    "input_json": "{\"number\": 8.943223797654792e-15}",
+    "canonical": "{\"number\":8.943223797654792e-15}",
+    "sha256": "4dd64a003ee6a72bf54505a505825a3de12bc4bc607f708bef97370f5dcd3fb8"
+  },
+  {
+    "input_json": "{\"number\": -1.9935895098490564e-200}",
+    "canonical": "{\"number\":-1.9935895098490564e-200}",
+    "sha256": "799c77b9b914ea6806fb30f36425450ae23ec049db8ff4dc9107101d7cd192d7"
+  },
+  {
+    "input_json": "{\"number\": -4.1280231913097155e+294}",
+    "canonical": "{\"number\":-4.1280231913097155e+294}",
+    "sha256": "9a5039fb3df6c5ef9acdf2ca18c5db5212608702582c88ad26f488d28a75394e"
+  },
+  {
+    "input_json": "{\"number\": 3.6098511846491826e-182}",
+    "canonical": "{\"number\":3.6098511846491826e-182}",
+    "sha256": "3d3c6a6003bf27e3123a83767db92243d418b95bec7c7c8d2f030170ccc045bf"
+  },
+  {
+    "input_json": "{\"number\": 5.161485746010852e+29}",
+    "canonical": "{\"number\":5.161485746010852e+29}",
+    "sha256": "fa8770fb615664c868c76fdec5fad42f87c916043b2c8394cd677dc536b51939"
+  },
+  {
+    "input_json": "{\"number\": 1.0989973459377408e+135}",
+    "canonical": "{\"number\":1.0989973459377408e+135}",
+    "sha256": "19a193e5330638c2e1d588f4b7dd259f1c1adc82e89f093a1b46a30bcbee0916"
+  },
+  {
+    "input_json": "{\"number\": -4.33504726238891e-70}",
+    "canonical": "{\"number\":-4.33504726238891e-70}",
+    "sha256": "dde434c1ea282ed51ca2bca25b94aa1f9fe235385821f29bd87cb71d2c20f5a9"
+  },
+  {
+    "input_json": "{\"number\": 4.525501057018544e+260}",
+    "canonical": "{\"number\":4.525501057018544e+260}",
+    "sha256": "6e185d718a09405d4e9221b4fa23236d3a156d32b1b91da21719601194f35047"
+  },
+  {
+    "input_json": "{\"number\": 1.3853891520578486e+177}",
+    "canonical": "{\"number\":1.3853891520578486e+177}",
+    "sha256": "46809087b1fcd1bef63f51b001d02d206747781121cd23a7a13932e8f0b386e0"
+  },
+  {
+    "input_json": "{\"number\": 2.741459421598483e-302}",
+    "canonical": "{\"number\":2.741459421598483e-302}",
+    "sha256": "b60d753d9adf83178e535e352fcb55d986e8a69310d65ea9d2bc5b7036d8961e"
+  },
+  {
+    "input_json": "{\"number\": -8.975651307834596e-251}",
+    "canonical": "{\"number\":-8.975651307834596e-251}",
+    "sha256": "4b2577214093732938d44b926eda2208b83382738d843ef628e4d7eecbfcfed3"
+  },
+  {
+    "input_json": "{\"number\": 7.925836158224677e-169}",
+    "canonical": "{\"number\":7.925836158224677e-169}",
+    "sha256": "99bc4853a19b7a86d29dae3a030c60e0d6677d65a94d7affd36cf40f043b3bbc"
+  },
+  {
+    "input_json": "{\"number\": 2.135171179348858e-105}",
+    "canonical": "{\"number\":2.135171179348858e-105}",
+    "sha256": "2885942d34b79264e98ae7dbf4d57dbef8a728d614bc3f2652ed4a054f66c28c"
+  },
+  {
+    "input_json": "{\"number\": 26018.16021189721}",
+    "canonical": "{\"number\":26018.16021189721}",
+    "sha256": "fbda98e04dc595b714547c283a569e04df6e54ff1d7939fbdb4d385bd50a4638"
+  },
+  {
+    "input_json": "{\"number\": 1.9302371020182237e-280}",
+    "canonical": "{\"number\":1.9302371020182237e-280}",
+    "sha256": "2b369102185247d7ebdd678ce0301e914b865b47eb6fcca1e14fd5555cb9467e"
+  },
+  {
+    "input_json": "{\"number\": -3.4758108412731574e-163}",
+    "canonical": "{\"number\":-3.4758108412731574e-163}",
+    "sha256": "ff473ac1b1a3370db8567466ea9fd5b0eafb6e430cdf4445d23f32f04c07aee9"
+  },
+  {
+    "input_json": "{\"number\": 1.761166651369302e+148}",
+    "canonical": "{\"number\":1.761166651369302e+148}",
+    "sha256": "48524a3d39e6f5e41c179a754d1ad318fbb829bb639732c5eedc5b6ef04f653b"
+  },
+  {
+    "input_json": "{\"number\": 1.424186476257343e-25}",
+    "canonical": "{\"number\":1.424186476257343e-25}",
+    "sha256": "3a8231badf5e5cfd9fa9f059a5a6dca1751cc6492a749086d8a5d99b0d2b7ce4"
+  },
+  {
+    "input_json": "{\"number\": 5.253252570551484e+98}",
+    "canonical": "{\"number\":5.253252570551484e+98}",
+    "sha256": "4f44893e833a9eb3df3cdae8df30a8caa65af16d8181840654033955b1ee47f7"
+  },
+  {
+    "input_json": "{\"number\": -4.5092079064629535e-201}",
+    "canonical": "{\"number\":-4.5092079064629535e-201}",
+    "sha256": "8850c038630f395ce4b19f5d9cca3e155f0936c73e37e18c55f7a7a68098bfbf"
+  },
+  {
+    "input_json": "{\"number\": 1.4988189889628207e-300}",
+    "canonical": "{\"number\":1.4988189889628207e-300}",
+    "sha256": "f9757a84046f709b4409e017580c846df6361fe0e925002b30dc853ecb6de199"
+  },
+  {
+    "input_json": "{\"number\": 2.428553878158507e-127}",
+    "canonical": "{\"number\":2.428553878158507e-127}",
+    "sha256": "751e587de462821b5aaa66c64b784330480601c85b247802d4e9e945baab87f3"
+  },
+  {
+    "input_json": "{\"number\": 2.636312368122259e+102}",
+    "canonical": "{\"number\":2.636312368122259e+102}",
+    "sha256": "d474f7b51631a65611eaad06cea1e5fe512c61f43e3081fbba8cc0a3629a456e"
+  },
+  {
+    "input_json": "{\"number\": 1.8068599448039776e-28}",
+    "canonical": "{\"number\":1.8068599448039776e-28}",
+    "sha256": "0b0ce16d8aaeb1de174e78c13995472be0920a68b53d39aa70b0699b2d421412"
+  },
+  {
+    "input_json": "{\"number\": 3.717157489588626e+88}",
+    "canonical": "{\"number\":3.717157489588626e+88}",
+    "sha256": "15bd26194aab5d9f904fc2692536af79cf0b6f8982f9c08d0b5ca6b71f2c4ae3"
+  },
+  {
+    "input_json": "{\"number\": 7.509541580213941e-239}",
+    "canonical": "{\"number\":7.509541580213941e-239}",
+    "sha256": "0b1a20bbef69707e5bc5514fdc78e17dd82a2e529918b28475bf3dd210d55d49"
+  },
+  {
+    "input_json": "{\"number\": -6.749769330900093e+129}",
+    "canonical": "{\"number\":-6.749769330900093e+129}",
+    "sha256": "1d6b75ac8f70465d90ac4dea9af16d87dbc93fb0c8ac6261859c654a087cf75f"
+  },
+  {
+    "input_json": "{\"number\": -1.098394428485287e+94}",
+    "canonical": "{\"number\":-1.098394428485287e+94}",
+    "sha256": "52f687519b314b834dc0bc9016906e6d0dba38c1a680f355d0f8947d523a4456"
+  },
+  {
+    "input_json": "{\"number\": -5.524678754300595e+126}",
+    "canonical": "{\"number\":-5.524678754300595e+126}",
+    "sha256": "13b3d2ace11455d3acb5e7b1a0a6214f42b6b6fb2d88471a7ba07aa6ef6934a7"
+  },
+  {
+    "input_json": "{\"number\": 7.244160909837591e+43}",
+    "canonical": "{\"number\":7.244160909837591e+43}",
+    "sha256": "93527cfb708e08b4dd39a0e7d2fac76aa5170f62c087e2bb63e47b98e85df3c1"
+  },
+  {
+    "input_json": "{\"number\": -9.786322498344331e+149}",
+    "canonical": "{\"number\":-9.786322498344331e+149}",
+    "sha256": "e93aa02faac16b81caba491a54046cf2c09da95aabe0aebe75d1b8e878737798"
+  },
+  {
+    "input_json": "{\"number\": -1.92506753809933e+226}",
+    "canonical": "{\"number\":-1.92506753809933e+226}",
+    "sha256": "322cb2605c07157f16e7f7151ea6e84695f8d4dc32ae60b5801494c7e00ef7fb"
+  },
+  {
+    "input_json": "{\"number\": 1.894005697757353e-260}",
+    "canonical": "{\"number\":1.894005697757353e-260}",
+    "sha256": "85a49bd78be17fe502950fff138415eb4d756c68bc1fe2dcc87527dbf2fdfc27"
+  },
+  {
+    "input_json": "{\"number\": 268.72697727901686}",
+    "canonical": "{\"number\":268.72697727901686}",
+    "sha256": "f3d263a319b9429ad51296338d39c4aa2b7b2970d9e166d7d74262aeb0770990"
+  },
+  {
+    "input_json": "{\"number\": 1.502353944251711e-149}",
+    "canonical": "{\"number\":1.502353944251711e-149}",
+    "sha256": "6521242f5e090ef06d737f986af427649a04d9962b77ab42b31744d39ad5cf62"
+  },
+  {
+    "input_json": "{\"number\": -1.0465374172468268e+96}",
+    "canonical": "{\"number\":-1.0465374172468268e+96}",
+    "sha256": "fab79168250110765e392b41fdce1852178c3e19b6149a23acd93dd1db2c65bc"
+  },
+  {
+    "input_json": "{\"number\": -1.854142635644954e+84}",
+    "canonical": "{\"number\":-1.854142635644954e+84}",
+    "sha256": "efde7a8baaf9ab95fca740e542bca19b964f135dd591ede710a180e6105c7246"
+  },
+  {
+    "input_json": "{\"number\": -7.161392848413043e-73}",
+    "canonical": "{\"number\":-7.161392848413043e-73}",
+    "sha256": "567319f83a9375733e034aff11556be24951001623bdd3aee7eec7ab40e3310b"
+  },
+  {
+    "input_json": "{\"number\": 1.188595549391227e+29}",
+    "canonical": "{\"number\":1.188595549391227e+29}",
+    "sha256": "0b1a93d84a0d8f3869497bd76479129625607ed12a9ef862afb2809c46bf4ae2"
+  },
+  {
+    "input_json": "{\"number\": -1.717503903649488e-115}",
+    "canonical": "{\"number\":-1.717503903649488e-115}",
+    "sha256": "14b5ef1518ed23371fb9b8014b47f157fede1b0b137e8e9ad72854f137963864"
+  },
+  {
+    "input_json": "{\"number\": 5.145794795511415e-165}",
+    "canonical": "{\"number\":5.145794795511415e-165}",
+    "sha256": "ded0f0f6303c53f167cfd30f1781118d5405db2fdaebd4c0d7c7555ce7da4b7d"
+  },
+  {
+    "input_json": "{\"number\": -5.7028032350252495e-188}",
+    "canonical": "{\"number\":-5.7028032350252495e-188}",
+    "sha256": "31246597bba0650b98e6878bdd6eafa182672b8325cd89b6c4def8fc11c59755"
+  },
+  {
+    "input_json": "{\"number\": 1.575922673790485e+228}",
+    "canonical": "{\"number\":1.575922673790485e+228}",
+    "sha256": "99cca866df0166be9e32920165fc4dfde8b59a5117d08236599501b8f975e2de"
+  },
+  {
+    "input_json": "{\"number\": 1.0592401134477012e-159}",
+    "canonical": "{\"number\":1.0592401134477012e-159}",
+    "sha256": "48811c082af6eceab8aca616a1445816b40ba975df83c3799f40e2198cf16ccc"
+  },
+  {
+    "input_json": "{\"number\": -1.6799503816953973e-45}",
+    "canonical": "{\"number\":-1.6799503816953973e-45}",
+    "sha256": "f899368299b7cdd2644491e92af7650139b07792d124d1088bd8624d05aea7a7"
+  },
+  {
+    "input_json": "{\"number\": 1.3562894433674195e-153}",
+    "canonical": "{\"number\":1.3562894433674195e-153}",
+    "sha256": "a8ad5468396c2dbdd029130ac1727255bd8418bdbd3315f29d13da84e4c8226a"
+  },
+  {
+    "input_json": "{\"number\": -8.4155815354865285e+270}",
+    "canonical": "{\"number\":-8.4155815354865285e+270}",
+    "sha256": "67514a257b30ef73baceabe03f19b1da04417a509af2ac5607157caba80acac5"
+  },
+  {
+    "input_json": "{\"number\": 4.314171962606562e+279}",
+    "canonical": "{\"number\":4.314171962606562e+279}",
+    "sha256": "d7ae8c1b78a52cc9aec060a68a92174595047d907a870c8761a07fd708d4b790"
+  },
+  {
+    "input_json": "{\"number\": -4.245169129545803e-196}",
+    "canonical": "{\"number\":-4.245169129545803e-196}",
+    "sha256": "fa13b251fd2a852608d102d5e77d98cfd34a47d9dd9bfa539bf246b07a781702"
+  },
+  {
+    "input_json": "{\"number\": -8.267713442064937e-180}",
+    "canonical": "{\"number\":-8.267713442064937e-180}",
+    "sha256": "f12b0f9f723ac30e895ff8306a3074f59bfa2cd8995b0f6d50166db577ecc4de"
+  },
+  {
+    "input_json": "{\"number\": 3.8904032929042617e+270}",
+    "canonical": "{\"number\":3.8904032929042617e+270}",
+    "sha256": "0ce9f6bb5ada31aa43107181a14040ba83667d497d35d7a686861d3e3cd74712"
+  },
+  {
+    "input_json": "{\"number\": 6.101022894008332e-83}",
+    "canonical": "{\"number\":6.101022894008332e-83}",
+    "sha256": "640d46f99f423feead2649f9e40f37098b3ed2184b17579935271773bdb038a0"
+  },
+  {
+    "input_json": "{\"number\": 2.3194043954660885e+209}",
+    "canonical": "{\"number\":2.3194043954660885e+209}",
+    "sha256": "b21dd5742647a968895d2041a515d425c0a482ef02ec5041708caeb420aa639c"
+  },
+  {
+    "input_json": "{\"number\": -3.797121888698746e-245}",
+    "canonical": "{\"number\":-3.797121888698746e-245}",
+    "sha256": "bf19104769a63dffc01eb06a3c8d06b04599cc6cb5f9a4851d7f4b71dbfac223"
+  },
+  {
+    "input_json": "{\"number\": -1.5807632499127307e+130}",
+    "canonical": "{\"number\":-1.5807632499127307e+130}",
+    "sha256": "407775e033cdc28c43081a36f0339ce4cb3fe77ccb1691790a5dc1701499e589"
+  },
+  {
+    "input_json": "{\"number\": -5.612010522807524e+307}",
+    "canonical": "{\"number\":-5.612010522807524e+307}",
+    "sha256": "bf80e97212755790bb6547dd8e92a375af56ff8cac8cd6db08dc44a21a111e9a"
+  },
+  {
+    "input_json": "{\"number\": -2.106399202294412e+189}",
+    "canonical": "{\"number\":-2.106399202294412e+189}",
+    "sha256": "08c171c6a51dd3fa925a780f2cecfdcc15e42aaf749c187d7b6d062e5478f2e2"
+  },
+  {
+    "input_json": "{\"number\": 3.1920193639200737e-167}",
+    "canonical": "{\"number\":3.1920193639200737e-167}",
+    "sha256": "9f78c38f4790acec4a9b038b331184281f5500850c466084ecaf8ad54f3bd2f5"
+  },
+  {
+    "input_json": "{\"number\": 3.268947253905089e+267}",
+    "canonical": "{\"number\":3.268947253905089e+267}",
+    "sha256": "7ffa918f08174ec473fb62cca375be3bb124ee5da4a4c1ef64ca6aa5aa82e5d3"
+  },
+  {
+    "input_json": "{\"number\": -2.6533666489225675e+252}",
+    "canonical": "{\"number\":-2.6533666489225675e+252}",
+    "sha256": "b8d2fd6a84abfaa8471d0946a87217c87cc4c0f38b66a5a87ce0658636dc9e45"
+  },
+  {
+    "input_json": "{\"number\": -4.3860235597245134e-302}",
+    "canonical": "{\"number\":-4.3860235597245134e-302}",
+    "sha256": "9462da8da92f7dd8ddb32c6b0c688faa5507059278adf0f3aa3e446e27c3df56"
+  },
+  {
+    "input_json": "{\"number\": -7.4372828907100295e-31}",
+    "canonical": "{\"number\":-7.4372828907100295e-31}",
+    "sha256": "61601d91fbca830b917e2bb95bb1ee4b2c8bdbe499b8ee915e93b5961ccde6d5"
+  },
+  {
+    "input_json": "{\"number\": 6.774319304618627e-225}",
+    "canonical": "{\"number\":6.774319304618627e-225}",
+    "sha256": "0d9c705f5fa08e660666822dbc83a7b129cc0af9e4546b918d2fef7d2c4a2e22"
+  },
+  {
+    "input_json": "{\"number\": -2.100848507017177e+29}",
+    "canonical": "{\"number\":-2.100848507017177e+29}",
+    "sha256": "ca3882b75dc6d8cb6e0ee1d5d091c9ee424e96fc6c0ef5e238d1ef002ab78692"
+  },
+  {
+    "input_json": "{\"number\": 5.077725946248666e+224}",
+    "canonical": "{\"number\":5.077725946248666e+224}",
+    "sha256": "774c9636c59b640eaed07131bd7719ab81037015044c63dc84eabf960d73e5ae"
+  },
+  {
+    "input_json": "{\"number\": -4.658883376646376e+180}",
+    "canonical": "{\"number\":-4.658883376646376e+180}",
+    "sha256": "859793f08231f71e1025b09d4355d4aae5688a2ca8139c6c739fdfd5dcf1921f"
+  },
+  {
+    "input_json": "{\"number\": 1.4994367768526745e-269}",
+    "canonical": "{\"number\":1.4994367768526745e-269}",
+    "sha256": "29bdb800b11a1262a77f87e3de4b13f3d15ba0f5f50891c9848f578ca0e0ff05"
+  },
+  {
+    "input_json": "{\"number\": 8.928872488806414e+277}",
+    "canonical": "{\"number\":8.928872488806414e+277}",
+    "sha256": "19569ecad7320316fd82cfdf253d677753f9daddfbf1dcfd82d971c0f3a16656"
+  },
+  {
+    "input_json": "{\"number\": 9.037110115973722e-38}",
+    "canonical": "{\"number\":9.037110115973722e-38}",
+    "sha256": "80563df468b8b8a0e5e8b283b2a482d1c3a3ea4000bca9be14bbafff1a414e45"
+  },
+  {
+    "input_json": "{\"number\": -4.3720615361206225e+188}",
+    "canonical": "{\"number\":-4.3720615361206225e+188}",
+    "sha256": "a6b9e667f4481f6af14b47156eb7338030e20c9b5f7616d8ba82d2f3e4d703d3"
+  },
+  {
+    "input_json": "{\"number\": -6.454651972862913e+248}",
+    "canonical": "{\"number\":-6.454651972862913e+248}",
+    "sha256": "f9d9cddfbbaff5d864818eaa7f3504e19b5a73b834288a7f6b62147c01315bcc"
+  },
+  {
+    "input_json": "{\"number\": -1.5920833935292909e+273}",
+    "canonical": "{\"number\":-1.5920833935292909e+273}",
+    "sha256": "700bb8583c2071d818500db287994c6f153dee962c4d2ae423ed377cab148604"
+  },
+  {
+    "input_json": "{\"number\": 4.5525379390259865e-172}",
+    "canonical": "{\"number\":4.5525379390259865e-172}",
+    "sha256": "3d250a650f19fa4c30f269e2ff4ffd8c4b01d651c0ba9df5d1c630c04ab8ef89"
+  },
+  {
+    "input_json": "{\"number\": -5.141175076747269e+222}",
+    "canonical": "{\"number\":-5.141175076747269e+222}",
+    "sha256": "b03c0b4c868b4f1c979ca660588c06773b3690227e163b0115c6451ea74d545a"
+  },
+  {
+    "input_json": "{\"number\": -1.0976649550776611e-40}",
+    "canonical": "{\"number\":-1.0976649550776611e-40}",
+    "sha256": "0fc174e1fc8fc1f8d6bc163e481c1abbd2d549c5a2291bede881e93ea718e6f8"
+  },
+  {
+    "input_json": "{\"number\": -8.268716956045354e-220}",
+    "canonical": "{\"number\":-8.268716956045354e-220}",
+    "sha256": "5074b75537465901bc20e3931d70de796568781dcd22e85db51647d498ab0453"
+  }
+]

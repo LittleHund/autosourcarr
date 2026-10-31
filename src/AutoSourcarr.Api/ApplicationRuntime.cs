@@ -1,0 +1,334 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
+using AutoSourcarr.Api.Endpoints;
+using AutoSourcarr.Api.Http;
+using AutoSourcarr.Core.Settings;
+using AutoSourcarr.Core.Concurrency;
+using AutoSourcarr.Core.Diagnostics;
+using AutoSourcarr.Core.Privacy;
+using AutoSourcarr.Core.Jobs;
+using AutoSourcarr.Core.Persistence;
+using AutoSourcarr.Core.Sources.Runtime;
+using AutoSourcarr.Core.Sources;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.FileProviders;
+
+[assembly: InternalsVisibleTo("AutoSourcarr.Tests")]
+
+namespace AutoSourcarr.Api;
+
+/// <summary>One app owner for the existing storage, source and HTTP components.
+/// Additional domain routes remain migration work; this is not default-runtime promotion.</summary>
+internal sealed class ApplicationRuntime : IAsyncDisposable
+{
+    internal const string Version = "0.4.3-migration";
+    private readonly object _closeGate = new();
+    private readonly object _catalogueWriteGate = new();
+    private readonly OperationOwner _http = new();
+    private readonly CancellationTokenSource _logStop = new(), _watchStop = new();
+    private readonly BoundedWorkScheduler _healthIo = new(1, 4), _logIo = new(1, 16);
+    private readonly SemaphoreSlim _admin = new(1, 1);
+    private readonly TaskCompletionSource<Exception> _fatal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private InstanceRoots? _roots;
+    private SqliteDatabase? _database;
+    private SettingsRepository? _preferences;
+    private SupportLogStore? _logs;
+    private NativeSourceOwnerConnection? _native;
+    private NativeSourceSnapshots? _snapshots;
+    private SourceEngineController? _source;
+    private SourceAttention? _attention;
+    private CatalogueRuntime? _catalogue;
+    private string? _dataDirectory;
+    private SuwayomiClient? _main;
+    private SourceEngineCapabilityContract? _mainCapabilities;
+    private PhysicalFileProvider? _static;
+    private Task? _writer, _sourceWatch, _close;
+    private bool _configured;
+
+    private ApplicationRuntime(AutoSourcarrSettings settings)
+    {
+        Settings = settings; Identity = RuntimeIdentity.Create(Version);
+        Tasks = new(); Lanes = new(settings, Tasks); Errors = new(Identity, Privacy);
+    }
+    internal AutoSourcarrSettings Settings { get; }
+    internal RuntimeIdentity Identity { get; }
+    internal SupportPrivacy Privacy { get; } = new();
+    internal ErrorRegistry Errors { get; }
+    internal TaskRegistry Tasks { get; }
+    internal WholeTaskCoordinator Lanes { get; }
+    internal RequestAdmissionGate Admission { get; } = new();
+    internal BoundedWorkScheduler Io { get; } = new(4, 64);
+    internal SqliteDatabase Database => _database ?? throw new InvalidOperationException("Storage is not initialized.");
+    internal SettingsRepository Preferences => _preferences ?? throw new InvalidOperationException("Preferences are not initialized.");
+    internal SupportLogStore Logs => _logs ?? throw new InvalidOperationException("Diagnostics are not initialized.");
+    internal NativeSourceSnapshots? SourceSnapshots => _snapshots;
+    internal SourceEngineController SourceRuntime => _source ?? throw new InvalidOperationException("Source runtime is not initialized.");
+    internal CatalogueRuntime Catalogue => _catalogue ?? throw new InvalidOperationException("Catalogue is not initialized.");
+    internal object CatalogueWriteGate => _catalogueWriteGate;
+    internal Task<Exception> FatalFailure => _fatal.Task;
+    internal bool Stopping => _http.IsStopping;
+
+    internal static Task<ApplicationRuntime> CreateNativeAsync(StartupConfigurationSnapshot startup,
+        IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken = default)
+    {
+        // No production switch bypasses the actual native identity/channel checks.
+        NativeSourceOwnerConnection.RequirePostExecPrivacyBeforeConfiguration();
+        return OpenAsync(startup, environment, acceptInherited: true, cancellationToken);
+    }
+
+    /// <summary>Controlled external-only composition. It cannot create a native connection,
+    /// snapshot reader, process generation or repair-isolation proof.</summary>
+    internal static Task<ApplicationRuntime> CreateExternalForTestsAsync(AutoSourcarrSettings settings,
+        string configurationRoot, CancellationToken cancellationToken = default)
+    {
+        if (settings.SourceEngineMode != "external") throw new ArgumentException("The controlled host supports external mode only.");
+        return OpenAsync(new(settings, Path.GetFullPath(configurationRoot)), new Dictionary<string, string?>(),
+            acceptInherited: false, cancellationToken);
+    }
+
+    private static async Task<ApplicationRuntime> OpenAsync(StartupConfigurationSnapshot startup,
+        IReadOnlyDictionary<string, string?> environment, bool acceptInherited, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(startup); ArgumentNullException.ThrowIfNull(environment);
+        var owner = new ApplicationRuntime(startup.Settings);
+        try
+        {
+            owner.Privacy.Register(environment);
+            owner.Privacy.Register(SettingsLoader.ToEnvironment(startup.Settings, includeSecrets: true)
+                .ToDictionary(pair => pair.Key, pair => (string?)pair.Value, StringComparer.Ordinal));
+            cancellationToken.ThrowIfCancellationRequested();
+            await owner.Io.RunAsync(() =>
+            {
+                // Reuse the existing ~ expansion and strict external DATABASE_DIR checks.
+                // An absent configured database mount must never become an empty replacement.
+                var data = DatabasePaths.Resolve(startup.Settings with { DatabaseDir = null }).Directory;
+                owner._dataDirectory = data;
+                var paths = DatabasePaths.Resolve(startup.Settings);
+                owner._roots = InstanceRoots.Acquire([data, startup.ConfigurationRoot, paths.Directory]);
+                owner._database = new(startup.Settings);
+                new SchemaMigrator(owner.Database).Initialize();
+                owner._preferences = new(owner.Database);
+                owner._logs = new(owner._logIo, owner.Identity, owner.Privacy, data);
+                return 0;
+            }, cancellationToken).ConfigureAwait(false);
+            if (acceptInherited)
+                owner._native = await NativeSourceOwnerConnection.AcceptInheritedAsync(startup.SourceRequest, cancellationToken, owner.Logs).ConfigureAwait(false);
+            if ((startup.Settings.SourceEngineMode == "integrated") != (owner._native is not null))
+                throw new InvalidDataException("Source mode and native boot ownership disagree.");
+            if (owner._native is not null)
+                owner._snapshots = await NativeSourceSnapshots.CreateAsync(owner._native, owner.Io, cancellationToken).ConfigureAwait(false);
+            var launch = new SourceEngineEnvironment(startup.ConfigurationRoot, "/home/suwayomi/.local/share/Tachidesk", owner.Privacy);
+            owner._source = owner._native is null
+                ? await SourceEngineController.CreateExternalAsync(startup.Settings, launch, environment, owner._admin, owner.Io,
+                    owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false)
+                : await SourceEngineController.CreateIntegratedAsync(startup.Settings, owner._native, launch, environment, owner._admin, owner.Io,
+                    owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false);
+            owner._attention = new(owner.Database, owner.Io, privacy: owner.Privacy);
+            owner._source.Client.Attention = owner._attention;
+            owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
+                owner._dataDirectory!, () => owner.Settings, owner.Io, owner._source.Client, owner.Tasks, owner.Lanes, owner.Logs, cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrWhiteSpace(startup.Settings.MainSuwayomiUrl))
+            {
+                owner._main = new(startup.Settings, startup.Settings.MainSuwayomiUrl,
+                    username: startup.Settings.MainSuwayomiUsername, password: startup.Settings.MainSuwayomiPassword, privacy: owner.Privacy);
+                owner._mainCapabilities = new(owner.Preferences, owner._main,
+                    SourceEngineCapabilityIdentity.ConfiguredExternal(startup.Settings.MainSuwayomiUrl,
+                        startup.Settings.MainSuwayomiUsername, startup.Settings.MainSuwayomiPassword), owner.Privacy, "main");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            owner._writer = owner.WriteLogsAsync();
+            owner._sourceWatch = owner.WatchSourceAsync();
+            await owner._source.StartAsync().ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return owner;
+        }
+        catch (Exception primary)
+        {
+            owner._logs?.Record("Startup", "Application composition failed (" + primary.GetType().Name + ").");
+            try { await owner.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception cleanup) { throw new AggregateException("Application startup and owned cleanup failed.", primary, cleanup); }
+            throw;
+        }
+    }
+
+    internal Task BeginHttpStopAsync() => _http.StopAsync();
+
+    internal void ConfigureHttp(IApplicationBuilder app, string staticRoot)
+    {
+        if (_configured || Stopping) throw new InvalidOperationException("The application HTTP lifetime cannot be configured again.");
+        _configured = true;
+        _static = new(Path.GetFullPath(staticRoot));
+        app.Use(next => context => OwnRequestAsync(context, next));
+        app.UseAutoSourcarrHttp(Version, () => Settings, RecordUnexpected, Admission, Lanes, Tasks, Privacy,
+            prefix => Errors.ResolvePrefix(prefix));
+        app.UseStaticFiles(new StaticFileOptions { RequestPath = "/static", FileProvider = _static });
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapGet("/", (HttpContext context) =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                return Results.File(Path.Combine(_static.Root, "index.html"), "text/html; charset=utf-8");
+            });
+            endpoints.MapMethods("/api/v1/live", ["GET", "HEAD"], (Func<HttpContext, Task<IResult>>)LivenessAsync);
+            endpoints.MapUiPreferences(Preferences, Io, () => Settings);
+            endpoints.MapErrors(Errors, Io, () => Settings);
+            endpoints.MapEngineCompatibility(_source!.CapabilityService, _mainCapabilities, () => Settings, _admin);
+            Catalogue.MapEndpoints(endpoints, Io, () => Settings, _admin);
+        });
+    }
+
+    private async Task OwnRequestAsync(HttpContext context, RequestDelegate next)
+    {
+        IDisposable lease;
+        try { lease = _http.Enter(); }
+        catch (OperationCanceledException)
+        {
+            context.Response.Headers.RetryAfter = "5";
+            await Results.Json(new { detail = "The application is shutting down." }, statusCode: 503).ExecuteAsync(context).ConfigureAwait(false);
+            return;
+        }
+        using (lease)
+        {
+            var original = context.RequestAborted;
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(original, _http.CancellationToken);
+            context.RequestAborted = linked.Token;
+            try { await next(context).ConfigureAwait(false); }
+            finally { context.RequestAborted = original; }
+        }
+    }
+
+    private async Task<IResult> LivenessAsync(HttpContext context)
+    {
+        try
+        {
+            await _healthIo.RunAsync(() =>
+            {
+                _ = Database.Read(DatabaseFile.Catalog, connection => connection.Scalar("SELECT 1"));
+                _ = Database.Read(DatabaseFile.Origins, connection => connection.Scalar("SELECT 1"));
+                return 0;
+            }, context.RequestAborted).ConfigureAwait(false);
+            return Results.Json(new { ok = true, version = Version });
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception error)
+        {
+            _ = RecordUnexpected(context, error);
+            return Results.Json(new { detail = "Database health check incomplete: " + error.GetType().Name }, statusCode: 503);
+        }
+    }
+    private string RecordUnexpected(HttpContext context, Exception error)
+    {
+        Logs.Record("AutoSourcarr", error.Message);
+        return Errors.Record("AutoSourcarr", error.Message,
+            $"unhandled|{context.Request.Method}|{context.Request.Path}|{error.GetType().Name}|{error.Message}",
+            path: context.Request.Path.Value ?? "", method: context.Request.Method, errorType: error.GetType().Name, exception: error);
+    }
+    private async Task WatchSourceAsync()
+    {
+        try { _fatal.TrySetResult(await _source!.FatalFailure.WaitAsync(_watchStop.Token).ConfigureAwait(false)); }
+        catch (OperationCanceledException) when (_watchStop.IsCancellationRequested) { }
+    }
+    private async Task WriteLogsAsync()
+    {
+        try
+        {
+            while (!_logStop.IsCancellationRequested)
+            {
+                try { await Logs.RunWriterAsync(_logStop.Token).ConfigureAwait(false); }
+                catch (WorkDeferredException) when (!_logStop.IsCancellationRequested)
+                { await Task.Delay(TimeSpan.FromSeconds(1), _logStop.Token).ConfigureAwait(false); }
+            }
+        }
+        catch (OperationCanceledException) when (_logStop.IsCancellationRequested) { }
+        catch (Exception error) { _fatal.TrySetResult(error); throw; }
+    }
+
+    public ValueTask DisposeAsync() { lock (_closeGate) return new(_close ??= CloseAsync()); }
+    private async Task CloseAsync()
+    {
+        // Publish the cached close task before callbacks can re-enter this owner.
+        await Task.Yield();
+        List<Exception> errors = [];
+        async Task Attempt(string stage, Func<Task> close)
+        {
+            try { await close().ConfigureAwait(false); }
+            catch (Exception error)
+            {
+                errors.Add(error);
+                _logs?.Record("Shutdown", stage + " failed (" + error.GetType().Name + ").");
+            }
+        }
+        await Attempt("HTTP drain", BeginHttpStopAsync).ConfigureAwait(false);
+        await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_main is not null) await Attempt("Main transport", () => _main.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_source is not null) await Attempt("Source lifetime", () => _source.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_native is not null) await Attempt("Native lifetime", () => _native.DisposeAsync().AsTask()).ConfigureAwait(false);
+        await Attempt("Source status watch cancellation", () => _watchStop.CancelAsync()).ConfigureAwait(false);
+        if (_sourceWatch is not null) await Attempt("Source status watch", () => _sourceWatch).ConfigureAwait(false);
+        await Attempt("General physical I/O", () => Io.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_database is not null)
+            await Attempt("Database close", async () =>
+            { await _healthIo.RunAsync(() => { _database.Dispose(); return 0; }, CancellationToken.None).ConfigureAwait(false); }).ConfigureAwait(false);
+        await Attempt("Health physical I/O", () => _healthIo.DisposeAsync().AsTask()).ConfigureAwait(false);
+        await Attempt("Log writer cancellation", () => _logStop.CancelAsync()).ConfigureAwait(false);
+        if (_writer is not null) await Attempt("Log writer", () => _writer).ConfigureAwait(false);
+        if (_logs is not null) await Attempt("Diagnostic store", () => _logs.DisposeAsync().AsTask()).ConfigureAwait(false);
+        await Attempt("Diagnostic physical I/O", () => _logIo.DisposeAsync().AsTask()).ConfigureAwait(false);
+        await Attempt("HTTP ownership", () => _http.DisposeAsync().AsTask()).ConfigureAwait(false);
+        try { _static?.Dispose(); } catch (Exception error) { errors.Add(error); }
+        try { _roots?.Dispose(); } catch (Exception error) { errors.Add(error); }
+        _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose();
+        if (errors.Count > 0) throw new AggregateException("Application shutdown retained cleanup failures.", errors);
+    }
+
+    /// <summary>Held regular-file locks, not deletion/recreation markers. Raw-source storage
+    /// is deliberately excluded so independent instances may share only their raw archives.</summary>
+    internal sealed class InstanceRoots : IDisposable
+    {
+        private readonly List<FileStream> _files = [];
+        private int _closed;
+        internal static InstanceRoots Acquire(IEnumerable<string> roots)
+        {
+            var held = new InstanceRoots();
+            try
+            {
+                var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                foreach (var root in roots.Select(path => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path))).Distinct(comparer).Order(comparer))
+                {
+                    PrivateDocumentStore.ValidateDirectory(root);
+                    var file = PrivateDocumentStore.OpenRegular(Path.Combine(root, ".autosourcarr-instance.lock"), writable: true, create: true, maximum: 64);
+                    var locked = false;
+                    try
+                    {
+                        if (!PrivateDocumentStore.TryExclusiveLock(file)) throw new IOException("Another AutoSourcarr process already owns this instance storage.");
+                        locked = true; held._files.Add(file);
+                        if (file.Length == 0) { file.WriteByte((byte)'0'); file.Flush(flushToDisk: true); }
+                    }
+                    finally { if (!locked) file.Dispose(); }
+                }
+                return held;
+            }
+            catch (Exception primary)
+            {
+                try { held.Dispose(); }
+                catch (Exception cleanup) { throw new AggregateException("Instance admission and lock cleanup failed.", primary, cleanup); }
+                throw;
+            }
+        }
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _closed, 1) != 0) return;
+            List<Exception> errors = [];
+            foreach (var file in _files.AsEnumerable().Reverse())
+            {
+                try { PrivateDocumentStore.ReleaseExclusiveLock(file); } catch (Exception error) { errors.Add(error); }
+                try { file.Dispose(); } catch (Exception error) { errors.Add(error); }
+            }
+            if (errors.Count > 0) throw new AggregateException("Instance lock cleanup failed.", errors);
+        }
+    }
+}

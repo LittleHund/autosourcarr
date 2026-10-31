@@ -1,0 +1,3857 @@
+{
+  "baseline": "0.4.3",
+  "sources": {
+    "autosourcarr\\app\\service.py": "77390f1645c036085ac2ea670638ee7e551b32dc114109d18ff14244efbcccc7",
+    "autosourcarr\\app\\serving_profiles.py": "aa763fb47f3ee7e60e75962f1c095ddcbd13914eb5897f8b74f1cfd6ac62f76c"
+  },
+  "cases": [
+    {
+      "kind": "season",
+      "name": "Chapter 1",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "Chapter 1",
+      "result": "Chapter 1"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "Chapter 1",
+      "result": "Chapter 0: Chapter 1"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "Chapter 1",
+      "result": "Chapter 1"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "Chapter 1",
+      "result": "Chapter 2.5: Chapter 1"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "Chapter 1",
+      "result": "Chapter 10: Chapter 1"
+    },
+    {
+      "kind": "season",
+      "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+      "result": 2
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+      "result": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+      "result": "Chapter 0: Ep. 1 - Log In (1) (Season 2 Premiere)"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+      "result": "Chapter 1: Log In (1) (Season 2 Premiere)"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+      "result": "Chapter 2.5: Ep. 1 - Log In (1) (Season 2 Premiere)"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+      "result": "Chapter 10: Ep. 1 - Log In (1) (Season 2 Premiere)"
+    },
+    {
+      "kind": "season",
+      "name": "Chapter 1: Hello",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "Chapter 1: Hello",
+      "result": "Chapter 1: Hello"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "Chapter 1: Hello",
+      "result": "Chapter 0: Chapter 1: Hello"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "Chapter 1: Hello",
+      "result": "Chapter 1: Hello"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "Chapter 1: Hello",
+      "result": "Chapter 2.5: Chapter 1: Hello"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "Chapter 1: Hello",
+      "result": "Chapter 10: Chapter 1: Hello"
+    },
+    {
+      "kind": "season",
+      "name": "1 - hello",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "1 - hello",
+      "result": "1 - hello"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "1 - hello",
+      "result": "Chapter 0: 1 - hello"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "1 - hello",
+      "result": "Chapter 1: hello"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "1 - hello",
+      "result": "Chapter 2.5: 1 - hello"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "1 - hello",
+      "result": "Chapter 10: 1 - hello"
+    },
+    {
+      "kind": "season",
+      "name": "Episode 2.5: Roads",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "Episode 2.5: Roads",
+      "result": "Episode 2.5: Roads"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "Episode 2.5: Roads",
+      "result": "Chapter 0: Episode 2.5: Roads"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "Episode 2.5: Roads",
+      "result": "Chapter 1: Episode 2.5: Roads"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "Episode 2.5: Roads",
+      "result": "Chapter 2.5: Roads"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "Episode 2.5: Roads",
+      "result": "Chapter 10: Episode 2.5: Roads"
+    },
+    {
+      "kind": "season",
+      "name": "Season 002: Chapter 1 [official]",
+      "result": 2
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "Season 002: Chapter 1 [official]",
+      "result": "Season 002: Chapter 1 [official]"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "Season 002: Chapter 1 [official]",
+      "result": "Chapter 0: Chapter 1 [official]"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "Season 002: Chapter 1 [official]",
+      "result": "Chapter 1: [official]"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "Season 002: Chapter 1 [official]",
+      "result": "Chapter 2.5: Chapter 1 [official]"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "Season 002: Chapter 1 [official]",
+      "result": "Chapter 10: Chapter 1 [official]"
+    },
+    {
+      "kind": "season",
+      "name": "New Official Secrets",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "New Official Secrets",
+      "result": "New Official Secrets"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "New Official Secrets",
+      "result": "Chapter 0: New Official Secrets"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "New Official Secrets",
+      "result": "Chapter 1: New Official Secrets"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "New Official Secrets",
+      "result": "Chapter 2.5: New Official Secrets"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "New Official Secrets",
+      "result": "Chapter 10: New Official Secrets"
+    },
+    {
+      "kind": "season",
+      "name": "章",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "章",
+      "result": "章"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "章",
+      "result": "Chapter 0: 章"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "章",
+      "result": "Chapter 1: 章"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "章",
+      "result": "Chapter 2.5: 章"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "章",
+      "result": "Chapter 10: 章"
+    },
+    {
+      "kind": "season",
+      "name": "Episode 0",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "Episode 0",
+      "result": "Episode 0"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "Episode 0",
+      "result": "Chapter 0"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "Episode 0",
+      "result": "Chapter 1: Episode 0"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "Episode 0",
+      "result": "Chapter 2.5: Episode 0"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "Episode 0",
+      "result": "Chapter 10: Episode 0"
+    },
+    {
+      "kind": "season",
+      "name": "Chapter 10.000: Translation",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "Chapter 10.000: Translation",
+      "result": "Chapter 10.000: Translation"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "Chapter 10.000: Translation",
+      "result": "Chapter 0: Chapter 10.000: Translation"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "Chapter 10.000: Translation",
+      "result": "Chapter 1: 0.000: Translation"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "Chapter 10.000: Translation",
+      "result": "Chapter 2.5: Chapter 10.000: Translation"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "Chapter 10.000: Translation",
+      "result": "Chapter 10: Translation"
+    },
+    {
+      "kind": "season",
+      "name": "S03 Ep 1 - Faraway",
+      "result": 3
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "S03 Ep 1 - Faraway",
+      "result": "S03 Ep 1 - Faraway"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "S03 Ep 1 - Faraway",
+      "result": "Chapter 0: Ep 1 - Faraway"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "S03 Ep 1 - Faraway",
+      "result": "Chapter 1: Faraway"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "S03 Ep 1 - Faraway",
+      "result": "Chapter 2.5: Ep 1 - Faraway"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "S03 Ep 1 - Faraway",
+      "result": "Chapter 10: Ep 1 - Faraway"
+    },
+    {
+      "kind": "season",
+      "name": "S2x not season",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "S2x not season",
+      "result": "S2x not season"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "S2x not season",
+      "result": "Chapter 0: x not season"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "S2x not season",
+      "result": "Chapter 1: x not season"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "S2x not season",
+      "result": "Chapter 2.5: x not season"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "S2x not season",
+      "result": "Chapter 10: x not season"
+    },
+    {
+      "kind": "season",
+      "name": "",
+      "result": 1
+    },
+    {
+      "kind": "display",
+      "number": -1,
+      "name": "",
+      "result": "Chapter"
+    },
+    {
+      "kind": "display",
+      "number": 0,
+      "name": "",
+      "result": "Chapter 0"
+    },
+    {
+      "kind": "display",
+      "number": 1,
+      "name": "",
+      "result": "Chapter 1"
+    },
+    {
+      "kind": "display",
+      "number": 2.5,
+      "name": "",
+      "result": "Chapter 2.5"
+    },
+    {
+      "kind": "display",
+      "number": 10,
+      "name": "",
+      "result": "Chapter 10"
+    },
+    {
+      "kind": "source",
+      "name": "MANGA Plus",
+      "url": "",
+      "result": true
+    },
+    {
+      "kind": "source",
+      "name": "Foo",
+      "url": "https://www.webtoons.com/x",
+      "result": true
+    },
+    {
+      "kind": "source",
+      "name": "Foo",
+      "url": "https://webtoons.com.evil.invalid",
+      "result": false
+    },
+    {
+      "kind": "source",
+      "name": "Viz Manga",
+      "url": "",
+      "result": true
+    },
+    {
+      "kind": "source",
+      "name": "Ordinary",
+      "url": "",
+      "result": false
+    },
+    {
+      "kind": "source",
+      "name": "Ordinary",
+      "url": "https://tapas.io",
+      "result": true
+    },
+    {
+      "kind": "source",
+      "name": "Official Manga",
+      "url": "https://example.invalid",
+      "result": false
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 0,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 0,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -910000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "6084907896154116083": 0
+      },
+      "maximum": 40,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 101000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 1: Hello",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 1: Hello",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 390000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 0
+      },
+      "maximum": 90,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": -594444.4444444445
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -884000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": -586600.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 100525.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Episode 2.5: Roads",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "The Official"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Episode 2.5: Roads",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 0,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 390000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 101000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": -575500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1: Hello",
+        "page_count": 90,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1: Hello",
+        "page_count": 90,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "6084907896154116083": 0
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 101800.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 5,
+        "quality_score": 100,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 5,
+        "quality_score": 100,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 90,
+      "official": [
+        "local"
+      ],
+      "result": -1593711.111111111
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "Official",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "Official",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 0
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 426000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "Official",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "Official",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 0,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 402700.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -896975.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1: Hello",
+        "page_count": 5,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1: Hello",
+        "page_count": 5,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 40,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 98125.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Official",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Official",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "6084907896154116083": 0
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 405555.55555555556
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Official",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Official",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": 412500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 90020.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 40,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 115000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 134500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 100,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 100,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 0,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 104900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 5,
+        "quality_score": null,
+        "scanlator": "",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 5,
+        "quality_score": null,
+        "scanlator": "",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -606875.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": 394500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Episode 2.5: Roads",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Episode 2.5: Roads",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 0
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 130000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 90,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 101288.88888888889
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 1,
+        "quality_score": null,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 1,
+        "quality_score": null,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -1909375.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 40,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 124900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Official",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Official",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 395625.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "official": [
+        "local"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 90,
+      "official": [
+        "local"
+      ],
+      "result": -1904722.2222222222
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 20,
+        "quality_score": 90,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 20,
+        "quality_score": 90,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 400055.55555555556
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 0,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": -1909600.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 100300.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "",
+        "page_count": 20,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "-9223372036854775808": 0
+      },
+      "maximum": 40,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 112500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 102288.88888888889
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 1: Hello",
+        "page_count": 1,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 1: Hello",
+        "page_count": 1,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": 105125.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 1,
+        "quality_score": 90,
+        "scanlator": "publisher release",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 1,
+        "quality_score": 90,
+        "scanlator": "publisher release",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": -605222.2222222222
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1: Hello",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1: Hello",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 90,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 99900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 1,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 1,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -1894875.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "1 - hello",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "1 - hello",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 124500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 1,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 1,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": -908722.2222222222
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": 104400.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 92388.88888888889
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 90,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 106455.55555555556
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 90,
+        "quality_score": 100,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 90,
+        "quality_score": 100,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 406700.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Episode 2.5: Roads",
+        "page_count": 90,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Episode 2.5: Roads",
+        "page_count": 90,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 40,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 124900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "New Official Secrets",
+        "page_count": 1,
+        "quality_score": null,
+        "scanlator": "publisher release",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "New Official Secrets",
+        "page_count": 1,
+        "quality_score": null,
+        "scanlator": "publisher release",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 390020.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": ""
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 0,
+      "official": [
+        "local"
+      ],
+      "result": -609900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -870600.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 0,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 91100.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "章",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "章",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 101100.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 90277.77777777778
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 96555.55555555556
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 90,
+      "official": [
+        "local"
+      ],
+      "result": 100000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1: Hello",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1: Hello",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 129900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 0,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": -909980.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 90,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 90,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 104800.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Official",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Official",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": -604722.2222222222
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 112400.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": -596875.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "New Official Secrets",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 104400.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "publisher release",
+        "source_entry_title": "The Official"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "publisher release",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "6084907896154116083": 0
+      },
+      "maximum": 0,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 401000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 90,
+        "quality_score": null,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 0,
+      "official": [],
+      "result": -898200.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "",
+        "page_count": 5,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 391388.8888888889
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 0,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 0,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": -905000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 1",
+        "page_count": 90,
+        "quality_score": 100,
+        "scanlator": "publisher release",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Chapter 1",
+        "page_count": 90,
+        "quality_score": 100,
+        "scanlator": "publisher release",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 0,
+      "official": [
+        "local"
+      ],
+      "result": 396800.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 20,
+        "quality_score": 100,
+        "scanlator": "",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 20,
+        "quality_score": 100,
+        "scanlator": "",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 407500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": ""
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 0,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 90,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 391000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 94500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 0,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": -1598700.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S2x not season",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 399900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "1 - hello",
+        "page_count": 1,
+        "quality_score": 0,
+        "scanlator": "publisher release",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": 400625.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 5,
+        "quality_score": null,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "章",
+        "page_count": 5,
+        "quality_score": null,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 391388.8888888889
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "1 - hello",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "publisher release",
+        "source_entry_title": ""
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "1 - hello",
+        "page_count": 0,
+        "quality_score": 90,
+        "scanlator": "publisher release",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 1000
+      },
+      "maximum": 40,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 394500.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "local": 1000
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 96555.55555555556
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": 0,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 90,
+        "quality_score": 0,
+        "scanlator": "",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 0,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 91800.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 10.000: Translation",
+        "page_count": 20,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 112400.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 0",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 90,
+      "official": [
+        "local"
+      ],
+      "result": 106455.55555555556
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "1 - hello",
+        "page_count": 5,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "1 - hello",
+        "page_count": 5,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 93125.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "章",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "章",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "MTL",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 40,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": 105525.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Season 002: Chapter 1 [official]",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "MTL",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "local": 0
+      },
+      "maximum": 40,
+      "official": [],
+      "result": -900000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "1 - hello",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "1 - hello",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Fan translation",
+        "source_entry_title": "Work [unofficial]"
+      },
+      "priorities": {
+        "-9223372036854775808": 1000
+      },
+      "maximum": 40,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 95625.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Episode 0",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Fan translation",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Episode 0",
+        "page_count": 1,
+        "quality_score": 100,
+        "scanlator": "Fan translation",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "6084907896154116083": 0
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 105020.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "(S2) Ep. 1 - Log In (1) (Season 2 Premiere)",
+        "page_count": 20,
+        "quality_score": 20,
+        "scanlator": "",
+        "source_entry_title": "Gallery [licensed]"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": -586600.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 1,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 1,
+        "quality_score": null,
+        "scanlator": "MTL",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 90,
+      "official": [],
+      "result": 100177.77777777778
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "S03 Ep 1 - Faraway",
+        "page_count": 90,
+        "quality_score": 90,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 0
+      },
+      "maximum": 0,
+      "official": [
+        "6084907896154116083"
+      ],
+      "result": -1893700.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "New Official Secrets",
+        "page_count": 5,
+        "quality_score": 20,
+        "scanlator": "Fan translation",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 0,
+      "official": [],
+      "result": 101000.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 5,
+        "quality_score": 90,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "-9223372036854775808",
+        "name": "Chapter 1",
+        "page_count": 5,
+        "quality_score": 90,
+        "scanlator": "Official",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "-9223372036854775808": 10
+      },
+      "maximum": 40,
+      "official": [
+        "-9223372036854775808"
+      ],
+      "result": 407525.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "official": [],
+      "result": false
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "6084907896154116083",
+        "name": "Chapter 1",
+        "page_count": 90,
+        "quality_score": 20,
+        "scanlator": "MTL",
+        "source_entry_title": ""
+      },
+      "priorities": {
+        "6084907896154116083": 10
+      },
+      "maximum": 40,
+      "official": [],
+      "result": 125900.0
+    },
+    {
+      "kind": "official",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 2.5: Roads",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "Official",
+        "source_entry_title": "The Official"
+      },
+      "official": [
+        "local"
+      ],
+      "result": true
+    },
+    {
+      "kind": "score",
+      "candidate": {
+        "source_id": "local",
+        "name": "Episode 2.5: Roads",
+        "page_count": 0,
+        "quality_score": 0,
+        "scanlator": "Official",
+        "source_entry_title": "The Official"
+      },
+      "priorities": {
+        "local": 10
+      },
+      "maximum": 40,
+      "official": [
+        "local"
+      ],
+      "result": 399900.0
+    },
+    {
+      "kind": "profile",
+      "value": {},
+      "valid": true,
+      "result": {
+        "languages": [],
+        "sources": [],
+        "quality": "default"
+      }
+    },
+    {
+      "kind": "rank",
+      "profile": {
+        "languages": [],
+        "sources": [],
+        "quality": "default"
+      },
+      "candidates": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ],
+      "languages": {
+        "6084907896154116083": "ja",
+        "-9223372036854775808": "en"
+      },
+      "result": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ]
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          "6084907896154116083",
+          "-9223372036854775808",
+          "6084907896154116083"
+        ]
+      },
+      "valid": true,
+      "result": {
+        "languages": [],
+        "sources": [
+          "6084907896154116083",
+          "-9223372036854775808"
+        ],
+        "quality": "default"
+      }
+    },
+    {
+      "kind": "rank",
+      "profile": {
+        "languages": [],
+        "sources": [
+          "6084907896154116083",
+          "-9223372036854775808"
+        ],
+        "quality": "default"
+      },
+      "candidates": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ],
+      "languages": {
+        "6084907896154116083": "ja",
+        "-9223372036854775808": "en"
+      },
+      "result": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 105.0,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 54.0,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ]
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "languages": [
+          "en",
+          "ja"
+        ],
+        "quality": "quality"
+      },
+      "valid": true,
+      "result": {
+        "languages": [
+          "en",
+          "ja"
+        ],
+        "sources": [],
+        "quality": "quality"
+      }
+    },
+    {
+      "kind": "rank",
+      "profile": {
+        "languages": [
+          "en",
+          "ja"
+        ],
+        "sources": [],
+        "quality": "quality"
+      },
+      "candidates": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ],
+      "languages": {
+        "6084907896154116083": "ja",
+        "-9223372036854775808": "en"
+      },
+      "result": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 523.0,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 1006.0,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ]
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          "-9223372036854775808"
+        ],
+        "languages": [
+          "en"
+        ],
+        "quality": "complete"
+      },
+      "valid": true,
+      "result": {
+        "languages": [
+          "en"
+        ],
+        "sources": [
+          "-9223372036854775808"
+        ],
+        "quality": "complete"
+      }
+    },
+    {
+      "kind": "rank",
+      "profile": {
+        "languages": [
+          "en"
+        ],
+        "sources": [
+          "-9223372036854775808"
+        ],
+        "quality": "complete"
+      },
+      "candidates": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ],
+      "languages": {
+        "6084907896154116083": "ja",
+        "-9223372036854775808": "en"
+      },
+      "result": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 25.0,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 1109.0,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ]
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      },
+      "valid": true,
+      "result": {
+        "languages": [],
+        "sources": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "quality": "default"
+      }
+    },
+    {
+      "kind": "rank",
+      "profile": {
+        "languages": [],
+        "sources": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "quality": "default"
+      },
+      "candidates": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ],
+      "languages": {
+        "6084907896154116083": "ja",
+        "-9223372036854775808": "en"
+      },
+      "result": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5.0,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4.0,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ]
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+        ]
+      },
+      "valid": true,
+      "result": {
+        "languages": [],
+        "sources": [
+          "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+        ],
+        "quality": "default"
+      }
+    },
+    {
+      "kind": "rank",
+      "profile": {
+        "languages": [],
+        "sources": [
+          "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+        ],
+        "quality": "default"
+      },
+      "candidates": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ],
+      "languages": {
+        "6084907896154116083": "ja",
+        "-9223372036854775808": "en"
+      },
+      "result": [
+        {
+          "source_id": "6084907896154116083",
+          "resolver_score": 5.0,
+          "page_count": 20,
+          "quality_score": 90
+        },
+        {
+          "source_id": "-9223372036854775808",
+          "resolver_score": 4.0,
+          "page_count": 5,
+          "quality_score": 10
+        }
+      ]
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ]
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+        ]
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          ""
+        ]
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": null
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "quality": "bad"
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "quality": null
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "unexpected": 0
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": [],
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": null,
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "languages": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26",
+          "27",
+          "28",
+          "29",
+          "30",
+          "31",
+          "32"
+        ]
+      },
+      "valid": false
+    },
+    {
+      "kind": "profile",
+      "value": {
+        "sources": [
+          false
+        ]
+      },
+      "valid": false
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+AutoSourcarr v0.4.5 — extension artifacts
+
+Integrated image: open Status → Build extensions in each AutoSourcarr instance.
+It builds that instance's JAR/APK sequentially with its own config, signing key,
+checkout and cache. Download current-version JAR/APK from Status; install each JAR
+in the corresponding main Suwayomi. No separate SDK container is required.
+Existing published installations rebuild in the background after version upgrades.
+First setup or changed reader URLs need an explicit build. Already installed readers
+remain compatible with this backend release; rebuilding does not install them into
+Suwayomi automatically. Downloads never contain another instance's credentials.
+
+The release ZIP contains source, not deployment-specific compiled credentials.
+Retain each app's /config/.extension-signing directory and /data/tools workspace.
+Legacy external paired builds remain supported by extension/build-in-container.sh;
+they write to extension/dist-instances, but integrated downloads use each app's
+/config/extension-downloads. Versioned file names begin AutoSourcarr-v0.4.5.
+
+Fix the reported private-autosourcarr:8283 refusal:
+  In the private retained autosourcarr.env set:
+    AUTOSOURCARR_INTERNAL_URL=http://private-autosourcarr:8282
+  The normal value is http://autosourcarr:8282.
+  These follow the supplied container listen port8282, not external host ports.
+  Rebuild and reinstall the new JAR in the corresponding Suwayomi instance.
+  Updating the server alone cannot change the URL in an already installed JAR.
+  There is no editable base-URL preference in this reader HttpSource.
+
+Use JAR files for Suwayomi: v2.3.2243 directly installs the JVM-ready JAR and avoids
+APK-to-JAR conversion. Use the separately built, persistently signed APK on Android.
+Android uses AUTOSOURCARR_PUBLIC_URL, /api/reader/v1/ and the existing reader token.
+Keep the Authelia reader bypass narrowly scoped to ^/api/reader/v1([/?].*)?$.
+The private and normal Android APK retain the same package identity and cannot
+coexist in one Android profile; the JARs belong in two separate Suwayomi servers.
+
+Do not install the AutoSourcarr reader into AutoSourcarr's own integrated source
+engine. Sources → Discover APK upload is for the upstream source extensions.
+An unsuccessful builder run retains previous valid outputs; verify the versioned
+filename and successful build result rather than assuming old files are new.
+
+Private main Suwayomi port mismatch in the September 27 log:
+  The server successfully listens on 30059, but the earlier Compose maps 30062:30058.
+  Restore private-suwayomi BIND_PORT=30058 and retain ports 30062:30058.
+  Set private AutoSourcarr MAIN_SUWAYOMI_URL=http://private-suwayomi:30058.
+  Save/Redeploy the affected services; host/browser access remains 30062.
+  This main-library URL is separate from AUTOSOURCARR_INTERNAL_URL above.

@@ -1,0 +1,22 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const ctx={document:{querySelector:()=>null},console,Blob,esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'),fmtWhen:s=>s};
+vm.createContext(ctx);
+vm.runInContext("const UI_BUILD_VERSION='0.3.7';var lastBackendErrors={items:[{message:'cached'}]};var lastHealthSnapshot={captured_at:'old',version:'0.3.5'};var clientErrors=[];",ctx);
+vm.runInContext(fs.readFileSync(__dirname+'/../app/static/workbench.js','utf8'),ctx);
+const support={runtime:{app_version:'0.3.6',server_time:'server-now',instance_id:'abc123'},health:{captured_at:'health-before'},tasks:[{id:'task-1',state:'running'}],imports:{items:[{id:24,state:'unresolved'}]}};
+let text=ctx.diagnosticExportText({app_version:'0.3.6',items:[{app_version:'0.3.6',exception_chain:[{type:'ReadTimeout',frames:[{file:'source.py',line:42}]}]}]},[],support.health,'',support);
+for(const part of ['Version: 0.3.6','UI asset version: 0.3.7','VERSION MISMATCH','server-now','health-before','task-1','unresolved','source.py','42','separate clocks'])assert(text.includes(part),part);
+assert.equal(ctx.scrubDiagnosticExport({accessToken:'hidden'}).accessToken,'[redacted]');
+assert(!ctx.scrubDiagnosticExport('https://private-token@host/path?part=3').includes('private-token'));
+const row={component:'Import source',message:'Source timed out after 12s',detail:' at Source.kt:42',context:{phase:'source_execution'}};
+const html=ctx.workbenchErrorHtml(row);
+const visible=html.split('<details>')[0];assert(!visible.includes('Source.kt'));assert(visible.includes('A source lookup took too long'));assert(html.includes('source_execution'));assert(!html.includes('<details open'));
+(async()=>{
+ const elements={'#exportErrors':{},'#errorExportStatus':{}};ctx.document.querySelector=k=>elements[k];let paths=[],download;
+ ctx.downloadBlob=(blob)=>{download=blob;};
+ ctx.api=async path=>{paths.push(path);return {...support,errors:{items:[{message:'fresh'}]}};};
+ await ctx.exportErrors();text=await download.text();assert(text.includes('fresh'));assert(text.includes('health-before'));assert.equal(paths.length,1);assert.equal(elements['#exportErrors'].disabled,false);
+ ctx.api=async path=>{paths.push(path);if(path==='/api/admin/diagnostics')throw Error('offline');return {app_version:'0.3.7',captured_at:'fallback-time',items:[{message:'fallback evidence'}]};};
+ await ctx.exportErrors();text=await download.text();assert(text.includes('PARTIAL EXPORT'));assert(text.includes('fallback evidence'));assert(text.includes('fallback-time'));assert.equal(elements['#exportErrors'].disabled,false);
+ console.log('PASS versioned technical export, readable UI, credential scrubbing, cached checks and partial fallback');
+})().catch(e=>{console.error(e);process.exitCode=1;});

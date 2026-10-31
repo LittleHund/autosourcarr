@@ -1,0 +1,26 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const ctx={document:{querySelector:()=>null},console};vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(__dirname+'/../app/static/workbench.js','utf8'),ctx);
+const diagnostic=ctx.challengeStatusText({cloudflare:{message:'Solver unavailable.',endpoint:'http://solver.invalid:8191',detail:'Connection timed out.',action:'Check the Docker network.',next_probe_at:2000000000},sources:Array.from({length:7},()=>({source_name:'MangaFire',message:'Handler enabled.'}))});
+for(const expected of ['http://solver.invalid:8191','Connection timed out','Check the Docker network','Next automatic health check','Check automatic handlers retries now','7 source variants'])assert(diagnostic.includes(expected),expected);
+assert.equal(diagnostic.match(/Handler enabled/g).length,1);
+assert(ctx.challengeStatusText({}).includes('waiting for source engine'));
+assert(!ctx.challengeStatusText({cloudflare:{state:'ready',message:'Available.'}}).includes('Next automatic'));
+(async()=>{
+ const notices=[],search={value:'',focus(){this.focused=true;}};
+ let pane='',renders=0,filters=0,loads=0;
+ ctx.toast=message=>notices.push(message);ctx.setSettingsSubtab=value=>{pane=value;};
+ ctx.settingsState={dirty:true,data:{files:[]},activeFile:'autosourcarr'};
+ ctx.renderEnvSettings=()=>{renders++;};ctx.filterSettings=()=>{filters++;};
+ ctx.loadEnvSettings=async()=>{loads++;};ctx.document.querySelector=()=>search;
+ await ctx.openSolverSettings();
+ assert.equal(pane,'configuration');assert.equal(ctx.settingsState.activeFile,'autosourcarr');
+ assert.equal(renders,0);assert.equal(loads,0);assert(notices[0].includes('draft'));
+ ctx.settingsState.dirty=false;
+ await ctx.openSolverSettings();
+ assert.equal(ctx.settingsState.activeFile,'source_host');assert.equal(renders,1);assert.equal(filters,1);
+ assert.equal(search.value,'FLARESOLVERR');assert.equal(search.focused,true);assert.equal(loads,0);
+ ctx.settingsState.data=null;
+ await ctx.openSolverSettings();assert.equal(loads,1);
+ console.log('PASS solver diagnostics, grouped preferences and draft-preserving settings shortcut');
+})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,0 +1,33 @@
+# Integrated deployment: only AutoSourcarr + your main Suwayomi.
+# Keep actual retained config/data/source mounts and existing reader ports.
+# Tools are bundled; no helper services or Docker socket.
+# Repair requires host user namespaces and compatible AppArmor policy, if enabled.
+# Non-root identity and no-new-privileges are internal image/startup defaults.
+x-autosourcarr-security: &autosourcarr-security
+  cap_drop: [ALL]
+  security_opt:
+    - seccomp=/mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/project/security/repair-seccomp.json
+    # On AppArmor hosts, load the bundled profile on the host first, then enable:
+    # - apparmor=autosourcarr-internal
+
+services:
+  autosourcarr:
+    <<: *autosourcarr-security
+    image: autosourcarr:local
+    pull_policy: build
+    build:
+      context: /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/project/autosourcarr
+    command: null
+    entrypoint: null
+    stop_grace_period: 90s
+    environment:
+      SOURCE_ENGINE_MODE: integrated
+      APP_SERVICES_MODE: integrated
+      SOURCE_ENGINE_UID: '568'
+      SOURCE_ENGINE_GID: '568'
+    env_file:
+    - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/config/autosourcarr.env
+    volumes:
+    - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/config:/config
+    - /mnt/hdd/storage/komga/manga:/mnt/manga-downloads:ro
+    - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/source-host:/home/suwayomi/.local/share/Tachidesk

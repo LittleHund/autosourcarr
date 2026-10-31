@@ -1,0 +1,1456 @@
+{
+  "format": 1,
+  "scope": "Original automatic media classification/keep/selection/followup only. Structural split side effects are stubbed; CSharp tests exercise real split separately.",
+  "provenance": {
+    "original_service_sha256": "77390f1645c036085ac2ea670638ee7e551b32dc114109d18ff14244efbcccc7",
+    "original_matcher_sha256": "b72f1df6dcb94e12d29d1210fae2528bfd47561e933daa11e997d906492266ee",
+    "actual_python_ast": true,
+    "in_memory_sqlite": true,
+    "split_effects_stubbed": true,
+    "app_modules_imported": false,
+    "live_or_knowledge_database_access": false,
+    "network": false
+  },
+  "cases": [
+    {
+      "name": "empty",
+      "rows": [],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "unknown-only",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "one-mode",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-primary-0-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-primary-1-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 1,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-primary-0-manual",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "manual",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-primary-0-MaNuAl",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "MaNuAl",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-primary-0-split-duplicate",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "split-duplicate",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-additional-0-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-additional-1-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 1,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-additional-0-manual",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "manual",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-additional-0-MaNuAl",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "MaNuAl",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-additional-0-split-duplicate",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "split-duplicate",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-manual-kept-anchor",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 1,
+          "match_type": "manual",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-first-unknown-primary",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-variant-majority",
+      "rows": [
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "manga-variant-tie",
+      "rows": [
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-primary-0-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-primary-1-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 1,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-primary-0-manual",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "manual",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-primary-0-MaNuAl",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "MaNuAl",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-primary-0-split-duplicate",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "split-duplicate",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-additional-0-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-additional-1-auto",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 1,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-additional-0-manual",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "manual",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-additional-0-MaNuAl",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "MaNuAl",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-additional-0-split-duplicate",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "split-duplicate",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-manual-kept-anchor",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 1,
+          "match_type": "manual",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-first-unknown-primary",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-variant-majority",
+      "rows": [
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "webtoon-variant-tie",
+      "rows": [
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "title-webtoon",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work [Webtoon]",
+          "genre": "",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "selected": [
+        {
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "result": {
+        "original_entry_id": 1,
+        "new_entry_id": 100
+      },
+      "followup": [
+        [
+          "mode",
+          1
+        ],
+        [
+          "mode",
+          100
+        ],
+        [
+          "labels",
+          1
+        ],
+        [
+          "labels",
+          100
+        ]
+      ],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "conflicting-title-genre",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work [Webtoon]",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    },
+    {
+      "name": "several-opposite-one-manual-refuses-whole-selection",
+      "rows": [
+        {
+          "kind": "primary",
+          "title": "Work",
+          "genre": "manga",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-00",
+          "source_manga_id": 100
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "auto",
+          "source_id": "s-01",
+          "source_manga_id": 101
+        },
+        {
+          "kind": "additional",
+          "title": "Work",
+          "genre": "webtoon",
+          "locked": 0,
+          "match_type": "manual",
+          "source_id": "s-02",
+          "source_manga_id": 102
+        }
+      ],
+      "selected": [],
+      "result": null,
+      "followup": [],
+      "original_sqlite_unchanged": true
+    }
+  ]
+}

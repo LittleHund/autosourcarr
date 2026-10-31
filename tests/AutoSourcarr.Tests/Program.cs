@@ -1,0 +1,95 @@
+using AutoSourcarr.Tests;
+
+if (args.Length == 3 && args[0] == "--private-document-probe") return PrivateDocumentTests.Probe(args[1], args[2]);
+if (args.Length == 2 && args[0] == "--instance-lock-probe") return ApplicationRuntimeTests.LockProbe(args[1]);
+if (args.Length == 2 && args[0] == "--raster-scratch-probe") return RasterScratchTests.Probe(args[1]);
+if (args.Length == 2 && args[0] == "--raster-scratch-reject-probe") return RasterScratchTests.RejectProbe(args[1]);
+
+var filters = new List<string>();
+for (var index = 0; index < args.Length; index += 2)
+{
+    if (args[index] != "--filter" || index + 1 >= args.Length || string.IsNullOrWhiteSpace(args[index + 1]))
+    {
+        Console.Error.WriteLine("Usage: AutoSourcarr.Tests [--filter name-fragment] ...");
+        return 2;
+    }
+    filters.Add(args[index + 1]);
+}
+
+var suite = new TestSuite();
+ConfigurationTests.Register(suite);
+ConfigurationRecoveryTests.Register(suite);
+StorageTests.Register(suite);
+SchemaStampTests.Register(suite);
+DatabaseBlobTests.Register(suite);
+RepairIsolationTests.Register(suite);
+OwnershipTests.Register(suite);
+MatchingTests.Register(suite);
+PrivacyTests.Register(suite);
+SourceClientTests.Register(suite);
+UpstreamResponseTests.Register(suite);
+SourceOperationTests.Register(suite);
+SourceAttentionTests.Register(suite);
+SettingsRepositoryTests.Register(suite);
+TaskRegistryTests.Register(suite);
+ImageHealthTests.Register(suite);
+TaskCoordinationTests.Register(suite);
+HealthCoordinationTests.Register(suite);
+HttpApiTests.Register(suite);
+CrossSiteWriteTests.Register(suite);
+ApplicationRuntimeTests.Register(suite);
+CatalogueHostTests.Register(suite);
+NativeMediaLifecycleTests.Register(suite);
+NativeMetadataHydrationTests.Register(suite);
+DiagnosticTests.Register(suite);
+SupportLogTests.Register(suite);
+RepairTaskTests.Register(suite);
+CanonicalJsonTests.Register(suite);
+PrivateDocumentTests.Register(suite);
+RepairHistoryTests.Register(suite);
+RawArchiveTests.Register(suite);
+RawStoreTests.Register(suite);
+SourceOriginTests.Register(suite);
+RawAcquisitionTests.Register(suite);
+RawServiceTests.Register(suite);
+RawApiTests.Register(suite);
+SourceManifestTests.Register(suite);
+ReaderServingTests.Register(suite);
+CatalogueSharingTests.Register(suite);
+CatalogueNativeFactTests.Register(suite);
+LauncherProofTests.Register(suite);
+WebsiteResearchTests.Register(suite);
+RasterScratchTests.Register(suite);
+GalleryPolicyTests.Register(suite);
+SourceInventoryTests.Register(suite);
+HardwareVmTests.Register(suite);
+CatalogueQueryTests.Register(suite);
+DisplayMetadataTests.Register(suite);
+CatalogueMetadataTests.Register(suite);
+SourceConfigurationTests.Register(suite);
+SourceControlTests.Register(suite);
+CatalogueStructureTests.Register(suite);
+CatalogueChapterTests.Register(suite);
+GuestArtifactTransferTests.Register(suite);
+GuestServerTests.Register(suite);
+CoverCacheTests.Register(suite);
+SourceRepositoryTests.Register(suite);
+SourceRuntimeContractTests.Register(suite);
+EngineCompatibilityApiTests.Register(suite);
+RepairArtifactFileTests.Register(suite);
+StartupIdentityTests.Register(suite);
+StartupConfigurationTests.Register(suite);
+StartupIdentityOracleTests.Register(suite);
+SourceRepositoryApiTests.Register(suite);
+SourceTransportEpochTests.Register(suite);
+NativeTagStoreTests.Register(suite);
+NativeRecordStoreTests.Register(suite);
+SourceOwnedObservationTests.Register(suite);
+NativeSourceOwnerProtocolTests.Register(suite);
+NativeSourceOwnerOracleTests.Register(suite);
+NativeSourceObservationTests.Register(suite);
+SourceSnapshotTests.Register(suite);
+NativeSourceOwnerConnectionTests.Register(suite);
+SourceEngineControllerTests.Register(suite);
+ReaderCatalogueReadTests.Register(suite);
+return suite.Run(filters);

@@ -1,0 +1,10 @@
+# Linux entrypoints must keep their exact interpreter bytes on Windows too.
+[*.sh]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+
+[{Dockerfile,Dockerfile.*}]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true

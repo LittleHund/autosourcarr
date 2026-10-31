@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" />
+    <PackageReference Include="Unidecode.NET" />
+    <PackageReference Include="SharpCompress" />
+    <!-- Manifest resource names follow the folder path: AutoSourcarr.Core.<Folder>.<file> -->
+    <EmbeddedResource Include="Matching/*.json" />
+    <EmbeddedResource Include="Text/*.json" />
+    <EmbeddedResource Include="Settings/*.json" />
+    <EmbeddedResource Include="Persistence/Schema/*.sql" />
+    <EmbeddedResource Include="Persistence/Schema/*.json" />
+    <None Update="Text/Notices/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Repair/Notices/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Imaging/Notices/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

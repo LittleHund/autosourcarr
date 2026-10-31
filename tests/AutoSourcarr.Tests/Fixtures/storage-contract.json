@@ -1,0 +1,6301 @@
+{
+  "catalog": {
+    "columns": {
+      "automatic_merge_events": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "target_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "duplicate_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "target_snapshot_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "duplicate_snapshot_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "merged_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "repaired_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "evidence_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        }
+      ],
+      "automatic_merge_lineage": [
+        {
+          "cid": 0,
+          "name": "canonical_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "member_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "snapshot_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "merged_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "browse_cache": [
+        {
+          "cid": 0,
+          "name": "cache_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "mode",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "page",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "query",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_ids_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "min_matches",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "exact_match_count",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "sort",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'relevance'",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "entry_ids_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "has_next_page",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "source_errors_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "last_accessed",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "catalogue_decisions": [
+        {
+          "cid": 0,
+          "name": "uid",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "digest",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "decision_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'pending'",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "message",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "applied_revision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "catalogue_entry_ids": [
+        {
+          "cid": 0,
+          "name": "uid",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "primary_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "catalogue_exchange_receipts": [
+        {
+          "cid": 0,
+          "name": "digest",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "result_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "applied_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "catalogue_exchange_stages": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "payload_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "revision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "created_at",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "result_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "catalogue_import_records": [
+        {
+          "cid": 0,
+          "name": "uid",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "digest",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "record_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "message",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "catalogue_origin": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "uid",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "catalogue_public_refs": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "reference",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        }
+      ],
+      "catalogue_record_bindings": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "reference",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "catalogue_record_resolutions": [
+        {
+          "cid": 0,
+          "name": "uid",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "digest",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "resolution_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "catalogue_shared_entries": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        }
+      ],
+      "catalogue_source_facts": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "reference",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "fact_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "catalogue_uid_records": [
+        {
+          "cid": 0,
+          "name": "uid",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "reference",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        }
+      ],
+      "crawl_pending": [
+        {
+          "cid": 0,
+          "name": "work_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "page",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "payload_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "deleted_entries_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "old_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "preferred_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "source_records",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "deleted_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "deleted_source_records": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "source_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "deleted_entry_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "deleted_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "display_metadata": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "fields_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "display_metadata_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "old_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "fields_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "due_work": [
+        {
+          "cid": 0,
+          "name": "kind",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "work_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "next_due",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "last_attempt",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "last_success",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "last_complete",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "outcome",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'unknown'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "failures",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "config_revision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "complete_revision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "duplicate_review_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "left_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "right_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "decision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "reviewed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "duplicate_reviews": [
+        {
+          "cid": 0,
+          "name": "left_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "right_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "decision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "reviewed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "duplicate_split_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "original_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "new_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "records_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "split_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "entries": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "preferred_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "thumbnail_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "status",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "author",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "artist",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "genre",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "manual_preferred_title",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "color_mode",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'unknown'",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "color_confidence",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "media_mode",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'unknown'",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "entry_aliases": [
+        {
+          "cid": 0,
+          "name": "old_entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "canonical_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "merged_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "entry_preference_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "canonical_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "old_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "profile_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "tracking_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "saved_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "entry_preferred_titles": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "raw_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "normalized",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "gallery_layout_candidates": [
+        {
+          "cid": 0,
+          "name": "split_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "candidate_ids_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "gallery_policies": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "policy_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "layout_revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "layout_result_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        }
+      ],
+      "gallery_records": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "metadata_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "general_task_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "record_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "identity_links": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "provider",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "provider_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "external_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "external_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "identity_scope",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'work'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "confidence",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "match_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'auto'",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "locked",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "thumbnail_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "status",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "author",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "artist",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "genre",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "media_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "country",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "year",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 20,
+          "name": "adult",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 21,
+          "name": "metadata_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 22,
+          "name": "last_checked",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "import_items": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "import_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "position",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "backup_source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'unresolved'",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "raw_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "candidate_ids_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "english_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "reference_entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "reference_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "reference_description",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "reference_thumbnail_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "translation_checked",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "suggestion_checked",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "suggestion_state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'pending'",
+          "pk": 0
+        },
+        {
+          "cid": 20,
+          "name": "matched_snapshot_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 21,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 22,
+          "name": "library_add_verified",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 23,
+          "name": "decision_revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "import_manual_autoresolve": [
+        {
+          "cid": 0,
+          "name": "backup_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "backup_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "backup_source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "backup_source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "backup_source_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "target_source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "target_source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "target_source_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "target_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "target_entry_id_hint",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "target_record_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "import_manual_autoresolve_state": [
+        {
+          "cid": 0,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "import_match_rejections": [
+        {
+          "cid": 0,
+          "name": "backup_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "signature",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "backup_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "backup_source",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "rejected_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "rejected_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "import_runs": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "filename",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'running'",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "total",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "added",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "existing",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "unresolved",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "failed",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "skipped",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "completed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "library_complete_observations": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "observation_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "observed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "library_tracking": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "monitored",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "main_manga_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "observation_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "observed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "manual_match_bindings": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "group_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "grouping_suppressed",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "entry_id_hint",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "record_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "manual_match_groups": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "manual_separate_records": [
+        {
+          "cid": 0,
+          "name": "target_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "separate_entry_id_hint",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "manual_title_scopes": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "captured_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "match_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "old_source_manga_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "new_source_manga_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "change_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "changed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "matching_policies": [
+        {
+          "cid": 0,
+          "name": "scope",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "subject",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "direction",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "rule_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "matching_presets": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "rule_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "matching_review_actions": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "action_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "undone_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "metadata_query_cache": [
+        {
+          "cid": 0,
+          "name": "provider",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "query_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "query_text",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "results_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "mixed_entry_reviews": [
+        {
+          "cid": 0,
+          "name": "fingerprint",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id_hint",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "reviewed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "pending_entry_merges": [
+        {
+          "cid": 0,
+          "name": "duplicate_entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "target_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "last_error",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "pending_entry_splits": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "original_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "new_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "records_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "last_error",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "policy_preview_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "preview_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "portable_identity_review_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "old_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "reference",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "decision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "evidence_sha256",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "note",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "portable_identity_reviews": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "reference",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "decision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "evidence_sha256",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "note",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "preferred_title_override_sources": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "preferred_title_overrides": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "quality_attempts": [
+        {
+          "cid": 0,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "attempted_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "outcome",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "observed_pages",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "unobserved_pages",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "serving_choices": [
+        {
+          "cid": 0,
+          "name": "virtual_chapter_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "changed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "serving_policy_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "old_entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "policy_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "serving_profiles": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "profile_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "serving_upgrade_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "virtual_chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "old_candidate_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "changed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "serving_upgrade_policies": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "revision",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "policy_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "settings": [
+        {
+          "cid": 0,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "value",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "source_color_profiles": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "color_mode",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'unknown'",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "confidence",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "sampled_pages",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "evidence",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "colored_fraction",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "analyzed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "source_config": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "display_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "lang",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "base_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "icon_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "supports_latest",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "enabled_language",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "enabled_search",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "enabled_chapters",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "priority",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1000",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "last_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "available",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "group_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "official",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "official_manual",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "source_discovery_outcomes": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "message",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "candidate_entry_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "checked_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "source_groups": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "priority",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1000",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "source_health": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'unchecked'",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "message",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "checked_at",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "started_at",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "last_success_at",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "last_repaired_at",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "last_changed_at",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "next_check_at",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "package_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "checked_version",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "repair_job_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "checks_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "history_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        }
+      ],
+      "source_matches": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_manga_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "confidence",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "match_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'auto'",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "locked",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "initialized",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "thumbnail_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "author",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "artist",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "genre",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "status",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "real_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "metadata_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "last_checked",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "source_record_tags": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "tag_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        }
+      ],
+      "source_variants": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_manga_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "confidence",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "match_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'auto'",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "locked",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "initialized",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "thumbnail_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "description",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "author",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "artist",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "genre",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "status",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "real_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "metadata_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "last_checked",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "sqlite_sequence": [
+        {
+          "cid": 0,
+          "name": "name",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 1,
+          "name": "seq",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "sqlite_stat1": [
+        {
+          "cid": 0,
+          "name": "tbl",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 1,
+          "name": "idx",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "stat",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "tag_reviews": [
+        {
+          "cid": 0,
+          "name": "left_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "right_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "decision",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "tags": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "namespace",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "normalized",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "thumbnail_fingerprints": [
+        {
+          "cid": 0,
+          "name": "subject_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "fingerprint",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "width",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "height",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "titles": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "normalized",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "language",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "title_type",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'alias'",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        }
+      ],
+      "translation_cache": [
+        {
+          "cid": 0,
+          "name": "source_text",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_lang",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'auto'",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "target_lang",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 3,
+          "name": "translated_text",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "provider",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "user_ui_preferences": [
+        {
+          "cid": 0,
+          "name": "user_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "values_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ]
+    },
+    "rows": {
+      "automatic_merge_events": [],
+      "automatic_merge_lineage": [],
+      "browse_cache": [],
+      "catalogue_decisions": [
+        {
+          "uid": "saved-decision",
+          "digest": "synthetic-digest",
+          "decision_json": "{\"type\":\"separate\"}",
+          "state": "pending",
+          "message": "",
+          "applied_revision": ""
+        }
+      ],
+      "catalogue_entry_ids": [
+        {
+          "uid": "asc1:entry:autosourcarr:00000000-0000-4000-8000-000000000002",
+          "entry_id": 9007199254740993,
+          "primary_id": 1
+        }
+      ],
+      "catalogue_exchange_receipts": [],
+      "catalogue_exchange_stages": [],
+      "catalogue_import_records": [],
+      "catalogue_origin": [
+        {
+          "id": 1,
+          "uid": "asc1:origin:autosourcarr:00000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "catalogue_public_refs": [],
+      "catalogue_record_bindings": [
+        {
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 9007199254740995,
+          "reference": "asc1:record:tachiyomi:synthetic-reference",
+          "entry_id": 9007199254740993
+        }
+      ],
+      "catalogue_record_resolutions": [],
+      "catalogue_shared_entries": [],
+      "catalogue_source_facts": [],
+      "catalogue_uid_records": [],
+      "crawl_pending": [],
+      "deleted_entries_history": [],
+      "deleted_source_records": [],
+      "display_metadata": [],
+      "display_metadata_history": [],
+      "due_work": [],
+      "duplicate_review_history": [],
+      "duplicate_reviews": [],
+      "duplicate_split_history": [],
+      "entries": [
+        {
+          "id": 9007199254740993,
+          "preferred_title": "Keep My Title",
+          "description": "",
+          "thumbnail_url": "",
+          "status": 0,
+          "author": "",
+          "artist": "",
+          "genre": "",
+          "manual_preferred_title": 1,
+          "color_mode": "unknown",
+          "color_confidence": 0.0,
+          "media_mode": "unknown",
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "entry_aliases": [
+        {
+          "old_entry_id": 42,
+          "canonical_entry_id": 9007199254740993,
+          "reason": "manual merge",
+          "merged_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "entry_preference_history": [],
+      "entry_preferred_titles": [
+        {
+          "entry_id": 9007199254740993,
+          "raw_title": "Keep My Title",
+          "normalized": "keep my title"
+        }
+      ],
+      "gallery_layout_candidates": [],
+      "gallery_policies": [
+        {
+          "source_id": "-9223372036854775808",
+          "revision": 7,
+          "policy_json": "{\"enabled\":false,\"criteria\":[\"artist\"]}",
+          "updated_at": "2026-10-19T00:00:00+00:00",
+          "layout_revision": 0,
+          "layout_result_json": "{}"
+        }
+      ],
+      "gallery_records": [
+        {
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 9007199254740995,
+          "metadata_json": "{\"chapter\":7,\"artist\":\"保持\"}",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "general_task_history": [],
+      "identity_links": [],
+      "import_items": [
+        {
+          "id": 1,
+          "import_id": "backup-run",
+          "position": 0,
+          "title": "保持",
+          "backup_source": "",
+          "source_id": "-9223372036854775808",
+          "source_url": "",
+          "state": "unresolved",
+          "reason": "",
+          "entry_id": null,
+          "raw_json": "{}",
+          "candidate_ids_json": "[]",
+          "english_title": "",
+          "reference_entry_id": null,
+          "reference_title": "",
+          "reference_description": "",
+          "reference_thumbnail_url": "",
+          "translation_checked": 0,
+          "suggestion_checked": 0,
+          "suggestion_state": "pending",
+          "matched_snapshot_json": "{}",
+          "updated_at": "2026-10-19T00:00:00+00:00",
+          "library_add_verified": 0,
+          "decision_revision": 0
+        }
+      ],
+      "import_manual_autoresolve": [
+        {
+          "backup_key": "saved-mapping",
+          "backup_title": "",
+          "backup_source": "",
+          "backup_source_id": "",
+          "backup_source_url": "",
+          "target_source_id": "-9223372036854775808",
+          "target_source_manga_id": 9007199254740995,
+          "target_source_name": "",
+          "target_title": "",
+          "target_entry_id_hint": 9007199254740993,
+          "target_record_json": "{}",
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "import_manual_autoresolve_state": [],
+      "import_match_rejections": [
+        {
+          "backup_key": "backup-record",
+          "signature": "rejected-target",
+          "backup_title": "",
+          "backup_source": "",
+          "rejected_title": "",
+          "rejected_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "import_runs": [
+        {
+          "id": "backup-run",
+          "filename": "",
+          "state": "running",
+          "total": 1,
+          "added": 0,
+          "existing": 0,
+          "unresolved": 1,
+          "failed": 0,
+          "skipped": 0,
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "completed_at": ""
+        }
+      ],
+      "library_complete_observations": [],
+      "library_tracking": [],
+      "manual_match_bindings": [
+        {
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 9007199254740995,
+          "group_id": "saved-group",
+          "grouping_suppressed": 0,
+          "entry_id_hint": 9007199254740993,
+          "source_name": "",
+          "source_title": "保持 元の作品",
+          "record_json": "{}",
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "manual_match_groups": [
+        {
+          "id": "saved-group",
+          "title": "Explicit group",
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "manual_separate_records": [
+        {
+          "target_entry_id": 9007199254740993,
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 123,
+          "separate_entry_id_hint": null,
+          "source_title": "Different work",
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "manual_title_scopes": [
+        {
+          "entry_id": 9007199254740993,
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 9007199254740995,
+          "title": "Keep My Title",
+          "captured_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "match_history": [],
+      "matching_policies": [],
+      "matching_presets": [],
+      "matching_review_actions": [],
+      "metadata_query_cache": [],
+      "mixed_entry_reviews": [],
+      "pending_entry_merges": [],
+      "pending_entry_splits": [],
+      "policy_preview_history": [],
+      "portable_identity_review_history": [],
+      "portable_identity_reviews": [],
+      "preferred_title_override_sources": [],
+      "preferred_title_overrides": [
+        {
+          "entry_id": 9007199254740993,
+          "title": "Keep My Title",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "quality_attempts": [],
+      "serving_choices": [],
+      "serving_policy_history": [],
+      "serving_profiles": [],
+      "serving_upgrade_history": [],
+      "serving_upgrade_policies": [],
+      "settings": [],
+      "source_color_profiles": [],
+      "source_config": [
+        {
+          "source_id": "-9223372036854775808",
+          "name": "Synthetic Source",
+          "display_name": "",
+          "lang": "ja",
+          "base_url": "",
+          "icon_url": "",
+          "supports_latest": 1,
+          "enabled_language": 1,
+          "enabled_search": 1,
+          "enabled_chapters": 1,
+          "priority": 700,
+          "last_seen": "2026-10-19T00:00:00+00:00",
+          "available": 1,
+          "group_id": 3,
+          "official": 0,
+          "official_manual": 0
+        }
+      ],
+      "source_discovery_outcomes": [],
+      "source_groups": [
+        {
+          "id": 3,
+          "name": "Saved source family",
+          "priority": 700,
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "source_health": [],
+      "source_matches": [
+        {
+          "id": 11,
+          "entry_id": 9007199254740993,
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 9007199254740995,
+          "source_manga_url": "",
+          "source_title": "保持 元の作品",
+          "confidence": 0.0,
+          "match_type": "manual",
+          "locked": 1,
+          "active": 1,
+          "initialized": 0,
+          "thumbnail_url": "",
+          "description": "",
+          "author": "",
+          "artist": "",
+          "genre": "",
+          "status": 0,
+          "real_url": "",
+          "metadata_json": "{}",
+          "last_checked": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "source_record_tags": [
+        {
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 9007199254740995,
+          "tag_id": 1
+        }
+      ],
+      "source_variants": [],
+      "sqlite_sequence": [
+        {
+          "name": "entries",
+          "seq": 9007199254740993
+        },
+        {
+          "name": "source_groups",
+          "seq": 3
+        },
+        {
+          "name": "source_matches",
+          "seq": 11
+        },
+        {
+          "name": "titles",
+          "seq": 1
+        },
+        {
+          "name": "tags",
+          "seq": 2
+        },
+        {
+          "name": "import_items",
+          "seq": 1
+        }
+      ],
+      "sqlite_stat1": [
+        {
+          "tbl": "catalogue_decisions",
+          "idx": "sqlite_autoindex_catalogue_decisions_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "manual_separate_records",
+          "idx": "idx_manual_separate_source",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "manual_separate_records",
+          "idx": "sqlite_autoindex_manual_separate_records_1",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "manual_match_bindings",
+          "idx": "idx_manual_bindings_entry_hint",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "manual_match_bindings",
+          "idx": "idx_manual_bindings_group",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "manual_match_bindings",
+          "idx": "sqlite_autoindex_manual_match_bindings_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "manual_match_groups",
+          "idx": "sqlite_autoindex_manual_match_groups_1",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "import_manual_autoresolve",
+          "idx": "idx_import_manual_autoresolve_target",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "import_manual_autoresolve",
+          "idx": "sqlite_autoindex_import_manual_autoresolve_1",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "import_match_rejections",
+          "idx": "idx_import_match_rejections_key",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "import_match_rejections",
+          "idx": "sqlite_autoindex_import_match_rejections_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "import_items",
+          "idx": "idx_import_items_run_state",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "import_items",
+          "idx": "sqlite_autoindex_import_items_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "manual_title_scopes",
+          "idx": "idx_manual_title_scopes_source",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "manual_title_scopes",
+          "idx": "sqlite_autoindex_manual_title_scopes_1",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "entry_preferred_titles",
+          "idx": "idx_entry_preferred_titles_normalized",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "entries",
+          "idx": "idx_entries_library_title",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "entries",
+          "idx": "idx_entries_lower_title",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "entries",
+          "idx": "idx_entries_status",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "entries",
+          "idx": "idx_entries_updated_id",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "gallery_policies",
+          "idx": "sqlite_autoindex_gallery_policies_1",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "source_record_tags",
+          "idx": "idx_source_record_tags_tag",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "source_record_tags",
+          "idx": "sqlite_autoindex_source_record_tags_1",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "entry_aliases",
+          "idx": "idx_entry_alias_canonical",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "gallery_records",
+          "idx": "sqlite_autoindex_gallery_records_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "source_config",
+          "idx": "idx_source_config_group",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "source_config",
+          "idx": "sqlite_autoindex_source_config_1",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "catalogue_record_bindings",
+          "idx": "idx_catalogue_verified_reference",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "catalogue_record_bindings",
+          "idx": "sqlite_autoindex_catalogue_record_bindings_1",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "tag_reviews",
+          "idx": "sqlite_autoindex_tag_reviews_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "source_groups",
+          "idx": "sqlite_autoindex_source_groups_1",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "tags",
+          "idx": "sqlite_autoindex_tags_1",
+          "stat": "2 2 1"
+        },
+        {
+          "tbl": "catalogue_entry_ids",
+          "idx": "idx_catalogue_primary_uid",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "catalogue_entry_ids",
+          "idx": "idx_catalogue_primary",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "catalogue_entry_ids",
+          "idx": "sqlite_autoindex_catalogue_entry_ids_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "idx_matches_manual_capture",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "idx_matches_lower_title",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "idx_matches_source_title",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "idx_matches_entry_source_active",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "idx_matches_entry",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "idx_source_manga_unique",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "idx_source_match_manga_lookup",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "source_matches",
+          "idx": "sqlite_autoindex_source_matches_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "titles",
+          "idx": "idx_titles_entry_normalized",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "titles",
+          "idx": "idx_titles_entry",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "titles",
+          "idx": "idx_titles_normalized",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "titles",
+          "idx": "sqlite_autoindex_titles_1",
+          "stat": "1 1 1 1 1"
+        },
+        {
+          "tbl": "import_runs",
+          "idx": "idx_import_runs_created",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "import_runs",
+          "idx": "sqlite_autoindex_import_runs_1",
+          "stat": "1 1"
+        }
+      ],
+      "tag_reviews": [
+        {
+          "left_id": 1,
+          "right_id": 2,
+          "decision": "different",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "tags": [
+        {
+          "id": 1,
+          "namespace": "artist",
+          "name": "保持",
+          "normalized": "保持"
+        },
+        {
+          "id": 2,
+          "namespace": "artist",
+          "name": "Other",
+          "normalized": "other"
+        }
+      ],
+      "thumbnail_fingerprints": [],
+      "titles": [
+        {
+          "id": 1,
+          "entry_id": 9007199254740993,
+          "title": "原題",
+          "normalized": "yuan ti",
+          "language": "ja",
+          "title_type": "alias",
+          "source_id": "-9223372036854775808",
+          "source_manga_id": 9007199254740995
+        }
+      ],
+      "translation_cache": [],
+      "user_ui_preferences": []
+    },
+    "indexes": [
+      {
+        "name": "idx_auto_merge_events_compact_history",
+        "tbl_name": "automatic_merge_events"
+      },
+      {
+        "name": "idx_auto_merge_events_pair",
+        "tbl_name": "automatic_merge_events"
+      },
+      {
+        "name": "idx_auto_merge_events_target",
+        "tbl_name": "automatic_merge_events"
+      },
+      {
+        "name": "idx_auto_merge_lineage_member",
+        "tbl_name": "automatic_merge_lineage"
+      },
+      {
+        "name": "idx_browse_cache_accessed",
+        "tbl_name": "browse_cache"
+      },
+      {
+        "name": "idx_catalogue_primary",
+        "tbl_name": "catalogue_entry_ids"
+      },
+      {
+        "name": "idx_catalogue_primary_uid",
+        "tbl_name": "catalogue_entry_ids"
+      },
+      {
+        "name": "idx_catalogue_public_reference",
+        "tbl_name": "catalogue_public_refs"
+      },
+      {
+        "name": "idx_catalogue_verified_reference",
+        "tbl_name": "catalogue_record_bindings"
+      },
+      {
+        "name": "idx_color_profiles_mode",
+        "tbl_name": "source_color_profiles"
+      },
+      {
+        "name": "idx_display_metadata_history",
+        "tbl_name": "display_metadata_history"
+      },
+      {
+        "name": "idx_due_work_time",
+        "tbl_name": "due_work"
+      },
+      {
+        "name": "idx_duplicate_reviews_decision",
+        "tbl_name": "duplicate_reviews"
+      },
+      {
+        "name": "idx_duplicate_split_original",
+        "tbl_name": "duplicate_split_history"
+      },
+      {
+        "name": "idx_entries_library_title",
+        "tbl_name": "entries"
+      },
+      {
+        "name": "idx_entries_lower_title",
+        "tbl_name": "entries"
+      },
+      {
+        "name": "idx_entries_status",
+        "tbl_name": "entries"
+      },
+      {
+        "name": "idx_entries_updated_id",
+        "tbl_name": "entries"
+      },
+      {
+        "name": "idx_entry_alias_canonical",
+        "tbl_name": "entry_aliases"
+      },
+      {
+        "name": "idx_entry_preference_history",
+        "tbl_name": "entry_preference_history"
+      },
+      {
+        "name": "idx_entry_preferred_titles_normalized",
+        "tbl_name": "entry_preferred_titles"
+      },
+      {
+        "name": "idx_identity_entry",
+        "tbl_name": "identity_links"
+      },
+      {
+        "name": "idx_identity_provider",
+        "tbl_name": "identity_links"
+      },
+      {
+        "name": "idx_identity_provider_external",
+        "tbl_name": "identity_links"
+      },
+      {
+        "name": "idx_import_items_run_state",
+        "tbl_name": "import_items"
+      },
+      {
+        "name": "idx_import_manual_autoresolve_target",
+        "tbl_name": "import_manual_autoresolve"
+      },
+      {
+        "name": "idx_import_match_rejections_key",
+        "tbl_name": "import_match_rejections"
+      },
+      {
+        "name": "idx_import_runs_created",
+        "tbl_name": "import_runs"
+      },
+      {
+        "name": "idx_manual_bindings_entry_hint",
+        "tbl_name": "manual_match_bindings"
+      },
+      {
+        "name": "idx_manual_bindings_group",
+        "tbl_name": "manual_match_bindings"
+      },
+      {
+        "name": "idx_manual_separate_source",
+        "tbl_name": "manual_separate_records"
+      },
+      {
+        "name": "idx_manual_title_scopes_source",
+        "tbl_name": "manual_title_scopes"
+      },
+      {
+        "name": "idx_match_history_source_id",
+        "tbl_name": "match_history"
+      },
+      {
+        "name": "idx_matches_entry",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "idx_matches_entry_source_active",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "idx_matches_lower_title",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "idx_matches_manual_capture",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "idx_matches_source_title",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "idx_metadata_query_cache_updated",
+        "tbl_name": "metadata_query_cache"
+      },
+      {
+        "name": "idx_portable_review_history",
+        "tbl_name": "portable_identity_review_history"
+      },
+      {
+        "name": "idx_portable_review_reference",
+        "tbl_name": "portable_identity_reviews"
+      },
+      {
+        "name": "idx_source_config_group",
+        "tbl_name": "source_config"
+      },
+      {
+        "name": "idx_source_manga_unique",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "idx_source_match_manga_lookup",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "idx_source_record_tags_tag",
+        "tbl_name": "source_record_tags"
+      },
+      {
+        "name": "idx_source_variant_manga_lookup",
+        "tbl_name": "source_variants"
+      },
+      {
+        "name": "idx_source_variants_entry",
+        "tbl_name": "source_variants"
+      },
+      {
+        "name": "idx_source_variants_entry_source_active",
+        "tbl_name": "source_variants"
+      },
+      {
+        "name": "idx_tag_reviews_right",
+        "tbl_name": "tag_reviews"
+      },
+      {
+        "name": "idx_task_history_updated",
+        "tbl_name": "general_task_history"
+      },
+      {
+        "name": "idx_thumbnail_fingerprint_value",
+        "tbl_name": "thumbnail_fingerprints"
+      },
+      {
+        "name": "idx_titles_entry",
+        "tbl_name": "titles"
+      },
+      {
+        "name": "idx_titles_entry_normalized",
+        "tbl_name": "titles"
+      },
+      {
+        "name": "idx_titles_normalized",
+        "tbl_name": "titles"
+      },
+      {
+        "name": "idx_translation_target",
+        "tbl_name": "translation_cache"
+      },
+      {
+        "name": "idx_variants_lower_title",
+        "tbl_name": "source_variants"
+      },
+      {
+        "name": "idx_variants_manual_capture",
+        "tbl_name": "source_variants"
+      },
+      {
+        "name": "idx_variants_source_title",
+        "tbl_name": "source_variants"
+      },
+      {
+        "name": "sqlite_autoindex_automatic_merge_lineage_1",
+        "tbl_name": "automatic_merge_lineage"
+      },
+      {
+        "name": "sqlite_autoindex_browse_cache_1",
+        "tbl_name": "browse_cache"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_decisions_1",
+        "tbl_name": "catalogue_decisions"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_entry_ids_1",
+        "tbl_name": "catalogue_entry_ids"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_exchange_receipts_1",
+        "tbl_name": "catalogue_exchange_receipts"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_exchange_stages_1",
+        "tbl_name": "catalogue_exchange_stages"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_import_records_1",
+        "tbl_name": "catalogue_import_records"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_public_refs_1",
+        "tbl_name": "catalogue_public_refs"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_record_bindings_1",
+        "tbl_name": "catalogue_record_bindings"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_record_resolutions_1",
+        "tbl_name": "catalogue_record_resolutions"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_source_facts_1",
+        "tbl_name": "catalogue_source_facts"
+      },
+      {
+        "name": "sqlite_autoindex_catalogue_uid_records_1",
+        "tbl_name": "catalogue_uid_records"
+      },
+      {
+        "name": "sqlite_autoindex_crawl_pending_1",
+        "tbl_name": "crawl_pending"
+      },
+      {
+        "name": "sqlite_autoindex_deleted_source_records_1",
+        "tbl_name": "deleted_source_records"
+      },
+      {
+        "name": "sqlite_autoindex_due_work_1",
+        "tbl_name": "due_work"
+      },
+      {
+        "name": "sqlite_autoindex_duplicate_reviews_1",
+        "tbl_name": "duplicate_reviews"
+      },
+      {
+        "name": "sqlite_autoindex_gallery_policies_1",
+        "tbl_name": "gallery_policies"
+      },
+      {
+        "name": "sqlite_autoindex_gallery_records_1",
+        "tbl_name": "gallery_records"
+      },
+      {
+        "name": "sqlite_autoindex_general_task_history_1",
+        "tbl_name": "general_task_history"
+      },
+      {
+        "name": "sqlite_autoindex_identity_links_1",
+        "tbl_name": "identity_links"
+      },
+      {
+        "name": "sqlite_autoindex_import_items_1",
+        "tbl_name": "import_items"
+      },
+      {
+        "name": "sqlite_autoindex_import_manual_autoresolve_1",
+        "tbl_name": "import_manual_autoresolve"
+      },
+      {
+        "name": "sqlite_autoindex_import_manual_autoresolve_state_1",
+        "tbl_name": "import_manual_autoresolve_state"
+      },
+      {
+        "name": "sqlite_autoindex_import_match_rejections_1",
+        "tbl_name": "import_match_rejections"
+      },
+      {
+        "name": "sqlite_autoindex_import_runs_1",
+        "tbl_name": "import_runs"
+      },
+      {
+        "name": "sqlite_autoindex_manual_match_bindings_1",
+        "tbl_name": "manual_match_bindings"
+      },
+      {
+        "name": "sqlite_autoindex_manual_match_groups_1",
+        "tbl_name": "manual_match_groups"
+      },
+      {
+        "name": "sqlite_autoindex_manual_separate_records_1",
+        "tbl_name": "manual_separate_records"
+      },
+      {
+        "name": "sqlite_autoindex_manual_title_scopes_1",
+        "tbl_name": "manual_title_scopes"
+      },
+      {
+        "name": "sqlite_autoindex_matching_policies_1",
+        "tbl_name": "matching_policies"
+      },
+      {
+        "name": "sqlite_autoindex_matching_presets_1",
+        "tbl_name": "matching_presets"
+      },
+      {
+        "name": "sqlite_autoindex_matching_review_actions_1",
+        "tbl_name": "matching_review_actions"
+      },
+      {
+        "name": "sqlite_autoindex_metadata_query_cache_1",
+        "tbl_name": "metadata_query_cache"
+      },
+      {
+        "name": "sqlite_autoindex_mixed_entry_reviews_1",
+        "tbl_name": "mixed_entry_reviews"
+      },
+      {
+        "name": "sqlite_autoindex_portable_identity_reviews_1",
+        "tbl_name": "portable_identity_reviews"
+      },
+      {
+        "name": "sqlite_autoindex_preferred_title_override_sources_1",
+        "tbl_name": "preferred_title_override_sources"
+      },
+      {
+        "name": "sqlite_autoindex_settings_1",
+        "tbl_name": "settings"
+      },
+      {
+        "name": "sqlite_autoindex_source_color_profiles_1",
+        "tbl_name": "source_color_profiles"
+      },
+      {
+        "name": "sqlite_autoindex_source_config_1",
+        "tbl_name": "source_config"
+      },
+      {
+        "name": "sqlite_autoindex_source_discovery_outcomes_1",
+        "tbl_name": "source_discovery_outcomes"
+      },
+      {
+        "name": "sqlite_autoindex_source_groups_1",
+        "tbl_name": "source_groups"
+      },
+      {
+        "name": "sqlite_autoindex_source_health_1",
+        "tbl_name": "source_health"
+      },
+      {
+        "name": "sqlite_autoindex_source_matches_1",
+        "tbl_name": "source_matches"
+      },
+      {
+        "name": "sqlite_autoindex_source_record_tags_1",
+        "tbl_name": "source_record_tags"
+      },
+      {
+        "name": "sqlite_autoindex_source_variants_1",
+        "tbl_name": "source_variants"
+      },
+      {
+        "name": "sqlite_autoindex_tag_reviews_1",
+        "tbl_name": "tag_reviews"
+      },
+      {
+        "name": "sqlite_autoindex_tags_1",
+        "tbl_name": "tags"
+      },
+      {
+        "name": "sqlite_autoindex_thumbnail_fingerprints_1",
+        "tbl_name": "thumbnail_fingerprints"
+      },
+      {
+        "name": "sqlite_autoindex_titles_1",
+        "tbl_name": "titles"
+      },
+      {
+        "name": "sqlite_autoindex_translation_cache_1",
+        "tbl_name": "translation_cache"
+      },
+      {
+        "name": "sqlite_autoindex_user_ui_preferences_1",
+        "tbl_name": "user_ui_preferences"
+      }
+    ],
+    "foreignKeys": {
+      "automatic_merge_events": [],
+      "automatic_merge_lineage": [],
+      "browse_cache": [],
+      "catalogue_decisions": [],
+      "catalogue_entry_ids": [],
+      "catalogue_exchange_receipts": [],
+      "catalogue_exchange_stages": [],
+      "catalogue_import_records": [],
+      "catalogue_origin": [],
+      "catalogue_public_refs": [],
+      "catalogue_record_bindings": [],
+      "catalogue_record_resolutions": [],
+      "catalogue_shared_entries": [],
+      "catalogue_source_facts": [],
+      "catalogue_uid_records": [],
+      "crawl_pending": [],
+      "deleted_entries_history": [],
+      "deleted_source_records": [],
+      "display_metadata": [],
+      "display_metadata_history": [],
+      "due_work": [],
+      "duplicate_review_history": [],
+      "duplicate_reviews": [],
+      "duplicate_split_history": [],
+      "entries": [],
+      "entry_aliases": [],
+      "entry_preference_history": [],
+      "entry_preferred_titles": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "entries",
+          "from": "entry_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "gallery_layout_candidates": [],
+      "gallery_policies": [],
+      "gallery_records": [],
+      "general_task_history": [],
+      "identity_links": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "entries",
+          "from": "entry_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "import_items": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "import_runs",
+          "from": "import_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "import_manual_autoresolve": [],
+      "import_manual_autoresolve_state": [],
+      "import_match_rejections": [],
+      "import_runs": [],
+      "library_complete_observations": [],
+      "library_tracking": [],
+      "manual_match_bindings": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "manual_match_groups",
+          "from": "group_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "SET NULL",
+          "match": "NONE"
+        }
+      ],
+      "manual_match_groups": [],
+      "manual_separate_records": [],
+      "manual_title_scopes": [],
+      "match_history": [],
+      "matching_policies": [],
+      "matching_presets": [],
+      "matching_review_actions": [],
+      "metadata_query_cache": [],
+      "mixed_entry_reviews": [],
+      "pending_entry_merges": [],
+      "pending_entry_splits": [],
+      "policy_preview_history": [],
+      "portable_identity_review_history": [],
+      "portable_identity_reviews": [],
+      "preferred_title_override_sources": [],
+      "preferred_title_overrides": [],
+      "quality_attempts": [],
+      "serving_choices": [],
+      "serving_policy_history": [],
+      "serving_profiles": [],
+      "serving_upgrade_history": [],
+      "serving_upgrade_policies": [],
+      "settings": [],
+      "source_color_profiles": [],
+      "source_config": [],
+      "source_discovery_outcomes": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "entries",
+          "from": "entry_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "source_groups": [],
+      "source_health": [],
+      "source_matches": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "entries",
+          "from": "entry_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "source_record_tags": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tags",
+          "from": "tag_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "source_variants": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "entries",
+          "from": "entry_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "sqlite_sequence": [],
+      "sqlite_stat1": [],
+      "tag_reviews": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "tags",
+          "from": "right_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "tags",
+          "from": "left_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "tags": [],
+      "thumbnail_fingerprints": [],
+      "titles": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "entries",
+          "from": "entry_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "translation_cache": [],
+      "user_ui_preferences": []
+    }
+  },
+  "origins": {
+    "columns": {
+      "candidate_pages": [
+        {
+          "cid": 0,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "page_index",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "private_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "chapter_candidate_rejections": [
+        {
+          "cid": 0,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "source_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "rejected_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "chapter_candidates": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "virtual_chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "source_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_match_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source_chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "source_chapter_url",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "source_order",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "source_chapter_index",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "-1",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "chapter_number",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "-1",
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "volume_number",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "-1",
+          "pk": 0
+        },
+        {
+          "cid": 13,
+          "name": "upload_date",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 14,
+          "name": "scanlator",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 15,
+          "name": "page_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 16,
+          "name": "quality_score",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 17,
+          "name": "active",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "1",
+          "pk": 0
+        },
+        {
+          "cid": 18,
+          "name": "first_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 19,
+          "name": "last_seen",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "origin_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "virtual_chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source_chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "served_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "quality_samples": [
+        {
+          "cid": 0,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "sampled_pages",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "broken_pages",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "median_width",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "median_height",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "avg_bytes",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "phash_first",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "phash_last",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "analyzed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "served_origin": [
+        {
+          "cid": 0,
+          "name": "virtual_chapter_id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "selected_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "source_record_scans": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "source_manga_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 3
+        },
+        {
+          "cid": 3,
+          "name": "checked_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "chapter_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "error",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        }
+      ],
+      "sqlite_sequence": [
+        {
+          "cid": 0,
+          "name": "name",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 1,
+          "name": "seq",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "sqlite_stat1": [
+        {
+          "cid": 0,
+          "name": "tbl",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 1,
+          "name": "idx",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "stat",
+          "type": "",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "virtual_chapters": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "chapter_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "chapter_number",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "-1",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "volume_number",
+          "type": "REAL",
+          "notnull": 1,
+          "dflt_value": "-1",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "display_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "hidden",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ]
+    },
+    "rows": {
+      "candidate_pages": [
+        {
+          "candidate_id": 21,
+          "page_index": 0,
+          "private_url": "https://example.invalid/ページ/%2F?page=1",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "chapter_candidate_rejections": [
+        {
+          "source_id": "-9223372036854775808",
+          "source_chapter_id": 999,
+          "source_manga_id": 9007199254740995,
+          "source_name": "",
+          "name": "Rejected upload",
+          "rejected_at": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "chapter_candidates": [
+        {
+          "id": 21,
+          "virtual_chapter_id": 17,
+          "source_id": "-9223372036854775808",
+          "source_name": "Synthetic Source",
+          "source_match_id": 11,
+          "source_manga_id": 9007199254740995,
+          "source_chapter_id": 9007199254740997,
+          "source_chapter_url": "",
+          "source_order": 0,
+          "source_chapter_index": -1,
+          "name": "Chapter 7",
+          "chapter_number": -1.0,
+          "volume_number": -1.0,
+          "upload_date": 0,
+          "scanlator": "",
+          "page_count": 2,
+          "quality_score": null,
+          "active": 1,
+          "first_seen": "2026-10-19T00:00:00+00:00",
+          "last_seen": "2026-10-19T00:00:00+00:00"
+        }
+      ],
+      "origin_history": [
+        {
+          "id": 1,
+          "virtual_chapter_id": 17,
+          "candidate_id": 21,
+          "source_id": "-9223372036854775808",
+          "source_name": "Synthetic Source",
+          "source_manga_id": 9007199254740995,
+          "source_chapter_id": 9007199254740997,
+          "served_at": "2026-10-19T00:00:00+00:00",
+          "reason": "saved read"
+        }
+      ],
+      "quality_samples": [],
+      "served_origin": [
+        {
+          "virtual_chapter_id": 17,
+          "candidate_id": 21,
+          "selected_at": "2026-10-19T00:00:00+00:00",
+          "reason": "saved reader choice"
+        }
+      ],
+      "source_record_scans": [],
+      "sqlite_sequence": [
+        {
+          "name": "virtual_chapters",
+          "seq": 17
+        },
+        {
+          "name": "chapter_candidates",
+          "seq": 21
+        },
+        {
+          "name": "origin_history",
+          "seq": 1
+        }
+      ],
+      "sqlite_stat1": [
+        {
+          "tbl": "served_origin",
+          "idx": "idx_served_origin_candidate",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "chapter_candidate_rejections",
+          "idx": "idx_candidate_rejections_manga",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "chapter_candidate_rejections",
+          "idx": "sqlite_autoindex_chapter_candidate_rejections_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "candidate_pages",
+          "idx": "sqlite_autoindex_candidate_pages_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "virtual_chapters",
+          "idx": "idx_virtual_entry",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "virtual_chapters",
+          "idx": "sqlite_autoindex_virtual_chapters_1",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "origin_history",
+          "idx": "idx_origin_entry",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "chapter_candidates",
+          "idx": "idx_candidate_virtual_source_active",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "chapter_candidates",
+          "idx": "idx_candidate_source_manga_active",
+          "stat": "1 1 1 1"
+        },
+        {
+          "tbl": "chapter_candidates",
+          "idx": "idx_candidate_virtual",
+          "stat": "1 1 1"
+        },
+        {
+          "tbl": "chapter_candidates",
+          "idx": "idx_candidate_chapter_lookup",
+          "stat": "1 1"
+        },
+        {
+          "tbl": "chapter_candidates",
+          "idx": "sqlite_autoindex_chapter_candidates_1",
+          "stat": "1 1 1"
+        }
+      ],
+      "virtual_chapters": [
+        {
+          "id": 17,
+          "entry_id": 9007199254740993,
+          "chapter_key": "n:7",
+          "chapter_number": 7.0,
+          "volume_number": -1.0,
+          "display_name": "Chapter 7",
+          "hidden": 0,
+          "created_at": "2026-10-19T00:00:00+00:00",
+          "updated_at": "2026-10-19T00:00:00+00:00"
+        }
+      ]
+    },
+    "indexes": [
+      {
+        "name": "idx_candidate_chapter_lookup",
+        "tbl_name": "chapter_candidates"
+      },
+      {
+        "name": "idx_candidate_rejections_manga",
+        "tbl_name": "chapter_candidate_rejections"
+      },
+      {
+        "name": "idx_candidate_source_manga_active",
+        "tbl_name": "chapter_candidates"
+      },
+      {
+        "name": "idx_candidate_virtual",
+        "tbl_name": "chapter_candidates"
+      },
+      {
+        "name": "idx_candidate_virtual_source_active",
+        "tbl_name": "chapter_candidates"
+      },
+      {
+        "name": "idx_origin_entry",
+        "tbl_name": "origin_history"
+      },
+      {
+        "name": "idx_served_origin_candidate",
+        "tbl_name": "served_origin"
+      },
+      {
+        "name": "idx_source_record_scans_entry",
+        "tbl_name": "source_record_scans"
+      },
+      {
+        "name": "idx_virtual_entry",
+        "tbl_name": "virtual_chapters"
+      },
+      {
+        "name": "sqlite_autoindex_candidate_pages_1",
+        "tbl_name": "candidate_pages"
+      },
+      {
+        "name": "sqlite_autoindex_chapter_candidate_rejections_1",
+        "tbl_name": "chapter_candidate_rejections"
+      },
+      {
+        "name": "sqlite_autoindex_chapter_candidates_1",
+        "tbl_name": "chapter_candidates"
+      },
+      {
+        "name": "sqlite_autoindex_source_record_scans_1",
+        "tbl_name": "source_record_scans"
+      },
+      {
+        "name": "sqlite_autoindex_virtual_chapters_1",
+        "tbl_name": "virtual_chapters"
+      }
+    ],
+    "foreignKeys": {
+      "candidate_pages": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "chapter_candidates",
+          "from": "candidate_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "chapter_candidate_rejections": [],
+      "chapter_candidates": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "virtual_chapters",
+          "from": "virtual_chapter_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "origin_history": [],
+      "quality_samples": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "chapter_candidates",
+          "from": "candidate_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "served_origin": [
+        {
+          "id": 0,
+          "seq": 0,
+          "table": "chapter_candidates",
+          "from": "candidate_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "NO ACTION",
+          "match": "NONE"
+        },
+        {
+          "id": 1,
+          "seq": 0,
+          "table": "virtual_chapters",
+          "from": "virtual_chapter_id",
+          "to": "id",
+          "on_update": "NO ACTION",
+          "on_delete": "CASCADE",
+          "match": "NONE"
+        }
+      ],
+      "source_record_scans": [],
+      "sqlite_sequence": [],
+      "sqlite_stat1": [],
+      "virtual_chapters": []
+    }
+  }
+}

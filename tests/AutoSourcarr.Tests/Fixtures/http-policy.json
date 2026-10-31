@@ -1,0 +1,5217 @@
+[
+  {
+    "method": "GET",
+    "path": "/",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/attention",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/attention/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/browse",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/candidates/17/quality",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/candidates/17/reject",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/candidates/17/restore",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/chapters/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/config",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/diagnostics",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/downloads",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/duplicate-candidates",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/duplicates",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/duplicates/automatic",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/duplicates/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/engine/compatibility",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/aliases",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/discover-additional",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/history",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/identity/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/manual-match",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/manual-search",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/manual-titles",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/matches/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/preferred-title",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/redo-automation",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/refresh-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/refresh-covers",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/refresh-metadata",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/separate-source",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/separate-source/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/source-records/17/17/check-chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/tags",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/unbind-auto-matches",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/unmatch-duplicates",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/variants/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/17/variants/17/17/promote",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/entries/summaries",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/errors",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/errors/clear",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/extension-apk",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/extension-apk/download",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/extension-jar",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/extension-jar/download",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/import/mihon-backup",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/17/match/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/17/reject",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/17/skip",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/17/suggestions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/17/suggestions/live",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/items/2",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/match/9",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/17/receipt",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/clear-history",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/reset-manual-autoresolve",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/imports/reset-rejections",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/library/add",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/consolidate",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/consolidate-preview",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/discover-additional",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/full-reset",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/refresh-feeds",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/refresh-metadata",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/reset-all-manual-actions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/reset-covers",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/reset-database",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/reset-manual-groups",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/reset-manual-matches",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/maintenance/unmatch-duplicates",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/manual-actions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/manual-groups",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/manual-groups/17/candidates",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/manual-groups/17/members",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/manual-groups/17/members/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/matrix",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/matrix/chapter-stats",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/metadata-fields/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/metadata-providers",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/mixed-entries",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/mixed-entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/mixed-entries/17/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/policy-simulator/run",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/profiles/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/review-workbench/apply",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/serving-upgrades/apply",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/settings/env",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/settings/env/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-browser",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-browser/clear-data",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-browser/restart",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-browser/user-agent",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-engine",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-engine/challenges",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-extensions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-extensions/17/action",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-extensions/update-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-extensions/upload",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-groups",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-groups/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-health",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-health/check",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-health/daily",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-maintenance/control",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-maintenance/jobs/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-manga/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-orphans/17/repair",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-repositories",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/source-repositories/preview",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/sources",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/sources/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/sources/17/preferences",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/sources/sync",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/storage/database",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/storage/database/move",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/subbed",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/subbed/repair-unmatched",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/subbed/search-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tags",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tags/reindex",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tags/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tags/reviews",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tags/suggestions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tasks/17/retry-safe",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/ui-preferences",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/browse/latest",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/browse/popular",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chapters/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/chapters/17/pages",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/entries/17/chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/entries/17/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/live",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/pages/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/search",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/source-covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/source-extension-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/source-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sources",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "GET",
+    "path": "/static/app.js",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "GET",
+    "path": "http",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "HEAD",
+    "path": "/",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/attention",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/attention/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/browse",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/candidates/17/quality",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/candidates/17/reject",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/candidates/17/restore",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/chapters/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/config",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/diagnostics",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/downloads",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/duplicate-candidates",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/duplicates",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/duplicates/automatic",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/duplicates/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/engine/compatibility",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/aliases",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/discover-additional",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/history",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/identity/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/manual-match",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/manual-search",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/manual-titles",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/matches/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/preferred-title",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/redo-automation",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/refresh-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/refresh-covers",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/refresh-metadata",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/separate-source",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/separate-source/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/source-records/17/17/check-chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/tags",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/unbind-auto-matches",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/unmatch-duplicates",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/variants/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/17/variants/17/17/promote",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/entries/summaries",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/errors",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/errors/clear",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/extension-apk",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/extension-apk/download",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/extension-jar",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/extension-jar/download",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/import/mihon-backup",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/17/match/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/17/reject",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/17/skip",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/17/suggestions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/17/suggestions/live",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/items/2",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/match/9",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/17/receipt",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/clear-history",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/reset-manual-autoresolve",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/imports/reset-rejections",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/library/add",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/consolidate",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/consolidate-preview",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/discover-additional",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/full-reset",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/refresh-feeds",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/refresh-metadata",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/reset-all-manual-actions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/reset-covers",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/reset-database",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/reset-manual-groups",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/reset-manual-matches",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/maintenance/unmatch-duplicates",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/manual-actions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/manual-groups",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/manual-groups/17/candidates",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/manual-groups/17/members",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/manual-groups/17/members/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/matrix",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/matrix/chapter-stats",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/metadata-fields/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/metadata-providers",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/mixed-entries",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/mixed-entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/mixed-entries/17/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/policy-simulator/run",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/profiles/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/review-workbench/apply",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/serving-upgrades/apply",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/settings/env",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/settings/env/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-browser",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-browser/clear-data",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-browser/restart",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-browser/user-agent",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-engine",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-engine/challenges",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-extensions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-extensions/17/action",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-extensions/update-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-extensions/upload",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-groups",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-groups/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-health",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-health/check",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-health/daily",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-maintenance/control",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-maintenance/jobs/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-manga/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-orphans/17/repair",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-repositories",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/source-repositories/preview",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/sources",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/sources/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/sources/17/preferences",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/sources/sync",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/storage/database",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/storage/database/move",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/subbed",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/subbed/repair-unmatched",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/subbed/search-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/tags",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/tags/reindex",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/tags/review",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/tags/reviews",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/tags/suggestions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/tasks/17/retry-safe",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/admin/ui-preferences",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/browse/latest",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/browse/popular",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/chapters/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/chapters/17/pages",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/entries/17/chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/entries/17/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/health",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/live",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/pages/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/search",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/source-covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/source-extension-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/source-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/api/v1/sources",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "HEAD",
+    "path": "/static/app.js",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "HEAD",
+    "path": "http",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/attention",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/attention/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/browse",
+    "task_name": "Admin action: POST browse",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/candidates/17/quality",
+    "task_name": "Analyze chapter quality",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/candidates/17/reject",
+    "task_name": "Admin action: POST candidates/17/reject",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/candidates/17/restore",
+    "task_name": "Admin action: POST candidates/17/restore",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/chapters/17",
+    "task_name": "Admin action: POST chapters/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/config",
+    "task_name": "Admin action: POST config",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/diagnostics",
+    "task_name": "Admin action: POST diagnostics",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/downloads",
+    "task_name": "Admin action: POST downloads",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/duplicate-candidates",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/duplicates",
+    "task_name": "Admin action: POST duplicates",
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/duplicates/automatic",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/duplicates/review",
+    "task_name": "Review duplicate",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/engine/compatibility",
+    "task_name": "Admin action: POST engine/compatibility",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries",
+    "task_name": "Admin action: POST entries",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17",
+    "task_name": "Admin action: POST entries/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/aliases",
+    "task_name": "Add alternate title",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/discover-additional",
+    "task_name": "Find missing + extra source records",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/history",
+    "task_name": "Admin action: POST entries/17/history",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/identity/refresh",
+    "task_name": "Refresh metadata + chapters",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/manual-match",
+    "task_name": "Update match",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/manual-search",
+    "task_name": "Admin action: POST entries/17/manual-search",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/manual-titles",
+    "task_name": "Admin action: POST entries/17/manual-titles",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/matches/17",
+    "task_name": "Admin action: POST entries/17/matches/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/preferred-title",
+    "task_name": "Change main title",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/redo-automation",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/refresh",
+    "task_name": "Refresh metadata + chapters",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/refresh-all",
+    "task_name": "Admin action: POST entries/17/refresh-all",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/refresh-covers",
+    "task_name": "Refresh covers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/refresh-metadata",
+    "task_name": "Refresh metadata",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/separate-source",
+    "task_name": "Admin action: POST entries/17/separate-source",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/separate-source/17/17",
+    "task_name": "Admin action: POST entries/17/separate-source/17/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/source-records/17/17/check-chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/tags",
+    "task_name": "Admin action: POST entries/17/tags",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/unbind-auto-matches",
+    "task_name": "Unbind automatic matches",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/unmatch-duplicates",
+    "task_name": "Unmatch duplicates",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/variants/17/17",
+    "task_name": "Admin action: POST entries/17/variants/17/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/17/variants/17/17/promote",
+    "task_name": "Use as primary",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/entries/summaries",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/errors",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/errors/clear",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/extension-apk",
+    "task_name": "Admin action: POST extension-apk",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/extension-apk/download",
+    "task_name": "Admin action: POST extension-apk/download",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/extension-jar",
+    "task_name": "Admin action: POST extension-jar",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/extension-jar/download",
+    "task_name": "Admin action: POST extension-jar/download",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/import/mihon-backup",
+    "task_name": "Admin action: POST import/mihon-backup",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports",
+    "task_name": "Admin action: POST imports",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items",
+    "task_name": "Admin action: POST imports/17/items",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/17",
+    "task_name": "Admin action: POST imports/17/items/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/17/match/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/17/reject",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/17/skip",
+    "task_name": "Skip backup import",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/17/suggestions",
+    "task_name": "Admin action: POST imports/17/items/17/suggestions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/17/suggestions/live",
+    "task_name": "Admin action: POST imports/17/items/17/suggestions/live",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/items/2",
+    "task_name": "Admin action: POST imports/17/items/2",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/match/9",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/17/receipt",
+    "task_name": "Admin action: POST imports/17/receipt",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/clear-history",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/reset-manual-autoresolve",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/imports/reset-rejections",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/library/add",
+    "task_name": "Admin action: POST library/add",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/consolidate",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/consolidate-preview",
+    "task_name": "Admin action: POST maintenance/consolidate-preview",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/discover-additional",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/full-reset",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/refresh-feeds",
+    "task_name": "Refresh browse feeds",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/refresh-metadata",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/reset-all-manual-actions",
+    "task_name": "Admin action: POST maintenance/reset-all-manual-actions",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/reset-covers",
+    "task_name": "Reset covers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/reset-database",
+    "task_name": "Reset database",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/reset-manual-groups",
+    "task_name": "Reset manual groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/reset-manual-matches",
+    "task_name": "Reset manual matches",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/maintenance/unmatch-duplicates",
+    "task_name": "Unmatch duplicates",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/manual-actions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/manual-groups",
+    "task_name": "Admin action: POST manual-groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/manual-groups/17/candidates",
+    "task_name": "Add manual group member",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/manual-groups/17/members",
+    "task_name": "Add manual group member",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/manual-groups/17/members/17/17",
+    "task_name": "Add manual group member",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/matrix",
+    "task_name": "Admin action: POST matrix",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/matrix/chapter-stats",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/metadata-fields/17",
+    "task_name": "Admin action: POST metadata-fields/17",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/metadata-providers",
+    "task_name": "Admin action: POST metadata-providers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/mixed-entries",
+    "task_name": "Admin action: POST mixed-entries",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/mixed-entries/17",
+    "task_name": "Admin action: POST mixed-entries/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/mixed-entries/17/review",
+    "task_name": "Admin action: POST mixed-entries/17/review",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/policy-simulator/run",
+    "task_name": "Admin action: POST policy-simulator/run",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/profiles/review",
+    "task_name": "Admin action: POST profiles/review",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/review-workbench/apply",
+    "task_name": "Admin action: POST review-workbench/apply",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/serving-upgrades/apply",
+    "task_name": "Admin action: POST serving-upgrades/apply",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/settings/env",
+    "task_name": "Admin action: POST settings/env",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/settings/env/17",
+    "task_name": "Admin action: POST settings/env/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-browser",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-browser/clear-data",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-browser/restart",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-browser/user-agent",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-engine",
+    "task_name": "Admin action: POST source-engine",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-engine/challenges",
+    "task_name": "Admin action: POST source-engine/challenges",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-extensions",
+    "task_name": "Admin action: POST source-extensions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-extensions/17/action",
+    "task_name": "Admin action: POST source-extensions/17/action",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-extensions/update-all",
+    "task_name": "Admin action: POST source-extensions/update-all",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-extensions/upload",
+    "task_name": "Install source APK",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-groups",
+    "task_name": "Admin action: POST source-groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-groups/17",
+    "task_name": "Admin action: POST source-groups/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-health",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-health/check",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-health/daily",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-maintenance/control",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-maintenance/jobs/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-manga/17",
+    "task_name": "Admin action: POST source-manga/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-orphans/17/repair",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-repositories",
+    "task_name": "Admin action: POST source-repositories",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/source-repositories/preview",
+    "task_name": "Admin action: POST source-repositories/preview",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/sources",
+    "task_name": "Admin action: POST sources",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/sources/17",
+    "task_name": "Admin action: POST sources/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/sources/17/preferences",
+    "task_name": "Admin action: POST sources/17/preferences",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/sources/sync",
+    "task_name": "Sync sources",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/storage/database",
+    "task_name": "Admin action: POST storage/database",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/storage/database/move",
+    "task_name": "Admin action: POST storage/database/move",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/subbed",
+    "task_name": "Admin action: POST subbed",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/subbed/repair-unmatched",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/subbed/search-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tags",
+    "task_name": "Admin action: POST tags",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tags/reindex",
+    "task_name": "Admin action: POST tags/reindex",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tags/review",
+    "task_name": "Admin action: POST tags/review",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tags/reviews",
+    "task_name": "Admin action: POST tags/reviews",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tags/suggestions",
+    "task_name": "Admin action: POST tags/suggestions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/tasks/17/retry-safe",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/admin/ui-preferences",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/browse/latest",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/browse/popular",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chapters/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/chapters/17/pages",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/entries/17/chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/entries/17/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/health",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/live",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/pages/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/search",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/source-covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/source-extension-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/source-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sources",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "POST",
+    "path": "/static/app.js",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "POST",
+    "path": "http",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/attention",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/attention/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/browse",
+    "task_name": "Admin action: PUT browse",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/candidates/17/quality",
+    "task_name": "Analyze chapter quality",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/candidates/17/reject",
+    "task_name": "Admin action: PUT candidates/17/reject",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/candidates/17/restore",
+    "task_name": "Admin action: PUT candidates/17/restore",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/chapters/17",
+    "task_name": "Admin action: PUT chapters/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/config",
+    "task_name": "Admin action: PUT config",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/diagnostics",
+    "task_name": "Admin action: PUT diagnostics",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/downloads",
+    "task_name": "Admin action: PUT downloads",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/duplicate-candidates",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/duplicates",
+    "task_name": "Admin action: PUT duplicates",
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/duplicates/automatic",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/duplicates/review",
+    "task_name": "Review duplicate",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/engine/compatibility",
+    "task_name": "Admin action: PUT engine/compatibility",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries",
+    "task_name": "Admin action: PUT entries",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17",
+    "task_name": "Admin action: PUT entries/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/aliases",
+    "task_name": "Add alternate title",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/discover-additional",
+    "task_name": "Find missing + extra source records",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/history",
+    "task_name": "Admin action: PUT entries/17/history",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/identity/refresh",
+    "task_name": "Refresh metadata + chapters",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/manual-match",
+    "task_name": "Update match",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/manual-search",
+    "task_name": "Admin action: PUT entries/17/manual-search",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/manual-titles",
+    "task_name": "Admin action: PUT entries/17/manual-titles",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/matches/17",
+    "task_name": "Admin action: PUT entries/17/matches/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/preferred-title",
+    "task_name": "Change main title",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/redo-automation",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/refresh",
+    "task_name": "Refresh metadata + chapters",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/refresh-all",
+    "task_name": "Admin action: PUT entries/17/refresh-all",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/refresh-covers",
+    "task_name": "Refresh covers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/refresh-metadata",
+    "task_name": "Refresh metadata",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/separate-source",
+    "task_name": "Admin action: PUT entries/17/separate-source",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/separate-source/17/17",
+    "task_name": "Admin action: PUT entries/17/separate-source/17/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/source-records/17/17/check-chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/tags",
+    "task_name": "Admin action: PUT entries/17/tags",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/unbind-auto-matches",
+    "task_name": "Unbind automatic matches",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/unmatch-duplicates",
+    "task_name": "Unmatch duplicates",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/variants/17/17",
+    "task_name": "Admin action: PUT entries/17/variants/17/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/17/variants/17/17/promote",
+    "task_name": "Use as primary",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/entries/summaries",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/errors",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/errors/clear",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/extension-apk",
+    "task_name": "Admin action: PUT extension-apk",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/extension-apk/download",
+    "task_name": "Admin action: PUT extension-apk/download",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/extension-jar",
+    "task_name": "Admin action: PUT extension-jar",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/extension-jar/download",
+    "task_name": "Admin action: PUT extension-jar/download",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/import/mihon-backup",
+    "task_name": "Admin action: PUT import/mihon-backup",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports",
+    "task_name": "Admin action: PUT imports",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items",
+    "task_name": "Admin action: PUT imports/17/items",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/17",
+    "task_name": "Admin action: PUT imports/17/items/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/17/match/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/17/reject",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/17/skip",
+    "task_name": "Skip backup import",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/17/suggestions",
+    "task_name": "Admin action: PUT imports/17/items/17/suggestions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/17/suggestions/live",
+    "task_name": "Admin action: PUT imports/17/items/17/suggestions/live",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/items/2",
+    "task_name": "Admin action: PUT imports/17/items/2",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/match/9",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/17/receipt",
+    "task_name": "Admin action: PUT imports/17/receipt",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/clear-history",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/reset-manual-autoresolve",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/imports/reset-rejections",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/library/add",
+    "task_name": "Admin action: PUT library/add",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/consolidate",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/consolidate-preview",
+    "task_name": "Admin action: PUT maintenance/consolidate-preview",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/discover-additional",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/full-reset",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/refresh-feeds",
+    "task_name": "Refresh browse feeds",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/refresh-metadata",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/reset-all-manual-actions",
+    "task_name": "Admin action: PUT maintenance/reset-all-manual-actions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/reset-covers",
+    "task_name": "Reset covers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/reset-database",
+    "task_name": "Reset database",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/reset-manual-groups",
+    "task_name": "Reset manual groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/reset-manual-matches",
+    "task_name": "Reset manual matches",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/maintenance/unmatch-duplicates",
+    "task_name": "Unmatch duplicates",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/manual-actions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/manual-groups",
+    "task_name": "Admin action: PUT manual-groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/manual-groups/17/candidates",
+    "task_name": "Admin action: PUT manual-groups/17/candidates",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/manual-groups/17/members",
+    "task_name": "Admin action: PUT manual-groups/17/members",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/manual-groups/17/members/17/17",
+    "task_name": "Admin action: PUT manual-groups/17/members/17/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/matrix",
+    "task_name": "Admin action: PUT matrix",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/matrix/chapter-stats",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/metadata-fields/17",
+    "task_name": "Admin action: PUT metadata-fields/17",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/metadata-providers",
+    "task_name": "Admin action: PUT metadata-providers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/mixed-entries",
+    "task_name": "Admin action: PUT mixed-entries",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/mixed-entries/17",
+    "task_name": "Admin action: PUT mixed-entries/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/mixed-entries/17/review",
+    "task_name": "Admin action: PUT mixed-entries/17/review",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/policy-simulator/run",
+    "task_name": "Admin action: PUT policy-simulator/run",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/profiles/review",
+    "task_name": "Admin action: PUT profiles/review",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/review-workbench/apply",
+    "task_name": "Admin action: PUT review-workbench/apply",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/serving-upgrades/apply",
+    "task_name": "Admin action: PUT serving-upgrades/apply",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/settings/env",
+    "task_name": "Admin action: PUT settings/env",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/settings/env/17",
+    "task_name": "Save settings",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-browser",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-browser/clear-data",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-browser/restart",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-browser/user-agent",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-engine",
+    "task_name": "Admin action: PUT source-engine",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-engine/challenges",
+    "task_name": "Admin action: PUT source-engine/challenges",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-extensions",
+    "task_name": "Admin action: PUT source-extensions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-extensions/17/action",
+    "task_name": "Admin action: PUT source-extensions/17/action",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-extensions/update-all",
+    "task_name": "Admin action: PUT source-extensions/update-all",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-extensions/upload",
+    "task_name": "Install source APK",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-groups",
+    "task_name": "Admin action: PUT source-groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-groups/17",
+    "task_name": "Admin action: PUT source-groups/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-health",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-health/check",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-health/daily",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-maintenance/control",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-maintenance/jobs/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-manga/17",
+    "task_name": "Admin action: PUT source-manga/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-orphans/17/repair",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-repositories",
+    "task_name": "Admin action: PUT source-repositories",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/source-repositories/preview",
+    "task_name": "Admin action: PUT source-repositories/preview",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/sources",
+    "task_name": "Admin action: PUT sources",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/sources/17",
+    "task_name": "Update source",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/sources/17/preferences",
+    "task_name": "Save source settings",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/sources/sync",
+    "task_name": "Sync sources",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/storage/database",
+    "task_name": "Admin action: PUT storage/database",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/storage/database/move",
+    "task_name": "Admin action: PUT storage/database/move",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/subbed",
+    "task_name": "Admin action: PUT subbed",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/subbed/repair-unmatched",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/subbed/search-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tags",
+    "task_name": "Admin action: PUT tags",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tags/reindex",
+    "task_name": "Admin action: PUT tags/reindex",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tags/review",
+    "task_name": "Admin action: PUT tags/review",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tags/reviews",
+    "task_name": "Admin action: PUT tags/reviews",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tags/suggestions",
+    "task_name": "Admin action: PUT tags/suggestions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tasks/17/retry-safe",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/ui-preferences",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/browse/latest",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/browse/popular",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/chapters/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/chapters/17/pages",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/entries/17/chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/entries/17/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/health",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/live",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/pages/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/search",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/source-covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/source-extension-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/source-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/sources",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "PUT",
+    "path": "/static/app.js",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "PUT",
+    "path": "http",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/attention",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/attention/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/browse",
+    "task_name": "Admin action: DELETE browse",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/candidates/17/quality",
+    "task_name": "Analyze chapter quality",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/candidates/17/reject",
+    "task_name": "Admin action: DELETE candidates/17/reject",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/candidates/17/restore",
+    "task_name": "Admin action: DELETE candidates/17/restore",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/chapters/17",
+    "task_name": "Admin action: DELETE chapters/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/config",
+    "task_name": "Admin action: DELETE config",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/diagnostics",
+    "task_name": "Admin action: DELETE diagnostics",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/downloads",
+    "task_name": "Admin action: DELETE downloads",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/duplicate-candidates",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/duplicates",
+    "task_name": "Admin action: DELETE duplicates",
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/duplicates/automatic",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/duplicates/review",
+    "task_name": "Review duplicate",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/engine/compatibility",
+    "task_name": "Admin action: DELETE engine/compatibility",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries",
+    "task_name": "Admin action: DELETE entries",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17",
+    "task_name": "Delete entry",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/aliases",
+    "task_name": "Add alternate title",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/discover-additional",
+    "task_name": "Find missing + extra source records",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/history",
+    "task_name": "Admin action: DELETE entries/17/history",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/identity/refresh",
+    "task_name": "Refresh metadata + chapters",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/manual-match",
+    "task_name": "Update match",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/manual-search",
+    "task_name": "Admin action: DELETE entries/17/manual-search",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/manual-titles",
+    "task_name": "Admin action: DELETE entries/17/manual-titles",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/matches/17",
+    "task_name": "Clear match",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/preferred-title",
+    "task_name": "Change main title",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/redo-automation",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/refresh",
+    "task_name": "Refresh metadata + chapters",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/refresh-all",
+    "task_name": "Admin action: DELETE entries/17/refresh-all",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/refresh-covers",
+    "task_name": "Refresh covers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/refresh-metadata",
+    "task_name": "Refresh metadata",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/separate-source",
+    "task_name": "Admin action: DELETE entries/17/separate-source",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/separate-source/17/17",
+    "task_name": "Admin action: DELETE entries/17/separate-source/17/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/source-records/17/17/check-chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/tags",
+    "task_name": "Admin action: DELETE entries/17/tags",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/unbind-auto-matches",
+    "task_name": "Unbind automatic matches",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/unmatch-duplicates",
+    "task_name": "Unmatch duplicates",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/variants/17/17",
+    "task_name": "Remove additional match",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/17/variants/17/17/promote",
+    "task_name": "Remove additional match",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/entries/summaries",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/errors",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/errors/clear",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/extension-apk",
+    "task_name": "Admin action: DELETE extension-apk",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/extension-apk/download",
+    "task_name": "Admin action: DELETE extension-apk/download",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/extension-jar",
+    "task_name": "Admin action: DELETE extension-jar",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/extension-jar/download",
+    "task_name": "Admin action: DELETE extension-jar/download",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/import/mihon-backup",
+    "task_name": "Admin action: DELETE import/mihon-backup",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports",
+    "task_name": "Admin action: DELETE imports",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items",
+    "task_name": "Admin action: DELETE imports/17/items",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/17",
+    "task_name": "Admin action: DELETE imports/17/items/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/17/match/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/17/reject",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/17/retry",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/17/skip",
+    "task_name": "Skip backup import",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/17/suggestions",
+    "task_name": "Admin action: DELETE imports/17/items/17/suggestions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/17/suggestions/live",
+    "task_name": "Admin action: DELETE imports/17/items/17/suggestions/live",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/items/2",
+    "task_name": "Admin action: DELETE imports/17/items/2",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/match/9",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/17/receipt",
+    "task_name": "Admin action: DELETE imports/17/receipt",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/clear-history",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/reset-manual-autoresolve",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/imports/reset-rejections",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/library/add",
+    "task_name": "Admin action: DELETE library/add",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/consolidate",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/consolidate-preview",
+    "task_name": "Admin action: DELETE maintenance/consolidate-preview",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/discover-additional",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/full-reset",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/refresh-feeds",
+    "task_name": "Refresh browse feeds",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/refresh-metadata",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/reset-all-manual-actions",
+    "task_name": "Admin action: DELETE maintenance/reset-all-manual-actions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/reset-covers",
+    "task_name": "Reset covers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/reset-database",
+    "task_name": "Reset database",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/reset-manual-groups",
+    "task_name": "Reset manual groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/reset-manual-matches",
+    "task_name": "Reset manual matches",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/maintenance/unmatch-duplicates",
+    "task_name": "Unmatch duplicates",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/manual-actions",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/manual-groups",
+    "task_name": "Admin action: DELETE manual-groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/manual-groups/17/candidates",
+    "task_name": "Remove manual group member",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/manual-groups/17/members",
+    "task_name": "Remove manual group member",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/manual-groups/17/members/17/17",
+    "task_name": "Remove manual group member",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/matrix",
+    "task_name": "Admin action: DELETE matrix",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/matrix/chapter-stats",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/metadata-fields/17",
+    "task_name": "Admin action: DELETE metadata-fields/17",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/metadata-providers",
+    "task_name": "Admin action: DELETE metadata-providers",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/mixed-entries",
+    "task_name": "Admin action: DELETE mixed-entries",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/mixed-entries/17",
+    "task_name": "Admin action: DELETE mixed-entries/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/mixed-entries/17/review",
+    "task_name": "Admin action: DELETE mixed-entries/17/review",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/policy-simulator/run",
+    "task_name": "Admin action: DELETE policy-simulator/run",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/profiles/review",
+    "task_name": "Admin action: DELETE profiles/review",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/review-workbench/apply",
+    "task_name": "Admin action: DELETE review-workbench/apply",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/serving-upgrades/apply",
+    "task_name": "Admin action: DELETE serving-upgrades/apply",
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/settings/env",
+    "task_name": "Admin action: DELETE settings/env",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/settings/env/17",
+    "task_name": "Admin action: DELETE settings/env/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-browser",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-browser/clear-data",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-browser/restart",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-browser/user-agent",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-engine",
+    "task_name": "Admin action: DELETE source-engine",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-engine/challenges",
+    "task_name": "Admin action: DELETE source-engine/challenges",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-extensions",
+    "task_name": "Admin action: DELETE source-extensions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-extensions/17/action",
+    "task_name": "Admin action: DELETE source-extensions/17/action",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-extensions/update-all",
+    "task_name": "Admin action: DELETE source-extensions/update-all",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-extensions/upload",
+    "task_name": "Install source APK",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-groups",
+    "task_name": "Admin action: DELETE source-groups",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-groups/17",
+    "task_name": "Admin action: DELETE source-groups/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-health",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-health/check",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-health/daily",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-maintenance/control",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-maintenance/jobs/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-manga/17",
+    "task_name": "Admin action: DELETE source-manga/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-orphans/17/repair",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-repositories",
+    "task_name": "Admin action: DELETE source-repositories",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/source-repositories/preview",
+    "task_name": "Admin action: DELETE source-repositories/preview",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/sources",
+    "task_name": "Admin action: DELETE sources",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/sources/17",
+    "task_name": "Admin action: DELETE sources/17",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/sources/17/preferences",
+    "task_name": "Admin action: DELETE sources/17/preferences",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/sources/sync",
+    "task_name": "Sync sources",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/storage/database",
+    "task_name": "Admin action: DELETE storage/database",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/storage/database/move",
+    "task_name": "Admin action: DELETE storage/database/move",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/subbed",
+    "task_name": "Admin action: DELETE subbed",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/subbed/repair-unmatched",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/subbed/search-all",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tags",
+    "task_name": "Admin action: DELETE tags",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tags/reindex",
+    "task_name": "Admin action: DELETE tags/reindex",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tags/review",
+    "task_name": "Admin action: DELETE tags/review",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tags/reviews",
+    "task_name": "Admin action: DELETE tags/reviews",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tags/suggestions",
+    "task_name": "Admin action: DELETE tags/suggestions",
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/tasks/17/retry-safe",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/admin/ui-preferences",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/browse/latest",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/browse/popular",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/chapters/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/chapters/17/pages",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/entries/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/entries/17/chapters",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/entries/17/refresh",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/health",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/live",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/pages/17/17",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/search",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/source-covers/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/source-extension-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/source-icon/17",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/v1/sources",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": true
+  },
+  {
+    "method": "DELETE",
+    "path": "/static/app.js",
+    "task_name": null,
+    "interactive": false,
+    "catalog_admission": false
+  },
+  {
+    "method": "DELETE",
+    "path": "http",
+    "task_name": null,
+    "interactive": true,
+    "catalog_admission": false
+  }
+]

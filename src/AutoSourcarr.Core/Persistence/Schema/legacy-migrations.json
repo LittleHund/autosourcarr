@@ -1,0 +1,496 @@
+{
+  "format": 1,
+  "sourceVersion": "0.4.3",
+  "catalog": [
+    {
+      "kind": "if-missing-column",
+      "table": "source_config",
+      "column": "enabled_language",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_config ADD COLUMN enabled_language INTEGER NOT NULL DEFAULT 1"
+        },
+        {
+          "kind": "sql",
+          "sql": "UPDATE source_config SET enabled_language=CASE WHEN enabled_search=1 OR enabled_chapters=1 THEN 1 ELSE 0 END"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_config",
+      "column": "available",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_config ADD COLUMN available INTEGER NOT NULL DEFAULT 1"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_config",
+      "column": "group_id",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_config ADD COLUMN group_id INTEGER"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_config",
+      "column": "official",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_config ADD COLUMN official INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_config",
+      "column": "official_manual",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_config ADD COLUMN official_manual INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS source_groups (\n                       id INTEGER PRIMARY KEY AUTOINCREMENT,\n                       name TEXT NOT NULL UNIQUE, priority INTEGER NOT NULL DEFAULT 1000,\n                       created_at TEXT NOT NULL, updated_at TEXT NOT NULL\n                   )"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_groups",
+      "column": "priority",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_groups ADD COLUMN priority INTEGER NOT NULL DEFAULT 1000"
+        },
+        {
+          "kind": "sql",
+          "sql": "UPDATE source_groups SET priority=COALESCE(\n                           (SELECT MIN(sc.priority) FROM source_config sc WHERE sc.group_id=source_groups.id),\n                           priority, 1000)"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "UPDATE source_config SET priority=(\n                       SELECT sg.priority FROM source_groups sg WHERE sg.id=source_config.group_id)\n                       WHERE group_id IS NOT NULL AND EXISTS(\n                           SELECT 1 FROM source_groups sg WHERE sg.id=source_config.group_id)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_source_config_group ON source_config(group_id)"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "entries",
+      "column": "color_mode",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE entries ADD COLUMN color_mode TEXT NOT NULL DEFAULT 'unknown'"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "entries",
+      "column": "color_confidence",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE entries ADD COLUMN color_confidence REAL NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "entries",
+      "column": "media_mode",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE entries ADD COLUMN media_mode TEXT NOT NULL DEFAULT 'unknown'"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "INSERT OR IGNORE INTO entry_preferred_titles(entry_id,raw_title,normalized)\n                SELECT e.id,e.preferred_title,NULL FROM entries e\n                WHERE NOT EXISTS(SELECT 1 FROM entry_preferred_titles p WHERE p.entry_id=e.id)"
+    },
+    {
+      "kind": "normalize-preferred-titles"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS source_color_profiles (\n                       source_id TEXT NOT NULL,\n                       source_manga_id INTEGER NOT NULL,\n                       color_mode TEXT NOT NULL DEFAULT 'unknown',\n                       confidence REAL NOT NULL DEFAULT 0,\n                       sampled_pages INTEGER NOT NULL DEFAULT 0,\n                       evidence TEXT NOT NULL DEFAULT '',\n                       colored_fraction REAL NOT NULL DEFAULT 0,\n                       analyzed_at TEXT NOT NULL,\n                       PRIMARY KEY(source_id, source_manga_id)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_color_profiles_mode ON source_color_profiles(color_mode, confidence)"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "titles",
+      "column": "source_manga_id",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE titles ADD COLUMN source_manga_id INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "kind": "sql",
+          "sql": "UPDATE titles SET source_manga_id=COALESCE((\n                           SELECT sm.source_manga_id FROM source_matches sm\n                           WHERE sm.entry_id=titles.entry_id AND sm.source_id=titles.source_id AND sm.active=1\n                           LIMIT 1),0)\n                       WHERE source_manga_id=0 AND source_id<>''"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS duplicate_split_history (\n                       id INTEGER PRIMARY KEY AUTOINCREMENT,\n                       original_entry_id INTEGER NOT NULL,\n                       new_entry_id INTEGER NOT NULL,\n                       records_json TEXT NOT NULL DEFAULT '[]',\n                       split_at TEXT NOT NULL\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_duplicate_split_original ON duplicate_split_history(original_entry_id, split_at)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS automatic_merge_lineage (\n                       canonical_entry_id INTEGER NOT NULL, member_entry_id INTEGER NOT NULL,\n                       snapshot_json TEXT NOT NULL DEFAULT '{}', merged_at TEXT NOT NULL,\n                       PRIMARY KEY(canonical_entry_id, member_entry_id)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_auto_merge_lineage_member ON automatic_merge_lineage(member_entry_id)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS automatic_merge_events (\n                       id INTEGER PRIMARY KEY AUTOINCREMENT, target_entry_id INTEGER NOT NULL, duplicate_entry_id INTEGER NOT NULL,\n                       target_snapshot_json TEXT NOT NULL DEFAULT '{}', duplicate_snapshot_json TEXT NOT NULL DEFAULT '{}',\n                       reason TEXT NOT NULL DEFAULT '', merged_at TEXT NOT NULL, repaired_at TEXT NOT NULL DEFAULT ''\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_auto_merge_events_target ON automatic_merge_events(target_entry_id, merged_at)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_auto_merge_events_pair ON automatic_merge_events(target_entry_id, duplicate_entry_id)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_auto_merge_events_compact_history ON automatic_merge_events(\n                merged_at DESC,id DESC,target_entry_id,duplicate_entry_id,reason,repaired_at,\n                CASE WHEN json_valid(target_snapshot_json) THEN json_extract(target_snapshot_json,'$.entry.preferred_title') END,\n                CASE WHEN json_valid(duplicate_snapshot_json) THEN json_extract(duplicate_snapshot_json,'$.entry.preferred_title') END)"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "automatic_merge_events",
+      "column": "evidence_json",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE automatic_merge_events ADD COLUMN evidence_json TEXT NOT NULL DEFAULT '{}'"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS preferred_title_overrides (\n                       entry_id INTEGER PRIMARY KEY,\n                       title TEXT NOT NULL,\n                       updated_at TEXT NOT NULL\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS preferred_title_override_sources (\n                       source_id TEXT NOT NULL,\n                       source_manga_id INTEGER NOT NULL,\n                       title TEXT NOT NULL,\n                       updated_at TEXT NOT NULL,\n                       PRIMARY KEY(source_id, source_manga_id)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS manual_title_scopes (\n                       entry_id INTEGER NOT NULL, source_id TEXT NOT NULL, source_manga_id INTEGER NOT NULL,\n                       title TEXT NOT NULL, captured_at TEXT NOT NULL,\n                       PRIMARY KEY(entry_id, source_id, source_manga_id)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_manual_title_scopes_source ON manual_title_scopes(source_id,source_manga_id)"
+    },
+    {
+      "kind": "sql",
+      "sql": "INSERT OR IGNORE INTO manual_title_scopes(entry_id,source_id,source_manga_id,title,captured_at)\n                   SELECT sm.entry_id,p.source_id,p.source_manga_id,p.title,p.updated_at\n                     FROM preferred_title_override_sources p\n                     JOIN source_matches sm ON sm.source_id=p.source_id AND sm.source_manga_id=p.source_manga_id AND sm.active=1\n                     JOIN preferred_title_overrides o ON o.entry_id=sm.entry_id AND o.title=p.title\n                   UNION\n                   SELECT sv.entry_id,p.source_id,p.source_manga_id,p.title,p.updated_at\n                     FROM preferred_title_override_sources p\n                     JOIN source_variants sv ON sv.source_id=p.source_id AND sv.source_manga_id=p.source_manga_id AND sv.active=1\n                     JOIN preferred_title_overrides o ON o.entry_id=sv.entry_id AND o.title=p.title"
+    },
+    {
+      "kind": "sql",
+      "sql": "DELETE FROM preferred_title_override_sources"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS manual_match_groups (\n                       id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '',\n                       created_at TEXT NOT NULL, updated_at TEXT NOT NULL\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS manual_match_bindings (\n                       source_id TEXT NOT NULL, source_manga_id INTEGER NOT NULL, group_id TEXT,\n                       entry_id_hint INTEGER, source_name TEXT NOT NULL DEFAULT '', source_title TEXT NOT NULL DEFAULT '',\n                       record_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL, updated_at TEXT NOT NULL,\n                       PRIMARY KEY(source_id, source_manga_id),\n                       FOREIGN KEY(group_id) REFERENCES manual_match_groups(id) ON DELETE SET NULL\n                   )"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "manual_match_bindings",
+      "column": "grouping_suppressed",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE manual_match_bindings ADD COLUMN grouping_suppressed INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_manual_bindings_group ON manual_match_bindings(group_id)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_manual_bindings_entry_hint ON manual_match_bindings(entry_id_hint)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS user_ui_preferences (\n                       user_key TEXT PRIMARY KEY, values_json TEXT NOT NULL DEFAULT '{}', updated_at TEXT NOT NULL\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS thumbnail_fingerprints (\n                       subject_key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL DEFAULT '', width INTEGER NOT NULL DEFAULT 0,\n                       height INTEGER NOT NULL DEFAULT 0, source_url TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_thumbnail_fingerprint_value ON thumbnail_fingerprints(fingerprint)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS import_runs (\n                       id TEXT PRIMARY KEY, filename TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT 'running',\n                       total INTEGER NOT NULL DEFAULT 0, added INTEGER NOT NULL DEFAULT 0, existing INTEGER NOT NULL DEFAULT 0,\n                       unresolved INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0, skipped INTEGER NOT NULL DEFAULT 0,\n                       created_at TEXT NOT NULL, completed_at TEXT NOT NULL DEFAULT ''\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_import_runs_created ON import_runs(created_at)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS import_items (\n                       id INTEGER PRIMARY KEY AUTOINCREMENT, import_id TEXT NOT NULL REFERENCES import_runs(id) ON DELETE CASCADE,\n                       position INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL DEFAULT '', backup_source TEXT NOT NULL DEFAULT '',\n                       source_id TEXT NOT NULL DEFAULT '', source_url TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT 'unresolved',\n                       reason TEXT NOT NULL DEFAULT '', entry_id INTEGER, raw_json TEXT NOT NULL DEFAULT '{}', candidate_ids_json TEXT NOT NULL DEFAULT '[]',\n                       english_title TEXT NOT NULL DEFAULT '', reference_entry_id INTEGER, reference_title TEXT NOT NULL DEFAULT '',\n                       reference_description TEXT NOT NULL DEFAULT '', reference_thumbnail_url TEXT NOT NULL DEFAULT '',\n                       translation_checked INTEGER NOT NULL DEFAULT 0, suggestion_checked INTEGER NOT NULL DEFAULT 0,\n                       suggestion_state TEXT NOT NULL DEFAULT 'pending', matched_snapshot_json TEXT NOT NULL DEFAULT '{}',\n                       updated_at TEXT NOT NULL, UNIQUE(import_id, position)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_import_items_run_state ON import_items(import_id,state,position)"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "english_title",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN english_title TEXT NOT NULL DEFAULT ''"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "reference_entry_id",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN reference_entry_id INTEGER"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "reference_title",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN reference_title TEXT NOT NULL DEFAULT ''"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "reference_description",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN reference_description TEXT NOT NULL DEFAULT ''"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "reference_thumbnail_url",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN reference_thumbnail_url TEXT NOT NULL DEFAULT ''"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "translation_checked",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN translation_checked INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "suggestion_checked",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN suggestion_checked INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "suggestion_state",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN suggestion_state TEXT NOT NULL DEFAULT 'pending'"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "library_add_verified",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN library_add_verified INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "decision_revision",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN decision_revision INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "import_items",
+      "column": "matched_snapshot_json",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE import_items ADD COLUMN matched_snapshot_json TEXT NOT NULL DEFAULT '{}'"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS import_match_rejections (\n                       backup_key TEXT NOT NULL, signature TEXT NOT NULL,\n                       backup_title TEXT NOT NULL DEFAULT '', backup_source TEXT NOT NULL DEFAULT '',\n                       rejected_title TEXT NOT NULL DEFAULT '', rejected_at TEXT NOT NULL,\n                       PRIMARY KEY(backup_key, signature)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_import_match_rejections_key ON import_match_rejections(backup_key)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS import_manual_autoresolve (\n                       backup_key TEXT PRIMARY KEY, backup_title TEXT NOT NULL DEFAULT '', backup_source TEXT NOT NULL DEFAULT '',\n                       backup_source_id TEXT NOT NULL DEFAULT '', backup_source_url TEXT NOT NULL DEFAULT '',\n                       target_source_id TEXT NOT NULL DEFAULT '', target_source_manga_id INTEGER NOT NULL DEFAULT 0,\n                       target_source_name TEXT NOT NULL DEFAULT '', target_title TEXT NOT NULL DEFAULT '',\n                       target_entry_id_hint INTEGER, target_record_json TEXT NOT NULL DEFAULT '{}',\n                       created_at TEXT NOT NULL, updated_at TEXT NOT NULL\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_import_manual_autoresolve_target ON import_manual_autoresolve(target_source_id,target_source_manga_id)"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS import_manual_autoresolve_state (\n                       key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT ''\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS manual_separate_records (\n                       target_entry_id INTEGER NOT NULL, source_id TEXT NOT NULL, source_manga_id INTEGER NOT NULL,\n                       separate_entry_id_hint INTEGER, source_title TEXT NOT NULL DEFAULT '',\n                       created_at TEXT NOT NULL, updated_at TEXT NOT NULL,\n                       PRIMARY KEY(target_entry_id, source_id, source_manga_id)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_manual_separate_source ON manual_separate_records(source_id,source_manga_id)"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_variants",
+      "column": "match_type",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_variants ADD COLUMN match_type TEXT NOT NULL DEFAULT 'auto'"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_variants",
+      "column": "locked",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_variants ADD COLUMN locked INTEGER NOT NULL DEFAULT 0"
+        }
+      ]
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "source_variants",
+      "column": "initialized",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE source_variants ADD COLUMN initialized INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+          "kind": "sql",
+          "sql": "UPDATE source_variants SET initialized=CASE WHEN length(description)>0 OR length(thumbnail_url)>0 THEN 1 ELSE 0 END"
+        }
+      ]
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_matches_manual_capture ON source_matches(entry_id,source_id,source_manga_id) WHERE active=1 AND lower(match_type)='manual'"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_variants_manual_capture ON source_variants(entry_id,source_id,source_manga_id) WHERE active=1 AND lower(match_type)='manual'"
+    },
+    {
+      "kind": "sql",
+      "sql": "INSERT OR IGNORE INTO entry_aliases(old_entry_id,canonical_entry_id,reason,merged_at)\n                   SELECT old_source_manga_id,new_source_manga_id,change_type,changed_at\n                   FROM match_history\n                   WHERE source_id='*' AND change_type LIKE 'merge:%'\n                     AND old_source_manga_id IS NOT NULL AND new_source_manga_id IS NOT NULL\n                     AND old_source_manga_id<>new_source_manga_id"
+    }
+  ],
+  "origins": [
+    {
+      "kind": "sql",
+      "sql": "CREATE TABLE IF NOT EXISTS chapter_candidate_rejections (\n                       source_id TEXT NOT NULL, source_chapter_id INTEGER NOT NULL,\n                       source_manga_id INTEGER NOT NULL DEFAULT 0, source_name TEXT NOT NULL DEFAULT '',\n                       name TEXT NOT NULL DEFAULT '', rejected_at TEXT NOT NULL,\n                       PRIMARY KEY(source_id, source_chapter_id)\n                   )"
+    },
+    {
+      "kind": "sql",
+      "sql": "CREATE INDEX IF NOT EXISTS idx_candidate_rejections_manga ON chapter_candidate_rejections(source_id,source_manga_id)"
+    },
+    {
+      "kind": "if-missing-column",
+      "table": "chapter_candidates",
+      "column": "source_chapter_index",
+      "steps": [
+        {
+          "kind": "sql",
+          "sql": "ALTER TABLE chapter_candidates ADD COLUMN source_chapter_index INTEGER NOT NULL DEFAULT -1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,658 @@
+[
+  {
+    "items": [],
+    "expected": []
+  },
+  {
+    "items": [
+      {
+        "id": "one",
+        "key": "request:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "源 failed at example.Test.run(One.java:1)",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "source_context": {
+          "source_id": "-42"
+        }
+      },
+      {
+        "id": "two",
+        "key": "request:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/99/chapters",
+        "message": "源 failed at example.Test.run(Other.java:2)",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:02+00:00",
+        "count": 3,
+        "source_context": {
+          "source_id": "-42"
+        }
+      }
+    ],
+    "expected": [
+      {
+        "id": "two",
+        "key": "request:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/99/chapters",
+        "message": "源 failed at example.Test.run(Other.java:2)",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:02+00:00",
+        "count": 4,
+        "source_context": {
+          "source_id": "-42"
+        },
+        "group_key": "diagnostic-68d830f1f5e9ae89",
+        "record_count": 2,
+        "member_ids": [
+          "one",
+          "two"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters",
+          "/api/v1/entries/99/chapters"
+        ]
+      }
+    ]
+  },
+  {
+    "items": [
+      {
+        "id": "one",
+        "key": "source-host-pages:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "two",
+        "key": "source-host-pages:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      }
+    ],
+    "expected": [
+      {
+        "id": "one",
+        "key": "source-host-pages:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-14bc7adebd95a545",
+        "record_count": 1,
+        "member_ids": [
+          "one"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      },
+      {
+        "id": "two",
+        "key": "source-host-pages:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-e223d064585d7d38",
+        "record_count": 1,
+        "member_ids": [
+          "two"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      }
+    ]
+  },
+  {
+    "items": [
+      {
+        "id": "code403",
+        "key": "request:code403",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "HTTP 403",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "code429",
+        "key": "request:code429",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 429,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "HTTP 429",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "code521",
+        "key": "request:code521",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 521,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "HTTP 521",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      }
+    ],
+    "expected": [
+      {
+        "id": "code403",
+        "key": "request:code403",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "HTTP 403",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-aec5552e2ef09896",
+        "record_count": 1,
+        "member_ids": [
+          "code403"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      },
+      {
+        "id": "code429",
+        "key": "request:code429",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 429,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "HTTP 429",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-f264e48faf181bb3",
+        "record_count": 1,
+        "member_ids": [
+          "code429"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      },
+      {
+        "id": "code521",
+        "key": "request:code521",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 521,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "HTTP 521",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-84ae3784d1ffe945",
+        "record_count": 1,
+        "member_ids": [
+          "code521"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      }
+    ]
+  },
+  {
+    "items": [
+      {
+        "id": "one",
+        "key": "request:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "retry then retry in 10 seconds",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "source_context": {
+          "source_name": "Straße"
+        }
+      },
+      {
+        "id": "two",
+        "key": "request:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/77/chapters",
+        "message": "retry then retry in 20 seconds",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "source_context": {
+          "source_name": "STRASSE"
+        }
+      }
+    ],
+    "expected": [
+      {
+        "id": "one",
+        "key": "request:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "retry then retry in 10 seconds",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 2,
+        "source_context": {
+          "source_name": "Straße"
+        },
+        "group_key": "diagnostic-3f74bd45985910b8",
+        "record_count": 2,
+        "member_ids": [
+          "one",
+          "two"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters",
+          "/api/v1/entries/77/chapters"
+        ]
+      }
+    ]
+  },
+  {
+    "items": [
+      {
+        "id": "one",
+        "key": "request:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": true,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "two",
+        "key": "request:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "three",
+        "key": "request:three",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": true,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "four",
+        "key": "request:four",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": true,
+        "pinned": true,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      }
+    ],
+    "expected": [
+      {
+        "id": "one",
+        "key": "request:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": true,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-5fa0ee5566c0c18e",
+        "record_count": 1,
+        "member_ids": [
+          "one"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      },
+      {
+        "id": "two",
+        "key": "request:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-a3b4a545b74528de",
+        "record_count": 1,
+        "member_ids": [
+          "two"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      },
+      {
+        "id": "three",
+        "key": "request:three",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": true,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-d964128de0f90fac",
+        "record_count": 1,
+        "member_ids": [
+          "three"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      },
+      {
+        "id": "four",
+        "key": "request:four",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": true,
+        "pinned": true,
+        "method": "GET",
+        "path": "/api/v1/entries/42/chapters",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1,
+        "group_key": "diagnostic-3b0346c186e5f11a",
+        "record_count": 1,
+        "member_ids": [
+          "four"
+        ],
+        "paths": [
+          "/api/v1/entries/42/chapters"
+        ]
+      }
+    ]
+  },
+  {
+    "items": [
+      {
+        "id": "one",
+        "key": "request:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/admin/imports/first/items/10",
+        "message": "Error (error abcdef123456)",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "two",
+        "key": "request:two",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/admin/imports/second/items/20",
+        "message": "Error",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      }
+    ],
+    "expected": [
+      {
+        "id": "one",
+        "key": "request:one",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "/api/admin/imports/first/items/10",
+        "message": "Error (error abcdef123456)",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 2,
+        "group_key": "diagnostic-00eb6d101c612b23",
+        "record_count": 2,
+        "member_ids": [
+          "one",
+          "two"
+        ],
+        "paths": [
+          "/api/admin/imports/first/items/10",
+          "/api/admin/imports/second/items/20"
+        ]
+      }
+    ]
+  },
+  {
+    "items": [
+      {
+        "id": "one",
+        "key": "import-source:-123",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "https://source.test/api/v1/chapters/10/pages?value=one",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      },
+      {
+        "id": "two",
+        "key": "import-source:-123",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "https://source.test/api/v1/chapters/20/pages?value=two",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 1
+      }
+    ],
+    "expected": [
+      {
+        "id": "one",
+        "key": "import-source:-123",
+        "component": "Source",
+        "severity": "error",
+        "status_code": 403,
+        "error_type": "SourceError",
+        "resolved": false,
+        "pinned": false,
+        "method": "GET",
+        "path": "https://source.test/api/v1/chapters/10/pages?value=one",
+        "message": "Source failed",
+        "first_seen": "2026-10-19T00:00:00+00:00",
+        "last_seen": "2026-10-19T00:00:01+00:00",
+        "count": 2,
+        "group_key": "diagnostic-4cf98453fa104399",
+        "record_count": 2,
+        "member_ids": [
+          "one",
+          "two"
+        ],
+        "paths": [
+          "https://source.test/api/v1/chapters/10/pages?value=one",
+          "https://source.test/api/v1/chapters/20/pages?value=two"
+        ]
+      }
+    ]
+  }
+]

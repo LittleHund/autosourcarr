@@ -1,0 +1,23 @@
+# Minimal independent contract for the operations AutoSourcarr uses.
+# Derived from Suwayomi-Server v2.3.2243:
+# graphql/server/primitives/LongAsString.kt; graphql/server/TachideskGraphQLSchema.kt;
+# graphql/queries/SourceQuery.kt; graphql/types/SourceType.kt;
+# graphql/mutations/SourceMutation.kt; graphql/mutations/SettingsMutation.kt.
+# Unused fields are deliberately omitted. This is not a live introspection export.
+scalar LongString
+union Preference = SwitchPreference | ListPreference | CheckBoxPreference | EditTextPreference | MultiSelectListPreference
+type SwitchPreference { key: String title: String summary: String visible: Boolean! enabled: Boolean! currentValue: Boolean default: Boolean! }
+type CheckBoxPreference { key: String title: String summary: String visible: Boolean! enabled: Boolean! currentValue: Boolean default: Boolean! }
+type EditTextPreference { key: String title: String summary: String visible: Boolean! enabled: Boolean! currentValue: String default: String dialogTitle: String dialogMessage: String text: String }
+type ListPreference { key: String title: String summary: String visible: Boolean! enabled: Boolean! currentValue: String default: String entries: [String!]! entryValues: [String!]! }
+type MultiSelectListPreference { key: String title: String summary: String visible: Boolean! enabled: Boolean! currentValue: [String!] default: [String!] entries: [String!]! entryValues: [String!]! dialogTitle: String dialogMessage: String }
+type SourceType { id: LongString! name: String! isConfigurable: Boolean! preferences: [Preference!]! }
+input SourcePreferenceChangeInput { position: Int! switchState: Boolean checkBoxState: Boolean editTextState: String listState: String multiSelectState: [String!] }
+input UpdateSourcePreferenceInput { clientMutationId: String source: LongString! change: SourcePreferenceChangeInput! }
+type UpdateSourcePreferencePayload { clientMutationId: String preferences: [Preference!]! source: SourceType! }
+type SettingsType { flareSolverrEnabled: Boolean! flareSolverrUrl: String! flareSolverrTimeout: Int! }
+input PartialSettingsTypeInput { flareSolverrEnabled: Boolean flareSolverrUrl: String flareSolverrTimeout: Int }
+input SetSettingsInput { clientMutationId: String settings: PartialSettingsTypeInput! }
+type SetSettingsPayload { clientMutationId: String settings: SettingsType! }
+type Query { source(id: LongString!): SourceType! settings: SettingsType! }
+type Mutation { updateSourcePreference(input: UpdateSourcePreferenceInput!): UpdateSourcePreferencePayload setSettings(input: SetSettingsInput!): SetSettingsPayload }

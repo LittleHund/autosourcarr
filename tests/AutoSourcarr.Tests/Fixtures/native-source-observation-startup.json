@@ -1,0 +1,67 @@
+{
+  "description": "Startup-only recovery appended to the qualified observation implementation; no runtime wire or source-capture function changes.",
+  "previous_ownership_fixture_sha256": "d26fe8a49e06ce985d03a122e832af7b37d652b713a83aab1fac249ce710dad6",
+  "unchanged_existing_function_hashes": {
+    "snapshot_rotr": "622c772029859a4ad0bd8a17a2081c21cc741485657cbb0639b1218a8d94ebd6",
+    "snapshot_be32": "9b982fe0b2312ebc1fcf6c74810aada6b15c3c22d7afd1909d9e6efe59e900a6",
+    "snapshot_sha_block": "3ce8bdf1d8b0b60eca52b52a0c0ec6f9563560d74213eadc8ee34b015f927b6b",
+    "snapshot_sha_init": "b82feae0259963357b2a7dd06115c26f399975fa398d0238d8e6a4abc7be8b0b",
+    "snapshot_sha_update": "487514e290083c36630914ab7f02b0ab0ea6b70bc28a9ef8c33140cb20c458e0",
+    "snapshot_sha_finish": "8fc6730a3e2ecb191aced52f62994b7656177bb64f7977977a2276c8fdc727db",
+    "snapshot_jar_leaf": "60bfd1a1a967c38b3c509bf09f42440a0da34525fdeaf073c3ea82adc049bce3",
+    "snapshot_ticket": "f56daf2f2e17023f3c8f5db34ff75b7ddaf6c4f5a99995d154f29da7b7affe1b",
+    "snapshot_close": "f4fa76f2bb73a3168a8f11261a30c7ad7e19769ffabe2f14e3f7265653e25d6f",
+    "snapshot_identity": "1a8a6bc3670739b5b2b862df4b20ef2093c91aa09001104a8ea08ac401062855",
+    "snapshot_child_prepare": "51f78dcb1c9a2ee1cbdc6696fd0d9982a2205441e1d81d2b38b509cd4236c463",
+    "snapshot_directory": "1d25934d846336a314145cc6c2178249c2864cc1591447bc005023625a148f62",
+    "snapshot_regular": "8ea384505bdeb8067f924dce88089174a9b729f3df79326603059930e02e6389",
+    "snapshot_same_file": "05f1e0457d1f022aa25f08a1b26a65a5e688f65ab7ad1f541a411d082566c718",
+    "snapshot_source_current": "819deb1b409aa43ff5963fd45c300874a8c3d0671c882ccf4011e1edba2c717b",
+    "snapshot_exchange_held": "791af432cfc2ad765a3866dd0bd46babf70576cfe48af540b84a072a827336d7",
+    "snapshot_source_unchanged": "4efc23d05581c1cca3721826018179334b18ae37645d66092a7b6e54a143f04f",
+    "snapshot_write_all": "4892bd4910718b1d4afb1dc0c8459e36dc8379829089ba7acef7fa116040199f",
+    "snapshot_cleanup": "7b12b6d452ba11e1ab3f68e208ce00699810407c6df9c1b7b7ed3a1a5fec8e2c",
+    "autosourcarr_source_observation_capture": "b91fb8bd3876429d48fc1bd5ddcbd26f763712e83bf060784dae4127ff02ed5b",
+    "autosourcarr_source_observation_remove": "14ca53a1007f6bd4d2fcfb3a83ad8ee1295e13971b241b92e6466f48e8327c90"
+  },
+  "source_hashes": {
+    "container-entry.c": "c71cfb93af521447a52fda52a38eea3538ff76137153a7e3a07a786f0e2fdd2c",
+    "source-observation.c": "28febca8993a28a05b90eb0603036ddaa97157c7fc885481125269f97fd2cbb7",
+    "source-observation.h": "633496db5bf9ee212b42ce6ac4d396034ad4bd0ffb212ec0780b4f8b189db00f",
+    "source-owner.c": "c84f6c88c8bec8ee1be5ae703540b81a8d0bea082f877d5e5cca527b47699d33",
+    "source-owner.h": "841e36361b0b812be170f837675195db3019a96dfce182aa240ae04fdf6fd3ba"
+  },
+  "startup_cleanup": {
+    "result_bytes": 40,
+    "maximum_tickets": 64,
+    "before_main_and_source_fork": true,
+    "whole_scan_before_unlink": true,
+    "metadata_only": true
+  },
+  "verification": {
+    "static_linux_x64_sha256": "42c1e5e09ac6d297f873bd5edcbec22a7bf0f060cabaa2bd40c93c786dd2b01e",
+    "static_only": true,
+    "modeled_syscalls": true,
+    "linux_execution": false,
+    "models": {
+      "cleanup-v2": {
+        "assertions": 462,
+        "wasm_sha256": "6e7cfab9f6cfeba265d68b179f2be7a747e8ebaa9884350bdfb66ef9195e9214",
+        "receipt_sha256": "6c599a48525a75ca3d40f7dfcc9a7cac78ca4844b15330eb8a4bce9999676f72",
+        "linux_execution": false
+      },
+      "parent-v2": {
+        "assertions": 177,
+        "wasm_sha256": "536a4152dc7d4a3ab388b52dae69ec2a7674ca473c6e54eed43541c4ba0b7d3e",
+        "receipt_sha256": "9fe995bac26d4acdce488529e362097d3a816554a7934728fdf0b06b1ead9145",
+        "linux_execution": false
+      },
+      "child-v3": {
+        "assertions": 87,
+        "wasm_sha256": "c93f392bd8c500e12624902ab958404e822eac58031fe016712072afdfba1e7d",
+        "receipt_sha256": "9d094c69ad86e85d415aba499a0ec2ece53595328a4a397c9da8c9469b3a6f3b",
+        "linux_execution": false
+      }
+    }
+  }
+}

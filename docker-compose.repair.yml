@@ -1,0 +1,64 @@
+# Legacy external compatibility only. Integrated deployments do not use this file.
+# Optional overlay. See scripts/repair-worker.sh and README source repairs.
+# REPAIR_ROOT is an absolute host dataset; it is never the live source-host folder.
+services:
+  autosourcarr:
+    environment:
+      REPAIR_WORKER_URL: http://autosourcarr-repair:8766
+      REPAIR_WORKER_TOKEN: ${REPAIR_TOKEN:?Run scripts/repair-worker.sh setup first}
+    networks:
+      - autosourcarr
+      - repair
+  autosourcarr-repair:
+    build:
+      context: ${AUTOSOURCARR_PROJECT_ROOT:?Run repair-worker.sh setup}/repair-worker
+    image: autosourcarr-repair:0.3.25
+    restart: unless-stopped
+    stop_grace_period: 60s
+    environment:
+      REPAIR_ROOT: ${REPAIR_ROOT:?Choose a separate absolute repair dataset}
+      REPAIR_TOKEN: ${REPAIR_TOKEN:?Run repair-worker.sh setup first}
+      REPAIR_NETWORK: ${REPAIR_NETWORK:-autosourcarr-repair}
+      REPAIR_JOB_NETWORK: ${REPAIR_NETWORK:-autosourcarr-repair}-jobs
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${REPAIR_ROOT}:/repairs
+    networks:
+      - repair
+      - repair-jobs
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+  repair-login:
+    profiles: [tools]
+    build:
+      context: ${AUTOSOURCARR_PROJECT_ROOT}/repair-worker
+      dockerfile: Dockerfile.codex
+    image: autosourcarr-repair-codex:0.3.25
+    user: '1000:1000'
+    entrypoint: [flock, -n, /locks/account.lock, codex]
+    command: [login, --device-auth]
+    volumes:
+      - ${REPAIR_ROOT}/auth:/home/node/.codex
+      - ${REPAIR_ROOT}/locks:/locks
+    networks:
+      - repair
+  autosourcarr-repair-egress:
+    image: autosourcarr-repair:0.3.25
+    command: [python, egress.py]
+    restart: unless-stopped
+    user: '1000:1000'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    networks:
+      - repair-jobs
+      - repair-egress
+networks:
+  repair:
+    name: ${REPAIR_NETWORK:-autosourcarr-repair}
+  repair-jobs:
+    name: ${REPAIR_NETWORK:-autosourcarr-repair}-jobs
+    internal: true
+  repair-egress:
