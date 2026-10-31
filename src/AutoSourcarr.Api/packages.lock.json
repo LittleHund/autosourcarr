@@ -2,6 +2,15 @@
   "version": 2,
   "dependencies": {
     "net10.0": {
+      "FluentMigrator.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.1",
+        "contentHash": "IQwT2rHWECap1pn7zBOwk6Q1qFkrqwxUMIBAp9jouv1PgsNlxGUhHcuCUYIuwnImgxxvCEkwcRRZIkIZT50/9w==",
+        "dependencies": {
+          "System.ComponentModel.Annotations": "5.0.0",
+          "System.ValueTuple": "4.6.1"
+        }
+      },
       "Magick.NET.Core": {
         "type": "Transitive",
         "resolved": "15.0.0",
@@ -42,13 +51,62 @@
           "SQLitePCLRaw.core": "2.1.13"
         }
       },
+      "System.ComponentModel.Annotations": {
+        "type": "Transitive",
+        "resolved": "5.0.0",
+        "contentHash": "dMkqfy2el8A8/I76n2Hi1oBFEbG1SfxD2l5nhwXV3XjlnOmwxJlQbYpJH4W51odnU9sARCSAgv7S3CyAFMkpYg=="
+      },
+      "System.ValueTuple": {
+        "type": "Transitive",
+        "resolved": "4.6.1",
+        "contentHash": "+RJT4qaekpZ7DDLhf+LTjq+E48jieKiY9ulJ+BoxKmZblIJfIJT8Ufcaa/clQqnYvWs8jugfGSMu8ylS0caG0w=="
+      },
       "autosourcarr.core": {
         "type": "Project",
         "dependencies": {
+          "Dapper": "[2.1.66, )",
+          "FluentMigrator": "[8.0.1, )",
+          "FluentMigrator.Runner.Core": "[8.0.1, )",
+          "FluentMigrator.Runner.SQLite": "[8.0.1, )",
           "Magick.NET-Q8-AnyCPU": "[15.0.0, )",
           "Microsoft.Data.Sqlite": "[10.0.13, )",
           "SharpCompress": "[0.50.6, )",
           "Unidecode.NET": "[2.2.1, )"
+        }
+      },
+      "Dapper": {
+        "type": "CentralTransitive",
+        "requested": "[2.1.66, )",
+        "resolved": "2.1.66",
+        "contentHash": "/q77jUgDOS+bzkmk3Vy9SiWMaetTw+NOoPAV0xPBsGVAyljd5S6P+4RUW7R3ZUGGr9lDRyPKgAMj2UAOwvqZYw=="
+      },
+      "FluentMigrator": {
+        "type": "CentralTransitive",
+        "requested": "[8.0.1, )",
+        "resolved": "8.0.1",
+        "contentHash": "vQqkf3gvNhofqKtsy0G9muWdleojsGpze180u/Z9kd2UPwR66lS5xGj8VV0SPlGeCpOYx1zYgaURvpamVzHQ3g==",
+        "dependencies": {
+          "FluentMigrator.Abstractions": "8.0.1"
+        }
+      },
+      "FluentMigrator.Runner.Core": {
+        "type": "CentralTransitive",
+        "requested": "[8.0.1, )",
+        "resolved": "8.0.1",
+        "contentHash": "GcG/GZhgjYcl04HrfLchUE9s+Uy9o6CJmDpJBK6yJ+TYLhAYhbq9sDzsoShzBhKlmhekQ/D+y9wtislcMXTRAA==",
+        "dependencies": {
+          "FluentMigrator": "8.0.1",
+          "FluentMigrator.Abstractions": "8.0.1"
+        }
+      },
+      "FluentMigrator.Runner.SQLite": {
+        "type": "CentralTransitive",
+        "requested": "[8.0.1, )",
+        "resolved": "8.0.1",
+        "contentHash": "NkGxuI6UQa19IF0nK9OuG4wubo5OREPsE+V+FS9Ydi4/kkpojgXcbC//b9sH8mr2ed0RwHqcqaMiDTKd7w4pQA==",
+        "dependencies": {
+          "FluentMigrator": "8.0.1",
+          "FluentMigrator.Runner.Core": "8.0.1"
         }
       },
       "Magick.NET-Q8-AnyCPU": {

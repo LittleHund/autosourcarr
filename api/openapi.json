@@ -417,6 +417,57 @@
           }
         }
       }
+    },
+    "/api/v1/storage/database/move": {
+      "post": {
+        "operationId": "moveDatabaseStorage",
+        "summary": "Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatabaseMoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseMoveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -543,6 +594,44 @@
           "encrypted_keys",
           "invalid_keys",
           "keys_without_value"
+        ]
+      },
+      "DatabaseMoveRequest": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      },
+      "DatabaseMoveResponse": {
+        "type": "object",
+        "properties": {
+          "from_directory": {
+            "type": "string"
+          },
+          "target_directory": {
+            "type": "string"
+          },
+          "catalog_bytes": {
+            "type": "integer"
+          },
+          "origins_bytes": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_directory",
+          "target_directory",
+          "catalog_bytes",
+          "origins_bytes",
+          "message"
         ]
       },
       "DatabaseStorageView": {
