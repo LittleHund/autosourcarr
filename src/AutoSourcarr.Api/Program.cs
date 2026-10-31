@@ -61,6 +61,14 @@ internal static class Program
             return runtime.FatalFailure.IsCompleted ? 78 : 0;
         }
         catch (OperationCanceledException) when (signals?.Token.IsCancellationRequested == true) { return 0; }
+        catch (ConfigurationException error)
+        {
+            // These messages name the setting and file, never a value (SettingsLoader, ConfigStore), so they can
+            // be shown: without them a bad saved value would only report "ConfigurationException".
+            Console.Error.WriteLine("AutoSourcarr cannot start: " + error.Message
+                + " Fix it in Compose or in config.json (the Settings page is not available until the app starts).");
+            return 78;
+        }
         catch (Exception error)
         {
             // Before the shared privacy registry exists, raw messages/stacks and

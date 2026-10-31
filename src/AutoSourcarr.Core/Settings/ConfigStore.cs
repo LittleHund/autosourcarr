@@ -24,6 +24,24 @@ public sealed class ConfigConversionRecord
 
     [JsonPropertyName("backup_directory")]
     public string BackupDirectory { get; set; } = "";
+
+    [JsonPropertyName("setting_keys")]
+    public List<string> SettingKeys { get; set; } = [];
+
+    [JsonPropertyName("source_host_keys")]
+    public List<string> SourceHostKeys { get; set; } = [];
+
+    [JsonPropertyName("extra_keys")]
+    public List<string> ExtraKeys { get; set; } = [];
+
+    [JsonPropertyName("encrypted_keys")]
+    public List<string> EncryptedKeys { get; set; } = [];
+
+    [JsonPropertyName("invalid_keys")]
+    public List<string> InvalidKeys { get; set; } = [];
+
+    [JsonPropertyName("keys_without_value")]
+    public List<string> KeysWithoutValue { get; set; } = [];
 }
 
 /// <summary>
@@ -49,6 +67,14 @@ public sealed class ConfigDocument
 
     [JsonPropertyName("conversion")]
     public ConfigConversionRecord? Conversion { get; set; }
+
+    /// <summary>
+    /// Settings you saved in the Settings page or setup wizard. They win over a Compose variable of the same
+    /// name (as wizard values did in 0.4.x), so a leftover env_file cannot silently undo a change made in the UI.
+    /// Resetting a setting to its default removes it from this list and lets Compose decide again.
+    /// </summary>
+    [JsonPropertyName("managed_keys")]
+    public List<string> ManagedKeys { get; set; } = [];
 
     [JsonPropertyName("setup")]
     public ConfigSetupRecord? Setup { get; set; }
@@ -178,6 +204,8 @@ public sealed class ConfigStore(string root)
             throw new ConfigurationException($"config.json uses format {document.Format}; this build supports up to {ConfigDocument.CurrentFormat}. Run the newer AutoSourcarr image or restore a matching backup.");
         if (document.Format < 1)
             throw new ConfigurationException("config.json has no valid format number; it was not changed.");
+        if (document.ManagedKeys is null || document.ManagedKeys.Any(key => key is null))
+            throw new ConfigurationException("config.json has an empty (null) managed_keys entry; it was not changed. Restore it from a backup.");
         // An explicit null ("settings": null, "KEY": null) is damage, not an empty value.
         foreach (var section in new[] { document.Settings, document.SourceHost, document.Extra })
             if (section is null || section.Values is null || section.Secrets is null
@@ -243,6 +271,7 @@ public sealed class ConfigStore(string root)
         SourceHost = Sorted(document.SourceHost),
         Extra = Sorted(document.Extra),
         Conversion = document.Conversion,
+        ManagedKeys = document.ManagedKeys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
         Setup = document.Setup,
         Update = document.Update
     };

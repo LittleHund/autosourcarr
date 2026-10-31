@@ -1,15 +1,15 @@
 {
-  "comment": "Settings schema (SET-7). Labels, wizard steps and descriptions of wizard fields live in setup-fields.json; this file adds the group, the description of every other setting and whether it is usually set in Compose. Every key of AutoSourcarrSettings.Definitions must appear here.",
+  "comment": "Settings schema (SET-7). Labels, wizard steps and descriptions of wizard fields live in setup-fields.json; this file adds the group, the description of every other setting and whether it is usually set in Compose. Every key of AutoSourcarrSettings.Definitions must appear here. compose: recommended = usually set in Compose; only = can only be set in Compose (it names container folders or identities, so a wrong value in the app could stop it from starting); allowed = normally edited in the app.",
   "settings": {
     "SETTINGS_CONFIG_DIR": {
       "group": "Runtime",
       "description": "Folder inside the container that holds config.json, config.key and setup state. Mount it as a persistent volume.",
-      "compose": "recommended"
+      "compose": "only"
     },
     "APP_SERVICES_MODE": {
       "group": "Runtime",
       "description": "integrated runs the bundled helper services inside this container; external keeps separately deployed helpers (0.4.x layouts).",
-      "compose": "recommended"
+      "compose": "only"
     },
     "REPAIR_WORKER_URL": {
       "group": "Repair",
@@ -80,17 +80,17 @@
     "SOURCE_ENGINE_MODE": {
       "group": "Runtime",
       "description": "integrated runs sources inside this image; external uses a separate source host (rollback and development only).",
-      "compose": "recommended"
+      "compose": "only"
     },
     "SOURCE_ENGINE_UID": {
       "group": "Runtime",
       "description": "User ID the source engine runs as. 0 picks the owner of the existing source folder (TrueNAS often uses 568).",
-      "compose": "recommended"
+      "compose": "only"
     },
     "SOURCE_ENGINE_GID": {
       "group": "Runtime",
       "description": "Group ID the source engine runs as. 0 picks the group of the existing source folder.",
-      "compose": "recommended"
+      "compose": "only"
     },
     "SOURCE_SUWAYOMI_URL": {
       "group": "Connections & languages",
@@ -120,12 +120,12 @@
     "DATA_DIR": {
       "group": "Runtime",
       "description": "Folder inside the container for covers, caches and runtime data. Mount it as a persistent volume.",
-      "compose": "recommended"
+      "compose": "only"
     },
     "DATABASE_DIR": {
       "group": "Runtime",
-      "description": "Folder for the SQLite databases. Empty uses the data folder. Change it with Settings > Database storage so the files are copied first.",
-      "compose": "recommended"
+      "description": "Folder for the SQLite databases. Empty uses the data folder. Set it in Compose only, pointing at a mounted folder that already holds the databases; moving them from the app arrives with the new data layer (conversion phase 2).",
+      "compose": "only"
     },
     "MAX_SOURCE_CONCURRENCY": {
       "group": "Matching",

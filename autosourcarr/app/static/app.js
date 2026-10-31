@@ -1510,8 +1510,8 @@ function settingsFile(){
   return settingsState.data?.files?.find(f=>f.id===settingsState.activeFile)||null;
 }
 function settingsInput(item){
-  const managed=item.key==='DATABASE_DIR';
-  const common=`data-env-key="${esc(item.key)}" data-env-kind="${esc(item.kind||'text')}"${managed?' disabled title="Use the Database storage Move button above"':''}`;
+  const managed=item.key==='DATABASE_DIR'||item.editable===false;
+  const common=`data-env-key="${esc(item.key)}" data-env-kind="${esc(item.kind||'text')}"${managed?' disabled title="Set this in Compose"':''}`;
   if(item.kind==='boolean'){
     const val=String(item.value||'').toLowerCase();
     return `<select ${common}><option value="true" ${val==='true'?'selected':''}>true</option><option value="false" ${val==='false'?'selected':''}>false</option></select>`;
@@ -1532,9 +1532,10 @@ function renderEnvSettings(){
   const stateBits=[file.path,file.exists?'file found':'file missing',file.writable?'writable':'read-only'];
   status.textContent=stateBits.join(' · ');
   if(file.errors?.length){groups.innerHTML=`<div class="notice settingsError"><strong>Cannot edit this file.</strong><br>${file.errors.map(esc).join('<br>')}</div>`;return;}
-  groups.innerHTML=(file.groups||[]).map((g,index)=>`<details class="settingsGroup" ${index===0?'open':''}><summary class="settingsGroupHeader"><span class="settingsGroupTitle"><span class="settingsChevron" aria-hidden="true">›</span><h3>${esc(g.name)}</h3></span><span class="muted">${g.items.length} setting${g.items.length===1?'':'s'}</span></summary><div class="settingsFieldGrid">${g.items.map(item=>`<label class="settingsField"><span class="settingsFieldTitle"><strong>${esc(item.label)}</strong><code>${esc(item.key)}</code></span>${item.description?`<small>${esc(item.description)}</small>`:''}${settingsInput(item)}</label>`).join('')}</div></details>`).join('')||'<div class="emptyBrowserResult">No settings found.</div>';
+  groups.innerHTML=(file.groups||[]).map((g,index)=>`<details class="settingsGroup" ${index===0?'open':''}><summary class="settingsGroupHeader"><span class="settingsGroupTitle"><span class="settingsChevron" aria-hidden="true">›</span><h3>${esc(g.name)}</h3></span><span class="muted">${g.items.length} setting${g.items.length===1?'':'s'}</span></summary><div class="settingsFieldGrid">${g.items.map(item=>`<label class="settingsField"><span class="settingsFieldTitle"><strong>${esc(item.label)}</strong><code>${esc(item.key)}</code></span>${item.description?`<small>${esc(item.description)}</small>`:''}${settingsInput(item)}${item.resettable?`<button type="button" class="tinyButton" data-env-reset="${esc(item.key)}">${settingsState.resets?.has(item.key)?'Undo':item.secret?'Remove saved value':'Use default'}</button>`:''}</label>`).join('')}</div></details>`).join('')||'<div class="emptyBrowserResult">No settings found.</div>';
   const notice=settingsState.notice;
   if(notice?.items?.length)groups.insertAdjacentHTML?.('afterbegin',`<div class="notice settingsUpdateNotice"><strong>Updated from ${esc(notice.from_version)} to ${esc(notice.to_version)}</strong><ul>${notice.items.map(item=>`<li><code>${esc(item.key)}</code> ${esc(item.message)}</li>`).join('')}</ul><button type="button" onclick="dismissSettingsUpdateNotice()">Dismiss</button></div>`);
+  groups.querySelectorAll('[data-env-reset]').forEach(button=>button.onclick=event=>{event.preventDefault();const key=button.dataset.envReset;settingsState.resets??=new Set();if(settingsState.resets.has(key))settingsState.resets.delete(key);else settingsState.resets.add(key);markSettingsDirty();renderEnvSettings();});
   groups.querySelectorAll('[data-env-key]').forEach(input=>input.addEventListener('input',markSettingsDirty));
   groups.querySelectorAll('[data-env-key]').forEach(input=>input.addEventListener('change',markSettingsDirty));
   $('#saveSettings').disabled=!file.writable;
@@ -1569,9 +1570,9 @@ async function moveDatabaseStorage(){
 // the page's existing file/group layout: one "file" (config.json) with the schema's groups.
 function settingsFromApi(view){
   const kind=item=>item.secret?'password':item.type==='boolean'?'boolean':item.type==='integer'||item.type==='number'?item.type:item.type==='url'?'url':'text';
-  const note=item=>[item.description,item.overridden_by_environment?'Set by a Compose variable, which wins: a change here has no effect until that variable is removed.':'',item.secret?(item.is_set?'A value is saved; leave empty to keep it.':'Not set.'):''].filter(Boolean).join(' ');
+  const note=item=>[item.description,item.editable===false?'Set in Compose only.':'',item.overridden_by_environment?'Currently decided by a Compose variable; saving a value here makes this app decide instead.':'',item.saved_in_app&&!item.secret?'Saved in this app.':'',item.secret?(item.is_set?'A value is saved; leave empty to keep it.':'Not set.'):'',item.problem?'Problem: '+item.problem:''].filter(Boolean).join(' ');
   return {files:[{id:'config',title:'config.json',path:'config.json',exists:!!view.config_file_exists,writable:true,revision:view.revision,
-    groups:(view.groups||[]).map(group=>({name:group.name,items:group.items.map(item=>({key:item.key,label:item.label,description:note(item),kind:kind(item),value:item.secret?'':(item.value??''),secret:item.secret,overridden:item.overridden_by_environment}))}))}]};
+    groups:(view.groups||[]).map(group=>({name:group.name,items:group.items.map(item=>({key:item.key,label:item.label,description:note(item),kind:kind(item),value:item.secret?'':(item.value??''),secret:item.secret,overridden:item.overridden_by_environment,editable:item.editable!==false,resettable:item.editable!==false&&(item.secret?item.is_set:item.saved_in_app||item.is_set)}))}))}]};
 }
 function loadEnvSettings({force=false}={}){
   if(settingsState.loadPromise)return settingsState.loadPromise;
@@ -1581,7 +1582,7 @@ function loadEnvSettings({force=false}={}){
     const [view,notice]=await Promise.all([apiV1().getSettings(),apiV1().getUpdateNotice().catch(()=>null)]);
     if(settingsState.editRevision!==revision)return settingsState.data;
     const data=settingsFromApi(view);
-    settingsState.data=data;settingsState.notice=notice?.present?notice.notice:null;
+    settingsState.data=data;settingsState.notice=notice?.present?notice.notice:null;settingsState.resets=new Set();
     if(!data.files?.some(f=>f.id===settingsState.activeFile))settingsState.activeFile=data.files?.[0]?.id||'autosourcarr';
     settingsState.dirty=false;renderEnvSettings();loadDatabaseStorage().catch(()=>{});return data;
   })();
@@ -1596,8 +1597,11 @@ async function saveEnvSettings(){
   // Only changed values are sent; an empty secret field keeps the saved secret.
   const saved=new Map((file.groups||[]).flatMap(group=>group.items).map(item=>[item.key,item]));
   const values={};
+  // "Use default" sends null (Compose or the default decides again); "Remove saved value" sends an empty secret.
+  for(const key of settingsState.resets||[])values[key]=saved.get(key)?.secret?'':null;
   $('#settingsGroups').querySelectorAll('[data-env-key]').forEach(input=>{
     const key=input.dataset.envKey,item=saved.get(key),value=String(input.value??'');
+    if(key in values||item?.editable===false)return;
     if(item?.secret&&value==='')return;
     if(item&&!item.secret&&String(item.value??'')===value)return;
     values[key]=value;
@@ -1623,14 +1627,16 @@ window.goUnmatched=()=>{switchTab('matrix');$('#matrixMinMatches').value='0';ren
 
 function fmtBytes(n){const v=Number(n||0);if(v<1024)return `${v} B`;if(v<1024**2)return `${(v/1024).toFixed(1)} KiB`;if(v<1024**3)return `${(v/1024**2).toFixed(1)} MiB`;return `${(v/1024**3).toFixed(2)} GiB`;}
 function fmtWhen(x){if(!x)return 'Never';const d=new Date(x);return Number.isNaN(d.getTime())?String(x):d.toLocaleString();}
-function connectionRow(title,ok,detail,extra=''){return `<div class="connectionRow"><span class="connectionIcon ${ok?'good':'bad'}">${ok?'✓':'!'}</span><div class="grow"><strong>${esc(title)}</strong><div class="muted">${esc(detail||'')}</div>${extra?`<div class="tinyText">${esc(extra)}</div>`:''}</div><span class="connectionState ${ok?'good':'bad'}">${ok?'Ready':'Problem'}</span></div>`;}
+// ok===null: this server did not check the connection (shown neutral, never as Ready or Problem).
+function connectionRow(title,ok,detail,extra=''){const tone=ok===null?'warn':ok?'good':'bad';return `<div class="connectionRow"><span class="connectionIcon ${tone}">${ok===null?'?':ok?'✓':'!'}</span><div class="grow"><strong>${esc(title)}</strong><div class="muted">${esc(detail||'')}</div>${extra?`<div class="tinyText">${esc(extra)}</div>`:''}</div><span class="connectionState ${tone}">${ok===null?'Not checked':ok?'Ready':'Problem'}</span></div>`;}
 function simpleMetric(label,value,note='',tone=''){return `<div class="simpleMetric ${tone}"><div><strong>${esc(value)}</strong><span>${esc(label)}</span></div>${note?`<small>${esc(note)}</small>`:''}</div>`;}
 function simpleMetricAction(label,value,note,action,tone=''){return `<button class="simpleMetric metricAction ${tone}" onclick="${action}"><div><strong>${esc(value)}</strong><span>${esc(label)}</span></div>${note?`<small>${esc(note)}</small>`:''}</button>`;}
 function metricCard(label,value,sub=''){return `<div class="metricCard"><span class="metricLabel">${esc(label)}</span><strong>${esc(value)}</strong>${sub?`<span class="muted">${esc(sub)}</span>`:''}</div>`;}
 function renderStatus(h){
   const st=h.stats||{},cat=st.catalog||{},ch=st.chapters||{},src=st.sources||{},cache=st.cache||{},perf=st.performance||{},storage=st.storage||{},lib=h.library||{};
-  const sourceOk=!!h.source_host?.ok, mainConfigured=!!h.main_suwayomi?.configured, mainOk=!!h.main_suwayomi?.ok;
-  const transConfigured=!!h.translation?.configured, transOk=!!h.translation?.ok;
+  const unchecked=part=>part?.checked===false;
+  const sourceOk=unchecked(h.source_host)||!!h.source_host?.ok, mainConfigured=!!h.main_suwayomi?.configured, mainOk=unchecked(h.main_suwayomi)||!!h.main_suwayomi?.ok;
+  const transConfigured=!!h.translation?.configured, transOk=unchecked(h.translation)||!!h.translation?.ok;
   const duplicateCount=Number(cat.possible_duplicates||0), duplicateGroups=Number(cat.duplicate_groups||0);
   const duplicateReady=cat.duplicate_snapshot_ready!==false;
   const unmatched=Number(cat.unmatched_entries||0), entries=Number(cat.entries||0);
@@ -1650,9 +1656,9 @@ function renderStatus(h){
   $('#statusHeadlineSub').textContent=ready?`${entries} entries · ${matchedPct}% matched · ${cache.persistent_browse_feeds??0} saved browse feeds`:'Check the highlighted items below first.';
   $('#statusOverview').innerHTML=[
     connectionRow('AutoSourcarr',true,`v${h.version}`,'Backend and databases loaded'),
-    connectionRow('Source engine',sourceOk,h.source_host?.url||'',h.source_host?.warning||h.source_host?.error||(h.source_host?.degraded?'Web server reachable · GraphQL busy':'Mihon extension host reachable')),
-    connectionRow('Main Suwayomi',mainConfigured?mainOk:true,mainConfigured?(h.main_suwayomi?.url||''):'Not configured',mainConfigured?(h.main_suwayomi?.error||'Library connection reachable'):'Only needed for the Subbed tab'),
-    connectionRow('Title translation',!transConfigured||transOk,transConfigured?(h.translation?.url||'Configured'):'Optional / disabled',transConfigured?(h.translation?.error||`${h.translation?.languages||0} languages reported`):'Enable LibreTranslate for origin-language and literal-title searches'),
+    connectionRow('Source engine',unchecked(h.source_host)?null:sourceOk,h.source_host?.url||'',h.source_host?.warning||h.source_host?.error||(h.source_host?.degraded?'Web server reachable · GraphQL busy':'Mihon extension host reachable')),
+    connectionRow('Main Suwayomi',mainConfigured?(unchecked(h.main_suwayomi)?null:mainOk):true,mainConfigured?(h.main_suwayomi?.url||''):'Not configured',mainConfigured?(h.main_suwayomi?.warning||h.main_suwayomi?.error||'Library connection reachable'):'Only needed for the Subbed tab'),
+    connectionRow('Title translation',!transConfigured?true:unchecked(h.translation)?null:transOk,transConfigured?(h.translation?.url||'Configured'):'Optional / disabled',transConfigured?(h.translation?.warning||h.translation?.error||`${h.translation?.languages||0} languages reported`):'Enable LibreTranslate for origin-language and literal-title searches'),
   ].join('');
   const downloadSize=lib.download_size||{};
   const downloadSizeValue=downloadSize.available?fmtBytes(downloadSize.bytes||0):(downloadSize.configured?'Unavailable':'Not mounted');
@@ -1716,7 +1722,7 @@ async function health(){
         groups:h.errors.groups,
       };
     }
-    if(!h.source_host?.ok){
+    if(!h.source_host?.ok&&h.source_host?.checked!==false){
       badge.textContent=h.source_engine?.state==='setup-required'?'integrated image required':'source engine unavailable';
       badge.className='pill healthButton fail';
     }else if(activeErrors>0){
@@ -1799,7 +1805,7 @@ function renderErrorsSnapshot(backend=lastBackendErrors,h=lastHealthSnapshot,bac
   const connectionRows=[];
   if(h){
     const sh=h.source_host||{};
-    connectionRows.push(diagnosticConnectionRow('Source engine',sh.ok?(sh.degraded?'warn':'good'):'bad',sh.warning||sh.error||sh.url||''));
+    connectionRows.push(diagnosticConnectionRow('Source engine',sh.checked===false?'warn':sh.ok?(sh.degraded?'warn':'good'):'bad',sh.warning||sh.error||sh.url||''));
     const main=h.main_suwayomi||{};
     if(main.configured)connectionRows.push(diagnosticConnectionRow('Main Suwayomi',main.ok?'good':'bad',main.error||main.url||''));
     const tr=h.translation||{};

@@ -79,19 +79,40 @@ public static class EnvConversion
         }
 
         var secrets = SettingsSecrets.Open(store.Root, create: true);
+        var encrypted = settings.Keys.Concat(sourceHost.Keys.Select(key => SourceHostEnv + ":" + key)).Concat(extra.Keys)
+            .Where(key => SettingsSecrets.IsSecretKey(key.Contains(':', StringComparison.Ordinal) ? key[(key.IndexOf(':', StringComparison.Ordinal) + 1)..] : key))
+            .Order(StringComparer.Ordinal).ToList();
+        var invalid = InvalidSettings(settings);
         var conversion = new ConfigConversionRecord
         {
             ConvertedAt = now.UtcDateTime.ToString("O", CultureInfo.InvariantCulture),
             SourceSha256 = hashes,
-            BackupDirectory = Path.GetRelativePath(store.Root, backupDirectory).Replace('\\', '/')
+            BackupDirectory = Path.GetRelativePath(store.Root, backupDirectory).Replace('\\', '/'),
+            SettingKeys = settings.Keys.Order(StringComparer.Ordinal).ToList(),
+            SourceHostKeys = sourceHost.Keys.Order(StringComparer.Ordinal).ToList(),
+            ExtraKeys = extra.Keys.Order(StringComparer.Ordinal).ToList(),
+            EncryptedKeys = encrypted,
+            InvalidKeys = invalid.ToList(),
+            KeysWithoutValue = withoutValue.ToList()
         };
+        var (setup, wizardKeys) = PreviousSetup(store.Root, conversion.ConvertedAt);
         var document = new ConfigDocument
         {
             Settings = ConfigStore.Encrypt(settings, secrets),
             SourceHost = ConfigStore.Encrypt(sourceHost, secrets),
             Extra = ConfigStore.Encrypt(extra, secrets),
             Conversion = conversion,
-            Setup = FinishedSetup(store.Root, conversion.ConvertedAt)
+            // 0.4.x wizard values beat stale Compose injections; they keep doing so from config.json.
+            ManagedKeys = wizardKeys.Where(settings.ContainsKey).Order(StringComparer.Ordinal).ToList(),
+            Setup = setup,
+            // Shown in Settings until dismissed. The app version is filled in by the first start (UpdateNotices).
+            Update = new ConfigUpdateRecord
+            {
+                AppVersion = "",
+                Defaults = SettingsSchema.Entries.Where(entry => !entry.Secret)
+                    .ToDictionary(entry => entry.Key, entry => entry.Default ?? "", StringComparer.Ordinal),
+                Notice = ConversionNotice(conversion)
+            }
         };
         store.WriteDocument(document);
         try
@@ -111,34 +132,70 @@ public static class EnvConversion
         {
             ConvertedAt = conversion.ConvertedAt,
             BackupDirectory = conversion.BackupDirectory,
-            SettingKeys = settings.Keys.Order(StringComparer.Ordinal).ToArray(),
-            SourceHostKeys = sourceHost.Keys.Order(StringComparer.Ordinal).ToArray(),
-            ExtraKeys = extra.Keys.Order(StringComparer.Ordinal).ToArray(),
-            EncryptedKeys = settings.Keys.Concat(sourceHost.Keys.Select(key => SourceHostEnv + ":" + key)).Concat(extra.Keys)
-                .Where(key => SettingsSecrets.IsSecretKey(key.Contains(':', StringComparison.Ordinal) ? key[(key.IndexOf(':', StringComparison.Ordinal) + 1)..] : key))
-                .Order(StringComparer.Ordinal).ToArray(),
-            InvalidKeys = InvalidSettings(settings),
-            KeysWithoutValue = withoutValue.ToArray()
+            SettingKeys = conversion.SettingKeys,
+            SourceHostKeys = conversion.SourceHostKeys,
+            ExtraKeys = conversion.ExtraKeys,
+            EncryptedKeys = encrypted,
+            InvalidKeys = invalid,
+            KeysWithoutValue = conversion.KeysWithoutValue
         };
     }
 
-    /// <summary>A 0.4.x install that finished its setup wizard must not be asked again after the conversion.</summary>
-    private static ConfigSetupRecord? FinishedSetup(string root, string convertedAt)
+    /// <summary>The persisted conversion record as a report (key names only), or null when this install never converted.</summary>
+    public static ConversionReport? Saved(string root)
+    {
+        var record = new ConfigStore(root).ReadDocument()?.Conversion;
+        return record is null ? null : new ConversionReport
+        {
+            ConvertedAt = record.ConvertedAt, BackupDirectory = record.BackupDirectory, SettingKeys = record.SettingKeys,
+            SourceHostKeys = record.SourceHostKeys, ExtraKeys = record.ExtraKeys, EncryptedKeys = record.EncryptedKeys,
+            InvalidKeys = record.InvalidKeys, KeysWithoutValue = record.KeysWithoutValue
+        };
+    }
+
+    private static UpdateNotice ConversionNotice(ConfigConversionRecord conversion)
+    {
+        var items = new List<UpdateNoticeItem>
+        {
+            new()
+            {
+                Key = MainEnv, Kind = "converted",
+                Message = $"Your settings were moved from {MainEnv} into config.json ({conversion.SettingKeys.Count} settings, {conversion.EncryptedKeys.Count} secrets encrypted with config.key). "
+                    + $"The old files were left in place and copied to {conversion.BackupDirectory}. Back up config.json and config.key together."
+            },
+            new()
+            {
+                Key = "env_file", Kind = "action",
+                Message = "Remove the old env_file line from your Compose file. Variables it injects count as Compose overrides; settings you save in this app still win, but every other setting keeps the old file's value."
+            }
+        };
+        foreach (var key in conversion.InvalidKeys)
+            items.Add(new() { Key = key, Kind = "must_change", Message = $"{key}: the value copied from {MainEnv} is not accepted. Open Settings and choose a new value." });
+        if (conversion.ExtraKeys.Count > 0)
+            items.Add(new() { Key = "extra", Kind = "kept", Message = "Kept but not used by this version: " + string.Join(", ", conversion.ExtraKeys) + "." });
+        return new UpdateNotice { FromVersion = "0.4.x (" + MainEnv + ")", ToVersion = "config.json", CreatedAt = conversion.ConvertedAt, Items = items };
+    }
+
+    /// <summary>A finished 0.4.x setup stays finished, and its wizard-owned keys stay owned by the app.</summary>
+    private static (ConfigSetupRecord? Setup, IReadOnlyList<string> ManagedKeys) PreviousSetup(string root, string convertedAt)
     {
         try
         {
             var raw = ConfigFiles.ReadBounded(Path.Combine(root, "setup-state.json"));
             if (raw is null)
-                return null;
+                return (null, []);
             using var state = System.Text.Json.JsonDocument.Parse(raw);
-            if (state.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object
-                || !state.RootElement.TryGetProperty("completed", out var completed) || completed.ValueKind != System.Text.Json.JsonValueKind.True)
-                return null;
-            return new ConfigSetupRecord { Completed = true, CompletedAt = convertedAt, Transaction = "converted-from-0.4" };
+            if (state.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                return (null, []);
+            var keys = state.RootElement.TryGetProperty("managed_keys", out var managed) && managed.ValueKind == System.Text.Json.JsonValueKind.Array
+                ? managed.EnumerateArray().Where(item => item.ValueKind == System.Text.Json.JsonValueKind.String).Select(item => item.GetString()!).ToArray()
+                : [];
+            var finished = state.RootElement.TryGetProperty("completed", out var completed) && completed.ValueKind == System.Text.Json.JsonValueKind.True;
+            return (finished ? new ConfigSetupRecord { Completed = true, CompletedAt = convertedAt, Transaction = "converted-from-0.4" } : null, keys);
         }
         catch (Exception error) when (error is System.Text.Json.JsonException or ConfigurationException)
         {
-            return null; // an unreadable old state only means the wizard is offered again
+            return (null, []); // an unreadable old state only means the wizard is offered again
         }
     }
 
@@ -159,7 +216,7 @@ public static class EnvConversion
             throw new ConfigurationException($"config.json verification failed for {section}; the conversion was undone and the env files stay active.");
     }
 
-    private static string[] InvalidSettings(IReadOnlyDictionary<string, string> settings)
+    private static IReadOnlyList<string> InvalidSettings(IReadOnlyDictionary<string, string> settings)
     {
         var invalid = new List<string>();
         foreach (var (key, value) in settings)

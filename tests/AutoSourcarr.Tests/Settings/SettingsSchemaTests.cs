@@ -65,7 +65,9 @@ public static class SettingsSchemaTests
             var transaction = Guid.NewGuid().ToString();
             var saved = editor.Save(Changes("""{"TZ":"Europe/Berlin","FUZZY_REVIEW_THRESHOLD":0.8}"""), first, transaction);
             Check.Equal("FUZZY_REVIEW_THRESHOLD,TZ", string.Join(',', saved.ChangedKeys));
-            Check.Equal("TZ", string.Join(',', saved.OverriddenByEnvironment));
+            Check.Equal("", string.Join(',', saved.OverriddenByEnvironment)); // saved in the app: the app decides, not Compose
+            Check.True(!editor.OverriddenByEnvironment("TZ") && editor.ManagedKeys().Contains("TZ"));
+            Check.Throws<SettingsValidationException>(() => editor.Save(Changes("""{"DATABASE_DIR":"/elsewhere"}"""), editor.Revision()));
             Check.Equal("settings.FUZZY_REVIEW_THRESHOLD: added|settings.TZ: added", string.Join('|', saved.Changes));
             var again = editor.Save(Changes("""{"TZ":"Europe/Berlin"}"""), first, transaction);
             Check.Equal(saved.Revision, again.Revision);
@@ -92,6 +94,21 @@ public static class SettingsSchemaTests
             var editor = new SettingsEditor(root, () => new AutoSourcarrSettings(), environment);
             editor.Save(JsonSerializer.Deserialize<Dictionary<string, JsonElement>>("""{"TZ":"Europe/Lisbon"}""")!, editor.Revision());
             Check.Equal("Europe/Lisbon", StartupConfigurationLoader.Load(temp.Path, environment).Settings.Tz);
+            // A leftover env_file injection cannot undo a value saved in the app ...
+            environment["TZ"] = "Asia/Tokyo";
+            Check.Equal("Europe/Lisbon", StartupConfigurationLoader.Load(temp.Path, environment).Settings.Tz);
+            // ... but it does decide settings you never saved in the app, and "Use default" hands TZ back to Compose.
+            environment["BROWSE_PAGE_SIZE"] = "33";
+            Check.Equal(33, StartupConfigurationLoader.Load(temp.Path, environment).Settings.BrowsePageSize);
+            editor.Save(JsonSerializer.Deserialize<Dictionary<string, JsonElement>>("""{"TZ":null}""")!, editor.Revision());
+            Check.Equal("Asia/Tokyo", StartupConfigurationLoader.Load(temp.Path, environment).Settings.Tz);
+
+            // With source-host.env present the wizard's repository list goes there (the source engine reads it until phase 4).
+            File.WriteAllText(Path.Combine(root, "source-host.env"), "EXTENSION_STORES='[\"https://old.example/index.min.json\"]'\n");
+            Check.Equal("https://old.example/index.min.json", string.Join(',', editor.ExtensionRepositories()));
+            editor.Save(JsonSerializer.Deserialize<Dictionary<string, JsonElement>>("""{"EXTENSION_STORES":["https://new.example/index.min.json"]}""")!, editor.Revision());
+            Check.True(File.ReadAllText(Path.Combine(root, "source-host.env")).Contains("https://new.example/index.min.json", StringComparison.Ordinal));
+            Check.Equal("https://new.example/index.min.json", string.Join(',', editor.ExtensionRepositories()));
         });
 
         suite.Add("settings update notice: changed defaults, removed and now-invalid settings are listed by key only", () =>

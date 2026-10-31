@@ -22,7 +22,8 @@ public sealed record SettingSchemaEntry(
     bool Advanced,
     double? Minimum,
     double? Maximum,
-    bool AllowEmpty);
+    bool AllowEmpty,
+    bool Editable);
 
 public sealed record SettingChoice(string Value, string Label);
 
@@ -84,12 +85,13 @@ public static class SettingsSchema
                 definition.Secret ? null : defaults.TryGetValue(definition.Key, out var value) ? value : null,
                 definition.Secret,
                 definition.Key,
-                Text(item, "compose") == "recommended",
+                Text(item, "compose") is "recommended" or "only",
                 hasWizard ? Text(wizard, "step") : null,
                 hasWizard && wizard.TryGetProperty("advanced", out var advanced) && advanced.GetBoolean(),
                 hasWizard && wizard.TryGetProperty("minimum", out var minimum) ? minimum.GetDouble() : null,
                 hasWizard && wizard.TryGetProperty("maximum", out var maximum) ? maximum.GetDouble() : null,
-                hasWizard && wizard.TryGetProperty("allow_empty", out var allowEmpty) && allowEmpty.GetBoolean()));
+                hasWizard && wizard.TryGetProperty("allow_empty", out var allowEmpty) && allowEmpty.GetBoolean(),
+                Text(item, "compose") != "only"));
         }
         var known = entries.Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
         foreach (var property in extra.EnumerateObject())
@@ -107,10 +109,13 @@ public static class SettingsSchema
         text.Append("Settings are stored in `config.json` in the config folder and edited on the Settings page or in the setup wizard. ");
         text.Append("Secrets are stored encrypted with `config.key`; keep both files together in backups.\n\n");
         text.Append("## Compose overrides\n\n");
-        text.Append("Any setting can be overridden by setting an environment variable with the same name in Compose. ");
-        text.Append("An override wins over `config.json` and the Settings page shows the setting as overridden, so a change made there has no effect until the variable is removed. ");
-        text.Append("Keep Compose small: set only the variables marked *Compose* below, and do not use `env_file:` with the old `autosourcarr.env` after it has been converted.\n\n");
-        text.Append("Precedence, lowest first: built-in default, `config.json`, Compose environment variable.\n\n");
+        text.Append("Any setting can be set by an environment variable with the same name in Compose. ");
+        text.Append("A Compose variable wins over the built-in default and over values in `config.json` that you never changed in the app; ");
+        text.Append("a value you saved on the Settings page or in the setup wizard wins over Compose (as wizard values did in 0.4.x), and the Settings page shows which settings Compose currently decides. ");
+        text.Append("Use the page's *Use default* to hand a setting back to Compose. ");
+        text.Append("Settings marked *Compose only* can only be set in Compose, because they name container folders or identities. ");
+        text.Append("Keep Compose small: set only the variables marked *Compose* or *Compose only*, and remove the old `env_file:` line once `autosourcarr.env` has been converted.\n\n");
+        text.Append("Precedence, lowest first: built-in default, `config.json`, Compose environment variable, value saved in the app.\n\n");
         foreach (var group in Entries.GroupBy(entry => entry.Group).OrderBy(group => GroupOrder(group.Key)).ThenBy(group => group.Key, StringComparer.Ordinal))
         {
             text.Append("## ").Append(group.Key).Append("\n\n");
@@ -124,7 +129,7 @@ public static class SettingsSchema
                 text.Append("| `").Append(entry.Key).Append("` | ").Append(Cell(type)).Append(" | ")
                     .Append(entry.Secret ? "—" : entry.Default is { Length: > 0 } value ? "`" + Cell(value) + "`" : "empty").Append(" | ")
                     .Append(Cell(entry.Description)).Append(" | ")
-                    .Append(entry.ComposeRecommended ? "Compose" : "").Append(" | ")
+                    .Append(!entry.Editable ? "Compose only" : entry.ComposeRecommended ? "Compose" : "").Append(" | ")
                     .Append(entry.WizardStep ?? "").Append(" |\n");
             }
             text.Append('\n');

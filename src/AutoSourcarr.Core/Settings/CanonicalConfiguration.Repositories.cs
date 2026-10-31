@@ -29,6 +29,17 @@ public sealed partial class CanonicalConfiguration
         }
     }
 
+    /// <summary>Replaces the whole repository list (setup wizard), with the same gate and recovery as single edits.</summary>
+    internal void SetExtensionStores(string json)
+    {
+        lock (_gate)
+        {
+            _ = RecoverCore();
+            var after = PatchEnvironment(RepositoryBytes(), new Dictionary<string, JsonNode?>(StringComparer.Ordinal) { ["EXTENSION_STORES"] = JsonValue.Create(json) });
+            _files.Write("source-host.env", after, preserveSourceHostMode: true);
+        }
+    }
+
     private byte[] RepositoryBytes() => _files.Read("source-host.env")
         ?? throw new FileNotFoundException("Private source host settings file is not mounted");
 }

@@ -36,6 +36,24 @@ public static class ConfigStoreTests
             var report = EnvConversion.EnsureConverted(root, Now) ?? throw new InvalidOperationException("Expected a conversion.");
             var loaded = new ConfigStore(root).Load();
 
+            // Hand-written expectations, independent of the parser the conversion uses.
+            Check.Equal("admin token # with hash and spaces", loaded.Settings["ADMIN_TOKEN"]);
+            Check.Equal("reader-Ωmega-🔑", loaded.Settings["AUTOSOURCARR_READER_API_TOKEN"]);
+            Check.Equal("", loaded.Settings["TRANSLATION_API_KEY"]);
+            Check.Equal("en,ja,all", loaded.Settings["SOURCE_LANGUAGES"]);
+            Check.Equal("kept as-is", loaded.Extra["CUSTOM_FROM_A_USER"]);
+            Check.Equal("hunter2", loaded.Extra["MY_SERVICE_PASSWORD"]);
+            Check.Equal("exported value", loaded.Extra["EXPORTED_EXTRA"]);
+            Check.True(!loaded.Settings.ContainsKey("DECLARED_WITHOUT_VALUE") && !loaded.Extra.ContainsKey("DECLARED_WITHOUT_VALUE"));
+            // The conversion is kept in config.json and shown as a notice until dismissed (ARC-6, ARC-7).
+            var document = new ConfigStore(root).ReadDocument()!;
+            Check.Equal(report.BackupDirectory, document.Conversion!.BackupDirectory);
+            Check.True(document.Conversion.EncryptedKeys.Contains("ADMIN_TOKEN"));
+            Check.Equal("converted,action,kept", string.Join(',', document.Update!.Notice!.Items.Select(item => item.Kind)));
+            Check.True(UpdateNotices.Check(root, "0.5.0") is null && UpdateNotices.Current(root) is not null);
+            Check.Equal("0.5.0", new ConfigStore(root).ReadDocument()!.Update!.AppVersion);
+            Check.Equal(report.BackupDirectory, EnvConversion.Saved(root)!.BackupDirectory);
+
             // Every key that had a value is present with the identical text.
             var expectedMain = DotEnv.Parse(Encoding.UTF8.GetString(main));
             var known = AutoSourcarrSettings.Definitions.Select(d => d.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);

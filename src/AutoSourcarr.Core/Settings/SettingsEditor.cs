@@ -65,14 +65,27 @@ public sealed partial class SettingsEditor
             return _store.ReadDocument()?.Setup;
     }
 
-    /// <summary>True when a Compose variable with this name is set, so config.json does not decide the value.</summary>
-    public bool OverriddenByEnvironment(string key) => _environment.TryGetValue(key, out var value) && value is not null;
+    /// <summary>
+    /// True when a Compose variable decides the value: one is set and you have not saved this setting in the app
+    /// (a value saved in the app wins over Compose, see ConfigDocument.ManagedKeys).
+    /// </summary>
+    public bool OverriddenByEnvironment(string key)
+    {
+        lock (_gate)
+            return Overridden(key, _store.ReadDocument()?.ManagedKeys ?? []);
+    }
+
+    private bool Overridden(string key, IReadOnlyCollection<string> managed) =>
+        _environment.TryGetValue(key, out var value) && value is not null && !managed.Contains(key);
 
     /// <summary>Effective text of every setting: config.json, else the running value. Includes secrets; never return this to a client.</summary>
     public IReadOnlyDictionary<string, string?> Effective()
     {
         lock (_gate)
-            return EffectiveCore(_store.Load()).Values;
+        {
+            var document = _store.ReadDocument();
+            return EffectiveCore(document is null ? ConfigValues.Empty : _store.Load(document), document?.ManagedKeys ?? []).Values;
+        }
     }
 
     public IReadOnlyDictionary<string, string?> SavedSettings()
@@ -85,6 +98,12 @@ public sealed partial class SettingsEditor
     {
         lock (_gate)
             return Repositories(_store.Load());
+    }
+
+    public IReadOnlyCollection<string> ManagedKeys()
+    {
+        lock (_gate)
+            return _store.ReadDocument()?.ManagedKeys ?? [];
     }
 
     /// <summary>
@@ -102,14 +121,14 @@ public sealed partial class SettingsEditor
             var document = _store.ReadDocument() ?? new ConfigDocument();
             if (transaction is not null && document.Setup?.Transaction == transaction)
                 return new(RevisionCore(), [], document.Setup.Changed, document.Setup.RestartRequired,
-                    document.Setup.Changed.Where(OverriddenByEnvironment).ToArray(), transaction);
+                    document.Setup.Changed.Where(key => Overridden(key, document.ManagedKeys)).ToArray(), transaction);
             if (!string.Equals(revision, RevisionCore(), StringComparison.Ordinal))
                 throw new SettingsConflictException("Settings changed elsewhere. Reload before saving; your changes were not applied.");
             if (changes.Count > SettingsSchema.Entries.Count + 1)
                 throw new SettingsValidationException("Too many settings in one request.");
 
             var before = _store.Load(document);
-            var (current, _) = EffectiveCore(before);
+            var (current, _) = EffectiveCore(before, document.ManagedKeys);
             var updates = new Dictionary<string, string?>(StringComparer.Ordinal);
             string? repositories = null;
             foreach (var (key, raw) in changes)
@@ -121,6 +140,8 @@ public sealed partial class SettingsEditor
                 }
                 if (!SettingsSchema.ByKey.TryGetValue(key, out var entry))
                     throw new SettingsValidationException("Unknown setting: " + key + ".");
+                if (!entry.Editable)
+                    throw new SettingsValidationException(key + " can only be set in Compose: it names a container folder or identity, and a wrong value would stop AutoSourcarr from starting.");
                 var value = Normalize(entry, raw);
                 if (entry.Secret && value == "")
                     value = null; // removing a secret = no saved value
@@ -146,8 +167,12 @@ public sealed partial class SettingsEditor
 
             var sourceHost = before.SourceHost.Where(pair => pair.Value is not null)
                 .ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal);
-            var repositoriesChanged = repositories is not null && !string.Equals(repositories, sourceHost.GetValueOrDefault(ExtensionStores), StringComparison.Ordinal);
-            if (repositoriesChanged)
+            var repositoriesChanged = repositories is not null
+                && !string.Equals(repositories, JsonSerializer.Serialize(Repositories(before).ToList(), SettingsEditorJson.Default.ListString), StringComparison.Ordinal);
+            // Until the extension host moves in-process (phase 4) the source engine and Sources > Repositories
+            // read source-host.env, so the wizard writes there too; config.json holds the list only without that file.
+            var legacyRepositories = repositoriesChanged && File.Exists(Path.Combine(_store.Root, CanonicalSourceHost));
+            if (repositoriesChanged && !legacyRepositories)
                 sourceHost[ExtensionStores] = repositories!;
             var extra = before.Extra.Where(pair => pair.Value is not null).ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal);
 
@@ -159,6 +184,13 @@ public sealed partial class SettingsEditor
                 document.Settings = ConfigStore.Encrypt(saved, secrets);
                 document.SourceHost = ConfigStore.Encrypt(sourceHost, secrets);
                 document.Extra = ConfigStore.Encrypt(extra, secrets);
+                var managed = new HashSet<string>(document.ManagedKeys, StringComparer.Ordinal);
+                foreach (var (key, value) in updates)
+                {
+                    if (value is null) managed.Remove(key);
+                    else managed.Add(key);
+                }
+                document.ManagedKeys = managed.Order(StringComparer.Ordinal).ToList();
                 if (transaction is not null)
                     document.Setup = new ConfigSetupRecord
                     {
@@ -168,13 +200,15 @@ public sealed partial class SettingsEditor
                         Changed = changedKeys.ToList(),
                         RestartRequired = restart
                     };
+                if (legacyRepositories)
+                    new CanonicalConfiguration(_store.Root).SetExtensionStores(repositories!);
                 _store.WriteDocument(document);
                 _registerSecrets?.Invoke(updates.Where(pair => pair.Value is { Length: > 0 } && SettingsSecrets.IsSecretKey(pair.Key))
                     .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
             }
             var after = _store.Load();
             var list = ConfigChanges.Compare(before, after);
-            return new(RevisionCore(), list, changedKeys, restart, changedKeys.Where(OverriddenByEnvironment).ToArray(), transaction);
+            return new(RevisionCore(), list, changedKeys, restart, changedKeys.Where(key => Overridden(key, document.ManagedKeys)).ToArray(), transaction);
         }
     }
 
@@ -184,20 +218,31 @@ public sealed partial class SettingsEditor
         return Convert.ToHexStringLower(SHA256.HashData(raw));
     }
 
-    private (Dictionary<string, string?> Values, IReadOnlyList<string> Repositories) EffectiveCore(ConfigValues saved)
+    /// <summary>What the next start will use: a value saved in the app, else a Compose variable, else config.json, else the running value.</summary>
+    private (Dictionary<string, string?> Values, IReadOnlyList<string> Repositories) EffectiveCore(ConfigValues saved, IReadOnlyCollection<string> managed)
     {
         var running = SettingsLoader.ToEnvironment(_running(), includeSecrets: true);
         var values = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var entry in SettingsSchema.Entries)
-            values[entry.Key] = saved.Settings.TryGetValue(entry.Key, out var value) && value is not null
-                ? value
+        {
+            var stored = saved.Settings.TryGetValue(entry.Key, out var value) ? value : null;
+            values[entry.Key] = stored is not null && (managed.Contains(entry.Key) || !Overridden(entry.Key, managed))
+                ? stored
                 : running.TryGetValue(entry.Key, out var live) ? live : entry.Secret ? "" : entry.Default;
+        }
         return (values, Repositories(saved));
     }
 
-    private static IReadOnlyList<string> Repositories(ConfigValues saved)
+    private const string CanonicalSourceHost = "source-host.env";
+
+    private IReadOnlyList<string> Repositories(ConfigValues saved)
     {
-        if (!saved.SourceHost.TryGetValue(ExtensionStores, out var raw) || string.IsNullOrWhiteSpace(raw))
+        string? raw;
+        if (File.Exists(Path.Combine(_store.Root, CanonicalSourceHost)))
+            new CanonicalConfiguration(_store.Root).EnvironmentFile(CanonicalSourceHost).TryGetValue(ExtensionStores, out raw);
+        else
+            saved.SourceHost.TryGetValue(ExtensionStores, out raw);
+        if (string.IsNullOrWhiteSpace(raw))
             return [SourceRepositoryStore.KeiyoushiUrl];
         try
         {
