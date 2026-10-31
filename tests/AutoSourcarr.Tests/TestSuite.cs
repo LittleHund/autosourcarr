@@ -34,6 +34,12 @@ public sealed class TestSuite
             {
                 failures++;
                 Console.WriteLine("FAIL " + name + "\n" + error);
+                if (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+                {
+                    // Annotations are readable through the API even where the raw log is not.
+                    var detail = string.Join(" | ", error.ToString().Split('\n').Take(12).Select(line => line.Trim()));
+                    Console.WriteLine("::error title=" + Escape(name) + "::" + Escape(detail));
+                }
                 outcomes.Add(new { name, passed = false, elapsedMs = watch.ElapsedMilliseconds, error = error.ToString() });
             }
         }
@@ -41,6 +47,10 @@ public sealed class TestSuite
             failed = failures, registered = _tests.Count, filtered = filters.Count > 0, filters, outcomes }));
         return failures == 0 ? 0 : 1;
     }
+
+    private static string Escape(string value) =>
+        value.Replace("%", "%25", StringComparison.Ordinal).Replace("\r", "", StringComparison.Ordinal)
+            .Replace("\n", "%0A", StringComparison.Ordinal).Replace(":", "%3A", StringComparison.Ordinal).Replace(",", "%2C", StringComparison.Ordinal);
 }
 
 public static class Check
