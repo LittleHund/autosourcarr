@@ -22,6 +22,7 @@ internal static class Program
             // launcher; the app starts the host itself. The Suwayomi image keeps the native PID1 path until phase 13.
             var hosted = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTOSOURCARR_SOURCE_HOST_JAR"));
             if (!hosted) NativeSourceOwnerConnection.RequirePostExecPrivacyBeforeConfiguration();
+            else AutoSourcarr.Core.Sources.Runtime.SourceHostProcess.ProtectParentProcess();
             await using var processSignals = signals = new StopSignals();
             if (args.Length != 0) throw new InvalidOperationException("Unexpected application arguments.");
             var environment = new Dictionary<string, string?>(StringComparer.Ordinal);

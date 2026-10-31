@@ -17,7 +17,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private static readonly TimeSpan[] RestartDelays = [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60)];
     private readonly object _gate = new();
     private readonly string _java, _jar, _dataDirectory;
-    private readonly IReadOnlyDictionary<string, string> _environment;
+    private readonly Func<IReadOnlyDictionary<string, string>> _environment;
     private readonly Action<string> _log;
     private readonly CancellationTokenSource _stop = new();
     private readonly HttpClient _health;
@@ -27,9 +27,14 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private string _displayName = "";
     private Task? _watch;
     private int _restarts;
-    private string _lastError = "";
+    private string _lastError = "", _startupError = "";
+    private bool _healthy;
 
     public SourceHostProcess(string java, string jar, string dataDirectory, int port, IReadOnlyDictionary<string, string> environment, Action<string> log)
+        : this(java, jar, dataDirectory, port, () => environment, log) { }
+
+    /// <param name="environment">Built again for every launch, so a restarted host gets the saved identity and repositories.</param>
+    public SourceHostProcess(string java, string jar, string dataDirectory, int port, Func<IReadOnlyDictionary<string, string>> environment, Action<string> log)
     {
         _java = java; _jar = jar; _dataDirectory = dataDirectory; Port = port; _environment = environment; _log = log;
         Token = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
@@ -44,7 +49,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     public string Token { get; }
     public int Restarts { get { lock (_gate) return _restarts; } }
     public string LastError { get { lock (_gate) return _lastError; } }
-    public bool Running { get { lock (_gate) return _process is { HasExited: false }; } }
+    public bool Running { get { lock (_gate) return _process is { HasExited: false }; } }  // _process is never a disposed instance
 
     /// <summary>Default deployment paths; AUTOSOURCARR_JAVA and AUTOSOURCARR_SOURCE_HOST_JAR override them.</summary>
     public static (string Java, string Jar) Locate(IReadOnlyDictionary<string, string?> environment)
@@ -61,9 +66,23 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         if (!File.Exists(_jar)) throw new FileNotFoundException("The source host jar is missing.", _jar);
         Directory.CreateDirectory(_dataDirectory);
         await StartDisplayAsync(cancellationToken).ConfigureAwait(false);
-        Launch();
-        await WaitHealthyAsync(timeout, cancellationToken).ConfigureAwait(false);
-        lock (_gate) _watch ??= Task.Run(WatchAsync);
+        try
+        {
+            Launch();
+            await WaitHealthyAsync(timeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception error) when (error is TimeoutException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            lock (_gate) _lastError = error.Message;
+            throw;
+        }
+        finally { StartWatching(); }
+    }
+
+    /// <summary>Keeps the host running (restarts with back-off), also after a failed first start.</summary>
+    public void StartWatching()
+    {
+        lock (_gate) if (!_stop.IsCancellationRequested) _watch ??= Task.Run(WatchAsync);
     }
 
     public async Task<bool> HealthyAsync(CancellationToken cancellationToken)
@@ -73,7 +92,8 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             using var response = await _health.GetAsync(new Uri(BaseUrl + "/v1/health"), cancellationToken).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
-        catch (Exception error) when (error is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested) { return false; }
+        catch (HttpRequestException) { return false; }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested) { return false; }
     }
 
     private async Task WaitHealthyAsync(TimeSpan timeout, CancellationToken cancellationToken)
@@ -82,13 +102,16 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         deadline.CancelAfter(timeout);
         while (true)
         {
-            if (await HealthyAsync(deadline.Token).ConfigureAwait(false)) return;
-            lock (_gate)
-                if (_process is { HasExited: true } exited)
-                    throw new InvalidOperationException("The source host stopped while starting (exit code " + exited.ExitCode.ToString(CultureInfo.InvariantCulture) + "). " + _lastError);
-            try { await Task.Delay(TimeSpan.FromMilliseconds(500), deadline.Token).ConfigureAwait(false); }
+            try
+            {
+                if (await HealthyAsync(deadline.Token).ConfigureAwait(false)) { lock (_gate) _healthy = true; return; }
+                lock (_gate)
+                    if (_process is { HasExited: true } exited)
+                        throw new InvalidOperationException("The source host stopped while starting (exit code " + exited.ExitCode.ToString(CultureInfo.InvariantCulture) + "). " + _startupError);
+                await Task.Delay(TimeSpan.FromMilliseconds(500), deadline.Token).ConfigureAwait(false);
+            }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && !_stop.IsCancellationRequested)
-            { throw new TimeoutException("The source host did not answer its health check within " + timeout.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s."); }
+            { throw new TimeoutException("The source host did not answer its health check within " + timeout.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s. " + _startupError); }
         }
     }
 
@@ -131,7 +154,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         start.ArgumentList.Add("-jar");
         start.ArgumentList.Add(_jar);
         start.Environment.Clear();
-        foreach (var (key, value) in _environment) start.Environment[key] = value;
+        foreach (var (key, value) in _environment()) start.Environment[key] = value;
         start.Environment["SOURCE_HOST_DATA"] = _dataDirectory;
         start.Environment["SOURCE_HOST_PORT"] = Port.ToString(CultureInfo.InvariantCulture);
         start.Environment["SOURCE_HOST_BIND"] = "127.0.0.1";
@@ -142,15 +165,26 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         process.ErrorDataReceived += (_, line) => Output(line.Data);
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        lock (_gate) { _process = process; _group = setsid is not null; }
+        lock (_gate)
+        {
+            if (_stop.IsCancellationRequested)
+            {
+                // Disposal began while this host was starting: it must not outlive the owner.
+                try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+                process.Dispose();
+                throw new OperationCanceledException(_stop.Token);
+            }
+            _process = process; _group = setsid is not null; _healthy = false;
+        }
         _log("Source host started (process " + process.Id.ToString(CultureInfo.InvariantCulture) + ").");
     }
 
     private void Output(string? line)
     {
         if (string.IsNullOrEmpty(line)) return;
+        // Only errors before the host answers count as its error: a failing source call logs exceptions too.
         if (line.Contains(" ERROR ", StringComparison.Ordinal) || line.Contains("Exception", StringComparison.Ordinal))
-            lock (_gate) _lastError = line.Length > 500 ? line[..500] : line;
+            lock (_gate) if (!_healthy) _startupError = line.Length > 500 ? line[..500] : line;
         if (!line.Contains(" DEBUG ", StringComparison.Ordinal) && !line.Contains(" TRACE ", StringComparison.Ordinal)) _log(line);
     }
 
@@ -159,8 +193,19 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         var failures = 0;
         while (!_stop.IsCancellationRequested)
         {
-            Process process;
-            lock (_gate) process = _process!;
+            Process? current;
+            lock (_gate) current = _process;
+            if (current is null)
+            {
+                // The previous start failed (no process): try again on the back-off ladder.
+                var wait = RestartDelays[Math.Min(failures++, RestartDelays.Length - 1)];
+                try { await Task.Delay(wait, _stop.Token).ConfigureAwait(false); Launch(); _ = ClearErrorWhenHealthyAsync(); }
+                catch (OperationCanceledException) { return; }
+                catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
+                { lock (_gate) _lastError = "The source host could not be started: " + error.Message; _log(LastError); }
+                continue;
+            }
+            var process = current;
             var started = DateTimeOffset.UtcNow;
             try { await process.WaitForExitAsync(_stop.Token).ConfigureAwait(false); }
             catch (OperationCanceledException) { return; }
@@ -171,20 +216,36 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             failures++;
             lock (_gate) { _restarts++; _lastError = "The source host exited with code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + "."; }
             _log(LastError + " Starting it again in " + delay.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s.");
+            lock (_gate) if (ReferenceEquals(_process, process)) _process = null;
             process.Dispose();
             try
             {
                 await Task.Delay(delay, _stop.Token).ConfigureAwait(false);
                 Launch();
+                _ = ClearErrorWhenHealthyAsync();
             }
             catch (OperationCanceledException) { return; }
             catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
             {
+                // Keep trying on the ladder: the next loop pass sees no process and starts one.
                 lock (_gate) _lastError = "The source host could not be started again: " + error.Message;
                 _log(LastError);
-                return;
             }
         }
+    }
+
+    /// <summary>A restarted host that answers again clears the exit message from the status.</summary>
+    private async Task ClearErrorWhenHealthyAsync()
+    {
+        try
+        {
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
+            deadline.CancelAfter(TimeSpan.FromMinutes(3));
+            while (!await HealthyAsync(deadline.Token).ConfigureAwait(false)) await Task.Delay(1000, deadline.Token).ConfigureAwait(false);
+            lock (_gate) { _healthy = true; _lastError = ""; }
+        }
+        catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) { }
     }
 
     /// <summary>setsid made the host a process-group leader (group id = its pid): stop what is left of the group.</summary>
@@ -195,6 +256,21 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         if (group && OperatingSystem.IsLinux() && processId > 1) _ = KillSignal(-processId, 9);
     }
 
+    /// <summary>
+    /// Hosted mode has no native launcher to do this: mark the app not dumpable, so code running in the source host
+    /// (same user) cannot read the app's memory or /proc/&lt;pid&gt;/environ (secrets in variables). A separate user for
+    /// the host comes with the low-rights runner (phase 6) and the new image (phase 13).
+    /// </summary>
+    public static void ProtectParentProcess()
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        if (Prctl(4 /* PR_SET_DUMPABLE */, 0, 0, 0, 0) != 0)
+            throw new InvalidOperationException("Could not mark the process not dumpable (prctl error " + Marshal.GetLastPInvokeError().ToString(CultureInfo.InvariantCulture) + ").");
+    }
+
+    [LibraryImport("libc", EntryPoint = "prctl", SetLastError = true)]
+    private static partial int Prctl(int option, nuint arg2, nuint arg3, nuint arg4, nuint arg5);
+
     [LibraryImport("libc", EntryPoint = "kill", SetLastError = true)]
     private static partial int KillSignal(int processId, int signal);
 
@@ -202,9 +278,12 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     {
         if (_stop.IsCancellationRequested) return;
         await _stop.CancelAsync().ConfigureAwait(false);
-        Process? process;
         Task? watch;
-        lock (_gate) { process = _process; watch = _watch; }
+        lock (_gate) watch = _watch;
+        // The watch loop stops at its next await and never launches again once _stop is cancelled (Launch checks it).
+        if (watch is not null) await watch.ConfigureAwait(false);
+        Process? process;
+        lock (_gate) { process = _process; _process = null; }
         if (process is { HasExited: false })
         {
             try { process.StandardInput.Close(); } catch (InvalidOperationException) { }
@@ -213,7 +292,6 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             try { await process.WaitForExitAsync(wait.Token).ConfigureAwait(false); } catch (OperationCanceledException) { }
         }
-        if (watch is not null) await watch.ConfigureAwait(false);
         process?.Dispose();
         Process? display;
         lock (_gate) display = _display;

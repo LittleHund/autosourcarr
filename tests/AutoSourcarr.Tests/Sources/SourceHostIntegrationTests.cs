@@ -74,17 +74,35 @@ public static class SourceHostIntegrationTests
 
             // A crashed host comes back on the same port and token and keeps its installed extensions.
             KillHost(host);
+            // During the restart delay the status must stay readable (no disposed process behind it).
+            for (var i = 0; i < 20; i++) { _ = host.Running; _ = host.LastError; Thread.Sleep(100); }
             var deadline = DateTime.UtcNow.AddMinutes(3);
             while (DateTime.UtcNow < deadline && !(host.Restarts == 1 && await host.HealthyAsync(CancellationToken.None))) await Task.Delay(500);
             Check.Equal(1, host.Restarts);
             Check.True(await host.HealthyAsync(CancellationToken.None), "host healthy after restart");
             Check.True((await client.SourcesAsync()).Any(row => row["id"]!.ToString() == sourceId), "extension kept across restart");
+            for (var i = 0; i < 50 && host.LastError.Length > 0; i++) await Task.Delay(100);
+            Check.Equal("", host.LastError);
+            // Disposal during a restart delay stops the host for good.
+            KillHost(host);
+            await Task.Delay(300);
+            await host.DisposeAsync();
+            Check.True(!host.Running, "no host after dispose");
+            await Task.Delay(6000);
+            using (var probe = new HttpClient { Timeout = TimeSpan.FromSeconds(2) })
+                Check.True(!await Reachable(probe, host.BaseUrl), "no host was started after dispose");
         }
         catch
         {
             lock (log) Console.WriteLine(string.Join('\n', log.TakeLast(80)));
             throw;
         }
+    }
+
+    private static async Task<bool> Reachable(HttpClient client, string baseUrl)
+    {
+        try { using var _ = await client.GetAsync(baseUrl + "/v1/health"); return true; }
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException) { return false; }
     }
 
     private static void KillHost(SourceHostProcess host)

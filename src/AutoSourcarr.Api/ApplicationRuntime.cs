@@ -164,11 +164,18 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             if (useHost)
             {
                 var (java, jar) = SourceHostProcess.Locate(environment);
-                var hostEnvironment = SourceHostEnvironment(startup.Settings, launch, environment);
-                var process = new SourceHostProcess(java, jar, Path.Combine(owner._dataDirectory!, "source-host"), 4567, hostEnvironment,
-                    line => owner.Logs.Record("Source host", line));
+                // Built for every launch: a restarted host gets the saved browser identity and repositories.
+                var process = new SourceHostProcess(java, jar, Path.Combine(owner._dataDirectory!, "source-host"), 4567,
+                    () => SourceHostEnvironment(owner.Settings, launch, environment), line => owner.Logs.Record("Source host", line));
                 owner.Privacy.Register(new Dictionary<string, string?> { ["source_host_token"] = process.Token });
                 try { await process.StartAsync(TimeSpan.FromMinutes(3), cancellationToken).ConfigureAwait(false); }
+                catch (Exception error) when (error is TimeoutException or InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    // Like the native engine: the app starts on its cached data, the status shows the source engine
+                    // error and the host keeps being started on the back-off ladder.
+                    owner.Logs.Record("Source host", "The source host did not start: " + error.Message);
+                    owner.Errors.Record("Source engine", "The source host did not start: " + error.Message, "source-host-start");
+                }
                 catch { await process.DisposeAsync().ConfigureAwait(false); throw; }
                 owner._source = await SourceEngineController.CreateHostedAsync(startup.Settings, process, launch, environment, owner._admin,
                     owner.Io, owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false);
