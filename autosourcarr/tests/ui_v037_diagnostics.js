@@ -2,6 +2,8 @@ const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const ctx={document:{querySelector:()=>null},console,Blob,esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'),fmtWhen:s=>s};
 vm.createContext(ctx);
 vm.runInContext("const UI_BUILD_VERSION='0.3.7';var lastBackendErrors={items:[{message:'cached'}]};var lastHealthSnapshot={captured_at:'old',version:'0.3.5'};var clientErrors=[];",ctx);
+vm.runInContext(fs.readFileSync(__dirname+'/../app/static/generated/api-client.js','utf8'),ctx);
+{const app=fs.readFileSync(__dirname+'/../app/static/app.js','utf8'),at=app.indexOf('function apiV1(');vm.runInContext(app.slice(at,app.indexOf('\n',at)).replace('api(path','globalThis.api(path'),ctx);}
 vm.runInContext(fs.readFileSync(__dirname+'/../app/static/workbench.js','utf8'),ctx);
 const support={runtime:{app_version:'0.3.6',server_time:'server-now',instance_id:'abc123'},health:{captured_at:'health-before'},tasks:[{id:'task-1',state:'running'}],imports:{items:[{id:24,state:'unresolved'}]}};
 let text=ctx.diagnosticExportText({app_version:'0.3.6',items:[{app_version:'0.3.6',exception_chain:[{type:'ReadTimeout',frames:[{file:'source.py',line:42}]}]}]},[],support.health,'',support);
@@ -16,7 +18,7 @@ const visible=html.split('<details>')[0];assert(!visible.includes('Source.kt'));
  ctx.downloadBlob=(blob)=>{download=blob;};
  ctx.api=async path=>{paths.push(path);return {...support,errors:{items:[{message:'fresh'}]}};};
  await ctx.exportErrors();text=await download.text();assert(text.includes('fresh'));assert(text.includes('health-before'));assert.equal(paths.length,1);assert.equal(elements['#exportErrors'].disabled,false);
- ctx.api=async path=>{paths.push(path);if(path==='/api/admin/diagnostics')throw Error('offline');return {app_version:'0.3.7',captured_at:'fallback-time',items:[{message:'fallback evidence'}]};};
+ ctx.api=async path=>{paths.push(path);if(path==='/api/v1/diagnostics')throw Error('offline');return {app_version:'0.3.7',captured_at:'fallback-time',items:[{message:'fallback evidence'}]};};
  await ctx.exportErrors();text=await download.text();assert(text.includes('PARTIAL EXPORT'));assert(text.includes('fallback evidence'));assert(text.includes('fallback-time'));assert.equal(elements['#exportErrors'].disabled,false);
  console.log('PASS versioned technical export, readable UI, credential scrubbing, cached checks and partial fallback');
 })().catch(e=>{console.error(e);process.exitCode=1;});

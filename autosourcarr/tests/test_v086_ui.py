@@ -30,6 +30,7 @@ def test_tasks_polling_shares_one_request_preserves_snapshot_and_recovers():
       const summary={textContent:''};const $=()=>summary;const document={querySelector:()=>true};
       const surfaceIsActive=()=>false;const renderTasks=()=>{};const requestSurfaceRender=()=>{};
       let api=()=>{calls++;return new Promise(resolve=>release=resolve)};
+      const apiV1=()=>({getTasks:()=>api('/api/v1/tasks')});
     '''+code+'''
       (async()=>{
         const a=loadTasks(),b=loadTasks(),c=loadTasks();assert.equal(calls,1);
