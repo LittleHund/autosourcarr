@@ -53,11 +53,11 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | `due_scheduler.py` → DueScheduler | done: DueScheduler + CrawlPages + CrawlLane, same delays and timestamp text as 0.4.x |
 | `task_registry.py`, `task_journal.py` | done: every job is a task (Ongoing/Completed/Failed, progress, ETA, finish time, PERF-1); TaskJournal now started with the app (history survives restarts) |
 | `async_utils.py`, `read_lane.py` | exist (BoundedWorkScheduler, WholeTaskCoordinator) |
-| Jobs section: `background_task_buckets`, `track_startup_task`, `stop/resume/cancel_background_tasks`, interactive request tracking, idle waits, task slots | done: JobQueue (StopBackgroundAsync / ResumeBackground) + WholeTaskCoordinator |
+| Jobs section: `background_task_buckets`, `track_startup_task`, `stop/resume/cancel_background_tasks`, interactive request tracking, idle waits, task slots | done in the queue: JobQueue (StopBackgroundAsync / ResumeBackground) + WholeTaskCoordinator; the reset and restore routes that call stop/resume are ported in phases 8 and 12 |
 | Jobs section: `schedule_startup_dedup`, `schedule_startup_refresh`, `schedule_entry_refresh_job`, `schedule_catalog_additional_record_scan`, `schedule_catalogue_choice`, `schedule_status_aux_refresh` | queue ready; each becomes a JobType when its work is ported (phases 6–10) |
 | TaskEndpoints (4) | done: `GET /api/v1/tasks`, `POST /api/v1/tasks/clear-history`, `/{taskId}/cancel`, `/{taskId}/retry-safe` (safe replays registered per kind; library-monitor replay arrives with phase 8); plus `GET /api/v1/jobs` |
 | DiagnosticEndpoints: diagnostics, errors, errors/clear | done: `GET /api/v1/diagnostics` (PERF-9 download, now wired in the app), `GET /api/v1/errors`, `POST /api/v1/errors/clear` |
-| Database move (phase 2 audit) | done: runs as an exclusive job (`202` + task id); the UI follows the task |
+| Database move (phase 2 audit) | done: runs as an exclusive, non-cancellable job (`202` + task id; never abandoned by the watchdog); the UI follows the task |
 | RuntimeMetrics | done for jobs (`job_run` phase) |
 | UI pages of this phase | done: task list, cancel, clear history, safe retry, error panel and diagnostics download call `/api/v1` through the generated client; live updates through `/api/v1/events` (fetch stream with the admin token), task polling falls back to 30 s while live |
 

@@ -421,6 +421,8 @@ async function runLiveEvents(){
       const response=await fetch('/api/v1/events',{headers,cache:'no-store',signal:controller.signal,credentials:'same-origin'});
       if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
       liveEvents.connected=true;
+      // Whatever changed while disconnected (or before a server restart) is picked up once.
+      liveTasksChanged();
       const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
       for(;;){
         const {value,done}=await reader.read();if(done)break;
