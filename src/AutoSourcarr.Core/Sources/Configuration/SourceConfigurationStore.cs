@@ -100,6 +100,9 @@ public sealed partial class SourceConfigurationStore
                         VALUES($id,$name,$display,$lang,$url,$icon,$latest,$enabled,$enabled,$enabled,$priority,$time,1,$official,0)
                         ON CONFLICT(source_id) DO UPDATE SET name=excluded.name,display_name=excluded.display_name,lang=excluded.lang,base_url=excluded.base_url,
                           icon_url=excluded.icon_url,supports_latest=excluded.supports_latest,last_seen=excluded.last_seen,available=1,official=excluded.official,official_manual=0
+                        WHERE (source_config.name,source_config.display_name,source_config.lang,source_config.base_url,source_config.icon_url,source_config.supports_latest,
+                               source_config.available,source_config.official,source_config.official_manual)
+                          IS NOT (excluded.name,excluded.display_name,excluded.lang,excluded.base_url,excluded.icon_url,excluded.supports_latest,1,excluded.official,0)
                         """, ("$id", id), ("$name", name), ("$display", SourceConfigurationJson.Text(source["displayName"])), ("$lang", language), ("$url", url),
                         ("$icon", SourceConfigurationJson.Text(source["iconUrl"])), ("$latest", !source.ContainsKey("supportsLatest") || SourceConfigurationJson.Truth(source["supportsLatest"]) ? 1 : 0),
                         ("$enabled", enabled), ("$priority", priority), ("$time", stamp), ("$official", ChapterResolver.ProbablyOfficialSource(name, url) ? 1 : 0));

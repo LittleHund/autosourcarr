@@ -1,26 +1,45 @@
+using System.Data;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AutoSourcarr.Core.Matching;
+using FluentMigrator.Runner;
+using FluentMigrator.Runner.Initialization;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AutoSourcarr.Core.Persistence;
 
-/// <summary>Preserves the released SQL and its conditional, per-file migrations.</summary>
+/// <summary>
+/// Creates and upgrades both databases with FluentMigrator (phase 2). Each file has its own migration set
+/// (tag "catalog" or "origins") and its own VersionInfo table. Migration 1 is the 0.4.4 baseline: the released
+/// SQL plus the conditional upgrades that bring a 0.3.x file to 0.4.4, so new and old files end in the same
+/// schema. Later schema changes are written as ordinary fluent migrations, which also run on Postgres
+/// (phase 16 adds the Postgres form of the baseline to the same migration numbers).
+/// The ASC1 application_id / user_version stamp is checked before any migration touches a file.
+/// </summary>
 public sealed partial class SchemaMigrator(SqliteDatabase database)
 {
+    public const string CatalogTag = "catalog";
+    public const string OriginsTag = "origins";
+
+    [ThreadStatic] private static Func<string, string>? _normalizeTitle;
+
     public void Initialize(Func<string, string>? normalizeTitle = null)
     {
-        normalizeTitle ??= TextMatcher.NormalizeTitle;
-        CreateBase(DatabaseFile.Catalog, Resource("catalog.sql") + Resource("library.sql"));
-        CreateBase(DatabaseFile.Origins, Resource("origins.sql"));
-        using var plan = JsonDocument.Parse(Resource("legacy-migrations.json"));
-        if (plan.RootElement.GetProperty("format").GetInt32() != 1)
-            throw new InvalidDataException("Unsupported embedded database migration plan.");
-        Apply(DatabaseFile.Catalog, plan.RootElement.GetProperty("catalog"), normalizeTitle);
-        Apply(DatabaseFile.Origins, plan.RootElement.GetProperty("origins"), normalizeTitle);
+        var previous = _normalizeTitle;
+        _normalizeTitle = normalizeTitle ?? TextMatcher.NormalizeTitle;
+        try
+        {
+            Migrate(DatabaseFile.Catalog, CatalogTag);
+            Migrate(DatabaseFile.Origins, OriginsTag);
+        }
+        finally { _normalizeTitle = previous; }
     }
 
+    /// <summary>Feature tables are part of the migrations now; this only re-applies the idempotent script.</summary>
     public void EnsureFeatureSchema(string name)
     {
         if (name is not ("catalogue-identity.sql" or "gallery-policy.sql" or "identity-review.sql"))
@@ -28,54 +47,44 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
         database.Write(DatabaseFile.Catalog, session => session.Execute(Resource(name)));
     }
 
-    private void Apply(DatabaseFile file, JsonElement steps, Func<string, string> normalizeTitle)
-    {
-        database.Write(file, session =>
-        {
-            RunSteps(session, steps, normalizeTitle);
-            return 0;
-        });
-    }
-
-    private static void RunSteps(DatabaseSession session, JsonElement steps, Func<string, string> normalizeTitle)
-    {
-        foreach (var step in steps.EnumerateArray())
-        {
-            switch (step.GetProperty("kind").GetString())
-            {
-                case "sql":
-                    session.Execute(step.GetProperty("sql").GetString()!);
-                    break;
-                case "if-missing-column":
-                    var table = step.GetProperty("table").GetString()!;
-                    var column = step.GetProperty("column").GetString()!;
-                    if (!Identifier().IsMatch(table) || !Identifier().IsMatch(column))
-                        throw new InvalidDataException("Invalid embedded migration identifier.");
-                    if (!session.Query($"PRAGMA table_info(\"{table}\")").Any(row => row.Text("name") == column))
-                        RunSteps(session, step.GetProperty("steps"), normalizeTitle);
-                    break;
-                case "normalize-preferred-titles":
-                    foreach (var row in session.Query("SELECT entry_id,raw_title FROM entry_preferred_titles WHERE normalized IS NULL"))
-                        session.Execute("""
-                            UPDATE entry_preferred_titles SET normalized=$normalized
-                            WHERE entry_id=$entry AND raw_title=$raw AND normalized IS NULL
-                            """, ("$normalized", normalizeTitle(row.Text("raw_title"))),
-                            ("$entry", row.Integer("entry_id")), ("$raw", row.Text("raw_title")));
-                    break;
-                default:
-                    throw new InvalidDataException("Unknown embedded database migration operation.");
-            }
-        }
-    }
-
     /// <summary>"ASC1": the SQLite application_id written by every AutoSourcarr build since 0.4.4.</summary>
     public const int SchemaApplicationId = 0x41534331;
     /// <summary>Highest schema revision this build understands; newer files are refused unchanged.</summary>
     public const int SchemaRevision = 1;
 
-    private void CreateBase(DatabaseFile file, string sql)
+    /// <summary>Highest FluentMigrator version per file in this build (VersionInfo).</summary>
+    public static long LatestMigration(DatabaseFile file) => typeof(SchemaMigrator).Assembly.GetTypes()
+        .Select(type => (Type: type, Migration: type.GetCustomAttribute<FluentMigrator.MigrationAttribute>(), Tags: type.GetCustomAttribute<FluentMigrator.TagsAttribute>()))
+        .Where(item => item.Migration is not null && item.Tags?.TagNames.Contains(file == DatabaseFile.Catalog ? CatalogTag : OriginsTag) == true)
+        .Max(item => item.Migration!.Version);
+
+    private void Migrate(DatabaseFile file, string tag)
     {
-        using var connection = database.Open(file, initialize: true);
+        var path = file == DatabaseFile.Catalog ? database.Paths.Catalog : database.Paths.Origins;
+        using (var connection = database.Open(file, initialize: true))
+            CheckStamp(connection, path);
+
+        using (var services = new ServiceCollection()
+                   .AddLogging(logging => logging.ClearProviders())
+                   .AddFluentMigratorCore()
+                   .ConfigureRunner(runner => runner.AddSQLite()
+                       .WithGlobalConnectionString(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString())
+                       .ScanIn(typeof(SchemaMigrator).Assembly).For.Migrations())
+                   .Configure<RunnerOptions>(options => options.Tags = [tag])
+                   .BuildServiceProvider(validateScopes: false))
+        using (var scope = services.CreateScope())
+            scope.ServiceProvider.GetRequiredService<IMigrationRunner>().MigrateUp();
+
+        using (var connection = database.Open(file, initialize: true))
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = string.Create(CultureInfo.InvariantCulture, $"PRAGMA application_id={SchemaApplicationId}; PRAGMA user_version={SchemaRevision}; PRAGMA optimize;");
+            command.ExecuteNonQuery();
+        }
+    }
+
+    private static void CheckStamp(SqliteConnection connection, string path)
+    {
         using var command = connection.CreateCommand();
         // Same rule as the Python app's check_schema_revision: a foreign or newer
         // file is refused before any CREATE or migration touches it.
@@ -83,21 +92,102 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
         var applicationId = Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
         command.CommandText = "PRAGMA user_version";
         var revision = Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
-        var path = file == DatabaseFile.Catalog ? database.Paths.Catalog : database.Paths.Origins;
         if (applicationId is not (0 or SchemaApplicationId))
             throw new SchemaRevisionException($"{path} is not an AutoSourcarr database (application_id {applicationId}).");
         if (revision > SchemaRevision)
             throw new SchemaRevisionException($"{path} uses schema revision {revision}; this build supports up to {SchemaRevision}. "
                 + "Run the newer AutoSourcarr image or restore a matching backup; the file was not changed.");
+    }
+
+    /// <summary>Migration 1 body: released SQL (all CREATE ... IF NOT EXISTS) plus the 0.3.x → 0.4.4 steps.</summary>
+    internal static void ApplyBaseline(IDbConnection connection, IDbTransaction? transaction, DatabaseFile file)
+    {
+        var sql = file == DatabaseFile.Catalog ? Resource("catalog.sql") + Resource("library.sql") : Resource("origins.sql");
+        Run(connection, transaction, sql);
+        using var plan = JsonDocument.Parse(Resource("legacy-migrations.json"));
+        if (plan.RootElement.GetProperty("format").GetInt32() != 1)
+            throw new InvalidDataException("Unsupported embedded database migration plan.");
+        RunSteps(connection, transaction, plan.RootElement.GetProperty(file == DatabaseFile.Catalog ? "catalog" : "origins"),
+            _normalizeTitle ?? TextMatcher.NormalizeTitle);
+    }
+
+    /// <summary>Migration 2 body: the feature tables that 0.4.x created on first use.</summary>
+    internal static void ApplyFeatureTables(IDbConnection connection, IDbTransaction? transaction)
+    {
+        foreach (var name in new[] { "catalogue-identity.sql", "gallery-policy.sql", "identity-review.sql" })
+            Run(connection, transaction, Resource(name));
+    }
+
+    private static void Run(IDbConnection connection, IDbTransaction? transaction, string sql, params (string Name, object? Value)[] parameters)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = sql;
-        command.ExecuteNonQuery();
-        command.CommandText = string.Create(CultureInfo.InvariantCulture, $"PRAGMA application_id={SchemaApplicationId}; PRAGMA user_version={SchemaRevision};");
-        command.ExecuteNonQuery();
-        command.CommandText = "PRAGMA optimize";
+        foreach (var (name, value) in parameters)
+        {
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = name;
+            parameter.Value = value ?? DBNull.Value;
+            command.Parameters.Add(parameter);
+        }
         command.ExecuteNonQuery();
     }
 
-    private static string Resource(string filename)
+    private static List<(long Entry, string Raw)> PendingTitles(IDbConnection connection, IDbTransaction? transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT entry_id,raw_title FROM entry_preferred_titles WHERE normalized IS NULL";
+        using var reader = command.ExecuteReader();
+        var rows = new List<(long, string)>();
+        while (reader.Read())
+            rows.Add((reader.GetInt64(0), reader.IsDBNull(1) ? "" : reader.GetString(1)));
+        return rows;
+    }
+
+    private static bool HasColumn(IDbConnection connection, IDbTransaction? transaction, string table, string column)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"PRAGMA table_info(\"{table}\")";
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+            if (string.Equals(reader.GetString(1), column, StringComparison.Ordinal))
+                return true;
+        return false;
+    }
+
+    private static void RunSteps(IDbConnection connection, IDbTransaction? transaction, JsonElement steps, Func<string, string> normalizeTitle)
+    {
+        foreach (var step in steps.EnumerateArray())
+        {
+            switch (step.GetProperty("kind").GetString())
+            {
+                case "sql":
+                    Run(connection, transaction, step.GetProperty("sql").GetString()!);
+                    break;
+                case "if-missing-column":
+                    var table = step.GetProperty("table").GetString()!;
+                    var column = step.GetProperty("column").GetString()!;
+                    if (!Identifier().IsMatch(table) || !Identifier().IsMatch(column))
+                        throw new InvalidDataException("Invalid embedded migration identifier.");
+                    if (!HasColumn(connection, transaction, table, column))
+                        RunSteps(connection, transaction, step.GetProperty("steps"), normalizeTitle);
+                    break;
+                case "normalize-preferred-titles":
+                    foreach (var (entry, raw) in PendingTitles(connection, transaction))
+                        Run(connection, transaction, """
+                            UPDATE entry_preferred_titles SET normalized=$normalized
+                            WHERE entry_id=$entry AND raw_title=$raw AND normalized IS NULL
+                            """, ("$normalized", normalizeTitle(raw)), ("$entry", entry), ("$raw", raw));
+                    break;
+                default:
+                    throw new InvalidDataException("Unknown embedded database migration operation.");
+            }
+        }
+    }
+
+    internal static string Resource(string filename)
     {
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(
             "AutoSourcarr.Core.Persistence.Schema." + filename)

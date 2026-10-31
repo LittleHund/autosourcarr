@@ -28,7 +28,7 @@ public sealed partial class SourceConfigurationStore
                     var priority = oldGroups.Where(row => SourceConfigurationJson.First(row["name"]) == name).Select(row => SourceConfigurationJson.Truth(row["priority"]) ? SourceConfigurationJson.Integer(row["priority"]) : 1000).FirstOrDefault(1000);
                     session.Execute("""
                         INSERT INTO source_groups(name,priority,created_at,updated_at) VALUES($name,$priority,$time,$time)
-                        ON CONFLICT(name) DO UPDATE SET priority=excluded.priority,updated_at=excluded.updated_at
+                        ON CONFLICT(name) DO UPDATE SET priority=excluded.priority,updated_at=excluded.updated_at WHERE source_groups.priority IS NOT excluded.priority
                         """, ("$name", name), ("$priority", priority), ("$time", SourceConfigurationJson.Timestamp(_clock)));
                 }
                 var groups = session.Query("SELECT id,name FROM source_groups").ToDictionary(row => row.Text("name"), row => row.Integer("id"), StringComparer.Ordinal);
@@ -71,7 +71,7 @@ public sealed partial class SourceConfigurationStore
                     var rule = MatchingRuleConfiguration.Validate(JsonNode.Parse(SourceConfigurationJson.Text(policy["rule_json"])));
                     session.Execute("""
                         INSERT INTO matching_policies(scope,subject,direction,rule_json,updated_at) VALUES($scope,$subject,$direction,$rule,$time)
-                        ON CONFLICT(scope,subject,direction) DO UPDATE SET rule_json=excluded.rule_json,updated_at=excluded.updated_at
+                        ON CONFLICT(scope,subject,direction) DO UPDATE SET rule_json=excluded.rule_json,updated_at=excluded.updated_at WHERE matching_policies.rule_json IS NOT excluded.rule_json
                         """, ("$scope", scope), ("$subject", subject), ("$direction", direction), ("$rule", SourceConfigurationJson.PythonJson(rule)), ("$time", SourceConfigurationJson.Timestamp(_clock)));
                 }
                 return new JsonObject { ["groups"] = groups.Count, ["sources"] = restored };

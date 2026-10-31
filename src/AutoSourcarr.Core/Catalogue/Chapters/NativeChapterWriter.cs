@@ -202,7 +202,8 @@ public sealed class NativeChapterWriter(SqliteDatabase database, object sourceWr
                 }
             }
             var display = ch.Name.Length != 0 ? ch.Name : "Chapter " + number.ToString("G6", CultureInfo.InvariantCulture).Replace('E', 'e');
-            if (vid.HasValue) o.Execute("UPDATE virtual_chapters SET display_name=$p0,chapter_number=$p1,volume_number=$p2,updated_at=$p3 WHERE id=$p4", P(display, number, ch.Volume, stamp, vid.Value));
+            // Changed rows only (PERF-5): an unchanged chapter keeps its row and updated_at.
+            if (vid.HasValue) o.Execute("UPDATE virtual_chapters SET display_name=$p0,chapter_number=$p1,volume_number=$p2,updated_at=$p3 WHERE id=$p4 AND (display_name,chapter_number,volume_number) IS NOT ($p0,$p1,$p2)", P(display, number, ch.Volume, stamp, vid.Value));
             else
             {
                 o.Execute("INSERT INTO virtual_chapters(entry_id,chapter_key,chapter_number,volume_number,display_name,created_at,updated_at) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p5)", P(context.EntryId, key, number, ch.Volume, ch.Name.Length != 0 ? ch.Name : number >= 0 ? display : "Chapter", stamp)); vid = Convert.ToInt64(o.Scalar("SELECT last_insert_rowid()"), CultureInfo.InvariantCulture);
@@ -219,6 +220,13 @@ public sealed class NativeChapterWriter(SqliteDatabase database, object sourceWr
                   source_chapter_index=CASE WHEN chapter_candidates.source_manga_id=excluded.source_manga_id AND chapter_candidates.source_order=excluded.source_order THEN chapter_candidates.source_chapter_index ELSE -1 END,
                   name=excluded.name,chapter_number=excluded.chapter_number,volume_number=excluded.volume_number,upload_date=excluded.upload_date,
                   scanlator=excluded.scanlator,page_count=CASE WHEN excluded.page_count>0 THEN excluded.page_count ELSE chapter_candidates.page_count END,active=excluded.active,last_seen=excluded.last_seen
+                WHERE (chapter_candidates.virtual_chapter_id,chapter_candidates.source_name,chapter_candidates.source_match_id,chapter_candidates.source_manga_id,
+                       chapter_candidates.source_chapter_url,chapter_candidates.source_order,chapter_candidates.name,chapter_candidates.chapter_number,
+                       chapter_candidates.volume_number,chapter_candidates.upload_date,chapter_candidates.scanlator,chapter_candidates.active)
+                  IS NOT (excluded.virtual_chapter_id,excluded.source_name,excluded.source_match_id,excluded.source_manga_id,
+                       excluded.source_chapter_url,excluded.source_order,excluded.name,excluded.chapter_number,
+                       excluded.volume_number,excluded.upload_date,excluded.scanlator,excluded.active)
+                  OR (excluded.page_count>0 AND excluded.page_count IS NOT chapter_candidates.page_count)
                 """, P(vid.Value, context.SourceId, context.SourceName, context.MatchId, context.MangaId, ch.Id, ch.Url, ch.SourceOrder, ch.Name.Length == 0 ? "Chapter" : ch.Name, number, ch.Volume, ch.UploadDate, ch.Scanlator, ch.PageCount, rejected ? 0 : 1, stamp));
         }
         if (updateScan) o.Execute("INSERT INTO source_record_scans VALUES($p0,$p1,$p2,$p3,$p4,'') ON CONFLICT(entry_id,source_id,source_manga_id) DO UPDATE SET checked_at=excluded.checked_at,chapter_count=excluded.chapter_count,error=''", P(context.EntryId, context.SourceId, context.MangaId, stamp, batch.Count));

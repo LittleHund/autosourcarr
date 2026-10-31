@@ -1555,7 +1555,7 @@ async function loadDatabaseStorage(){
     const pending=d.pending_relocation;
     if(state)state.textContent=`${fmtBytes(d.bytes||0)} · ${d.active_dir||'unknown'}`;
     if(detail){
-      if(!d.move_available)detail.textContent=d.move_note||'Moving the databases is not available in this version.';
+      if(!d.move_available||!pending)detail.textContent=d.move_note||'Moving the databases is not available in this version.';
       else if(pending&&pending.target_dir&&pending.activated_in_process)detail.textContent=`Using ${pending.target_dir} now. The old DB files are kept as a safety copy until the next redeploy verifies this location again.`;
       else if(pending&&pending.target_dir)detail.textContent=`Move staging to ${pending.target_dir}. The current DB remains authoritative until the final verified cut-over finishes.`;
       else detail.textContent='Enter an absolute writable path mounted into this container. AutoSourcarr copies, verifies and switches both DBs live without creating a fresh database.';
@@ -1563,8 +1563,18 @@ async function loadDatabaseStorage(){
   }catch(e){if(state)state.textContent='Unavailable';if(detail)detail.textContent=e.message;}
 }
 async function moveDatabaseStorage(){
-  // The move (copy, verify, switch) arrives with the new data layer; until then the server says why.
   if(!databaseStorageState?.move_available){toast(databaseStorageState?.move_note||'Moving the databases is not available in this version.');return;}
+  const input=$('#databaseStoragePath'),button=$('#moveDatabaseStorage');const path=String(input?.value||'').trim();
+  if(!path){toast('Enter a database storage path');return;}
+  if(!path.startsWith('/')){toast('Database storage must be an absolute container path');return;}
+  if(!confirm(`Move both AutoSourcarr databases to ${path}?\n\nAutoSourcarr pauses database work, copies and checks both databases, then switches to the new folder. The old files stay where they are as a safety copy.`))return;
+  if(button)button.disabled=true;
+  try{
+    const r=await apiV1({timeoutMs:300000}).moveDatabaseStorage({path});
+    toast(r.message||'Databases moved');
+    await Promise.allSettled([loadDatabaseStorage(),loadEnvSettings({force:true})]);
+  }catch(e){toast('Database move failed: '+e.message);}
+  finally{if(button)button.disabled=!databaseStorageState?.move_available;}
 }
 // The Settings page reads and saves config.json through /api/v1/settings. The response is shown in
 // the page's existing file/group layout: one "file" (config.json) with the schema's groups.

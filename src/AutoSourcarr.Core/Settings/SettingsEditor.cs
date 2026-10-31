@@ -212,6 +212,29 @@ public sealed partial class SettingsEditor
         }
     }
 
+    /// <summary>
+    /// Records where the databases now are, after DatabaseRelocation copied and checked them. DATABASE_DIR is
+    /// Compose-only for ordinary edits (a bare value change would start with empty databases); this is the one
+    /// writer allowed to set it, and it saves it as a value set in the app so a stale Compose value cannot win.
+    /// </summary>
+    public void SaveDatabaseDirectory(string directory)
+    {
+        lock (_gate)
+        {
+            var document = _store.ReadDocument() ?? new ConfigDocument();
+            var before = _store.Load(document);
+            var saved = before.Settings.Where(pair => pair.Value is not null).ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal);
+            saved["DATABASE_DIR"] = directory;
+            var secrets = SettingsSecrets.Open(_store.Root, create: true);
+            document.Settings = ConfigStore.Encrypt(saved, secrets);
+            document.SourceHost = ConfigStore.Encrypt(before.SourceHost.Where(pair => pair.Value is not null).ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal), secrets);
+            document.Extra = ConfigStore.Encrypt(before.Extra.Where(pair => pair.Value is not null).ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal), secrets);
+            if (!document.ManagedKeys.Contains("DATABASE_DIR"))
+                document.ManagedKeys.Add("DATABASE_DIR");
+            _store.WriteDocument(document);
+        }
+    }
+
     private string RevisionCore()
     {
         var raw = ConfigFiles.ReadBounded(_store.FilePath) ?? [];

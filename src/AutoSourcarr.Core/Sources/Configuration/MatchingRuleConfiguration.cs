@@ -48,7 +48,7 @@ public sealed class MatchingRuleConfiguration(SqliteDatabase database, object so
                 if (value is null) session.Execute("DELETE FROM matching_policies WHERE scope=$scope AND subject=$subject AND direction=$direction", ("$scope", scope), ("$subject", subject), ("$direction", direction));
                 else session.Execute("""
                     INSERT INTO matching_policies(scope,subject,direction,rule_json,updated_at) VALUES($scope,$subject,$direction,$rule,$time)
-                    ON CONFLICT(scope,subject,direction) DO UPDATE SET rule_json=excluded.rule_json,updated_at=excluded.updated_at
+                    ON CONFLICT(scope,subject,direction) DO UPDATE SET rule_json=excluded.rule_json,updated_at=excluded.updated_at WHERE matching_policies.rule_json IS NOT excluded.rule_json
                     """, ("$scope", scope), ("$subject", subject), ("$direction", direction), ("$rule", SourceConfigurationJson.PythonJson(value)), ("$time", SourceConfigurationJson.Timestamp(_clock)));
                 return Configuration(session);
             });

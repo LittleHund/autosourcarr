@@ -7,6 +7,12 @@
     <PackageReference Include="Magick.NET-Q8-AnyCPU" />
     <PackageReference Include="Unidecode.NET" />
     <PackageReference Include="SharpCompress" />
+    <PackageReference Include="FluentMigrator" />
+    <PackageReference Include="FluentMigrator.Runner.Core" />
+    <PackageReference Include="FluentMigrator.Runner.SQLite" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
     <!-- Manifest resource names follow the folder path: AutoSourcarr.Core.<Folder>.<file> -->
     <EmbeddedResource Include="Matching/*.json" />
     <EmbeddedResource Include="Unicode/*.json" />

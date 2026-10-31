@@ -138,7 +138,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 owner._dataDirectory!, () => owner.Settings, owner.Io, owner._source.Client, owner.Tasks, owner.Lanes, owner.Logs, cancellationToken).ConfigureAwait(false);
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
-                () => owner.RequestStop?.Invoke(), health: owner.HealthAsync);
+                () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
+                moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory)));
             if (!string.IsNullOrWhiteSpace(startup.Settings.MainSuwayomiUrl))
             {
                 owner._main = new(startup.Settings, startup.Settings.MainSuwayomiUrl,

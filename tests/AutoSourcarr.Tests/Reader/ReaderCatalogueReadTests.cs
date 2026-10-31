@@ -179,7 +179,7 @@ public static class ReaderCatalogueReadTests
     private static async Task<JsonObject> Body(HttpResponseMessage response) => JsonNode.Parse(await response.Content.ReadAsStringAsync())!.AsObject();
     private static JsonObject Snapshot(DatabaseSession c)
     {
-        var value = new JsonObject(); foreach (var row in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND (name NOT LIKE 'sqlite_%' OR name='sqlite_sequence') ORDER BY name"))
+        var value = new JsonObject(); foreach (var row in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND (name NOT LIKE 'sqlite_%' OR name='sqlite_sequence') AND name<>'VersionInfo' ORDER BY name"))
         {
             var table = row.Text("name"); value[table] = new JsonArray(c.Query("SELECT * FROM \"" + table.Replace("\"", "\"\"", StringComparison.Ordinal) + "\" ORDER BY rowid").Select(record => JsonSerializer.SerializeToNode(record.ToDictionary(pair => pair.Key, pair => pair.Value))).ToArray());
         }

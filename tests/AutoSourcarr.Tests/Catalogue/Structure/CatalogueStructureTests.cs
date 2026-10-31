@@ -207,7 +207,7 @@ public static class CatalogueStructureTests
     }
     private static JsonObject Snapshot(DatabaseSession c)
     {
-        var result = new JsonObject(); foreach (var row in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"))
+        var result = new JsonObject(); foreach (var row in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name<>'VersionInfo' ORDER BY name"))
         { var table = row.Text("name"); result[table] = new JsonArray(c.Query("SELECT * FROM " + table + " ORDER BY rowid").Select(value => System.Text.Json.JsonSerializer.SerializeToNode(value.ToDictionary(pair => pair.Key, pair => pair.Value))).ToArray()); }
         return result;
     }
