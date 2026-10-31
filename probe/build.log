@@ -1,10 +1,22 @@
   AutoSourcarr.Core -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/bin/Release/net10.0/AutoSourcarr.Core.dll
   AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
   AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
-  AutoSourcarr.Tests -> /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/bin/Release/net10.0/AutoSourcarr.Tests.dll
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(63,37): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(100,19): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(100,67): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(121,22): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(122,27): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(122,94): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
 
-Build succeeded.
+Build FAILED.
+
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(63,37): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(100,19): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(100,67): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(121,22): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(122,27): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Api/AccessControlTests.cs(122,94): error CS0119: 'AccessControlTests.Path(string)' is a method, which is not valid in the given context [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
     0 Warning(s)
-    0 Error(s)
+    6 Error(s)
 
-Time Elapsed 00:00:28.48
+Time Elapsed 00:00:26.62
