@@ -66,35 +66,34 @@ def call(host, method, path, body=None, raw=False, timeout=180):
 def check(host, item, query, lang):
     started = time.time(); step = "install"; result = {"pkg": item["pkg"], "version": item.get("version")}
     try:
-        installed = call(host, "POST", "/v1/extensions/install", {"apk_url": item["apk"]}, timeout=300)
+        installed = call(host, "POST", "/v1/extensions/install-url", {"apk_url": item["apk"]}, timeout=300)
         result["lib"] = installed.get("libVersion")
-        ids = installed.get("sourceIds") or []
-        sources = {s["id"]: s for s in call(host, "GET", "/v1/sources")}
-        mine = [sources[i] for i in ids if i in sources]
+        if installed.get("loadError"): raise RuntimeError("load error: " + installed["loadError"])
+        mine = installed["source"]["nodes"]
         source = next((s for s in mine if s["lang"] == lang), None) or (mine[0] if mine else None)
         if source is None: raise RuntimeError("no source loaded")
         result["source"] = "%s (%s)" % (source["name"], source["lang"])
         sid = source["id"]
         step = "search"
-        page = call(host, "GET", "/v1/sources/%s/search?q=%s&page=1" % (sid, urllib.parse.quote(query)))
+        page = call(host, "GET", "/v1/sources/%s/mangas?type=SEARCH&page=1&query=%s" % (sid, urllib.parse.quote(query)))
         if not page["mangas"]:
-            step = "popular"; page = call(host, "GET", "/v1/sources/%s/popular?page=1" % sid)
+            step = "popular"; page = call(host, "GET", "/v1/sources/%s/mangas?type=POPULAR&page=1" % sid)
         if not page["mangas"]: raise RuntimeError("no titles found")
         result["titles"] = len(page["mangas"])
         step = "details"
-        chapters = []
-        for manga in page["mangas"][:3]:
-            detail = call(host, "POST", "/v1/sources/%s/manga" % sid, {"url": manga["url"], "title": manga["title"]})
+        chapters = []; manga = None
+        for candidate in page["mangas"][:3]:
+            detail = call(host, "POST", "/v1/mangas/%d/fetch" % candidate["id"], {"fetchManga": True, "fetchChapters": True})
             chapters = detail["chapters"]
-            if chapters: result["title"] = manga["title"]; break
+            if chapters: manga = detail["manga"]; result["title"] = manga["title"]; break
         if not chapters: raise RuntimeError("no chapters in the first titles")
         result["chapters"] = len(chapters)
         step = "pages"
-        pages = call(host, "POST", "/v1/sources/%s/pages" % sid, {"url": chapters[-1]["url"], "name": chapters[-1]["name"]})["pages"]
+        pages = call(host, "POST", "/v1/chapters/%d/pages" % chapters[-1]["id"])["pages"]
         if not pages: raise RuntimeError("chapter has no pages")
         result["pages"] = len(pages)
         step = "image"
-        image, kind = call(host, "GET", "/v1/sources/%s/image?url=%s" % (sid, urllib.parse.quote(pages[0]["image_url"] or "", safe="")), raw=True)
+        image, kind = call(host, "GET", pages[0], raw=True)
         if len(image) < 512: raise RuntimeError("first image is only %d bytes (%s)" % (len(image), kind))
         result["image_bytes"] = len(image); result["image_type"] = kind
         result["ok"] = True
