@@ -85,20 +85,22 @@ def check(host, item, query, lang):
         if not page["mangas"]: raise RuntimeError("no titles found")
         result["titles"] = len(page["mangas"])
         step = "details"
-        chapters = []; manga = None
-        for candidate in page["mangas"][:3]:
+        pages = []; seen_chapters = False
+        # First titles in order; per title the oldest, newest and middle chapter. A chapter without pages (e.g. a
+        # Komga book in a format without page images) moves on to the next.
+        for candidate in page["mangas"][:5]:
+            step = "details"
             detail = call(host, "POST", "/v1/mangas/%d/fetch" % candidate["id"], {"fetchManga": True, "fetchChapters": True})
             chapters = detail["chapters"]
-            if chapters: manga = detail["manga"]; result["title"] = manga["title"]; break
-        if not chapters: raise RuntimeError("no chapters in the first titles")
-        result["chapters"] = len(chapters)
-        step = "pages"
-        pages = []
-        # The oldest chapter first; a chapter without pages (e.g. a Komga book not analysed yet) moves on to the next.
-        for chapter in [chapters[-1], chapters[0], chapters[len(chapters) // 2]][:min(3, len(chapters))]:
-            pages = call(host, "POST", "/v1/chapters/%d/pages" % chapter["id"])["pages"]
+            if not chapters: continue
+            seen_chapters = True; result["title"] = detail["manga"]["title"]; result["chapters"] = len(chapters)
+            step = "pages"
+            for chapter in [chapters[-1], chapters[0], chapters[len(chapters) // 2]][:min(3, len(chapters))]:
+                pages = call(host, "POST", "/v1/chapters/%d/pages" % chapter["id"])["pages"]
+                if pages: break
             if pages: break
-        if not pages: raise RuntimeError("chapter has no pages")
+        if not seen_chapters: raise RuntimeError("no chapters in the first titles")
+        if not pages: raise RuntimeError("no chapter with pages in the first titles")
         result["pages"] = len(pages)
         step = "image"
         image, kind = call(host, "GET", pages[0], raw=True)
@@ -152,7 +154,9 @@ def main():
     parser.add_argument("--lang", default="en")
     parser.add_argument("--require", type=int, default=1)
     parser.add_argument("--lib14", action="store_true", help="also install and check a lib 1.4 APK from the repository history; it must pass")
-    parser.add_argument("--cloudflare-url", action="append", default=[], help="a page behind a Cloudflare challenge; one must pass")
+    parser.add_argument("--cloudflare-url", action="append", default=[], help="a real page behind Cloudflare; reported, required only with --require-cloudflare")
+    parser.add_argument("--require-cloudflare", action="store_true")
+    parser.add_argument("--challenge-url", default="", help="a local JavaScript challenge (scripts/fake-cloudflare.py); it must pass")
     args = parser.parse_args()
     index = repository(args.index)
     items = []
@@ -176,8 +180,8 @@ def main():
         else:
             passed += 1 if result["ok"] else 0
         print(json.dumps(result), flush=True)
-    cloudflare_ok = None
-    if args.cloudflare_url:
+    cloudflare_ok = None; challenge_ok = None
+    if args.cloudflare_url or args.challenge_url:
         # The WebView downloads its Chromium build on first start: wait for it (up to 6 minutes).
         deadline = time.time() + 360; state = ""
         while time.time() < deadline:
@@ -189,9 +193,20 @@ def main():
         result = cloudflare(args.host, url)
         print(json.dumps({"cloudflare": True, **result}), flush=True)
         cloudflare_ok = bool(cloudflare_ok) or result["ok"]
+    if args.challenge_url:
+        result = cloudflare(args.host, args.challenge_url)
+        try:
+            body = urllib.request.urlopen(args.challenge_url.rstrip("/") + "/stats", timeout=10).read().decode()
+            result["server"] = json.loads(body)
+        except Exception as error:
+            result["server"] = str(error)
+        print(json.dumps({"challenge": True, **result}), flush=True)
+        challenge_ok = result["ok"]
     print(json.dumps({"summary": True, "passed": passed, "total": len([i for i in items if not i.get("lib14")]),
-                      "required": args.require, "lib14": lib14_ok, "cloudflare": cloudflare_ok}))
-    sys.exit(0 if passed >= args.require and lib14_ok is not False and cloudflare_ok is not False else 1)
+                      "required": args.require, "lib14": lib14_ok, "cloudflare": cloudflare_ok, "challenge": challenge_ok}))
+    ok = passed >= args.require and lib14_ok is not False and challenge_ok is not False
+    if args.require_cloudflare: ok = ok and bool(cloudflare_ok)
+    sys.exit(0 if ok else 1)
 
 if __name__ == "__main__":
     main()

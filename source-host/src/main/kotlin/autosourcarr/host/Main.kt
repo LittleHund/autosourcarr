@@ -21,6 +21,7 @@ private val logger = KotlinLogging.logger {}
  */
 fun main() {
     HostConfig.extensionsDir.mkdirs()
+    java.security.Security.addProvider(org.bouncycastle.jce.provider.BouncyCastleProvider())
     // AndroidCompat keeps shared preferences and files below this folder.
     System.setProperty("$CONFIG_PREFIX.server.rootDir", HostConfig.dataDir.absolutePath)
 
