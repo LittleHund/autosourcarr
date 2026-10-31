@@ -443,7 +443,7 @@
     "/api/v1/setup/finish": {
       "post": {
         "operationId": "finishSetup",
-        "summary": "Save the wizard's changes to config.json in one step; a repeated request id returns the first result.",
+        "summary": "Save the wizard\u0027s changes to config.json in one step; a repeated request id returns the first result.",
         "requestBody": {
           "required": true,
           "content": {
@@ -597,7 +597,7 @@
     "/api/v1/source-browser/clear-data": {
       "post": {
         "operationId": "clearSourceBrowserData",
-        "summary": "Remove the engine's cookies and browser data (sign-ins and Cloudflare clearances). Installed extensions stay.",
+        "summary": "Remove the engine\u0027s cookies and browser data (sign-ins and Cloudflare clearances). Installed extensions stay.",
         "responses": {
           "202": {
             "description": "Success",
@@ -897,7 +897,7 @@
     "/api/v1/tasks/{taskId}/cancel": {
       "post": {
         "operationId": "cancelTask",
-        "summary": "Cancel a queued or running task. Work already done stays; the task is listed as failed with \"Cancelled by user\".",
+        "summary": "Cancel a queued or running task. Work already done stays; the task is listed as failed with \u0022Cancelled by user\u0022.",
         "parameters": [
           {
             "name": "taskId",

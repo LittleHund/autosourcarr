@@ -48,4 +48,19 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
 15 warnings
-Built /home/runner/work/autosourcarr/autosourcarr/.build/autosourcarr-source-host.jar
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/CloudflareWebViewSolver.kt:110:22 Unresolved reference 'dispose'.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':source-host:compileKotlin' (registered by plugin 'org.jetbrains.kotlin.jvm').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 49s
