@@ -80,7 +80,7 @@ jobs:
               export SOURCE_HOST_DATA=$RUNNER_TEMP/source-host-data SOURCE_HOST_PORT=4567
               java -jar .build/autosourcarr-source-host.jar > probe/source-host-run.log 2>&1 &
               for i in $(seq 1 90); do curl -sf http://127.0.0.1:4567/v1/health > probe/source-host-health.json && break; sleep 2; done
-              python3 scripts/source-host-check.py --pkgs "${SOURCE_HOST_PKGS:-eu.kanade.tachiyomi.extension.all.mangadex,eu.kanade.tachiyomi.extension.en.mangapill}" --require 1 > probe/source-host-check.txt 2>&1; hc=$?
+              python3 scripts/source-host-check.py --pkgs "${SOURCE_HOST_PKGS:-eu.kanade.tachiyomi.extension.all.mangadex,eu.kanade.tachiyomi.extension.en.mangapill,eu.kanade.tachiyomi.extension.en.weebcentral,eu.kanade.tachiyomi.extension.en.mangatown,eu.kanade.tachiyomi.extension.all.webtoons}" --require 1 > probe/source-host-check.txt 2>&1; hc=$?
               kill %1 2>/dev/null; sleep 2
               tail -c 20000 probe/source-host-run.log > probe/source-host-run.tail.log
               rm -f probe/source-host-run.log
