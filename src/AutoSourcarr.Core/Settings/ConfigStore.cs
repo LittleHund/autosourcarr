@@ -49,6 +49,80 @@ public sealed class ConfigDocument
 
     [JsonPropertyName("conversion")]
     public ConfigConversionRecord? Conversion { get; set; }
+
+    [JsonPropertyName("setup")]
+    public ConfigSetupRecord? Setup { get; set; }
+
+    [JsonPropertyName("update")]
+    public ConfigUpdateRecord? Update { get; set; }
+}
+
+/// <summary>The last finished setup wizard run; Finish with the same transaction id is answered from here.</summary>
+public sealed class ConfigSetupRecord
+{
+    [JsonPropertyName("completed")]
+    public bool Completed { get; set; }
+
+    [JsonPropertyName("completed_at")]
+    public string CompletedAt { get; set; } = "";
+
+    [JsonPropertyName("transaction")]
+    public string Transaction { get; set; } = "";
+
+    [JsonPropertyName("changed")]
+    public List<string> Changed { get; set; } = [];
+
+    [JsonPropertyName("restart_required")]
+    public bool RestartRequired { get; set; }
+}
+
+/// <summary>What the last start knew, so the next version can say exactly what an update changed (ARC-7).</summary>
+public sealed class ConfigUpdateRecord
+{
+    [JsonPropertyName("app_version")]
+    public string AppVersion { get; set; } = "";
+
+    /// <summary>Built-in defaults of non-secret settings at that version.</summary>
+    [JsonPropertyName("defaults")]
+    public Dictionary<string, string> Defaults { get; set; } = new(StringComparer.Ordinal);
+
+    [JsonPropertyName("notice")]
+    public UpdateNotice? Notice { get; set; }
+}
+
+/// <summary>Shown after an update until dismissed. Holds key names and built-in defaults only, never your values.</summary>
+public sealed class UpdateNotice
+{
+    [JsonPropertyName("from_version")]
+    public string FromVersion { get; set; } = "";
+
+    [JsonPropertyName("to_version")]
+    public string ToVersion { get; set; } = "";
+
+    [JsonPropertyName("created_at")]
+    public string CreatedAt { get; set; } = "";
+
+    [JsonPropertyName("items")]
+    public List<UpdateNoticeItem> Items { get; set; } = [];
+}
+
+public sealed class UpdateNoticeItem
+{
+    [JsonPropertyName("key")]
+    public string Key { get; set; } = "";
+
+    /// <summary>default_changed, removed or must_change.</summary>
+    [JsonPropertyName("kind")]
+    public string Kind { get; set; } = "";
+
+    [JsonPropertyName("old_default")]
+    public string? OldDefault { get; set; }
+
+    [JsonPropertyName("new_default")]
+    public string? NewDefault { get; set; }
+
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
 }
 
 /// <summary>Decrypted values of one config.json; never printed with values.</summary>
@@ -119,8 +193,12 @@ public sealed class ConfigStore(string root)
     public ConfigValues Load()
     {
         var document = ReadDocument();
-        if (document is null)
-            return ConfigValues.Empty;
+        return document is null ? ConfigValues.Empty : Load(document);
+    }
+
+    /// <summary>Decrypted values of an already read document (one read for value and revision).</summary>
+    public ConfigValues Load(ConfigDocument document)
+    {
         var hasSecrets = document.Settings.Secrets.Count + document.SourceHost.Secrets.Count + document.Extra.Secrets.Count > 0;
         var secrets = hasSecrets ? SettingsSecrets.Open(Root, create: false) : null;
         return new(Decrypt(document.Settings, secrets), Decrypt(document.SourceHost, secrets), Decrypt(document.Extra, secrets));
@@ -164,7 +242,9 @@ public sealed class ConfigStore(string root)
         Settings = Sorted(document.Settings),
         SourceHost = Sorted(document.SourceHost),
         Extra = Sorted(document.Extra),
-        Conversion = document.Conversion
+        Conversion = document.Conversion,
+        Setup = document.Setup,
+        Update = document.Update
     };
 
     private static ConfigSection Sorted(ConfigSection section)

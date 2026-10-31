@@ -1,0 +1,704 @@
+{
+  "comment": "Settings schema (SET-7). Labels, wizard steps and descriptions of wizard fields live in setup-fields.json; this file adds the group, the description of every other setting and whether it is usually set in Compose. Every key of AutoSourcarrSettings.Definitions must appear here.",
+  "settings": {
+    "SETTINGS_CONFIG_DIR": {
+      "group": "Runtime",
+      "description": "Folder inside the container that holds config.json, config.key and setup state. Mount it as a persistent volume.",
+      "compose": "recommended"
+    },
+    "APP_SERVICES_MODE": {
+      "group": "Runtime",
+      "description": "integrated runs the bundled helper services inside this container; external keeps separately deployed helpers (0.4.x layouts).",
+      "compose": "recommended"
+    },
+    "REPAIR_WORKER_URL": {
+      "group": "Repair",
+      "description": "Address of an external repair worker. Leave empty with the integrated image.",
+      "compose": "allowed"
+    },
+    "REPAIR_WORKER_TOKEN": {
+      "group": "Repair",
+      "description": "Shared secret for the external repair worker. Not needed with the integrated image.",
+      "compose": "allowed"
+    },
+    "REPAIR_AI_PROVIDER": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "REPAIR_AI_PROTOCOL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "REPAIR_AI_BASE_URL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "REPAIR_AI_MODEL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "REPAIR_AI_API_KEY": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "REPAIR_AI_WORKSPACE_ID": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "REPAIR_AI_BROWSER_URL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "SUWAYOMI_BROWSER_URL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "KOMGA_BROWSER_URL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "KOMF_BROWSER_URL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "TRANSLATION_BROWSER_URL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "AUTHELIA_BROWSER_URL": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "MAIN_SUWAYOMI_USERNAME": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "MAIN_SUWAYOMI_PASSWORD": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "SOURCE_ENGINE_MODE": {
+      "group": "Runtime",
+      "description": "integrated runs sources inside this image; external uses a separate source host (rollback and development only).",
+      "compose": "recommended"
+    },
+    "SOURCE_ENGINE_UID": {
+      "group": "Runtime",
+      "description": "User ID the source engine runs as. 0 picks the owner of the existing source folder (TrueNAS often uses 568).",
+      "compose": "recommended"
+    },
+    "SOURCE_ENGINE_GID": {
+      "group": "Runtime",
+      "description": "Group ID the source engine runs as. 0 picks the group of the existing source folder.",
+      "compose": "recommended"
+    },
+    "SOURCE_SUWAYOMI_URL": {
+      "group": "Connections & languages",
+      "description": "Address of the external source host when the source engine runs in external mode.",
+      "compose": "allowed"
+    },
+    "AUTOSOURCARR_PUBLIC_URL": {
+      "group": "Connections & languages",
+      "compose": "recommended"
+    },
+    "AUTOSOURCARR_INTERNAL_URL": {
+      "group": "Connections & languages",
+      "compose": "recommended"
+    },
+    "TZ": {
+      "group": "Runtime",
+      "compose": "recommended"
+    },
+    "MAIN_SUWAYOMI_URL": {
+      "group": "Connections & languages",
+      "compose": "allowed"
+    },
+    "MAIN_SUWAYOMI_DOWNLOADS_PATH": {
+      "group": "Connections & languages",
+      "compose": "allowed"
+    },
+    "DATA_DIR": {
+      "group": "Runtime",
+      "description": "Folder inside the container for covers, caches and runtime data. Mount it as a persistent volume.",
+      "compose": "recommended"
+    },
+    "DATABASE_DIR": {
+      "group": "Runtime",
+      "description": "Folder for the SQLite databases. Empty uses the data folder. Change it with Settings > Database storage so the files are copied first.",
+      "compose": "recommended"
+    },
+    "MAX_SOURCE_CONCURRENCY": {
+      "group": "Matching",
+      "compose": "allowed"
+    },
+    "SOURCE_HOST_WORK_CONCURRENCY": {
+      "group": "Matching",
+      "compose": "allowed"
+    },
+    "BACKGROUND_SOURCE_CONCURRENCY": {
+      "group": "Matching",
+      "compose": "allowed"
+    },
+    "BACKGROUND_TASK_CONCURRENCY": {
+      "group": "Matching",
+      "description": "How many background tasks run at the same time.",
+      "compose": "allowed"
+    },
+    "IMPORT_RESOLVE_CONCURRENCY": {
+      "group": "Matching",
+      "compose": "allowed"
+    },
+    "BROWSE_PAGE_SIZE": {
+      "group": "Browse & cache",
+      "compose": "allowed"
+    },
+    "AUTO_MATCH_THRESHOLD": {
+      "group": "Matching",
+      "compose": "allowed"
+    },
+    "FUZZY_REVIEW_THRESHOLD": {
+      "group": "Matching",
+      "compose": "allowed"
+    },
+    "METADATA_TTL_SECONDS": {
+      "group": "Metadata & covers",
+      "description": "How long fetched metadata is kept before it is refreshed, in seconds.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_ENABLED": {
+      "group": "Metadata identity",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_PROVIDERS": {
+      "group": "Metadata identity",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_INCLUDE_ADULT": {
+      "group": "Metadata identity",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_TIMEOUT": {
+      "group": "Metadata identity",
+      "description": "Time limit for one metadata provider request, in seconds.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_OVERALL_TIMEOUT": {
+      "group": "Metadata identity",
+      "description": "Time limit for one identity lookup across all providers, in seconds.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_CONCURRENCY": {
+      "group": "Metadata identity",
+      "description": "How many identity lookups run at the same time.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_CACHE_TTL_SECONDS": {
+      "group": "Metadata identity",
+      "description": "How long identity lookup results are cached, in seconds.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_MIN_SCORE": {
+      "group": "Metadata identity",
+      "description": "Lowest title score (0–1) for a provider result to count as the same work.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_DESCRIPTION_THRESHOLD": {
+      "group": "Metadata identity",
+      "description": "Lowest summary similarity (0–1) used as supporting identity evidence.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_QUERY_LIMIT": {
+      "group": "Metadata identity",
+      "description": "Most title variants searched per identity lookup.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_RESULTS_PER_PROVIDER": {
+      "group": "Metadata identity",
+      "description": "Most results read from each provider per search.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_ON_INGEST": {
+      "group": "Metadata identity",
+      "description": "Look up the identity of new entries when they are first added.",
+      "compose": "allowed"
+    },
+    "METADATA_IDENTITY_ENTRIES_PER_FEED": {
+      "group": "Metadata identity",
+      "description": "Most new entries per source feed that get an identity lookup.",
+      "compose": "allowed"
+    },
+    "COMICVINE_API_KEY": {
+      "group": "Metadata identity",
+      "compose": "allowed"
+    },
+    "SOURCE_REQUEST_TIMEOUT": {
+      "group": "Performance & resilience",
+      "compose": "allowed"
+    },
+    "SOURCE_AUTO_CHALLENGES": {
+      "group": "Sources",
+      "compose": "allowed"
+    },
+    "HTTP_MAX_CONNECTIONS": {
+      "group": "Performance & resilience",
+      "description": "Most open outgoing HTTP connections in total.",
+      "compose": "allowed"
+    },
+    "HTTP_MAX_KEEPALIVE_CONNECTIONS": {
+      "group": "Performance & resilience",
+      "description": "Most idle outgoing HTTP connections kept open for reuse.",
+      "compose": "allowed"
+    },
+    "HTTP_KEEPALIVE_EXPIRY_SECONDS": {
+      "group": "Performance & resilience",
+      "description": "How long an idle outgoing connection is kept open, in seconds.",
+      "compose": "allowed"
+    },
+    "HTTP_TRANSPORT_RETRIES": {
+      "group": "Performance & resilience",
+      "description": "How often a request is retried after a connection error (not after an HTTP error).",
+      "compose": "allowed"
+    },
+    "FEDERATED_SOURCE_TIMEOUT": {
+      "group": "Browse & cache",
+      "description": "Time limit per source when browsing or searching several sources, in seconds.",
+      "compose": "allowed"
+    },
+    "FEDERATED_OVERALL_TIMEOUT": {
+      "group": "Browse & cache",
+      "compose": "allowed"
+    },
+    "FEDERATED_ITEMS_PER_SOURCE": {
+      "group": "Browse & cache",
+      "description": "Most results taken from each source in a combined browse or search.",
+      "compose": "allowed"
+    },
+    "INTERACTIVE_SOURCE_TIMEOUT": {
+      "group": "Browse & cache",
+      "description": "Time limit per source for requests you are waiting on in the UI, in seconds.",
+      "compose": "allowed"
+    },
+    "INTERACTIVE_OVERALL_TIMEOUT": {
+      "group": "Browse & cache",
+      "description": "Total time limit for an interactive multi-source request, in seconds.",
+      "compose": "allowed"
+    },
+    "SEARCH_CACHE_TTL_SECONDS": {
+      "group": "Browse & cache",
+      "description": "How long search results are reused, in seconds.",
+      "compose": "allowed"
+    },
+    "SEARCH_CACHE_MAX_ENTRIES": {
+      "group": "Browse & cache",
+      "description": "Most search results kept in memory.",
+      "compose": "allowed"
+    },
+    "SUBBED_CACHE_TTL_SECONDS": {
+      "group": "Browse & cache",
+      "description": "How long the subscribed-library view is reused, in seconds.",
+      "compose": "allowed"
+    },
+    "COVER_HINT_CACHE_MAX_ENTRIES": {
+      "group": "Metadata & covers",
+      "description": "Most cover addresses remembered in memory.",
+      "compose": "allowed"
+    },
+    "BROWSE_CACHE_REFRESH_SECONDS": {
+      "group": "Browse & cache",
+      "description": "Age after which a saved browse page is refreshed in the background, in seconds.",
+      "compose": "allowed"
+    },
+    "BROWSE_PREFETCH_PAGES": {
+      "group": "Browse & cache",
+      "description": "How many following browse pages are loaded ahead.",
+      "compose": "allowed"
+    },
+    "BACKGROUND_REFRESH_ON_STARTUP": {
+      "group": "Background refresh",
+      "description": "Refresh source feeds shortly after start.",
+      "compose": "allowed"
+    },
+    "CONTINUOUS_CATALOG_DISCOVERY": {
+      "group": "Background refresh",
+      "compose": "allowed"
+    },
+    "CONTINUOUS_CATALOG_INTERVAL_SECONDS": {
+      "group": "Background refresh",
+      "description": "Pause between background catalogue feed requests, in seconds.",
+      "compose": "allowed"
+    },
+    "CONTINUOUS_CATALOG_MODES": {
+      "group": "Background refresh",
+      "description": "Feeds the background catalogue reads: LATEST, POPULAR or both, comma-separated.",
+      "compose": "allowed"
+    },
+    "CONTINUOUS_CATALOG_BACKLOG_LIMIT": {
+      "group": "Background refresh",
+      "description": "Most feed pages waiting in the background catalogue queue.",
+      "compose": "allowed"
+    },
+    "STARTUP_REFRESH_DELAY_SECONDS": {
+      "group": "Background refresh",
+      "description": "Wait after start before the first background refresh, in seconds.",
+      "compose": "allowed"
+    },
+    "BACKGROUND_DEDUP_ON_STARTUP": {
+      "group": "Background refresh",
+      "description": "Check for duplicate entries shortly after start.",
+      "compose": "allowed"
+    },
+    "AUTOMATIC_DUPLICATE_MATCHING": {
+      "group": "Background refresh",
+      "compose": "allowed"
+    },
+    "AUTOMATIC_DUPLICATE_MATCHING_DELAY_SECONDS": {
+      "group": "Background refresh",
+      "description": "Wait before automatic duplicate matching runs after a change, in seconds.",
+      "compose": "allowed"
+    },
+    "DUPLICATE_SIGNATURE_MAX_BUCKET": {
+      "group": "Duplicate detection",
+      "description": "Largest group of similar titles compared in one duplicate check.",
+      "compose": "allowed"
+    },
+    "DUPLICATE_SNAPSHOT_TTL_SECONDS": {
+      "group": "Duplicate detection",
+      "description": "How long the duplicate list is reused before it is rebuilt, in seconds.",
+      "compose": "allowed"
+    },
+    "DUPLICATE_AUTO_MERGE_MIN_EXACT_TITLES": {
+      "group": "Duplicate detection",
+      "description": "Exact title matches needed before two entries can merge automatically.",
+      "compose": "allowed"
+    },
+    "DUPLICATE_AUTO_MERGE_SUMMARY_THRESHOLD": {
+      "group": "Duplicate detection",
+      "description": "Lowest summary similarity (0–1) for an automatic merge.",
+      "compose": "allowed"
+    },
+    "DUPLICATE_AUTO_MERGE_MIN_SUMMARY_CHARS": {
+      "group": "Duplicate detection",
+      "description": "Shortest summary, in characters, that counts as merge evidence.",
+      "compose": "allowed"
+    },
+    "EXACT_THUMBNAIL_MATCHING": {
+      "group": "Background refresh",
+      "description": "Use identical cover images as matching evidence.",
+      "compose": "allowed"
+    },
+    "THUMBNAIL_FINGERPRINT_TTL_SECONDS": {
+      "group": "Background refresh",
+      "description": "How long a cover fingerprint is kept, in seconds.",
+      "compose": "allowed"
+    },
+    "THUMBNAIL_FINGERPRINT_TIMEOUT": {
+      "group": "Background refresh",
+      "description": "Time limit for downloading a cover to fingerprint it, in seconds.",
+      "compose": "allowed"
+    },
+    "THUMBNAIL_FINGERPRINT_ENTRIES_PER_PASS": {
+      "group": "Background refresh",
+      "description": "Most entries fingerprinted per background pass.",
+      "compose": "allowed"
+    },
+    "REFRESH_SOURCE_TIMEOUT": {
+      "group": "Refresh & chapters",
+      "description": "Time limit per source when refreshing an entry, in seconds.",
+      "compose": "allowed"
+    },
+    "REFRESH_OVERALL_TIMEOUT": {
+      "group": "Refresh & chapters",
+      "description": "Total time limit for refreshing one entry, in seconds.",
+      "compose": "allowed"
+    },
+    "COVER_FETCH_TIMEOUT": {
+      "group": "Metadata & covers",
+      "description": "Time limit for downloading a cover, in seconds.",
+      "compose": "allowed"
+    },
+    "COVER_INLINE_WAIT": {
+      "group": "Metadata & covers",
+      "description": "How long a page waits for a cover before showing a placeholder, in seconds.",
+      "compose": "allowed"
+    },
+    "COVER_CACHE_TTL_SECONDS": {
+      "group": "Metadata & covers",
+      "description": "How long a downloaded cover is kept before it is checked again, in seconds.",
+      "compose": "allowed"
+    },
+    "COVER_FETCH_CONCURRENCY": {
+      "group": "Metadata & covers",
+      "description": "How many covers are downloaded at the same time.",
+      "compose": "allowed"
+    },
+    "METADATA_ENRICHMENT_ENTRIES_PER_FEED": {
+      "group": "Metadata & covers",
+      "description": "Most entries per feed that get extra metadata in the background.",
+      "compose": "allowed"
+    },
+    "METADATA_ENRICHMENT_CONCURRENCY": {
+      "group": "Metadata & covers",
+      "description": "How many metadata lookups run at the same time.",
+      "compose": "allowed"
+    },
+    "METADATA_ENRICHMENT_SOURCE_LIMIT": {
+      "group": "Metadata & covers",
+      "description": "Most sources asked for details of one entry.",
+      "compose": "allowed"
+    },
+    "METADATA_ENRICHMENT_TIMEOUT": {
+      "group": "Metadata & covers",
+      "description": "Time limit for one metadata lookup, in seconds.",
+      "compose": "allowed"
+    },
+    "METADATA_ENRICHMENT_ON_STARTUP": {
+      "group": "Metadata & covers",
+      "description": "Fill in missing metadata shortly after start.",
+      "compose": "allowed"
+    },
+    "METADATA_ENRICHMENT_STARTUP_DELAY_SECONDS": {
+      "group": "Metadata & covers",
+      "description": "Wait after start before the metadata pass, in seconds.",
+      "compose": "allowed"
+    },
+    "METADATA_ENRICHMENT_STARTUP_LIMIT": {
+      "group": "Metadata & covers",
+      "description": "Most entries handled by the start-up metadata pass.",
+      "compose": "allowed"
+    },
+    "CHAPTER_PAGE_CACHE_TTL_SECONDS": {
+      "group": "Refresh & chapters",
+      "description": "How long a chapter's page list is reused, in seconds.",
+      "compose": "allowed"
+    },
+    "PAGE_INFO_CACHE_MAX_ENTRIES": {
+      "group": "Refresh & chapters",
+      "description": "Most page lists kept in memory.",
+      "compose": "allowed"
+    },
+    "QUALITY_ANALYSIS_CONCURRENCY": {
+      "group": "Quality analysis",
+      "compose": "allowed"
+    },
+    "QUALITY_SAMPLE_TIMEOUT": {
+      "group": "Quality analysis",
+      "description": "Time limit for downloading one sample page for the quality score, in seconds.",
+      "compose": "allowed"
+    },
+    "QUALITY_OVERALL_TIMEOUT": {
+      "group": "Quality analysis",
+      "description": "Total time limit for scoring one chapter, in seconds.",
+      "compose": "allowed"
+    },
+    "COLOR_DETECTION_ENABLED": {
+      "group": "Quality analysis",
+      "compose": "allowed"
+    },
+    "COLOR_DETECTION_SAMPLE_PAGES": {
+      "group": "Quality analysis",
+      "description": "Pages sampled to decide whether a chapter is in colour.",
+      "compose": "allowed"
+    },
+    "COLOR_DETECTION_COLORED_PIXEL_FRACTION": {
+      "group": "Quality analysis",
+      "description": "Share of coloured pixels (0–1) above which a page counts as colour.",
+      "compose": "allowed"
+    },
+    "COLOR_DETECTION_MIN_CONFIDENCE": {
+      "group": "Quality analysis",
+      "description": "Lowest confidence (0–1) needed to label a source colour or black-and-white.",
+      "compose": "allowed"
+    },
+    "COLOR_DETECTION_TIMEOUT": {
+      "group": "Quality analysis",
+      "description": "Time limit for the colour check of one chapter, in seconds.",
+      "compose": "allowed"
+    },
+    "MANUAL_SEARCH_TIMEOUT": {
+      "group": "Manual matching",
+      "description": "Time limit per source for a manual match search, in seconds.",
+      "compose": "allowed"
+    },
+    "MANUAL_SEARCH_OVERALL_TIMEOUT": {
+      "group": "Manual matching",
+      "description": "Total time limit for a manual match search, in seconds.",
+      "compose": "allowed"
+    },
+    "MANUAL_SEARCH_ALIAS_LIMIT": {
+      "group": "Manual matching",
+      "description": "Most alternative titles tried in a manual search.",
+      "compose": "allowed"
+    },
+    "MANUAL_SEARCH_LIVE_QUERY_LIMIT": {
+      "group": "Manual matching",
+      "description": "Most live source queries per manual search.",
+      "compose": "allowed"
+    },
+    "AUTO_MISSING_SOURCE_DISCOVERY": {
+      "group": "Manual matching",
+      "compose": "allowed"
+    },
+    "AUTO_MISSING_SOURCE_ENTRIES_PER_FEED": {
+      "group": "Manual matching",
+      "description": "Most entries per feed checked for sources they are still missing.",
+      "compose": "allowed"
+    },
+    "AUTO_MISSING_SOURCE_SOURCE_LIMIT": {
+      "group": "Manual matching",
+      "description": "Most sources searched per entry for a missing source.",
+      "compose": "allowed"
+    },
+    "SOURCE_RECOVERY_TIMEOUT_SECONDS": {
+      "group": "Manual matching",
+      "description": "Time budget for recovering one slow source or item; finished work is kept and the rest stays retryable.",
+      "compose": "allowed"
+    },
+    "SUBBED_SEARCH_ENTRY_TIMEOUT_SECONDS": {
+      "group": "Manual matching",
+      "description": "Time limit for searching sources for one subscribed entry, in seconds.",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_DISCOVERY": {
+      "group": "Additional source records",
+      "description": "Look for the same work on other sources in the background.",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_MIN_SCORE": {
+      "group": "Additional source records",
+      "description": "Lowest title score (0–1) for attaching another source's record automatically.",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_QUERY_LIMIT": {
+      "group": "Additional source records",
+      "description": "Most title variants searched per entry when looking for other sources.",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_ENTRIES_PER_FEED": {
+      "group": "Additional source records",
+      "description": "Most entries per feed checked for records on other sources.",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_SOURCE_TIMEOUT": {
+      "group": "Additional source records",
+      "description": "Time limit per source when looking for other records, in seconds.",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_OVERALL_TIMEOUT": {
+      "group": "Additional source records",
+      "description": "Total time limit per entry when looking for other records, in seconds.",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_STARTUP_ENTRIES": {
+      "group": "Additional source records",
+      "description": "Entries checked for other records shortly after start (0 = none).",
+      "compose": "allowed"
+    },
+    "AUTO_VARIANT_STARTUP_DELAY_SECONDS": {
+      "group": "Additional source records",
+      "description": "Wait after start before that check, in seconds.",
+      "compose": "allowed"
+    },
+    "MANUAL_TRANSLATION_QUERY_LIMIT": {
+      "group": "Manual matching",
+      "description": "Most translated titles searched in a manual search.",
+      "compose": "allowed"
+    },
+    "MANUAL_TRANSLATE_CANDIDATE_LIMIT": {
+      "group": "Manual matching",
+      "description": "Most search results translated for comparison in a manual search.",
+      "compose": "allowed"
+    },
+    "TRANSLATION_API_URL": {
+      "group": "Connections & languages",
+      "compose": "allowed"
+    },
+    "TRANSLATION_API_KEY": {
+      "group": "Connections & languages",
+      "compose": "allowed"
+    },
+    "TRANSLATION_MODE": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "TRANSLATION_TIMEOUT": {
+      "group": "Translation",
+      "description": "Time limit for one translation request, in seconds.",
+      "compose": "allowed"
+    },
+    "TRANSLATION_OVERALL_TIMEOUT": {
+      "group": "Translation",
+      "description": "Total time limit for translating one entry's titles, in seconds.",
+      "compose": "allowed"
+    },
+    "TRANSLATION_CONCURRENCY": {
+      "group": "Translation",
+      "description": "How many translation requests run at the same time.",
+      "compose": "allowed"
+    },
+    "TRANSLATION_TARGET_LANGUAGES": {
+      "group": "Translation",
+      "compose": "allowed"
+    },
+    "BACKGROUND_TRANSLATION_ON_DISCOVERY": {
+      "group": "Translation",
+      "description": "Translate titles of newly found entries in the background.",
+      "compose": "allowed"
+    },
+    "BACKGROUND_TRANSLATION_ENTRIES_PER_FEED": {
+      "group": "Translation",
+      "description": "Most new entries per feed translated in the background.",
+      "compose": "allowed"
+    },
+    "BACKGROUND_TRANSLATION_ENTRIES_PER_STARTUP": {
+      "group": "Translation",
+      "description": "Entries translated shortly after start (0 = none).",
+      "compose": "allowed"
+    },
+    "TRANSLATION_STARTUP_DELAY_SECONDS": {
+      "group": "Translation",
+      "description": "Wait after start before the translation pass, in seconds.",
+      "compose": "allowed"
+    },
+    "SOURCE_FAILURE_THRESHOLD": {
+      "group": "Performance & resilience",
+      "description": "Failures in a row after which a source pauses.",
+      "compose": "allowed"
+    },
+    "SOURCE_COOLDOWN_SECONDS": {
+      "group": "Performance & resilience",
+      "description": "How long a failing source pauses, in seconds.",
+      "compose": "allowed"
+    },
+    "BACKGROUND_IDLE_SECONDS": {
+      "group": "Performance & resilience",
+      "description": "Quiet time after your last action before background work resumes, in seconds.",
+      "compose": "allowed"
+    },
+    "SQLITE_CACHE_MB": {
+      "group": "Performance & resilience",
+      "description": "Memory SQLite may use as page cache, in MB.",
+      "compose": "allowed"
+    },
+    "SQLITE_BUSY_TIMEOUT_MS": {
+      "group": "Performance & resilience",
+      "description": "How long a database write waits for a lock before failing, in milliseconds.",
+      "compose": "allowed"
+    },
+    "SOURCE_LANGUAGES": {
+      "group": "Connections & languages",
+      "compose": "allowed"
+    },
+    "ADMIN_TOKEN": {
+      "group": "Security",
+      "compose": "allowed"
+    },
+    "AUTOSOURCARR_READER_API_TOKEN": {
+      "group": "Connections & languages",
+      "compose": "allowed"
+    },
+    "AUTHELIA_USER_HEADER": {
+      "group": "Background refresh",
+      "compose": "allowed"
+    }
+  }
+}

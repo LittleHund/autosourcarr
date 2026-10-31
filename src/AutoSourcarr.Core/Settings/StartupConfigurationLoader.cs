@@ -36,7 +36,13 @@ public static class StartupConfigurationLoader
         var conversion = convertLegacyEnvironment
             ? EnvConversion.EnsureConverted(configurationRoot, now ?? DateTimeOffset.UtcNow)
             : null;
-        var configuration = new ConfigStore(configurationRoot).Load();
+        var store = new ConfigStore(configurationRoot);
+        var configuration = store.Load();
+        // Once config.json exists it is the only saved configuration: the 0.4.x wizard values were copied
+        // into it by the conversion, and Settings/setup now save there. Old env-file wizard values must not
+        // override it any more (the recovery above still ran, so a half-finished 0.4.x save is undone first).
+        if (store.Exists)
+            managed = new Dictionary<string, string?>(StringComparer.Ordinal);
         var settings = SettingsLoader.Load(dotenv, inherited, managed, bundledImage, configuration.Settings);
         return new(settings, configurationRoot, conversion);
     }

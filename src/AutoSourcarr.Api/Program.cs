@@ -34,6 +34,9 @@ internal static class Program
                 Console.WriteLine($"Converted autosourcarr.env to config.json: {converted.SettingKeys.Count} settings, "
                     + $"{converted.SourceHostKeys.Count} source-host values, {converted.ExtraKeys.Count} other values, "
                     + $"{converted.EncryptedKeys.Count} encrypted. Originals kept in {converted.BackupDirectory}.");
+            var notice = UpdateNotices.Check(startup.ConfigurationRoot, ApplicationRuntime.Version);
+            if (notice is not null)
+                Console.WriteLine($"Updated from {notice.FromVersion} to {notice.ToVersion}: {notice.Items.Count} setting notice(s); see Settings.");
             ApplyTimeZone(startup.Settings, environment);
             await using var runtime = await ApplicationRuntime.CreateNativeAsync(startup, environment, processSignals.Token).ConfigureAwait(false);
             var host = new HostBuilder().UseConsoleLifetime()
@@ -42,6 +45,7 @@ internal static class Program
                 .ConfigureWebHost(web => web.UseKestrel(options => { options.AddServerHeader = false; options.ListenAnyIP(8282); })
                     .Configure(app => runtime.ConfigureHttp(app, "/app/static"))).Build();
             var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+            runtime.RequestStop = lifetime.StopApplication;
             // The cached task remains owned and is joined by runtime disposal even
             // if the framework's server shutdown deadline expires first.
             using var stopping = lifetime.ApplicationStopping.Register(() => _ = runtime.BeginHttpStopAsync());
