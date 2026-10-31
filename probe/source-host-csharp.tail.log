@@ -1,2 +1,2 @@
 PASS source host: supervised host serves install, search, details, chapters, pages and image to the client; restarts after a crash
-{"total":1,"passed":1,"failed":0,"registered":957,"filtered":true,"filters":["source host:"],"outcomes":[{"name":"source host: supervised host serves install, search, details, chapters, pages and image to the client; restarts after a crash","passed":true,"elapsedMs":8097}]}
+{"total":1,"passed":1,"failed":0,"registered":957,"filtered":true,"filters":["source host:"],"outcomes":[{"name":"source host: supervised host serves install, search, details, chapters, pages and image to the client; restarts after a crash","passed":true,"elapsedMs":7030}]}
