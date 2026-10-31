@@ -33,6 +33,7 @@ internal sealed class SourceEngineController : IManagedSourceRuntime, IAsyncDisp
     private readonly TaskCompletionSource<Exception> _fatal = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly List<Exception> _cleanup = [];
     private SuwayomiClient? _client;
+    private SourceHostProcess? _host;
     private SourceEngineCapabilityContract? _capabilities;
     private Task? _loop, _retirement, _capability, _stop, _dispose;
     private Request? _request;
@@ -124,6 +125,21 @@ internal sealed class SourceEngineController : IManagedSourceRuntime, IAsyncDisp
         => CreateAsync(settings, null, environment, parentEnvironment, sharedSourceAdmin, io, settingsStore,
             privacy, errors, TimeProvider.System, null, username, password);
 
+    /// <summary>
+    /// Phase 4: integrated mode without Suwayomi. The app's own source host (<see cref="SourceHostProcess"/>, already
+    /// started and healthy) answers on 127.0.0.1 with the host protocol. The controller owns the host and stops it on
+    /// dispose. There is no native generation; the host restarts itself after a crash.
+    /// </summary>
+    internal static async Task<SourceEngineController> CreateHostedAsync(AutoSourcarrSettings settings, SourceHostProcess host,
+        SourceEngineEnvironment environment, IReadOnlyDictionary<string, string?> parentEnvironment, SemaphoreSlim sharedSourceAdmin,
+        BoundedWorkScheduler io, SettingsRepository settingsStore, SupportPrivacy privacy, ErrorRegistry errors)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        var controller = await CreateAsync(settings, null, environment, parentEnvironment, sharedSourceAdmin, io, settingsStore,
+            privacy, errors, TimeProvider.System, null, "", "", host).ConfigureAwait(false);
+        return controller;
+    }
+
     private SourceEngineController(AutoSourcarrSettings settings, NativeCommands? native, SourceEngineEnvironment environment,
         IReadOnlyDictionary<string, string?> parentEnvironment, SemaphoreSlim sharedSourceAdmin, BoundedWorkScheduler io,
         SupportPrivacy privacy, ErrorRegistry errors, TimeProvider clock)
@@ -136,7 +152,7 @@ internal sealed class SourceEngineController : IManagedSourceRuntime, IAsyncDisp
     private static async Task<SourceEngineController> CreateAsync(AutoSourcarrSettings settings, NativeCommands? native,
         SourceEngineEnvironment environment, IReadOnlyDictionary<string, string?> parentEnvironment, SemaphoreSlim sharedSourceAdmin,
         BoundedWorkScheduler io, SettingsRepository settingsStore, SupportPrivacy privacy, ErrorRegistry errors, TimeProvider clock,
-        ISourceTransportFactory? factory, string username, string password)
+        ISourceTransportFactory? factory, string username, string password, SourceHostProcess? host = null)
     {
         SourceEngineController? controller = null;
         try
@@ -146,14 +162,22 @@ internal sealed class SourceEngineController : IManagedSourceRuntime, IAsyncDisp
             ArgumentNullException.ThrowIfNull(io); ArgumentNullException.ThrowIfNull(settingsStore);
             ArgumentNullException.ThrowIfNull(privacy); ArgumentNullException.ThrowIfNull(errors); ArgumentNullException.ThrowIfNull(clock);
             if (settings.SourceEngineMode is not ("integrated" or "external")
-                || (settings.SourceEngineMode == "integrated") != (native is not null))
+                || (settings.SourceEngineMode == "integrated") != (native is not null || host is not null))
                 throw new ArgumentException("Native ownership must match the selected source mode");
             native?.Startup.RequireSameRequest(SourceStartupRequest.FromSettings(settings));
             environment.RequirePrivacy(privacy); native?.RequirePrivacy(privacy);
-            var identity = native is null ? SourceEngineCapabilityIdentity.ConfiguredExternal(settings.EffectiveSourceUrl, username, password)
+            var identity = host is not null ? SourceEngineCapabilityIdentity.ConfiguredExternal(host.BaseUrl)
+                : native is null ? SourceEngineCapabilityIdentity.ConfiguredExternal(settings.EffectiveSourceUrl, username, password)
                 : SourceEngineCapabilityIdentity.IntegratedSource();
             controller = new(settings, native, environment, parentEnvironment, sharedSourceAdmin, io, privacy, errors, clock);
-            controller._client = new(settings, native is null ? settings.EffectiveSourceUrl : IntegratedUrl,
+            if (host is not null)
+            {
+                controller._host = host;
+                controller._state = "source-host";
+                controller._client = SuwayomiClient.ForSourceHost(settings, host.BaseUrl, host.Token,
+                    workLimit: settings.SourceHostWorkConcurrency, runtime: controller, privacy: privacy, transportFactory: factory);
+            }
+            else controller._client = new(settings, native is null ? settings.EffectiveSourceUrl : IntegratedUrl,
                 workLimit: settings.SourceHostWorkConcurrency, runtime: controller,
                 username: native is null ? username : "", password: native is null ? password : "", privacy: privacy, transportFactory: factory);
             controller._capabilities = new(settingsStore, controller.Client, identity, privacy, "source", clock);
@@ -175,9 +199,10 @@ internal sealed class SourceEngineController : IManagedSourceRuntime, IAsyncDisp
     {
         lock (_gate)
         {
-            var ready = _ready && !_stopping && _native is not null && !_native.Retirement.IsCompleted;
+            var ready = _host is not null ? _host.Running && !_stopping
+                : _ready && !_stopping && _native is not null && !_native.Retirement.IsCompleted;
             return new(_settings.SourceEngineMode, _state, ready, _native is null ? null : _generation,
-                _restarts, _error, _observedVersion, false, _challengeState,
+                _host?.Restarts ?? _restarts, _host is { LastError.Length: > 0 } ? _host.LastError : _error, _observedVersion, false, _challengeState,
                 _capabilityReport is null ? null : (JsonObject)_capabilityReport.DeepClone(),
                 ready && _capabilityGeneration == _generation, _capabilityError);
         }
@@ -682,6 +707,7 @@ internal sealed class SourceEngineController : IManagedSourceRuntime, IAsyncDisp
             if (_capabilities is not null) try { await _capabilities.DisposeAsync().ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
             if (_client is not null) try { await _client.DisposeAsync().ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
             if (_native is not null) try { await _native.Shutdown().ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
+            if (_host is not null) try { await _host.DisposeAsync().ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
             Task? retirement; lock (_gate) retirement = _retirement;
             if (retirement is not null) try { await retirement.ConfigureAwait(false); } catch (Exception error) { errors.Add(error); }
         }
@@ -691,7 +717,7 @@ internal sealed class SourceEngineController : IManagedSourceRuntime, IAsyncDisp
             lock (_gate)
             {
                 if (_fatalError is not null) errors.Add(_fatalError);
-                errors.AddRange(_cleanup); _state = _native is null ? "external" : "stopped";
+                errors.AddRange(_cleanup); _state = _host is not null ? "stopped" : _native is null ? "external" : "stopped";
             }
             if (errors.Count == 0) complete.TrySetResult();
             else complete.TrySetException(new AggregateException("Source controller shutdown failed", errors));

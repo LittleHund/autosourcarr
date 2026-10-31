@@ -131,6 +131,15 @@ public sealed partial class SuwayomiClient
                     ["source"] = new JsonObject { ["id"] = source["id"]?.DeepClone(), ["name"] = source["name"]?.DeepClone(), ["isConfigurable"] = source["isConfigurable"]?.DeepClone() },
                     ["preferences"] = HostPreferences(prefs) } };
             }
+            case "ReimaginedEngineContract":
+            {
+                // The operations this client maps onto the host's REST API. Chapter downloads stay with the main library.
+                var fields = new JsonArray(new[] { "fetchExtensions", "fetchMangaAndChapters", "fetchChapterPages", "fetchSourceManga",
+                        "updateExtension", "updateExtensions", "updateManga", "updateSourcePreference" }
+                    .Select(item => (JsonNode?)new JsonObject { ["name"] = item, ["args"] = new JsonArray(new JsonObject { ["name"] = "input" }) }).ToArray());
+                return new() { ["__schema"] = new JsonObject { ["mutationType"] = new JsonObject { ["fields"] = fields },
+                    ["subscriptionType"] = new JsonObject { ["fields"] = new JsonArray() } } };
+            }
             default:
                 throw new SuwayomiException($"The source host does not offer the operation {(name.Length == 0 ? "(unnamed)" : name)}.");
         }
