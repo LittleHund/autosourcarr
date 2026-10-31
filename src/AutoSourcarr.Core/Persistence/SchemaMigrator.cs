@@ -111,4 +111,4 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
 }
 
 /// <summary>The database file belongs to another program or to a newer AutoSourcarr; nothing was changed.</summary>
-public sealed class SchemaRevisionException(string message) : InvalidDataException(message);
+public sealed class SchemaRevisionException(string message) : InvalidOperationException(message);

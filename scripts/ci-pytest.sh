@@ -13,5 +13,12 @@ sort -u "$baseline" > "$report.baseline"
 new=$(comm -13 "$report.baseline" "$report.failed")
 fixed=$(comm -23 "$report.baseline" "$report.failed")
 if [[ -n "$fixed" ]]; then printf '\nBaseline failures that now pass (trim %s):\n%s\n' "$baseline" "$fixed"; fi
-if [[ -n "$new" ]]; then printf '\nNEW FAILURES (not in baseline):\n%s\n' "$new"; exit 1; fi
+if [[ -n "$new" ]]; then
+  printf '\nNEW FAILURES (not in baseline):\n%s\n' "$new"
+  # GitHub annotations: visible through the API even when the raw log is not.
+  while IFS= read -r test; do echo "::error title=new pytest failure::$test"; done <<< "$new"
+  echo "::error title=pytest summary::$(tail -1 "$report")"
+  grep -E '^(E |FAILED|ERROR)' "$report" | head -40 | while IFS= read -r line; do echo "::warning::$line"; done
+  exit 1
+fi
 echo "No new Python failures (baseline $(wc -l < "$report.baseline") known)."
