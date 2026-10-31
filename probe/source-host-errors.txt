@@ -1,0 +1,12 @@
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:31 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:52 Unresolved reference 'getMangaDetails'.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:77 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:82 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:87 Unresolved reference 'url'.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:50 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:71 Unresolved reference 'getChapterList'.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:102 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:159:69 Cannot infer type for value parameter 'index'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:159:76 Cannot infer type for value parameter 'chapter'. Specify it explicitly.
+FAILURE: Build failed with an exception.
+BUILD FAILED in 2m 10s

@@ -1,0 +1,75 @@
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/database/sqlite/SQLiteDatabase.java:242: warning: [removal] finalize() in Object has been deprecated and marked for removal
+    protected void finalize() throws Throwable {
+                   ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/database/sqlite/SQLiteDatabase.java:246: warning: [removal] finalize() in Object has been deprecated and marked for removal
+            super.finalize();
+                 ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/content/pm/PackageManager.java:3369: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public abstract int getInstantAppCookieMaxSize();
+                        ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/content/Intent.java:4193: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public static final int FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET = 0x00080000;
+                            ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/os/MessageQueue.java:76: warning: [removal] finalize() in Object has been deprecated and marked for removal
+    protected void finalize() throws Throwable {
+                   ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/os/MessageQueue.java:80: warning: [removal] finalize() in Object has been deprecated and marked for removal
+            super.finalize();
+                 ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/NetworkInfo.java:424: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public String getReason() {
+                  ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/ConnectivityManager.java:1223: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public static NetworkCapabilities networkCapabilitiesForType(int type) {
+                                      ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/ConnectivityManager.java:1848: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public void reportInetCondition(int networkType, int percentage) {
+                ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/webkit/WebSettings.java:256: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public static final int FORCE_DARK_OFF = 0;
+                            ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/webkit/WebSettings.java:268: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public static final int FORCE_DARK_AUTO = 1;
+                            ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/webkit/WebSettings.java:277: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public static final int FORCE_DARK_ON = 2;
+                            ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/webkit/WebSettings.java:1590: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public void setForceDark(@ForceDark int forceDark) {
+                ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/webkit/WebSettings.java:1602: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public @ForceDark int getForceDark() {
+                          ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/database/AbstractCursor.java:385: warning: [removal] finalize() in Object has been deprecated and marked for removal
+    protected void finalize() {
+                   ^
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+15 warnings
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:31 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:52 Unresolved reference 'getMangaDetails'.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:77 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:82 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:87 Unresolved reference 'url'.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:50 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:71 Unresolved reference 'getChapterList'.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:102 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:159:69 Cannot infer type for value parameter 'index'. Specify it explicitly.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:159:76 Cannot infer type for value parameter 'chapter'. Specify it explicitly.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':source-host:compileKotlin' (registered by plugin 'org.jetbrains.kotlin.jvm').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2m 10s
