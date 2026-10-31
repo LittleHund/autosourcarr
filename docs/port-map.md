@@ -81,6 +81,24 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | UI pages of this phase | done: source engine card, source browser panel, challenge check, apply saved repositories, Needs attention, engine compatibility call `/api/v1` through the generated client |
 | Audit fixes (fresh-agent audit) | 8 findings → 7 fixed (no disposed Process in status, no relaunch after dispose, failed first start retried and the app starts without the host, startup-only host error, environment rebuilt per launch, saved repositories applied, id import conflicts, counted upload limit, challenge state per engine, app not dumpable); 1 scoped: a separate user for the host comes with the low-rights runner (phase 6) and the new image (phase 13) |
 
+### Phase 5 (accounts), ticked 2026-10-31
+
+| Row | Result |
+| --- | --- |
+| Sign-in methods (AUTH-1) | done: AUTH_METHOD forms (login page, default), basic (browser pop-up), external (Remote-User / Remote-Groups from a trusted proxy, AUTH_TRUSTED_PROXIES); admin token and API keys work with every method |
+| Owner on first boot (AUTH-2) | done: login page creates the owner (first admin); PBKDF2-SHA512 210k salted hashes (runtime only; same family as ASP.NET Core Identity's PasswordHasher, which is a separate package); external owner bound by AUTH_OWNER_EXTERNAL_USER; groups never make an owner |
+| Roles in one place (AUTH-6, AUTH-3) | done: AccessPolicy + AccessControlMiddleware decide owner/admin/guest/reader/script for every page, API call, live update and asset (case and trailing slash canonical); external groups map via AUTH_ADMIN_GROUPS / AUTH_GUEST_GROUPS |
+| Keys page (AUTH-4) | done: automatic admin token (owner regenerates), one permanent admin key, per-device reader keys (also accepted on /api/reader/v1, revocable alone), script keys (admin or read-only); secrets shown once, stored as SHA-256 fingerprints |
+| Cross-site write guard (AUTH-5) | exists; now case-insensitive; the four reset routes refuse cross-site posts (test) |
+| Security log and slow-down (AUTH-8) | done: security-events.jsonl (5,000 newest), /api/v1/security/events with kind filter; attempts counted before the check, 2–30 s delays, (name, address) refused after 20, burst → error registry (notifications SET-11 later) |
+| Server-side owner reset (AUTH-10) | done: AUTH_RESET_OWNER applies once per use, prints a one-time setup code to the server log, data kept |
+| Sessions | signed tokens (HMAC-SHA256, instance key, 30 days, renewed), HttpOnly SameSite=Strict, Secure behind HTTPS proxies; password change, account removal and sign-out end the account's sessions (sign-out ends them on all devices) |
+| Routes | `/api/v1/auth/{status,setup,login,logout,me,password}`, `/api/v1/keys` (+`/{keyId}`, `/admin-token/regenerate`), `/api/v1/accounts` (+`/{accountId}`), `/api/v1/security/events`, `/login` |
+| UI pages of this phase | done: login page (sign-in, first-boot owner, setup code), Settings > Security (admin token, keys, accounts for the owner, security log, sign out); 401 → login page |
+| Done when | every route of the app checked against anonymous, guest, reader and script-guest callers and the admin policy (AccessControlTests); reset routes refuse cross-site posts |
+| Later (phase 16) | two-factor (AUTH-7), owner transfer and recovery codes (AUTH-9) |
+| Audit fixes (fresh-agent audit) | 9 findings, all fixed: case-variant bypass, untrusted proxy headers, throttle lockout/bypass, sign-out not ending sessions, login open redirect, Basic first boot, guests blocked by the v1 filter, repeating owner reset open to visitors, smaller items (token redaction, Secure cookie, password-change slow-down) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):

@@ -225,7 +225,7 @@
        */
       cancelTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/cancel`, undefined, options); },
       /**
-       * pw
+       * Change your own password; other sessions of the account end.
        * POST /api/v1/auth/password
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -278,7 +278,7 @@
        */
       clearTaskHistory(options) { return call('POST', '/api/v1/tasks/clear-history', undefined, options); },
       /**
-       * create
+       * Owner only: add an admin or guest account with a password.
        * POST /api/v1/accounts
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -286,7 +286,7 @@
        */
       createAccount(body, options) { return call('POST', '/api/v1/accounts', body, options); },
       /**
-       * create
+       * Create a key (kind admin, reader or script; scripts are admin or guest). The secret is shown only in this answer.
        * POST /api/v1/keys
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -294,7 +294,7 @@
        */
       createKey(body, options) { return call('POST', '/api/v1/keys', body, options); },
       /**
-       * setup
+       * First boot: create the owner account (the first admin) and sign in. Refused once an owner exists.
        * POST /api/v1/auth/setup
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -302,7 +302,7 @@
        */
       createOwner(body, options) { return call('POST', '/api/v1/auth/setup', body, options); },
       /**
-       * delete
+       * Owner only: remove an account (not the owner); its sessions end.
        * DELETE /api/v1/accounts/{accountId}
        * @param {string} accountId
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -325,7 +325,7 @@
        */
       finishSetup(body, options) { return call('POST', '/api/v1/setup/finish', body, options); },
       /**
-       * accounts
+       * Owner only: accounts with role and sign-in source (no password data).
        * GET /api/v1/accounts
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -339,7 +339,7 @@
        */
       getAttention(options) { return call('GET', '/api/v1/attention', undefined, options); },
       /**
-       * status
+       * Sign-in method, whether the owner account still has to be created, and who is signed in.
        * GET /api/v1/auth/status
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -388,14 +388,14 @@
        */
       getJobs(options) { return call('GET', '/api/v1/jobs', undefined, options); },
       /**
-       * keys
+       * Keys page: the automatic admin token, the permanent admin key, reader keys (one per device) and script keys.
        * GET /api/v1/keys
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       getKeys(options) { return call('GET', '/api/v1/keys', undefined, options); },
       /**
-       * me
+       * Who is calling: name, role and how they signed in.
        * GET /api/v1/auth/me
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -409,7 +409,7 @@
        */
       getRuntimeMetrics(options) { return call('GET', '/api/v1/diagnostics/metrics', undefined, options); },
       /**
-       * events
+       * Security log: sign-ins, failed sign-ins, slow-downs, key, token and account events, newest first; filter with ?kind=.
        * GET /api/v1/security/events
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -479,7 +479,7 @@
        */
       getUpdateNotice(options) { return call('GET', '/api/v1/settings/update-notice', undefined, options); },
       /**
-       * login
+       * Sign in with name and password (login page). Failed attempts slow down and are logged.
        * POST /api/v1/auth/login
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -487,7 +487,7 @@
        */
       login(body, options) { return call('POST', '/api/v1/auth/login', body, options); },
       /**
-       * logout
+       * Sign out. Ends every session of the account, on all devices.
        * POST /api/v1/auth/logout
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -502,7 +502,7 @@
        */
       moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
       /**
-       * regen
+       * Owner only: replace the automatic admin token; the old one stops working at once.
        * POST /api/v1/keys/admin-token/regenerate
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -539,7 +539,7 @@
        */
       retryTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/retry-safe`, undefined, options); },
       /**
-       * revoke
+       * Revoke a key at once (a lost phone is cut off without touching other devices).
        * DELETE /api/v1/keys/{keyId}
        * @param {string} keyId
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`

@@ -8,7 +8,7 @@
     "/api/v1/accounts": {
       "get": {
         "operationId": "getAccounts",
-        "summary": "accounts",
+        "summary": "Owner only: accounts with role and sign-in source (no password data).",
         "responses": {
           "200": {
             "description": "Success",
@@ -27,7 +27,7 @@
       },
       "post": {
         "operationId": "createAccount",
-        "summary": "create",
+        "summary": "Owner only: add an admin or guest account with a password.",
         "requestBody": {
           "required": true,
           "content": {
@@ -68,7 +68,7 @@
     "/api/v1/accounts/{accountId}": {
       "delete": {
         "operationId": "deleteAccount",
-        "summary": "delete",
+        "summary": "Owner only: remove an account (not the owner); its sessions end.",
         "parameters": [
           {
             "name": "accountId",
@@ -171,7 +171,7 @@
     "/api/v1/auth/login": {
       "post": {
         "operationId": "login",
-        "summary": "login",
+        "summary": "Sign in with name and password (login page). Failed attempts slow down and are logged.",
         "requestBody": {
           "required": true,
           "content": {
@@ -202,7 +202,7 @@
     "/api/v1/auth/logout": {
       "post": {
         "operationId": "logout",
-        "summary": "logout",
+        "summary": "Sign out. Ends every session of the account, on all devices.",
         "responses": {
           "200": {
             "description": "Success",
@@ -223,7 +223,7 @@
     "/api/v1/auth/me": {
       "get": {
         "operationId": "getMe",
-        "summary": "me",
+        "summary": "Who is calling: name, role and how they signed in.",
         "responses": {
           "200": {
             "description": "Success",
@@ -244,7 +244,7 @@
     "/api/v1/auth/password": {
       "post": {
         "operationId": "changePassword",
-        "summary": "pw",
+        "summary": "Change your own password; other sessions of the account end.",
         "requestBody": {
           "required": true,
           "content": {
@@ -285,7 +285,7 @@
     "/api/v1/auth/setup": {
       "post": {
         "operationId": "createOwner",
-        "summary": "setup",
+        "summary": "First boot: create the owner account (the first admin) and sign in. Refused once an owner exists.",
         "requestBody": {
           "required": true,
           "content": {
@@ -336,7 +336,7 @@
     "/api/v1/auth/status": {
       "get": {
         "operationId": "getAuthStatus",
-        "summary": "status",
+        "summary": "Sign-in method, whether the owner account still has to be created, and who is signed in.",
         "responses": {
           "200": {
             "description": "Success",
@@ -555,7 +555,7 @@
     "/api/v1/keys": {
       "get": {
         "operationId": "getKeys",
-        "summary": "keys",
+        "summary": "Keys page: the automatic admin token, the permanent admin key, reader keys (one per device) and script keys.",
         "responses": {
           "200": {
             "description": "Success",
@@ -574,7 +574,7 @@
       },
       "post": {
         "operationId": "createKey",
-        "summary": "create",
+        "summary": "Create a key (kind admin, reader or script; scripts are admin or guest). The secret is shown only in this answer.",
         "requestBody": {
           "required": true,
           "content": {
@@ -615,7 +615,7 @@
     "/api/v1/keys/admin-token/regenerate": {
       "post": {
         "operationId": "regenerateAdminToken",
-        "summary": "regen",
+        "summary": "Owner only: replace the automatic admin token; the old one stops working at once.",
         "responses": {
           "200": {
             "description": "Success",
@@ -646,7 +646,7 @@
     "/api/v1/keys/{keyId}": {
       "delete": {
         "operationId": "revokeKey",
-        "summary": "revoke",
+        "summary": "Revoke a key at once (a lost phone is cut off without touching other devices).",
         "parameters": [
           {
             "name": "keyId",
@@ -687,7 +687,7 @@
     "/api/v1/security/events": {
       "get": {
         "operationId": "getSecurityEvents",
-        "summary": "events",
+        "summary": "Security log: sign-ins, failed sign-ins, slow-downs, key, token and account events, newest first; filter with ?kind=.",
         "responses": {
           "200": {
             "description": "Success",
@@ -883,7 +883,7 @@
     "/api/v1/setup/finish": {
       "post": {
         "operationId": "finishSetup",
-        "summary": "Save the wizard's changes to config.json in one step; a repeated request id returns the first result.",
+        "summary": "Save the wizard\u0027s changes to config.json in one step; a repeated request id returns the first result.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1037,7 +1037,7 @@
     "/api/v1/source-browser/clear-data": {
       "post": {
         "operationId": "clearSourceBrowserData",
-        "summary": "Remove the engine's cookies and browser data (sign-ins and Cloudflare clearances). Installed extensions stay.",
+        "summary": "Remove the engine\u0027s cookies and browser data (sign-ins and Cloudflare clearances). Installed extensions stay.",
         "responses": {
           "202": {
             "description": "Success",
@@ -1337,7 +1337,7 @@
     "/api/v1/tasks/{taskId}/cancel": {
       "post": {
         "operationId": "cancelTask",
-        "summary": "Cancel a queued or running task. Work already done stays; the task is listed as failed with \"Cancelled by user\".",
+        "summary": "Cancel a queued or running task. Work already done stays; the task is listed as failed with \u0022Cancelled by user\u0022.",
         "parameters": [
           {
             "name": "taskId",
