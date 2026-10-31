@@ -129,5 +129,5 @@ public static class RepairEvidence
         return text.Length is > 0 and <= 2048 && !text.Any(char.IsWhiteSpace) && Uri.TryCreate(text, UriKind.Absolute, out var uri)
             && uri.Scheme is "http" or "https" && uri.Host.Length > 0 && uri.UserInfo.Length == 0 && uri.Query.Length == 0 && uri.Fragment.Length == 0 ? text : null;
     }
-    private static string Cut(string value, int count) => Text.UnicodeCaseFold.Truncate(value, count);
+    private static string Cut(string value, int count) => Unicode.UnicodeCaseFold.Truncate(value, count);
 }

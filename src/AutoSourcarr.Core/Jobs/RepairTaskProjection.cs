@@ -131,7 +131,7 @@ public sealed class RepairTaskProjection(SupportPrivacy privacy, Func<double>? m
             if (changing && stage is not ("confirmed" or "reported-not-working" or "reverted") && (changeState is "queued" or "installing" or "installed" or "recovered" or "rolled-back" || Failed.Contains(changeState)))
             {
                 stage = changeState switch { "queued" => "install-queued", "recovered" => "installed", _ => changeState };
-                message = Text.UnicodeCaseFold.Truncate(privacy.Text(D.Text(operation, "message", message)), 1200);
+                message = Unicode.UnicodeCaseFold.Truncate(privacy.Text(D.Text(operation, "message", message)), 1200);
             }
             var state = Failed.Contains(stage) ? "failed" : Terminal.Contains(stage) ? "completed" : "running";
             var signature = new Signature(stage, Numeric(job["updated_at"]), D.Text(job, "version"));
