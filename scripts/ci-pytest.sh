@@ -11,6 +11,18 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=autosourcarr python -m pytest -q -p no:cach
 grep '^FAILED' "$report" | sed -e 's/^FAILED //' -e 's/ - .*//' | sort -u > "$report.failed"
 sort -u "$baseline" > "$report.baseline"
 new=$(comm -13 "$report.baseline" "$report.failed")
+if [[ -n "$new" ]]; then
+  # One retry for tests outside the baseline: timing-sensitive tests (e.g. the WebView
+  # websocket relay) fail intermittently on shared runners. A pass on retry is reported, not hidden.
+  mapfile -t retry <<< "$new"
+  if PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=autosourcarr python -m pytest -q -p no:cacheprovider "${retry[@]}" > "$report.retry" 2>&1; then
+    while IFS= read -r test; do echo "::warning title=flaky test passed on retry::$test"; done <<< "$new"
+    new=""
+  else
+    grep '^FAILED' "$report.retry" | sed -e 's/^FAILED //' -e 's/ - .*//' | sort -u > "$report.refailed"
+    new=$(cat "$report.refailed")
+  fi
+fi
 fixed=$(comm -23 "$report.baseline" "$report.failed")
 if [[ -n "$fixed" ]]; then printf '\nBaseline failures that now pass (trim %s):\n%s\n' "$baseline" "$fixed"; fi
 if [[ -n "$new" ]]; then

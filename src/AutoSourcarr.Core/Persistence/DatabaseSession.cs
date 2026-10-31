@@ -16,27 +16,19 @@ public sealed class DatabaseSession
     internal SynchronousReturnBoundary Returns { get; }
     internal Exception? Violation => Returns.Failure;
 
-    private readonly bool _write;
-
     internal DatabaseSession(SqliteConnection connection, bool write, int commandTimeout, SynchronousReturnBoundary returns)
     {
         _connection = connection;
         _ownerThread = Environment.CurrentManagedThreadId;
         _commandTimeout = commandTimeout;
-        _write = write;
         Returns = returns;
         if (write)
             _transaction = connection.BeginTransaction(deferred: false);
     }
 
-    /// <summary>True when the session was opened through <see cref="SqliteDatabase.Write"/>.</summary>
-    public bool IsWrite => _write;
-
     public int Execute(string sql, params (string Name, object? Value)[] parameters)
     {
         CheckUsable();
-        if (!_write)
-            throw new InvalidOperationException("Execute requires a write session; this session was opened for reading.");
         _transaction ??= _connection.BeginTransaction(deferred: true);
         using var command = Command(sql, parameters);
         return command.ExecuteNonQuery();

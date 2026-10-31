@@ -113,7 +113,13 @@ public sealed partial class PrivateDocumentStore : IPrivateDocumentStore
             handle = new((IntPtr)descriptor, ownsHandle: true);
             try
             {
-                if (Statx(descriptor, "", 0x1000, 0x205, out var status) != 0 || (status.Mask & 5) != 5 || (status.Mode & 0xF000) != 0x8000 || status.Links != 1 || status.Size > (ulong)maximum)
+                if (Statx(descriptor, "", 0x1000, 0x205, out var status) != 0 || (status.Mask & 5) != 5)
+                    throw new InvalidDataException("Private source document is linked, special or oversized");
+                // A directory or device opens read-only on Linux; Windows refuses it at CreateFile.
+                // Report it the same way on both: not openable as a regular document.
+                if ((status.Mode & 0xF000) != 0x8000)
+                    throw new IOException("Cannot open a regular private source document");
+                if (status.Links != 1 || status.Size > (ulong)maximum)
                     throw new InvalidDataException("Private source document is linked, special or oversized");
             }
             catch { handle.Dispose(); throw; }
