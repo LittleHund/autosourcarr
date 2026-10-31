@@ -79,10 +79,12 @@ public static class ConfigStoreTests
             var root = Path.Combine(temp.Path, "config");
             Directory.CreateDirectory(root);
             File.WriteAllText(Path.Combine(root, EnvConversion.MainEnv), "SOURCE_LANGUAGES=en,ja\nADMIN_TOKEN=from-config\n");
+            File.WriteAllText(Path.Combine(root, "setup-state.json"), """{"completed":true,"managed_keys":[]}""");
             var environment = new Dictionary<string, string?>(StringComparer.Ordinal) { ["SETTINGS_CONFIG_DIR"] = root };
 
             var first = StartupConfigurationLoader.Load(temp.Path, environment, convertLegacyEnvironment: true, now: Now);
             Check.True(first.Conversion is not null, "The final host converts on its first start.");
+            Check.True(new ConfigStore(root).ReadDocument()!.Setup?.Completed == true, "A finished 0.4.x setup stays finished.");
             File.Delete(Path.Combine(root, EnvConversion.MainEnv)); // only config.json remains as input
             var fromConfig = StartupConfigurationLoader.Load(temp.Path, environment);
             Check.Equal("en,ja", fromConfig.Settings.SourceLanguages);

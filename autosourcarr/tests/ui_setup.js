@@ -22,7 +22,7 @@ function harness(completed=true){
   {key:'AUTOSOURCARR_READER_API_TOKEN',kind:'secret',generate:true,step:'readers',label:'Key',description:'Keep or replace',value:'',configured:true},
   {key:'BROWSE_PAGE_SIZE',kind:'integer',step:'performance',label:'Page size',description:'Size',value:50,minimum:1,maximum:500}]};
  const context={document,crypto,Uint8Array,console,JSON,Promise,URL,clearTimeout(){},setTimeout:fn=>timers.push(fn),confirm:()=>true,sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},switchTab:tab=>calls.push(['tab',tab]),syncModalScrollLock(){},toast:s=>calls.push(['toast',s]),settingsState:{dirty:false,saving:false,editRevision:0},api:async(path,opts)=>{calls.push([path,opts]);if(path.endsWith('/provider'))return {provider:'chatgpt'};if(path.endsWith('/control'))return {busy:false};if(opts.method==='POST'){data.completed=true;return {completed:true,restart_required:false};}return structuredClone(data);}};
- context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../app/static/repair-login.js','utf8'),context);vm.runInContext(source,context);
+ context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../app/static/generated/api-client.js','utf8'),context);vm.runInContext(fs.readFileSync(__dirname+'/../app/static/repair-login.js','utf8'),context);vm.runInContext(source,context);
  return {context,nodes,calls,storage,timers,get data(){return data;},set data(v){data=v;},next:async()=>{nodes.get('setupNext').onclick();await tick();}};
 }
 if(require.main===module)(async()=>{

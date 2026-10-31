@@ -5,7 +5,9 @@ const app=fs.readFileSync(path.join(project,'autosourcarr/app/static/app.js'),'u
 const nav=fs.readFileSync(path.join(project,'autosourcarr/app/static/navigation-state.js'),'utf8');
 const html=fs.readFileSync(path.join(project,'autosourcarr/app/static/index.html'),'utf8');
 const slice=(begin,end)=>{const i=app.indexOf(begin),j=app.indexOf(end,i);assert(i>=0&&j>i,begin);return app.slice(i,j);};
-const settings=slice('function loadEnvSettings(','window.goDuplicates=');
+const settings=slice('function settingsFromApi(','window.goDuplicates=');
+const apiV1Source=slice('function apiV1(','\n');
+const apiClient=fs.readFileSync(path.join(project,'autosourcarr/app/static/generated/api-client.js'),'utf8');
 const navigation=slice('let navigationGeneration=','document.querySelectorAll(\'nav button\').forEach');
 const bootstrap=slice('async function bootstrapAutoSourcarr(){',"if(typeof initializeWorkbench===");
 const prefs=slice('function applyUiPreferences(values){','async function loadUiPreferences(){');
@@ -59,7 +61,7 @@ function harness(saved={version:1,tab:'browse'}) {
  context.window=context;context.$=selector=>document.querySelector(selector);
  for(const name of ['loadBrowse','loadSubbed','loadMatrix','loadDuplicates','loadMixedEntries','loadManualActions','health','loadApkDownload','loadImports','loadAttention','loadTasks','loadSourceBrowser','loadInternalServices','loadTagReview','loadSources','startTaskPolling','scheduleMetadataLivePoll','scheduleDuplicateHeartbeat','updateUiPreferenceOwner','rememberClientError','renderMatrix','renderDuplicates'])context[name]=async(...args)=>{calls.push([name,...args]);};
  context.loadUiPreferences=async()=>{};context.applyUiPreferences=()=>{};context.browsePageSizeNeedsReload=()=>false;
- vm.createContext(context);vm.runInContext(nav,context);vm.runInContext(navigation+settings+mark+bootstrap,context);
+ vm.createContext(context);vm.runInContext(apiClient,context);vm.runInContext(nav,context);vm.runInContext(apiV1Source+navigation+settings+mark+bootstrap,context);
  return {context,nodes,calls,events,preferences,session,timers,run:code=>vm.runInContext(code,context),dispatch:(name,target,isTrusted=true)=>{for(const fn of events.get(name)||[])fn({target,isTrusted});},tick};
 }
 const tests=[];const test=(name,fn)=>tests.push({name,fn});
@@ -87,7 +89,7 @@ test('late source inventory preserves new explicit filter selection',async()=>{
 });
 test('read-only customization never requests env settings',async()=>{
  const h=harness(null);h.preferences.settingsSubtab='customization';await h.context.switchTab('settings');
- assert(!h.calls.some(call=>call[0]==='api'&&call[1]==='/api/admin/settings/env'));
+ assert(!h.calls.some(call=>call[0]==='api'&&call[1]==='/api/v1/settings'));
 });
 test('dirty configuration survives leaving and reopening settings',async()=>{
  const h=harness(null);h.preferences.settingsSubtab='configuration';h.context.settingsState.dirty=true;h.context.settingsState.data={files:[{id:'autosourcarr',revision:'old',writable:true}]};

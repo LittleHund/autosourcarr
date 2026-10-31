@@ -1,0 +1,34 @@
+# AutoSourcarr 0.5.0: the smallest Compose (ARC-5).
+#
+# Settings live in /config/config.json and are edited in the web UI (Settings, or the setup
+# wizard on first start). Secrets in it are encrypted with /config/config.key: back up both.
+#
+# Coming from 0.4.x: point /config at your existing config folder. On the first start the
+# old autosourcarr.env (and source-host.env) is converted once into config.json; the env
+# files stay where they are and an identical copy goes to /config/backups/. After that,
+# REMOVE the old "env_file:" line from your Compose: every variable it injects counts as an
+# override and wins over the Settings page (the page marks such settings as overridden).
+#
+# Every setting can still be set here as an environment variable with the same name; such
+# a variable wins over config.json. The full list with defaults is in docs/settings.md.
+# Keep this list short.
+#
+# The image is published from conversion phase 13; until then this file is a preview.
+services:
+  autosourcarr:
+    image: ghcr.io/littlehund/autosourcarr:0.5.0
+    container_name: autosourcarr
+    restart: unless-stopped
+    ports:
+      - "8282:8282"
+    volumes:
+      - ./config:/config
+      - ./data:/data
+    environment:
+      TZ: Europe/Amsterdam
+      # Optional overrides (see docs/settings.md, column "Compose"):
+      # SOURCE_ENGINE_UID: "568"
+      # SOURCE_ENGINE_GID: "568"
+      # DATABASE_DIR: /database
+    cap_drop: [ALL]
+    stop_grace_period: 90s

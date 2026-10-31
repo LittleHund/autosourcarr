@@ -390,6 +390,9 @@ async function api(url, opts = {}) {
     if(typeof recordUiTiming==='function')recordUiTiming('request',url,performance.now()-timingStart,{method:requestMethod,status:timingStatus,ok:timingOk,headers_ms:timingHeaders===null?null:Math.round(timingHeaders)});
   }
 }
+// Typed client for /api/v1, generated from the server's OpenAPI document (scripts/generate-api-client.mjs).
+// Requests still go through api() above: same admin token, timeouts and error handling.
+function apiV1(defaults={}){return AutoSourcarrApi.createClient({request:(path,options)=>api(path,{...defaults,...options})});}
 window.addEventListener('unhandledrejection', e => {
   const reason=e.reason;
   if(reason?.expectedCancellation || reason?.name==='AbortError') return;
@@ -1502,8 +1505,7 @@ window.addEventListener('visibilitychange',()=>{
   }
 });
 
-// Environment settings editor. Values are written to the persistent sibling config/*.env; Compose
-// applies them on the next TrueNAS Custom App restart/redeploy.
+// Settings editor: config.json through /api/v1/settings (see settingsFromApi below). Changes apply after a restart.
 function settingsFile(){
   return settingsState.data?.files?.find(f=>f.id===settingsState.activeFile)||null;
 }
@@ -1530,7 +1532,9 @@ function renderEnvSettings(){
   const stateBits=[file.path,file.exists?'file found':'file missing',file.writable?'writable':'read-only'];
   status.textContent=stateBits.join(' · ');
   if(file.errors?.length){groups.innerHTML=`<div class="notice settingsError"><strong>Cannot edit this file.</strong><br>${file.errors.map(esc).join('<br>')}</div>`;return;}
-  groups.innerHTML=(file.groups||[]).map((g,index)=>`<details class="settingsGroup" ${index===0?'open':''}><summary class="settingsGroupHeader"><span class="settingsGroupTitle"><span class="settingsChevron" aria-hidden="true">›</span><h3>${esc(g.name)}</h3></span><span class="muted">${g.items.length} setting${g.items.length===1?'':'s'}</span></summary><div class="settingsFieldGrid">${g.items.map(item=>`<label class="settingsField"><span class="settingsFieldTitle"><strong>${esc(item.label)}</strong><code>${esc(item.key)}</code></span>${item.description?`<small>${esc(item.description)}</small>`:''}${settingsInput(item)}</label>`).join('')}</div></details>`).join('')||'<div class="emptyBrowserResult">No variables found in this env file.</div>';
+  groups.innerHTML=(file.groups||[]).map((g,index)=>`<details class="settingsGroup" ${index===0?'open':''}><summary class="settingsGroupHeader"><span class="settingsGroupTitle"><span class="settingsChevron" aria-hidden="true">›</span><h3>${esc(g.name)}</h3></span><span class="muted">${g.items.length} setting${g.items.length===1?'':'s'}</span></summary><div class="settingsFieldGrid">${g.items.map(item=>`<label class="settingsField"><span class="settingsFieldTitle"><strong>${esc(item.label)}</strong><code>${esc(item.key)}</code></span>${item.description?`<small>${esc(item.description)}</small>`:''}${settingsInput(item)}</label>`).join('')}</div></details>`).join('')||'<div class="emptyBrowserResult">No settings found.</div>';
+  const notice=settingsState.notice;
+  if(notice?.items?.length)groups.insertAdjacentHTML?.('afterbegin',`<div class="notice settingsUpdateNotice"><strong>Updated from ${esc(notice.from_version)} to ${esc(notice.to_version)}</strong><ul>${notice.items.map(item=>`<li><code>${esc(item.key)}</code> ${esc(item.message)}</li>`).join('')}</ul><button type="button" onclick="dismissSettingsUpdateNotice()">Dismiss</button></div>`);
   groups.querySelectorAll('[data-env-key]').forEach(input=>input.addEventListener('input',markSettingsDirty));
   groups.querySelectorAll('[data-env-key]').forEach(input=>input.addEventListener('change',markSettingsDirty));
   $('#saveSettings').disabled=!file.writable;
@@ -1541,41 +1545,43 @@ function renderEnvSettings(){
 function markSettingsDirty(){settingsState.editRevision++;settingsState.dirty=true;updateSettingsDirtyLabel();}
 function updateSettingsDirtyLabel(){const n=$('#settingsDirtyState');if(n)n.textContent=settingsState.dirty?'Unsaved changes':'No unsaved changes';}
 async function loadDatabaseStorage(){
-  const state=$('#databaseStorageState'),detail=$('#databaseStorageDetail'),input=$('#databaseStoragePath');
+  const state=$('#databaseStorageState'),detail=$('#databaseStorageDetail'),input=$('#databaseStoragePath'),button=$('#moveDatabaseStorage');
   if(state)state.textContent='Loading…';
   try{
-    const d=await api('/api/admin/storage/database');databaseStorageState=d;
+    const d=await apiV1().getDatabaseStorage();databaseStorageState=d;
     if(input&&!input.matches(':focus'))input.value=d.active_dir||'';
+    if(button)button.disabled=!d.move_available;
     const pending=d.pending_relocation;
     if(state)state.textContent=`${fmtBytes(d.bytes||0)} · ${d.active_dir||'unknown'}`;
     if(detail){
-      if(pending&&pending.target_dir&&pending.activated_in_process)detail.textContent=`Using ${pending.target_dir} now. The old DB files are kept as a safety copy until the next redeploy verifies this location again.`;
+      if(!d.move_available)detail.textContent=d.move_note||'Moving the databases is not available in this version.';
+      else if(pending&&pending.target_dir&&pending.activated_in_process)detail.textContent=`Using ${pending.target_dir} now. The old DB files are kept as a safety copy until the next redeploy verifies this location again.`;
       else if(pending&&pending.target_dir)detail.textContent=`Move staging to ${pending.target_dir}. The current DB remains authoritative until the final verified cut-over finishes.`;
       else detail.textContent='Enter an absolute writable path mounted into this container. AutoSourcarr copies, verifies and switches both DBs live without creating a fresh database.';
     }
   }catch(e){if(state)state.textContent='Unavailable';if(detail)detail.textContent=e.message;}
 }
 async function moveDatabaseStorage(){
-  const input=$('#databaseStoragePath'),button=$('#moveDatabaseStorage');const path=String(input?.value||'').trim();
-  if(!path){toast('Enter a database storage path');return;}
-  if(!path.startsWith('/')){toast('Database storage must be an absolute container path');return;}
-  if(!confirm(`Move both AutoSourcarr databases to ${path}?\n\nAutoSourcarr will stage a live backup, briefly quiesce DB writes for the final sync, verify both copies, then switch to the new location. The old files remain as a safety copy until the next redeploy verifies the new DBs again.`))return;
-  if(button)button.disabled=true;
-  try{
-    const r=await api('/api/admin/storage/database/move',{method:'POST',timeoutMs:120000,body:JSON.stringify({path})});
-    toast(r.message||'Database moved and switched live');
-    await Promise.allSettled([loadDatabaseStorage(),loadEnvSettings()]);
-  }catch(e){toast('Database move failed: '+e.message);}
-  finally{if(button)button.disabled=false;}
+  // The move (copy, verify, switch) arrives with the new data layer; until then the server says why.
+  if(!databaseStorageState?.move_available){toast(databaseStorageState?.move_note||'Moving the databases is not available in this version.');return;}
+}
+// The Settings page reads and saves config.json through /api/v1/settings. The response is shown in
+// the page's existing file/group layout: one "file" (config.json) with the schema's groups.
+function settingsFromApi(view){
+  const kind=item=>item.secret?'password':item.type==='boolean'?'boolean':item.type==='integer'||item.type==='number'?item.type:item.type==='url'?'url':'text';
+  const note=item=>[item.description,item.overridden_by_environment?'Set by a Compose variable, which wins: a change here has no effect until that variable is removed.':'',item.secret?(item.is_set?'A value is saved; leave empty to keep it.':'Not set.'):''].filter(Boolean).join(' ');
+  return {files:[{id:'config',title:'config.json',path:'config.json',exists:!!view.config_file_exists,writable:true,revision:view.revision,
+    groups:(view.groups||[]).map(group=>({name:group.name,items:group.items.map(item=>({key:item.key,label:item.label,description:note(item),kind:kind(item),value:item.secret?'':(item.value??''),secret:item.secret,overridden:item.overridden_by_environment}))}))}]};
 }
 function loadEnvSettings({force=false}={}){
   if(settingsState.loadPromise)return settingsState.loadPromise;
   if(settingsState.dirty&&!force)return Promise.resolve(settingsState.data);
   const revision=settingsState.editRevision;
   const loading=(async()=>{
-    const data=await api('/api/admin/settings/env');
+    const [view,notice]=await Promise.all([apiV1().getSettings(),apiV1().getUpdateNotice().catch(()=>null)]);
     if(settingsState.editRevision!==revision)return settingsState.data;
-    settingsState.data=data;
+    const data=settingsFromApi(view);
+    settingsState.data=data;settingsState.notice=notice?.present?notice.notice:null;
     if(!data.files?.some(f=>f.id===settingsState.activeFile))settingsState.activeFile=data.files?.[0]?.id||'autosourcarr';
     settingsState.dirty=false;renderEnvSettings();loadDatabaseStorage().catch(()=>{});return data;
   })();
@@ -1587,19 +1593,29 @@ async function saveEnvSettings(){
   const revision=settingsState.editRevision;
   const file=settingsFile(); if(!file)return;
   if(!file.writable){toast('Settings file is not writable inside the AutoSourcarr container');return;}
+  // Only changed values are sent; an empty secret field keeps the saved secret.
+  const saved=new Map((file.groups||[]).flatMap(group=>group.items).map(item=>[item.key,item]));
   const values={};
-  $('#settingsGroups').querySelectorAll('[data-env-key]').forEach(input=>values[input.dataset.envKey]=String(input.value??''));
+  $('#settingsGroups').querySelectorAll('[data-env-key]').forEach(input=>{
+    const key=input.dataset.envKey,item=saved.get(key),value=String(input.value??'');
+    if(item?.secret&&value==='')return;
+    if(item&&!item.secret&&String(item.value??'')===value)return;
+    values[key]=value;
+  });
   settingsState.saving=true;
   const buttons=[$('#saveSettings'),$('#saveSettingsBottom')];buttons.forEach(b=>{if(b)b.disabled=true;});
   try{
-    const r=await api(`/api/admin/settings/env/${encodeURIComponent(file.id)}`,{method:'PUT',body:JSON.stringify({values,revision:file.revision})});
+    const r=await apiV1().saveSettings({revision:file.revision,values});
     if(settingsState.editRevision!==revision){file.revision=r.revision;toast('Saved. Newer edits remain unsaved.');return;}
     settingsState.dirty=false;
-    toast('Settings saved. Restart/redeploy the TrueNAS Custom App to apply them.');
+    toast(r.message||'Settings saved. Restart AutoSourcarr to apply them.');
     await loadEnvSettings();
-    $('#settingsFileStatus').textContent=`${r.path} · saved · restart/redeploy required`;
+    const status=$('#settingsFileStatus');if(status)status.textContent=`config.json · saved${r.restart_required?' · restart required':''}`;
   }catch(e){toast('Unable to save settings: '+e.message);}
   finally{settingsState.saving=false;const f=settingsFile();buttons.forEach(b=>{if(b)b.disabled=!(f?.writable);});updateSettingsDirtyLabel();}
+}
+async function dismissSettingsUpdateNotice(){
+  try{await apiV1().dismissUpdateNotice();settingsState.notice=null;renderEnvSettings();}catch(e){toast(e.message);}
 }
 window.goDuplicates=async(entryId=null)=>{globalThis.AutoSourcarrMatchingReview?.showCandidates();switchTab('duplicates',{load:false});await loadDuplicates(entryId);};
 window.goUnavailableSources=()=>{switchTab('sources');if($('#sourceAvailability')){$('#sourceAvailability').value='unavailable';renderSources();}};
