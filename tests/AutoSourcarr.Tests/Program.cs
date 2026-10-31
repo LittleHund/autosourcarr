@@ -30,6 +30,7 @@ AutoSourcarr.Tests.Sources.SourceHostIntegrationTests.Register(suite);
 AutoSourcarr.Tests.Sources.SourceBrowserPreferencesTests.Register(suite);
 AutoSourcarr.Tests.Api.SourceRuntimeApiTests.Register(suite);
 AutoSourcarr.Tests.Api.AccessControlTests.Register(suite);
+AutoSourcarr.Tests.Repair.ApkInspectionTests.Register(suite);
 SchemaStampTests.Register(suite);
 DatabaseBlobTests.Register(suite);
 RepairIsolationTests.Register(suite);
