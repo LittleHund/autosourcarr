@@ -152,11 +152,13 @@ class HostApi(
                 val manga = mangaFromJson(body)
                 val withChapters = body["chapters"]?.jsonPrimitive?.booleanOrNull ?: true
                 val source = entry.source
-                val details = runBlocking { source.getMangaDetails(manga) }.also { it.url = manga.url }
-                val chapters = if (withChapters) runBlocking { source.getChapterList(details) } else emptyList()
+                // tachiyomix 1.6 combined call; CatalogueSource bridges older extensions to their fetch* methods.
+                val update = runBlocking { source.getMangaUpdate(manga, emptyList(), fetchDetails = true, fetchChapters = withChapters) }
+                val details = update.manga.also { it.url = manga.url }
+                val chapters: List<SChapter> = update.chapters
                 reply(exchange, 200, buildJsonObject {
                     put("manga", mangaJson(details))
-                    put("chapters", JsonArray(chapters.mapIndexed { index, chapter -> chapterJson(chapter, index) }))
+                    put("chapters", JsonArray(chapters.mapIndexed { index: Int, chapter: SChapter -> chapterJson(chapter, index) }))
                 })
             }
             method == "POST" && rest == listOf("pages") -> {
