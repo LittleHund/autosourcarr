@@ -193,7 +193,7 @@ grep -q 'CREATE TABLE IF NOT EXISTS manual_title_scopes' autosourcarr/app/db.py
   grep -q 'data-source-subtab="installed"[^>]*>Installed' autosourcarr/app/static/index.html
   grep -q 'data-source-subtab="manage"[^>]*>Discover' autosourcarr/app/static/index.html
   grep -q 'id="sourceManagePanel"' autosourcarr/app/static/index.html
-  grep -q '/api/admin/source-extensions/update-all' autosourcarr/app/static/app.js
+  grep -q '/api/v1/source-extensions/update-all' autosourcarr/app/static/app.js
   grep -q 'syncSourceRowsToMatrices' autosourcarr/app/static/app.js
   grep -q 'async def update_all_extensions' autosourcarr/app/suwayomi.py
   grep -q '@app.post("/api/admin/source-extensions/update-all"' autosourcarr/app/main.py

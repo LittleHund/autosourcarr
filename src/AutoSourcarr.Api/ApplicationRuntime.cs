@@ -232,6 +232,12 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     Client = owner._source.Client, AdminLock = owner._admin,
                     RecordError = error => owner.Errors.Record("Source orphans", error.Message, "source-orphans|" + error.GetType().Name)
                 },
+                SourceRepair = new SourceRepairServices
+                {
+                    Domain = new AutoSourcarr.Core.Repair.Migration.DomainRepair(Path.Combine(owner._dataDirectory!, "source-maintenance"),
+                        owner._source.Client, owner._admin, owner._publicFetcher),
+                    RecordError = error => owner.Errors.Record("Source repair", error.Message, "source-repair|" + error.GetType().Name)
+                },
                 Sources = new SourceServices
                 {
                     Configuration = owner._sourceConfiguration!, Client = owner._source.Client, Preferences = owner._sourcePreferences!, AdminLock = owner._admin

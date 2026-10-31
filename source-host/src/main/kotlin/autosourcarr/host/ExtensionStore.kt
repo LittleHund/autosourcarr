@@ -157,6 +157,61 @@ class ExtensionStore(
         return result
     }
 
+    /** The jar an installed package runs from (the dex2jar output plus the APK's assets), or null. */
+    fun jarFile(pkg: String): File? {
+        val extension = synchronized(gate) { installed[pkg] } ?: return null
+        return File(root, extension.jar).takeIf { it.isFile }
+    }
+
+    /**
+     * Replaces the jar of an installed package with a repaired or restored jar (AutoSourcarr source repair). The
+     * installed.json entry keeps the APK's metadata (name, version, class, content warning, signature); only the jar
+     * file changes. The new jar is <pkg>-v<version>-<sha256 prefix>.jar, so it never shares a path (and class loader)
+     * with the jar it replaces. When the new jar does not load, the previous jar is loaded again and the error thrown.
+     */
+    fun installJar(
+        pkg: String,
+        upload: File,
+    ): InstalledExtension {
+        val previous = synchronized(gate) { installed[pkg] } ?: throw NoSuchElementException("$pkg is not installed")
+        val hasMain =
+            try {
+                java.util.zip.ZipFile(upload).use { zip -> zip.getEntry(previous.className.replace('.', '/') + ".class") != null }
+            } catch (error: java.util.zip.ZipException) {
+                throw IllegalArgumentException("The upload is not a jar: ${error.message}")
+            }
+        if (!hasMain) throw IllegalArgumentException("The jar does not contain the source class ${previous.className}")
+        val jarName = "$pkg-v${previous.versionName}-${sha256(upload).take(12)}.jar"
+        if (jarName == previous.jar && previous.loadError == null) return previous
+        val jar = File(root, jarName)
+        val temporary = File(root, "$jarName.tmp")
+        upload.copyTo(temporary, overwrite = true)
+        unload(previous)
+        if (jar.exists()) jar.delete()
+        if (!temporary.renameTo(jar)) {
+            temporary.delete()
+            runCatching { load(pkg, File(root, previous.jar).toPath(), previous.className, previous.contentWarning) }
+            throw IllegalStateException("The jar could not be placed in the extensions folder")
+        }
+        val ids =
+            try {
+                load(pkg, jar.toPath(), previous.className, previous.contentWarning)
+            } catch (error: Throwable) {
+                PackageTools.jarLoaderMap.remove(jar.toPath().absolutePathString())?.close()
+                jar.delete()
+                runCatching { load(pkg, File(root, previous.jar).toPath(), previous.className, previous.contentWarning) }
+                    .onFailure { logger.warn(it) { "The previous jar of $pkg could not be loaded again" } }
+                throw error
+            }
+        val result = previous.copy(jar = jarName, sourceIds = ids.map { it.toString() }, loadError = null)
+        synchronized(gate) {
+            installed[pkg] = result
+            save()
+        }
+        if (previous.jar != jarName) File(root, previous.jar).delete()
+        return result
+    }
+
     /** Rebuilds the sources of one package (after a preference change). */
     fun reload(pkg: String) {
         val extension = synchronized(gate) { installed[pkg] } ?: return

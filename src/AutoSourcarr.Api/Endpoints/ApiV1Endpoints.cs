@@ -155,6 +155,8 @@ public sealed class ApiV1Services
     public SourceServices? Sources { get; init; }
     /// <summary>Orphan sources and the source-maintenance inventory routes (phase 6d); null answers 503.</summary>
     public SourceInventoryServices? SourceInventory { get; init; }
+    /// <summary>Domain-migration repair and rollback (phase 6e); null answers 503.</summary>
+    public SourceRepairServices? SourceRepair { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -519,6 +521,7 @@ public static class ApiV1Endpoints
         AccountsV1Endpoints.Map(endpoints, group, services, json);
         SourceV1Endpoints.Map(group, services, json);
         SourceInventoryV1Endpoints.Map(group, services, json);
+        SourceRepairV1Endpoints.Map(group, services, json, services.SourceRepair);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

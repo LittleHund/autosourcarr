@@ -171,6 +171,27 @@ class HostApi(
                     file.delete()
                 }
             }
+            // AutoSourcarr source repair: the installed jar (last working code) and a repaired or restored jar for it.
+            method == "GET" && parts.size == 3 && parts[0] == "extensions" && parts[2] == "jar" -> {
+                val jar = store.jarFile(parts[1]) ?: throw NoSuchElementException("${parts[1]} is not installed")
+                val bytes = jar.readBytes()
+                exchange.responseHeaders.set("Content-Type", "application/java-archive")
+                exchange.responseHeaders.set("Content-Disposition", "attachment; filename=\"${jar.name}\"")
+                exchange.responseHeaders.set("Cache-Control", "no-store")
+                exchange.sendResponseHeaders(200, bytes.size.toLong())
+                exchange.responseBody.write(bytes)
+            }
+            method == "POST" && parts == listOf("extensions", "install-jar") -> {
+                val pkg = query["pkg"]?.takeIf { it.isNotBlank() } ?: throw IllegalArgumentException("Send pkg")
+                val file = java.io.File.createTempFile("upload-", ".jar", HostConfig.extensionsDir)
+                try {
+                    file.outputStream().use { output -> limited(exchange, 64L * 1024 * 1024).copyTo(output) }
+                    val installed = store.installJar(pkg, file)
+                    reply(exchange, 200, extensionJson(installed.pkg))
+                } finally {
+                    file.delete()
+                }
+            }
             // Sources
             method == "GET" && parts == listOf("sources") -> reply(exchange, 200, JsonArray(SourceRegistry.all().map { sourceJson(it) }))
             parts.size >= 2 && parts[0] == "sources" -> sourceRoute(exchange, method, parseSourceId(parts[1]), parts.drop(2), query)
