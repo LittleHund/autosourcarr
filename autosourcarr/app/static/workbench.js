@@ -377,24 +377,24 @@ async function applySavedRepositories(){
 }
 async function loadRepositories(){
   if(repositoryState.loading)return;repositoryState.loading=true;repositoryMessage('Loading saved repositories…');
-  try{const data=await api('/api/admin/source-repositories',{timeoutMs:6000,noMutationRefresh:true});repositoryState={...repositoryState,...data,loaded:true};renderRepositories();repositoryMessage(repositoryApplyMessage());}
+  try{const data=await api('/api/v1/source-repositories',{timeoutMs:6000,noMutationRefresh:true});repositoryState={...repositoryState,...data,loaded:true};renderRepositories();repositoryMessage(repositoryApplyMessage());}
   catch(e){repositoryMessage('Unable to load repositories: '+e.message);}
   finally{repositoryState.loading=false;}
 }
 async function previewSourceRepository(event){
   event.preventDefault();const button=document.querySelector('#previewRepository'),url=document.querySelector('#repositoryUrl').value.trim();button.disabled=true;repositoryState.preview=null;const panel=document.querySelector('#repositoryPreview');panel.hidden=true;
-  try{const data=await api('/api/admin/source-repositories/preview',{method:'POST',body:JSON.stringify({url}),timeoutMs:12000,noMutationRefresh:true});if(document.querySelector('#repositoryUrl').value.trim()!==url)return;repositoryState.preview=data;panel.innerHTML=`<h3>${esc(data.name||'Extension repository')}</h3><p>${esc(data.format)} · ${data.extension_count==null?'Extension count checked by the source host':Number(data.extension_count)+' extensions'}</p><p class="muted">Recognized manifest. Source compatibility is checked during installation.</p><p class="muted">Source code: ${esc(data.source_repository||'No unambiguous declaration found')}. ${esc(data.source_code_status||'Provide the original project when required.')}</p><button class="primaryAction" id="confirmAddRepository">Add repository</button>`;panel.hidden=false;document.querySelector('#confirmAddRepository').onclick=addSourceRepository;}
+  try{const data=await api('/api/v1/source-repositories/preview',{method:'POST',body:JSON.stringify({url}),timeoutMs:12000,noMutationRefresh:true});if(document.querySelector('#repositoryUrl').value.trim()!==url)return;repositoryState.preview=data;panel.innerHTML=`<h3>${esc(data.name||'Extension repository')}</h3><p>${esc(data.format)} · ${data.extension_count==null?'Extension count checked by the source host':Number(data.extension_count)+' extensions'}</p><p class="muted">Recognized manifest. Source compatibility is checked during installation.</p><p class="muted">Source code: ${esc(data.source_repository||'No unambiguous declaration found')}. ${esc(data.source_code_status||'Provide the original project when required.')}</p><button class="primaryAction" id="confirmAddRepository">Add repository</button>`;panel.hidden=false;document.querySelector('#confirmAddRepository').onclick=addSourceRepository;}
   catch(e){repositoryMessage('Repository preview failed: '+e.message);}
   finally{button.disabled=false;}
 }
 async function addSourceRepository(){
   const preview=repositoryState.preview;if(!preview)return;const b=document.querySelector('#confirmAddRepository');b.disabled=true;
-  try{const data=await api('/api/admin/source-repositories',{method:'POST',body:JSON.stringify({url:preview.url,revision:repositoryState.revision}),timeoutMs:8000,noMutationRefresh:true});repositoryState={...repositoryState,...data,preview:null};renderRepositories();document.querySelector('#repositoryForm').hidden=true;repositoryMessage('Repository saved. '+repositoryApplyMessage());}
+  try{const data=await api('/api/v1/source-repositories',{method:'POST',body:JSON.stringify({url:preview.url,revision:repositoryState.revision}),timeoutMs:8000,noMutationRefresh:true});repositoryState={...repositoryState,...data,preview:null};renderRepositories();document.querySelector('#repositoryForm').hidden=true;repositoryMessage('Repository saved. '+repositoryApplyMessage());}
   catch(e){repositoryMessage('Repository was not saved: '+e.message+' Refresh the list before retrying.');b.disabled=false;}
 }
 async function removeSourceRepository(index,button){
   const repo=repositoryState.repositories[index];if(!repo||!confirm('Remove this repository from the source engine configuration? Installed extensions are retained.'))return;button.disabled=true;
-  try{const data=await api('/api/admin/source-repositories',{method:'DELETE',body:JSON.stringify({url:repo.url,revision:repositoryState.revision}),timeoutMs:8000,noMutationRefresh:true});repositoryState={...repositoryState,...data};renderRepositories();repositoryMessage('Repository removed from configuration. '+repositoryApplyMessage());}
+  try{const data=await api('/api/v1/source-repositories',{method:'DELETE',body:JSON.stringify({url:repo.url,revision:repositoryState.revision}),timeoutMs:8000,noMutationRefresh:true});repositoryState={...repositoryState,...data};renderRepositories();repositoryMessage('Repository removed from configuration. '+repositoryApplyMessage());}
   catch(e){repositoryMessage('Repository was not removed: '+e.message);button.disabled=false;}
 }
 const diagnosticInertState=new Map();

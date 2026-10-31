@@ -42,6 +42,12 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private SourceEngineController? _source;
     private SourceAttention? _attention;
     private AutoSourcarr.Api.Security.AccessControlServices? _access;
+    private AutoSourcarr.Core.Sources.Repositories.SourceRepositoryStore? _repositories;
+    private AutoSourcarr.Core.Sources.Repositories.SourceRepositoryPreview? _repositoryPreview;
+    private AutoSourcarr.Core.Repair.PublicSourceFetcher? _publicFetcher;
+    private SourceHealthCoordinator? _health;
+    private Task? _healthMonitor;
+    private readonly CancellationTokenSource _healthStop = new();
     internal AutoSourcarr.Api.Security.AccessControlServices? Access => _access;
     private CatalogueRuntime? _catalogue;
     private string? _dataDirectory;
@@ -195,6 +201,13 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
                 owner._dataDirectory!, () => owner.Settings, owner.Io, owner._source.Client, owner.Tasks, owner.Lanes, owner.Logs, cancellationToken).ConfigureAwait(false);
             owner._access = OpenAccounts(owner, startup);
+            owner._repositories = new(new CanonicalConfiguration(startup.ConfigurationRoot));
+            owner._publicFetcher = new();
+            owner._repositoryPreview = new(owner._publicFetcher);
+            owner._health = new SourceHealthCoordinator(new SourceHealthStore(owner.Database, owner.Privacy), owner._source.Client, owner.Io, owner.Lanes,
+                owner.Tasks, new NoRepairObservations(), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy);
+            owner._healthMonitor = Task.Run(() => owner._health.RunMonitorAsync(error => owner.Errors.Record("Source health", error.Message, "source-health-monitor"),
+                owner._healthStop.Token));
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
@@ -264,6 +277,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             endpoints.MapEngineCompatibility(_source!.CapabilityService, _mainCapabilities, () => Settings, _admin);
             Catalogue.MapEndpoints(endpoints, Io, () => Settings, _admin);
             endpoints.MapApiV1(_apiV1!);
+            // Phase 6: repositories and source health under /api/v1 (same handlers as the stage-26 /api/admin wires).
+            endpoints.MapSourceRepositories(_repositories!, _repositoryPreview!, Io, () => Settings, "/api/v1/source-repositories");
+            endpoints.MapSourceHealth(_health!, () => Settings, _admin, "/api/v1/source-health");
         });
     }
 
@@ -457,6 +473,11 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
+        await Attempt("Source health monitor stop", () => _healthStop.CancelAsync()).ConfigureAwait(false);
+        if (_healthMonitor is not null)
+            await Attempt("Source health monitor", async () => { try { await _healthMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
+        if (_health is not null) await Attempt("Source health", () => _health.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_publicFetcher is not null) await Attempt("Public fetcher", () => _publicFetcher.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_main is not null) await Attempt("Main transport", () => _main.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_source is not null) await Attempt("Source lifetime", () => _source.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -554,4 +575,11 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             if (errors.Count > 0) throw new AggregateException("Instance lock cleanup failed.", errors);
         }
     }
+}
+
+/// <summary>Repair observations for source health arrive with the repair workflow (phase 6e); until then none.</summary>
+internal sealed class NoRepairObservations : IRepairHealthObservations
+{
+    public Task<(System.Text.Json.Nodes.JsonArray Jobs, System.Text.Json.Nodes.JsonObject Operation, System.Text.Json.Nodes.JsonObject Histories)> ReadAsync(CancellationToken cancellationToken) =>
+        Task.FromResult((new System.Text.Json.Nodes.JsonArray(), new System.Text.Json.Nodes.JsonObject(), new System.Text.Json.Nodes.JsonObject()));
 }
