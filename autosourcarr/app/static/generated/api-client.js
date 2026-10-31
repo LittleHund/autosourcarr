@@ -5,6 +5,21 @@
   'use strict';
 
   /**
+   * @typedef {Object} ConfigView
+   * @property {string} source_suwayomi_url
+   * @property {string} autosourcarr_public_url
+   * @property {string} main_suwayomi_url
+   * @property {number} auto_match_threshold
+   * @property {number} federated_source_timeout
+   * @property {number} federated_overall_timeout
+   * @property {Array<string>} source_languages
+   * @property {boolean} metadata_identity_enabled
+   * @property {Array<string>} metadata_identity_providers
+   * @property {boolean} metadata_identity_include_adult
+   * @property {boolean} admin_token_required
+   */
+
+  /**
    * @typedef {Object} ConversionSummary
    * @property {boolean} converted
    * @property {(string|null)} converted_at
@@ -18,9 +33,113 @@
    */
 
   /**
+   * @typedef {Object} DatabaseStorageView
+   * @property {string} active_dir
+   * @property {(string|null)} configured_dir
+   * @property {number} catalog_bytes
+   * @property {number} origins_bytes
+   * @property {number} bytes
+   * @property {boolean} move_available
+   * @property {string} move_note
+   * @property {(Object<string, *>|null)} pending_relocation
+   */
+
+  /**
+   * @typedef {Object} JsonObject
+   */
+
+  /**
+   * @typedef {Object} ProblemResponse
+   * @property {string} detail
+   */
+
+  /**
+   * @typedef {Object} ReaderPreflightRequest
+   * @property {string} revision
+   * @property {(Object<string, *>|null)} changes
+   */
+
+  /**
+   * @typedef {Object} ReaderPreflightResponse
+   * @property {string} revision
+   * @property {{ready: boolean, exit_code: number, errors: Array<{key: string, code: number, message: string}>, warnings: Array<items>}} reader_build
+   */
+
+  /**
+   * @typedef {Object} RestartResponse
+   * @property {boolean} restarting
+   */
+
+  /**
+   * @typedef {Object} RuntimeMetricsSnapshot
+   * @property {Array<{phase: string, count: number, samples: number, p50_ms: (number|null), p95_ms: (number|null)}>} phases
+   * @property {{active: number, peak_active: number, encoded_bytes: number, peak_encoded_bytes: number, active_rgba_bytes: number, peak_rgba_bytes: number}} decode
+   * @property {number} samples_per_phase
+   * @property {string} memory_measure
+   */
+
+  /**
    * @typedef {Object} SettingsOverview
-   * @property {Array<{key: string, value: (string|null), secret: boolean, is_set: boolean}>} items
+   * @property {string} revision
    * @property {boolean} config_file_exists
+   * @property {Array<{name: string, items: Array<{key: string, label: string, description: string, group: string, type: string, value: (string|null), secret: boolean, is_set: boolean, default: (string|null), compose_variable: string, compose_recommended: boolean, overridden_by_environment: boolean, wizard_step: (string|null), advanced: boolean, minimum: (number|null), maximum: (number|null), choices: Array<{value: string, label: string}>}>}>} groups
+   */
+
+  /**
+   * @typedef {Object} SettingsSaveRequest
+   * @property {string} revision
+   * @property {Object<string, *>} values
+   */
+
+  /**
+   * @typedef {Object} SettingsSaveResponse
+   * @property {string} revision
+   * @property {Array<{section: string, key: string, kind: string, secret: boolean}>} changes
+   * @property {Array<string>} changed_keys
+   * @property {boolean} restart_required
+   * @property {Array<string>} overridden_by_environment
+   * @property {string} message
+   */
+
+  /**
+   * @typedef {Object} SettingsSchemaResponse
+   * @property {Array<{key: string, group: string, label: string, description: string, type: string, allowed_values: Array<string>, choices: Array<{value: string, label: string}>, default: (string|null), secret: boolean, compose_variable: string, compose_recommended: boolean, wizard_step: (string|null), advanced: boolean, minimum: (number|null), maximum: (number|null), allow_empty: boolean}>} settings
+   */
+
+  /**
+   * @typedef {Object} SetupFinishRequest
+   * @property {string} revision
+   * @property {string} transaction
+   * @property {(Object<string, *>|null)} changes
+   */
+
+  /**
+   * @typedef {Object} SetupFinishResponse
+   * @property {boolean} completed
+   * @property {Array<string>} changed
+   * @property {boolean} restart_required
+   * @property {string} transaction
+   * @property {{ready: boolean, exit_code: number, errors: Array<{key: string, code: number, message: string}>, warnings: Array<items>}} reader_build
+   * @property {boolean} can_restart
+   * @property {Array<{section: string, key: string, kind: string, secret: boolean}>} changes
+   */
+
+  /**
+   * @typedef {Object} SetupView
+   * @property {boolean} completed
+   * @property {string} revision
+   * @property {Array<Object<string, *>>} fields
+   * @property {(Object<string, *>|null)} cleanup
+   * @property {boolean} restart_required
+   * @property {boolean} integrated
+   * @property {boolean} can_restart
+   * @property {{ready: boolean, exit_code: number, errors: Array<{key: string, code: number, message: string}>, warnings: Array<items>}} reader_build
+   */
+
+  /**
+   * @typedef {Object} UpdateNoticeResponse
+   * @property {boolean} present
+   * @property {({from_version?: string, to_version?: string, created_at?: string, items?: Array<{key?: string, kind?: string, old_default?: (string|null), new_default?: (string|null), message?: string}>}|null)} notice
    */
 
   /** Thrown for any non-2xx answer; `status` and the parsed `body` (when JSON) are kept. */
@@ -55,7 +174,51 @@
     }
     return {
       /**
-       * Effective settings; secret values are hidden.
+       * Check draft reader addresses and key without saving them.
+       * POST /api/v1/setup/reader-preflight
+       * @param {ReaderPreflightRequest} body
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<ReaderPreflightResponse>}
+       */
+      checkSetupReader(body, signal) { return call('POST', '/api/v1/setup/reader-preflight', body, signal); },
+      /**
+       * Hide the update notice.
+       * POST /api/v1/settings/update-notice/dismiss
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<UpdateNoticeResponse>}
+       */
+      dismissUpdateNotice(signal) { return call('POST', '/api/v1/settings/update-notice/dismiss', undefined, signal); },
+      /**
+       * Save the wizard's changes to config.json in one step; a repeated request id returns the first result.
+       * POST /api/v1/setup/finish
+       * @param {SetupFinishRequest} body
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<SetupFinishResponse>}
+       */
+      finishSetup(body, signal) { return call('POST', '/api/v1/setup/finish', body, signal); },
+      /**
+       * The running values the UI needs to describe this instance.
+       * GET /api/v1/config
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<ConfigView>}
+       */
+      getConfig(signal) { return call('GET', '/api/v1/config', undefined, signal); },
+      /**
+       * Where the databases are and how large they are.
+       * GET /api/v1/storage/database
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<DatabaseStorageView>}
+       */
+      getDatabaseStorage(signal) { return call('GET', '/api/v1/storage/database', undefined, signal); },
+      /**
+       * Timing samples per work phase (no URLs, titles or keys).
+       * GET /api/v1/diagnostics/metrics
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<RuntimeMetricsSnapshot>}
+       */
+      getRuntimeMetrics(signal) { return call('GET', '/api/v1/diagnostics/metrics', undefined, signal); },
+      /**
+       * Effective settings grouped as on the Settings page; secret values are hidden.
        * GET /api/v1/settings
        * @param {AbortSignal} [signal]
        * @returns {Promise<SettingsOverview>}
@@ -68,6 +231,49 @@
        * @returns {Promise<ConversionSummary>}
        */
       getSettingsConversion(signal) { return call('GET', '/api/v1/settings/conversion', undefined, signal); },
+      /**
+       * The settings schema: name, type, default, description, secret, Compose variable and wizard step.
+       * GET /api/v1/settings/schema
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<SettingsSchemaResponse>}
+       */
+      getSettingsSchema(signal) { return call('GET', '/api/v1/settings/schema', undefined, signal); },
+      /**
+       * Setup wizard fields with the current values; secrets show only whether one is saved.
+       * GET /api/v1/setup
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<SetupView>}
+       */
+      getSetup(signal) { return call('GET', '/api/v1/setup', undefined, signal); },
+      /**
+       * Catalogue, chapter, source, cache and storage counts; refreshed at most every 15 seconds.
+       * GET /api/v1/status/stats
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<JsonObject>}
+       */
+      getStatusStats(signal) { return call('GET', '/api/v1/status/stats', undefined, signal); },
+      /**
+       * What the last update changed in your settings, until dismissed.
+       * GET /api/v1/settings/update-notice
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<UpdateNoticeResponse>}
+       */
+      getUpdateNotice(signal) { return call('GET', '/api/v1/settings/update-notice', undefined, signal); },
+      /**
+       * Restart the integrated image to apply saved settings.
+       * POST /api/v1/setup/restart
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<RestartResponse>}
+       */
+      restartAfterSetup(signal) { return call('POST', '/api/v1/setup/restart', undefined, signal); },
+      /**
+       * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
+       * PUT /api/v1/settings
+       * @param {SettingsSaveRequest} body
+       * @param {AbortSignal} [signal]
+       * @returns {Promise<SettingsSaveResponse>}
+       */
+      saveSettings(body, signal) { return call('PUT', '/api/v1/settings', body, signal); },
     };
   }
 

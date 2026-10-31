@@ -5,10 +5,52 @@
     "version": "1"
   },
   "paths": {
+    "/api/v1/config": {
+      "get": {
+        "operationId": "getConfig",
+        "summary": "The running values the UI needs to describe this instance.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/diagnostics/metrics": {
+      "get": {
+        "operationId": "getRuntimeMetrics",
+        "summary": "Timing samples per work phase (no URLs, titles or keys).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeMetricsSnapshot"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/settings": {
       "get": {
         "operationId": "getSettings",
-        "summary": "Effective settings; secret values are hidden.",
+        "summary": "Effective settings grouped as on the Settings page; secret values are hidden.",
         "responses": {
           "200": {
             "description": "Success",
@@ -16,6 +58,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SettingsOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      },
+      "put": {
+        "operationId": "saveSettings",
+        "summary": "Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsSaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
                 }
               }
             }
@@ -46,10 +137,326 @@
           }
         }
       }
+    },
+    "/api/v1/settings/schema": {
+      "get": {
+        "operationId": "getSettingsSchema",
+        "summary": "The settings schema: name, type, default, description, secret, Compose variable and wizard step.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSchemaResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/settings/update-notice": {
+      "get": {
+        "operationId": "getUpdateNotice",
+        "summary": "What the last update changed in your settings, until dismissed.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateNoticeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/settings/update-notice/dismiss": {
+      "post": {
+        "operationId": "dismissUpdateNotice",
+        "summary": "Hide the update notice.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateNoticeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/setup": {
+      "get": {
+        "operationId": "getSetup",
+        "summary": "Setup wizard fields with the current values; secrets show only whether one is saved.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/setup/finish": {
+      "post": {
+        "operationId": "finishSetup",
+        "summary": "Save the wizard\u0027s changes to config.json in one step; a repeated request id returns the first result.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupFinishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupFinishResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/setup/reader-preflight": {
+      "post": {
+        "operationId": "checkSetupReader",
+        "summary": "Check draft reader addresses and key without saving them.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReaderPreflightRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReaderPreflightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/setup/restart": {
+      "post": {
+        "operationId": "restartAfterSetup",
+        "summary": "Restart the integrated image to apply saved settings.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestartResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/status/stats": {
+      "get": {
+        "operationId": "getStatusStats",
+        "summary": "Catalogue, chapter, source, cache and storage counts; refreshed at most every 15 seconds.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/storage/database": {
+      "get": {
+        "operationId": "getDatabaseStorage",
+        "summary": "Where the databases are and how large they are.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseStorageView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ConfigView": {
+        "type": "object",
+        "properties": {
+          "source_suwayomi_url": {
+            "type": "string"
+          },
+          "autosourcarr_public_url": {
+            "type": "string"
+          },
+          "main_suwayomi_url": {
+            "type": "string"
+          },
+          "auto_match_threshold": {
+            "type": "number"
+          },
+          "federated_source_timeout": {
+            "type": "number"
+          },
+          "federated_overall_timeout": {
+            "type": "number"
+          },
+          "source_languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata_identity_enabled": {
+            "type": "boolean"
+          },
+          "metadata_identity_providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata_identity_include_adult": {
+            "type": "boolean"
+          },
+          "admin_token_required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source_suwayomi_url",
+          "autosourcarr_public_url",
+          "main_suwayomi_url",
+          "auto_match_threshold",
+          "federated_source_timeout",
+          "federated_overall_timeout",
+          "source_languages",
+          "metadata_identity_enabled",
+          "metadata_identity_providers",
+          "metadata_identity_include_adult",
+          "admin_token_required"
+        ]
+      },
       "ConversionSummary": {
         "type": "object",
         "properties": {
@@ -117,10 +524,453 @@
           "keys_without_value"
         ]
       },
+      "DatabaseStorageView": {
+        "type": "object",
+        "properties": {
+          "active_dir": {
+            "type": "string"
+          },
+          "configured_dir": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "catalog_bytes": {
+            "type": "integer"
+          },
+          "origins_bytes": {
+            "type": "integer"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "move_available": {
+            "type": "boolean"
+          },
+          "move_note": {
+            "type": "string"
+          },
+          "pending_relocation": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "active_dir",
+          "configured_dir",
+          "catalog_bytes",
+          "origins_bytes",
+          "bytes",
+          "move_available",
+          "move_note",
+          "pending_relocation"
+        ]
+      },
+      "JsonObject": {
+        "type": "object"
+      },
+      "ProblemResponse": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail"
+        ]
+      },
+      "ReaderPreflightRequest": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string"
+          },
+          "changes": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "revision",
+          "changes"
+        ]
+      },
+      "ReaderPreflightResponse": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string"
+          },
+          "reader_build": {
+            "type": "object",
+            "properties": {
+              "ready": {
+                "type": "boolean"
+              },
+              "exit_code": {
+                "type": "integer"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "code",
+                    "message"
+                  ]
+                }
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/properties/reader_build/properties/errors/items"
+                }
+              }
+            },
+            "required": [
+              "ready",
+              "exit_code",
+              "errors",
+              "warnings"
+            ]
+          }
+        },
+        "required": [
+          "revision",
+          "reader_build"
+        ]
+      },
+      "RestartResponse": {
+        "type": "object",
+        "properties": {
+          "restarting": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "restarting"
+        ]
+      },
+      "RuntimeMetricsSnapshot": {
+        "type": "object",
+        "properties": {
+          "phases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "phase": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "samples": {
+                  "type": "integer"
+                },
+                "p50_ms": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "p95_ms": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "phase",
+                "count",
+                "samples",
+                "p50_ms",
+                "p95_ms"
+              ]
+            }
+          },
+          "decode": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "integer"
+              },
+              "peak_active": {
+                "type": "integer"
+              },
+              "encoded_bytes": {
+                "type": "integer"
+              },
+              "peak_encoded_bytes": {
+                "type": "integer"
+              },
+              "active_rgba_bytes": {
+                "type": "integer"
+              },
+              "peak_rgba_bytes": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "active",
+              "peak_active",
+              "encoded_bytes",
+              "peak_encoded_bytes",
+              "active_rgba_bytes",
+              "peak_rgba_bytes"
+            ]
+          },
+          "samples_per_phase": {
+            "type": "integer"
+          },
+          "memory_measure": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "phases",
+          "decode",
+          "samples_per_phase",
+          "memory_measure"
+        ]
+      },
       "SettingsOverview": {
         "type": "object",
         "properties": {
-          "items": {
+          "revision": {
+            "type": "string"
+          },
+          "config_file_exists": {
+            "type": "boolean"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "group": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "secret": {
+                        "type": "boolean"
+                      },
+                      "is_set": {
+                        "type": "boolean"
+                      },
+                      "default": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "compose_variable": {
+                        "type": "string"
+                      },
+                      "compose_recommended": {
+                        "type": "boolean"
+                      },
+                      "overridden_by_environment": {
+                        "type": "boolean"
+                      },
+                      "wizard_step": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "advanced": {
+                        "type": "boolean"
+                      },
+                      "minimum": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "maximum": {
+                        "type": [
+                          "number",
+                          "null"
+                        ]
+                      },
+                      "choices": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "label"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "label",
+                      "description",
+                      "group",
+                      "type",
+                      "value",
+                      "secret",
+                      "is_set",
+                      "default",
+                      "compose_variable",
+                      "compose_recommended",
+                      "overridden_by_environment",
+                      "wizard_step",
+                      "advanced",
+                      "minimum",
+                      "maximum",
+                      "choices"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "items"
+              ]
+            }
+          }
+        },
+        "required": [
+          "revision",
+          "config_file_exists",
+          "groups"
+        ]
+      },
+      "SettingsSaveRequest": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "revision",
+          "values"
+        ]
+      },
+      "SettingsSaveResponse": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "section": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "secret": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "section",
+                "key",
+                "kind",
+                "secret"
+              ]
+            }
+          },
+          "changed_keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "restart_required": {
+            "type": "boolean"
+          },
+          "overridden_by_environment": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision",
+          "changes",
+          "changed_keys",
+          "restart_required",
+          "overridden_by_environment",
+          "message"
+        ]
+      },
+      "SettingsSchemaResponse": {
+        "type": "object",
+        "properties": {
+          "settings": {
             "type": "array",
             "items": {
               "type": "object",
@@ -128,7 +978,43 @@
                 "key": {
                   "type": "string"
                 },
-                "value": {
+                "group": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "allowed_values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "choices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "label"
+                    ]
+                  }
+                },
+                "default": {
                   "type": [
                     "string",
                     "null"
@@ -137,25 +1023,330 @@
                 "secret": {
                   "type": "boolean"
                 },
-                "is_set": {
+                "compose_variable": {
+                  "type": "string"
+                },
+                "compose_recommended": {
+                  "type": "boolean"
+                },
+                "wizard_step": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "advanced": {
+                  "type": "boolean"
+                },
+                "minimum": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "maximum": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "allow_empty": {
                   "type": "boolean"
                 }
               },
               "required": [
                 "key",
-                "value",
+                "group",
+                "label",
+                "description",
+                "type",
+                "allowed_values",
+                "choices",
+                "default",
                 "secret",
-                "is_set"
+                "compose_variable",
+                "compose_recommended",
+                "wizard_step",
+                "advanced",
+                "minimum",
+                "maximum",
+                "allow_empty"
               ]
             }
-          },
-          "config_file_exists": {
-            "type": "boolean"
           }
         },
         "required": [
-          "items",
-          "config_file_exists"
+          "settings"
+        ]
+      },
+      "SetupFinishRequest": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string"
+          },
+          "transaction": {
+            "type": "string"
+          },
+          "changes": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "revision",
+          "transaction",
+          "changes"
+        ]
+      },
+      "SetupFinishResponse": {
+        "type": "object",
+        "properties": {
+          "completed": {
+            "type": "boolean"
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "restart_required": {
+            "type": "boolean"
+          },
+          "transaction": {
+            "type": "string"
+          },
+          "reader_build": {
+            "type": "object",
+            "properties": {
+              "ready": {
+                "type": "boolean"
+              },
+              "exit_code": {
+                "type": "integer"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "code",
+                    "message"
+                  ]
+                }
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/properties/reader_build/properties/errors/items"
+                }
+              }
+            },
+            "required": [
+              "ready",
+              "exit_code",
+              "errors",
+              "warnings"
+            ]
+          },
+          "can_restart": {
+            "type": "boolean"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "section": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "secret": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "section",
+                "key",
+                "kind",
+                "secret"
+              ]
+            }
+          }
+        },
+        "required": [
+          "completed",
+          "changed",
+          "restart_required",
+          "transaction",
+          "reader_build",
+          "can_restart",
+          "changes"
+        ]
+      },
+      "SetupView": {
+        "type": "object",
+        "properties": {
+          "completed": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "cleanup": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "restart_required": {
+            "type": "boolean"
+          },
+          "integrated": {
+            "type": "boolean"
+          },
+          "can_restart": {
+            "type": "boolean"
+          },
+          "reader_build": {
+            "type": "object",
+            "properties": {
+              "ready": {
+                "type": "boolean"
+              },
+              "exit_code": {
+                "type": "integer"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "code",
+                    "message"
+                  ]
+                }
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/properties/reader_build/properties/errors/items"
+                }
+              }
+            },
+            "required": [
+              "ready",
+              "exit_code",
+              "errors",
+              "warnings"
+            ]
+          }
+        },
+        "required": [
+          "completed",
+          "revision",
+          "fields",
+          "cleanup",
+          "restart_required",
+          "integrated",
+          "can_restart",
+          "reader_build"
+        ]
+      },
+      "UpdateNoticeResponse": {
+        "type": "object",
+        "properties": {
+          "present": {
+            "type": "boolean"
+          },
+          "notice": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "from_version": {
+                "type": "string"
+              },
+              "to_version": {
+                "type": "string"
+              },
+              "created_at": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "old_default": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "new_default": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "present",
+          "notice"
         ]
       }
     },
