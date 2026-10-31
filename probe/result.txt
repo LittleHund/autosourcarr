@@ -1,4 +1,4 @@
-sha=8fabc9f9c6e55e73abc2d7b0aba62db538eef9bc
+sha=3b38910df22bd0cb9e62dda4c2f7ff9bc02aef1c
 restore=0
 build=0
 test=0
@@ -6,3 +6,4 @@ openapi=0
 client=0
 source_host_build=0
 source_host_check=0
+source_host_csharp=0
