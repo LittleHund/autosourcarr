@@ -91,6 +91,7 @@ public sealed partial class SuwayomiClient : IDisposable, IAsyncDisposable, ISou
     }
     internal async Task<JsonObject> GraphQlCoreAsync(SourceTransportSession session, string query, JsonObject? variables, CancellationToken cancellationToken)
     {
+        if (SourceHost) return await HostOperationAsync(session, query, variables, cancellationToken).ConfigureAwait(false);
         session.ThrowIfRetired(); _ = session.EngineForRequest();
         var request = JsonSerializer.SerializeToUtf8Bytes(new JsonObject { ["query"] = query, ["variables"] = variables?.DeepClone() ?? new JsonObject() });
         await using var response = await SendAsync(session, HttpMethod.Post, new Uri(BaseUrl + "/api/graphql"), request, "application/json", null, null, followRedirects: true, cancellationToken, requireRuntimeOrigin: true).ConfigureAwait(false);
@@ -300,7 +301,8 @@ public sealed partial class SuwayomiClient : IDisposable, IAsyncDisposable, ISou
     private async Task<OwnedUpstreamResponse> SendAsync(SourceTransportSession session, HttpMethod method, Uri target, byte[]? bytes, string? contentType,
         IReadOnlyDictionary<string, string>? headers, TimeSpan? timeout, bool followRedirects, CancellationToken cancellationToken,
         bool requireRuntimeOrigin = false, Func<HttpContent>? contentFactory = null, bool about = false,
-        AuthenticationHeaderValue? aboutAuthorization = null, SourceAboutTransportRegistration? aboutTransport = null, int maximumRedirects = 20)
+        AuthenticationHeaderValue? aboutAuthorization = null, SourceAboutTransportRegistration? aboutTransport = null, int maximumRedirects = 20,
+        bool allowErrorStatus = false)
     {
         using var call = session.EnterCall();
         var plane = session.Engine ?? (SameOrigin(target) ? session.EngineForRequest() : session.Plane);
@@ -344,6 +346,7 @@ public sealed partial class SuwayomiClient : IDisposable, IAsyncDisposable, ISou
                 }
                 if (headers is not null) foreach (var (key, value) in headers) request.Headers.TryAddWithoutValidation(key, value);
                 if (SameOrigin(target)) request.Headers.Authorization = about ? aboutAuthorization : _basic;
+                if (SourceHost && _hostToken.Length > 0 && SameOrigin(target)) request.Headers.TryAddWithoutValidation("X-Source-Host-Token", _hostToken);
                 HttpResponseMessage response;
                 try { response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false); }
                 catch { request.Dispose(); throw; }
@@ -360,7 +363,7 @@ public sealed partial class SuwayomiClient : IDisposable, IAsyncDisposable, ISou
                     { method = HttpMethod.Get; bytes = null; contentFactory = null; }
                     continue;
                 }
-                try { response.EnsureSuccessStatusCode(); }
+                try { if (!allowErrorStatus) response.EnsureSuccessStatusCode(); }
                 catch (Exception primary)
                 {
                     try { CloseRaw(response, request, plane); } catch (Exception cleanup) { throw new AggregateException(primary, cleanup); }

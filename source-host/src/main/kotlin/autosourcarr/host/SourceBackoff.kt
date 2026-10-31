@@ -74,7 +74,7 @@ class SourceBackoff(
     fun state(sourceId: Long): JsonObject {
         val state = states[sourceId]
         return buildJsonObject {
-            put("sourceId", sourceId.toULong().toString())
+            put("sourceId", sourceId.toString())
             if (state == null) {
                 put("paused", false)
             } else {

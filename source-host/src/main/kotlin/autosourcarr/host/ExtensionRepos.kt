@@ -160,7 +160,7 @@ class ExtensionRepos(
                                             4 -> url = Proto.text(sv)
                                         }
                                     }
-                                    sources += SourceInfo(id.toULong().toString(), sourceName, lang, url)
+                                    sources += SourceInfo(id.toString(), sourceName, lang, url)
                                 }
                             }
                         }

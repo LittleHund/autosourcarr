@@ -117,6 +117,13 @@ public sealed partial class SuwayomiClient
         if (string.IsNullOrWhiteSpace(filename) || filename.IndexOfAny(['/', '\\', '\r', '\n', '\0']) >= 0)
             throw new ArgumentException("A plain extension filename is required.", nameof(filename));
         if (data.Length == 0) throw new ArgumentException("The extension file is empty.", nameof(data));
+        if (SourceHost)
+        {
+            if (!apk) throw new ArgumentException("The source host installs extension APK files only.", nameof(apk));
+            await HostCoreAsync(session, HttpMethod.Post, "/v1/extensions/install-file?name=" + Uri.EscapeDataString(filename), null, cancellationToken,
+                data, "application/vnd.android.package-archive", TimeSpan.FromSeconds(90)).ConfigureAwait(false);
+            return;
+        }
         HttpContent Multipart()
         {
             var multipart = new MultipartFormDataContent();
