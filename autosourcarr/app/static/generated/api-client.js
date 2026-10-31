@@ -217,6 +217,14 @@
     }
     return {
       /**
+       * Keep the original APK of an installed source as repair evidence (headers confirm the original and its version).
+       * POST /api/v1/source-maintenance/original-apk/{pkgName}
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      attachOriginalSourceApk(pkgName, options) { return call('POST', `/api/v1/source-maintenance/original-apk/${encodeURIComponent(pkgName)}`, undefined, options); },
+      /**
        * Cancel a queued or running task. Work already done stays; the task is listed as failed with "Cancelled by user".
        * POST /api/v1/tasks/{taskId}/cancel
        * @param {string} taskId
@@ -406,6 +414,13 @@
        */
       getHealth(options) { return call('GET', '/api/v1/health', undefined, options); },
       /**
+       * Installed source extensions with their package, version, repository and source identities.
+       * GET /api/v1/source-maintenance/installed
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getInstalledSourceExtensions(options) { return call('GET', '/api/v1/source-maintenance/installed', undefined, options); },
+      /**
        * Job queue: workers, running and queued jobs with ETA, and per-type run limit, average time, failures and freezes.
        * GET /api/v1/jobs
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -490,6 +505,13 @@
        */
       getSourceExtensions(options) { return call('GET', '/api/v1/source-extensions', undefined, options); },
       /**
+       * Source repair status: worker configuration, the daily check switch and the last repair promotion. Repair runs arrive in phase 6e.
+       * GET /api/v1/source-maintenance
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceMaintenance(options) { return call('GET', '/api/v1/source-maintenance', undefined, options); },
+      /**
        * Details of one title as its source reports them (refreshed from the source).
        * GET /api/v1/source-manga/{mangaId}
        * @param {string} mangaId
@@ -497,6 +519,13 @@
        * @returns {Promise<JsonObject>}
        */
       getSourceManga(mangaId, options) { return call('GET', `/api/v1/source-manga/${encodeURIComponent(mangaId)}`, undefined, options); },
+      /**
+       * Orphaned sources under two headers, Installed and Not installed, each with its own orphan group (SRC-3); items lists them all, with discovery and installation state.
+       * GET /api/v1/source-orphans
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceOrphans(options) { return call('GET', '/api/v1/source-orphans', undefined, options); },
       /**
        * The extension's own settings for this source (as in Mihon), with current values.
        * GET /api/v1/sources/{sourceId}/preferences
@@ -534,6 +563,14 @@
        */
       getUpdateNotice(options) { return call('GET', '/api/v1/settings/update-notice', undefined, options); },
       /**
+       * Install the original archived package of a removed source (digest and package identity checked; never replaces an installed source).
+       * POST /api/v1/source-orphans/{pkgName}/install
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      installSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/install`, undefined, options); },
+      /**
        * Sign in with name and password (login page). Failed attempts slow down and are logged.
        * POST /api/v1/auth/login
        * @param {JsonObject} body
@@ -549,6 +586,14 @@
        */
       logout(options) { return call('POST', '/api/v1/auth/logout', undefined, options); },
       /**
+       * Mark an installed source as orphaned (only when it is missing from the configured repositories).
+       * POST /api/v1/source-orphans/{pkgName}/mark
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      markSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/mark`, undefined, options); },
+      /**
        * Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.
        * POST /api/v1/storage/database/move
        * @param {DatabaseMoveRequest} body
@@ -557,12 +602,27 @@
        */
       moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
       /**
+       * Collect removed sources from sampled original Keiyoushi history (two years) in the background; at most once a minute.
+       * POST /api/v1/source-orphans/refresh
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      refreshSourceOrphans(options) { return call('POST', '/api/v1/source-orphans/refresh', undefined, options); },
+      /**
        * Owner only: replace the automatic admin token; the old one stops working at once.
        * POST /api/v1/keys/admin-token/regenerate
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       regenerateAdminToken(options) { return call('POST', '/api/v1/keys/admin-token/regenerate', undefined, options); },
+      /**
+       * Build and check an orphan with the repair runner (phase 6e; answers 409 until then).
+       * POST /api/v1/source-orphans/{pkgName}/repair
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      repairSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/repair`, undefined, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
@@ -602,6 +662,13 @@
        */
       revokeKey(keyId, options) { return call('DELETE', `/api/v1/keys/${encodeURIComponent(keyId)}`, undefined, options); },
       /**
+       * Restore the package installed before the last repair (arrives with the repair runner; answers 409 until then).
+       * POST /api/v1/source-maintenance/rollback
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      rollbackSourceRepair(options) { return call('POST', '/api/v1/source-maintenance/rollback', undefined, options); },
+      /**
        * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
        * PUT /api/v1/settings
        * @param {SettingsSaveRequest} body
@@ -609,6 +676,14 @@
        * @returns {Promise<SettingsSaveResponse>}
        */
       saveSettings(body, options) { return call('PUT', '/api/v1/settings', body, options); },
+      /**
+       * Turn the daily maintained-source check on or off (requires a configured repair worker to turn on).
+       * PUT /api/v1/source-maintenance/watch
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setSourceMaintenanceWatch(body, options) { return call('PUT', '/api/v1/source-maintenance/watch', body, options); },
       /**
        * Change one extension setting of this source.
        * PUT /api/v1/sources/{sourceId}/preferences
@@ -633,6 +708,14 @@
        * @returns {Promise<JsonObject>}
        */
       syncSources(options) { return call('POST', '/api/v1/source-settings/sync', undefined, options); },
+      /**
+       * Return an installed orphan to the Installed list.
+       * POST /api/v1/source-orphans/{pkgName}/unmark
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      unmarkSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/unmark`, undefined, options); },
       /**
        * Update every installed extension that has a newer version.
        * POST /api/v1/source-extensions/update-all
