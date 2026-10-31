@@ -376,6 +376,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 ["last_event_id"] = owner.Events.LastId,
             };
             var jobs = owner.Jobs.Snapshot();
+            // Job keys can hold paths or titles; the download keeps type, state and timing only.
+            foreach (var list in new[] { jobs["running"]!.AsArray(), jobs["queued"]!.AsArray() })
+                foreach (var row in list) row!.AsObject().Remove("key");
             var source = new JsonObject { ["mode"] = owner.Settings.SourceEngineMode, ["checked"] = false,
                 ["note"] = "Source engine health returns with conversion phase 4." };
             var services = new JsonObject { ["jobs"] = jobs };

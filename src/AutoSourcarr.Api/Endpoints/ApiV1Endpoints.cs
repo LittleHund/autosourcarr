@@ -455,7 +455,8 @@ public static class ApiV1Endpoints
                     var handle = jobs.Enqueue(DatabaseMoveJob, target, async job =>
                     {
                         job.Report(message: "Pausing database work, copying and checking both databases");
-                        var result = await Task.Run(() => move(target), job.CancellationToken).ConfigureAwait(false);
+                        // Not cancellable once started: the copy, check and switch run to the end or fail as a whole.
+                        var result = await Task.Run(() => move(target), CancellationToken.None).ConfigureAwait(false);
                         job.Result(result.Message);
                     }, origin: "manual", title: "Move databases to " + target, context: target);
                     return Results.Json(new DatabaseMoveQueued(handle.Id, target, handle.Merged
@@ -516,7 +517,7 @@ public static class ApiV1Endpoints
 
     /// <summary>Exclusive and disk-heavy: nothing else runs while both databases are copied and switched.</summary>
     public static readonly JobType DatabaseMoveJob = new("database-move", "Move databases", JobPriority.High,
-        JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromMinutes(30));
+        JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(12), Cancellable: false);
 
     private static void MapJobs(IEndpointRouteBuilder endpoints, RouteGroupBuilder group, ApiV1Services services, ApiJsonContext json)
     {

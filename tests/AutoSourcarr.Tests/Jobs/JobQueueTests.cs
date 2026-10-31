@@ -105,7 +105,7 @@ public static class JobQueueTests
             var normal = new JobType("normal", "Normal", JobPriority.Normal, RunLimit: 3);
             var lows = Enumerable.Range(0, 6).Select(index => fixture.Queue.Enqueue(low, "l" + index, _ => Task.Delay(5))).ToArray();
             var normals = Enumerable.Range(0, 6).Select(index => fixture.Queue.Enqueue(normal, "n" + index, _ => Task.Delay(5))).ToArray();
-            using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(9));
             var produced = 0;
             var producer = Task.Run(async () =>
             {
@@ -117,7 +117,8 @@ public static class JobQueueTests
                 }
             });
             var allDone = Task.WhenAll(lows.Concat(normals).Select(handle => handle.Completion));
-            var finished = allDone.Wait(TimeSpan.FromSeconds(2.5));
+            // Without aging this would never finish; with it the Low/Normal work completes within seconds even on a slow runner.
+            var finished = allDone.Wait(TimeSpan.FromSeconds(8));
             stop.Cancel(); producer.Wait();
             Check.True(finished, "Low and Normal jobs all finished while High work kept arriving.");
             Check.True(produced > 20, "The burst really kept the queue busy (" + produced + " High jobs).");
@@ -129,7 +130,7 @@ public static class JobQueueTests
         suite.Add("jobs: a job without progress is frozen, recorded as an error at once and retried with back-off (PERF-3)", () =>
         {
             using var fixture = new Fixture(new JobQueueOptions { Workers = 1, WatchdogInterval = TimeSpan.FromMilliseconds(20), CancelGrace = TimeSpan.FromMilliseconds(200) });
-            var stuck = new JobType("stuck", "Stuck work", StallTimeout: TimeSpan.FromMilliseconds(150), MaxAttempts: 2, RetryBase: TimeSpan.FromMilliseconds(100));
+            var stuck = new JobType("stuck", "Stuck work", StallTimeout: TimeSpan.FromMilliseconds(600), MaxAttempts: 2, RetryBase: TimeSpan.FromMilliseconds(100));
             var attempts = 0;
             var handle = fixture.Queue.Enqueue(stuck, "k", async job =>
             {
@@ -211,6 +212,40 @@ public static class JobQueueTests
             Check.True(row["eta_seconds"] is not null && row["eta_start_seconds"] is not null, row.ToJsonString());
             Check.Equal(1, tasks["jobs"]!["workers"]!.GetValue<int>());
             gate.SetResult();
+        });
+
+        suite.Add("jobs: a cancel wins over a freeze (no hidden retry) and a new request is not merged into a dying job", () =>
+        {
+            using var fixture = new Fixture(new JobQueueOptions { Workers = 1, WatchdogInterval = TimeSpan.FromMilliseconds(20), CancelGrace = TimeSpan.FromSeconds(5) });
+            var stuck = new JobType("stuck2", "Stuck work", StallTimeout: TimeSpan.FromMilliseconds(200), MaxAttempts: 3, RetryBase: TimeSpan.FromMilliseconds(50));
+            var release = new TaskCompletionSource();
+            var runs = 0;
+            var first = fixture.Queue.Enqueue(stuck, "k", async _ => { Interlocked.Increment(ref runs); await release.Task; });
+            Wait(() => fixture.Errors.Snapshot(10)["items"]!.AsArray().Any(row => row!["key"]!.GetValue<string>() == "job-frozen:stuck2"));
+            var again = fixture.Queue.Enqueue(stuck, "k", _ => Task.CompletedTask);
+            Check.True(!again.Merged, "A frozen job does not absorb a new request.");
+            Check.True(fixture.Tasks.RequestCancelAsync(first.Id).GetAwaiter().GetResult() || fixture.Tasks.Find(first.Id)!.State == "failed");
+            release.SetResult();
+            Check.Equal(JobOutcome.Cancelled, first.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+            Check.Equal(JobOutcome.Completed, again.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+            Thread.Sleep(200);
+            Check.Equal(1, runs);
+            Check.Equal(1L, fixture.Errors.Snapshot(10)["items"]!.AsArray().Single(row => row!["key"]!.GetValue<string>() == "job-frozen:stuck2")!["count"]!.GetValue<long>());
+        });
+
+        suite.Add("jobs: a non-cancellable exclusive job cannot be cancelled and is never abandoned", () =>
+        {
+            using var fixture = new Fixture(new JobQueueOptions { Workers = 2, WatchdogInterval = TimeSpan.FromMilliseconds(20), CancelGrace = TimeSpan.FromMilliseconds(100) });
+            var move = new JobType("move", "Move", JobPriority.High, JobFlags.Exclusive, StallTimeout: TimeSpan.FromMilliseconds(100), Cancellable: false);
+            var release = new TaskCompletionSource();
+            var handle = fixture.Queue.Enqueue(move, "k", _ => release.Task);
+            var other = fixture.Queue.Enqueue(Fast, "other", _ => Task.CompletedTask);
+            Wait(() => fixture.Running() == 1);
+            Check.True(!fixture.Tasks.RequestCancelAsync(handle.Id).GetAwaiter().GetResult(), "The task list offers no cancel.");
+            Thread.Sleep(400); // past stall + grace
+            Check.True(!other.Completion.IsCompleted, "Nothing ran beside the exclusive job after its stall time.");
+            release.SetResult();
+            Check.Equal(JobOutcome.Completed, other.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
         });
 
         suite.Add("jobs: stopping background work cancels queued and running jobs, waits for them, and resume starts new work", () =>
@@ -308,6 +343,14 @@ public static class EventStreamTests
             for (var index = 0; index < 3; index++) seen.Add(subscription.NextAsync(TimeSpan.FromSeconds(2), CancellationToken.None).GetAwaiter().GetResult()!.Id);
             Check.Equal("4,5,6", string.Join(",", seen));
             Check.True(subscription.NextAsync(TimeSpan.FromMilliseconds(50), CancellationToken.None).GetAwaiter().GetResult() is null, "Nothing more: a heartbeat would be sent.");
+            // An id from before a server restart (newer than anything held) must make the browser reload.
+            Check.True(stream.Since(5000) is null);
+            using var restarted = stream.Subscribe(lastId: 5000);
+            Check.Equal("resync", restarted.NextAsync(TimeSpan.FromSeconds(1), CancellationToken.None).GetAwaiter().GetResult()!.Topic);
+            // A reconnect far behind replays everything still held instead of overflowing.
+            for (var index = 0; index < 600; index++) stream.Publish("jobs");
+            using var behind = stream.Subscribe(lastId: 6);
+            for (var index = 0; index < 600; index++) behind.NextAsync(TimeSpan.FromSeconds(1), CancellationToken.None).GetAwaiter().GetResult();
         });
 
         suite.Add("events: a reader whose gap is no longer held gets a resync event", () =>

@@ -34,17 +34,16 @@ public sealed class EventStream
     public AppEvent Publish(string topic, JsonObject? data = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
-        Subscriber[] targets;
         AppEvent item;
         lock (_gate)
         {
             item = new AppEvent(_next++, topic, _clock().ToString("O", CultureInfo.InvariantCulture), data ?? []);
             _ring[(int)(item.Id % Capacity)] = item;
             _count = Math.Min(Capacity, _count + 1);
-            targets = _subscribers.ToArray();
+            // Delivered inside the lock so every reader sees ids in order; Offer never blocks.
+            foreach (var subscriber in _subscribers)
+                subscriber.Offer(item);
         }
-        foreach (var subscriber in targets)
-            subscriber.Offer(item);
         return item;
     }
 
@@ -75,7 +74,9 @@ public sealed class EventStream
         lock (_gate)
         {
             var newest = _next - 1;
-            if (lastId >= newest) return [];
+            // An id from before a restart (ids start at 1 again) cannot be resumed: the reader must reload.
+            if (lastId > newest) return null;
+            if (lastId == newest) return [];
             var oldest = newest - _count + 1;
             if (lastId + 1 < oldest) return null;
             var result = new List<AppEvent>((int)(newest - lastId));
@@ -91,26 +92,24 @@ public sealed class EventStream
     /// </summary>
     public EventSubscription Subscribe(long? lastId = null, IReadOnlySet<string>? topics = null)
     {
-        var subscriber = new Subscriber(topics);
         lock (_gate)
         {
-            if (lastId is { } after)
-            {
-                var backlog = Since(after);
-                if (backlog is null) subscriber.Offer(Resync(after));
-                else foreach (var item in backlog) subscriber.Offer(item);
-            }
+            IReadOnlyList<AppEvent>? backlog = lastId is { } after ? Since(after) : [];
+            // Room for the whole replay plus the normal live buffer, so resuming never overflows by itself.
+            var subscriber = new Subscriber(topics, SubscriberBuffer + (backlog?.Count ?? 1));
+            if (backlog is null) subscriber.Offer(Resync(lastId!.Value));
+            else foreach (var item in backlog) subscriber.Offer(item);
             _subscribers.Add(subscriber);
+            return new EventSubscription(subscriber, () => { lock (_gate) _subscribers.Remove(subscriber); });
         }
-        return new EventSubscription(subscriber, () => { lock (_gate) _subscribers.Remove(subscriber); });
     }
 
     private AppEvent Resync(long lastId) => new(_next - 1, "resync", _clock().ToString("O", CultureInfo.InvariantCulture),
         new JsonObject { ["reason"] = "Events after " + lastId.ToString(CultureInfo.InvariantCulture) + " are no longer held; reload the page data." });
 
-    internal sealed class Subscriber(IReadOnlySet<string>? topics)
+    internal sealed class Subscriber(IReadOnlySet<string>? topics, int capacity)
     {
-        private readonly Channel<AppEvent> _channel = Channel.CreateBounded<AppEvent>(new BoundedChannelOptions(SubscriberBuffer)
+        private readonly Channel<AppEvent> _channel = Channel.CreateBounded<AppEvent>(new BoundedChannelOptions(capacity)
         { SingleReader = true, SingleWriter = false, FullMode = BoundedChannelFullMode.Wait });
         private int _overflowed;
         internal ChannelReader<AppEvent> Reader => _channel.Reader;

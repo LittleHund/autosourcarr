@@ -24,7 +24,7 @@ public enum JobFlags
 /// <see cref="RetryBase"/> give the back-off for failed or frozen runs (base, doubling per failure, at most one hour).
 /// </summary>
 public sealed record JobType(string Name, string Title, JobPriority Priority = JobPriority.Normal, JobFlags Flags = JobFlags.None,
-    int RunLimit = 1, TimeSpan? StallTimeout = null, int MaxAttempts = 1, TimeSpan? RetryBase = null)
+    int RunLimit = 1, TimeSpan? StallTimeout = null, int MaxAttempts = 1, TimeSpan? RetryBase = null, bool Cancellable = true)
 {
     public TimeSpan Stall => StallTimeout ?? TimeSpan.FromMinutes(10);
     public TimeSpan Retry => RetryBase ?? TimeSpan.FromSeconds(60);
@@ -111,7 +111,9 @@ public sealed class JobQueue : IAsyncDisposable
         {
             ObjectDisposedException.ThrowIf(_stop.IsCancellationRequested, this);
             var level = priority ?? type.Priority;
-            var existing = _queued.Concat(_running).FirstOrDefault(item => item.Type.Name == type.Name && item.Key == key && !item.Finished);
+            // A job that is being cancelled or was frozen is ending; a new request must not be merged into it.
+            var existing = _queued.Concat(_running).FirstOrDefault(item => item.Type.Name == type.Name && item.Key == key
+                && !item.Finished && !item.CancelRequested && !item.Frozen);
             if (existing is not null)
             {
                 if (level < existing.Priority && _queued.Contains(existing)) existing.Priority = level;
@@ -124,7 +126,8 @@ public sealed class JobQueue : IAsyncDisposable
             _queued.Add(job);
             Stats(type);
         }
-        _tasks.BindCanceller(job.Id, () => { Cancel(job); return ValueTask.CompletedTask; });
+        // Work that cannot stop halfway (a database move) is not offered for cancellation.
+        if (type.Cancellable) _tasks.BindCanceller(job.Id, () => { Cancel(job); return ValueTask.CompletedTask; });
         Publish("queued", job);
         Signal();
         return new JobHandle(job.Id, false, job.Done.Task);
@@ -144,7 +147,7 @@ public sealed class JobQueue : IAsyncDisposable
             queued = _queued.ToArray(); _queued.Clear();
             running = _running.ToArray();
             foreach (var job in queued) { job.CancelRequested = true; job.Finished = true; }
-            foreach (var job in running) { job.CancelRequested = true; job.CancelReason = reason; job.StoppedAt = Now(); }
+            foreach (var job in running.Where(job => job.Type.Cancellable)) { job.CancelRequested = true; job.CancelReason = reason; job.StoppedAt = Now(); }
         }
         foreach (var job in queued)
         {
@@ -152,7 +155,8 @@ public sealed class JobQueue : IAsyncDisposable
             Publish("cancelled", job, new JsonObject { ["reason"] = reason });
             job.Finish(JobOutcome.Cancelled);
         }
-        foreach (var job in running) job.Cancel();
+        foreach (var job in running.Where(job => job.Type.Cancellable)) job.Cancel();
+        // Work that cannot be cancelled is still waited for, so nothing runs during the reset.
         var drained = Task.WhenAll(running.Select(job => (Task)job.Done.Task));
         var finished = await Task.WhenAny(drained, Task.Delay(grace ?? _options.CancelGrace, _time)).ConfigureAwait(false) == drained;
         _events?.Publish("jobs", new JsonObject { ["change"] = "paused", ["reason"] = reason });
@@ -398,15 +402,19 @@ public sealed class JobQueue : IAsyncDisposable
             // A run the watchdog already released (or a later attempt of the same job) is not finished twice.
             if (job.Attempt != attempt || !_running.Remove(job)) return;
             var stats = Stats(job.Type);
-            if (job.Frozen) { outcome = JobOutcome.Frozen; }
-            else if (job.CancelRequested || failure is OperationCanceledException) { outcome = JobOutcome.Cancelled; }
+            // A cancel (user or stop) wins over a freeze, and cancelled work is never retried.
+            if (job.CancelRequested) { outcome = JobOutcome.Cancelled; }
+            // A frozen job that still finished its work (it was only slow) completes; the freeze stays recorded.
+            else if (job.Frozen && failure is not null) { outcome = JobOutcome.Frozen; }
+            else if (failure is OperationCanceledException && _stop.IsCancellationRequested) { outcome = JobOutcome.Cancelled; }
             else if (failure is null)
             {
+                job.Frozen = false;
                 outcome = JobOutcome.Completed; stats.Completed++;
                 stats.Observe((Now() - job.StartedAt).TotalSeconds);
             }
             else { outcome = JobOutcome.Failed; stats.Failed++; }
-            retry = outcome is JobOutcome.Failed or JobOutcome.Frozen && job.Attempt < job.Type.MaxAttempts && !_stop.IsCancellationRequested;
+            retry = outcome is JobOutcome.Failed or JobOutcome.Frozen && !job.CancelRequested && job.Attempt < job.Type.MaxAttempts && !_stop.IsCancellationRequested;
             if (retry)
             {
                 delay = Backoff(job);
@@ -429,7 +437,8 @@ public sealed class JobQueue : IAsyncDisposable
                 case JobOutcome.Cancelled: _tasks.Cancel(job.Id, job.CancelReason ?? "Cancelled by user"); break;
                 default:
                     _tasks.Fail(job.Id, reason);
-                    _errors?.Record("Jobs", $"{job.Type.Title} failed: {reason}", key: (outcome == JobOutcome.Frozen ? "job-frozen:" : "job-failed:") + job.Type.Name);
+                    // A freeze was already recorded when the watchdog saw it; one freeze is one error.
+                    if (outcome == JobOutcome.Failed) _errors?.Record("Jobs", $"{job.Type.Title} failed: {reason}", key: "job-failed:" + job.Type.Name);
                     break;
             }
             Publish(outcome.ToString().ToLowerInvariant(), job, reason.Length > 0 ? new JsonObject { ["reason"] = reason } : null);
@@ -453,7 +462,9 @@ public sealed class JobQueue : IAsyncDisposable
                     Stats(job.Type).Frozen++;
                     frozen.Add(job);
                 }
-                else if ((job.Frozen || job.CancelRequested) && job.StoppedAt is { } stopped && now - stopped > _options.CancelGrace)
+                // An exclusive job is never abandoned: releasing it would let other work run beside it.
+                else if ((job.Frozen || job.CancelRequested) && !job.Type.Flags.HasFlag(JobFlags.Exclusive)
+                         && job.StoppedAt is { } stopped && now - stopped > _options.CancelGrace)
                     abandoned.Add(job);
             }
         }
@@ -470,7 +481,7 @@ public sealed class JobQueue : IAsyncDisposable
             // The work ignored cancellation; free its slot so the queue keeps moving and keep the evidence.
             _errors?.Record("Jobs", $"{job.Type.Title} did not stop within {Seconds(_options.CancelGrace)} after it was cancelled; its slot was released",
                 key: "job-abandoned:" + job.Type.Name);
-            Finished(job, null, job.Attempt);
+            Finished(job, new TimeoutException(job.FrozenReason.Length > 0 ? job.FrozenReason : "Stopped by the watchdog"), job.Attempt);
         }
     }
 
