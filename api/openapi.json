@@ -47,6 +47,27 @@
         }
       }
     },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Status page: version, databases, catalogue counts, active errors and dependency checks.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/settings": {
       "get": {
         "operationId": "getSettings",
@@ -855,6 +876,18 @@
                             "label"
                           ]
                         }
+                      },
+                      "editable": {
+                        "type": "boolean"
+                      },
+                      "saved_in_app": {
+                        "type": "boolean"
+                      },
+                      "problem": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
                       }
                     },
                     "required": [
@@ -874,7 +907,10 @@
                       "advanced",
                       "minimum",
                       "maximum",
-                      "choices"
+                      "choices",
+                      "editable",
+                      "saved_in_app",
+                      "problem"
                     ]
                   }
                 }
@@ -1052,6 +1088,9 @@
                 },
                 "allow_empty": {
                   "type": "boolean"
+                },
+                "editable": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -1070,7 +1109,8 @@
                 "advanced",
                 "minimum",
                 "maximum",
-                "allow_empty"
+                "allow_empty",
+                "editable"
               ]
             }
           }
