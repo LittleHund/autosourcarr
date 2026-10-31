@@ -7,23 +7,23 @@ namespace AutoSourcarr.Core.Settings;
 public sealed class ConfigSection
 {
     [JsonPropertyName("values")]
-    public Dictionary<string, string> Values { get; init; } = new(StringComparer.Ordinal);
+    public Dictionary<string, string> Values { get; set; } = new(StringComparer.Ordinal);
 
     [JsonPropertyName("secrets")]
-    public Dictionary<string, string> Secrets { get; init; } = new(StringComparer.Ordinal);
+    public Dictionary<string, string> Secrets { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>Where the values came from when an older env-based install was converted.</summary>
 public sealed class ConfigConversionRecord
 {
     [JsonPropertyName("converted_at")]
-    public string ConvertedAt { get; init; } = "";
+    public string ConvertedAt { get; set; } = "";
 
     [JsonPropertyName("sources")]
-    public Dictionary<string, string> SourceSha256 { get; init; } = new(StringComparer.Ordinal);
+    public Dictionary<string, string> SourceSha256 { get; set; } = new(StringComparer.Ordinal);
 
     [JsonPropertyName("backup_directory")]
-    public string BackupDirectory { get; init; } = "";
+    public string BackupDirectory { get; set; } = "";
 }
 
 /// <summary>
@@ -36,19 +36,19 @@ public sealed class ConfigDocument
     public const int CurrentFormat = 1;
 
     [JsonPropertyName("format")]
-    public int Format { get; init; } = CurrentFormat;
+    public int Format { get; set; } = CurrentFormat;
 
     [JsonPropertyName("settings")]
-    public ConfigSection Settings { get; init; } = new();
+    public ConfigSection Settings { get; set; } = new();
 
     [JsonPropertyName("source_host")]
-    public ConfigSection SourceHost { get; init; } = new();
+    public ConfigSection SourceHost { get; set; } = new();
 
     [JsonPropertyName("extra")]
-    public ConfigSection Extra { get; init; } = new();
+    public ConfigSection Extra { get; set; } = new();
 
     [JsonPropertyName("conversion")]
-    public ConfigConversionRecord? Conversion { get; init; }
+    public ConfigConversionRecord? Conversion { get; set; }
 }
 
 /// <summary>Decrypted values of one config.json; never printed with values.</summary>
@@ -104,6 +104,11 @@ public sealed class ConfigStore(string root)
             throw new ConfigurationException($"config.json uses format {document.Format}; this build supports up to {ConfigDocument.CurrentFormat}. Run the newer AutoSourcarr image or restore a matching backup.");
         if (document.Format < 1)
             throw new ConfigurationException("config.json has no valid format number; it was not changed.");
+        // An explicit null ("settings": null, "KEY": null) is damage, not an empty value.
+        foreach (var section in new[] { document.Settings, document.SourceHost, document.Extra })
+            if (section is null || section.Values is null || section.Secrets is null
+                || section.Values.Values.Any(value => value is null) || section.Secrets.Values.Any(value => value is null))
+                throw new ConfigurationException("config.json has an empty (null) section or value; it was not changed. Restore it from a backup.");
         return document;
     }
 

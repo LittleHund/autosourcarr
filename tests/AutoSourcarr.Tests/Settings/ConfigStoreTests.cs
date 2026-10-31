@@ -121,6 +121,13 @@ public static class ConfigStoreTests
             File.WriteAllText(path, """{ "format": 1, "settings": { "values": { "ADMIN_TOKEN": "plain" }, "secrets": {} } }""");
             Check.Throws<ConfigurationException>(() => new ConfigStore(temp.Path).Load());
             Check.Equal("""{ "format": 1, "settings": { "values": { "ADMIN_TOKEN": "plain" }, "secrets": {} } }""", File.ReadAllText(path));
+            File.WriteAllText(path, """{ "format": 1, "settings": null }""");
+            Check.Throws<ConfigurationException>(() => new ConfigStore(temp.Path).Load());
+            File.WriteAllText(path, """{ "format": 1, "extra": { "values": { "X": null } } }""");
+            Check.Throws<ConfigurationException>(() => new ConfigStore(temp.Path).Load());
+            File.WriteAllText(path, """{ "format": 1, "settings": { "values": { "TZ": "UTC" } } }""");
+            var minimal = new ConfigStore(temp.Path).Load();
+            Check.True(minimal.Settings["TZ"] == "UTC" && minimal.SourceHost.Count == 0 && minimal.Extra.Count == 0, "Missing sections are empty.");
         });
 
         suite.Add("settings config: change list names keys only, never values", () =>

@@ -1,0 +1,175 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AutoSourcarr API",
+    "version": "1"
+  },
+  "paths": {
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "getSettings",
+        "summary": "Effective settings; secret values are hidden.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/settings/conversion": {
+      "get": {
+        "operationId": "getSettingsConversion",
+        "summary": "What this start converted from autosourcarr.env to config.json.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConversionSummary": {
+        "type": "object",
+        "properties": {
+          "converted": {
+            "type": "boolean"
+          },
+          "converted_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "backup_directory": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "setting_keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "source_host_keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "extra_keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "encrypted_keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "invalid_keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "keys_without_value": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "converted",
+          "converted_at",
+          "backup_directory",
+          "setting_keys",
+          "source_host_keys",
+          "extra_keys",
+          "encrypted_keys",
+          "invalid_keys",
+          "keys_without_value"
+        ]
+      },
+      "SettingsOverview": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "secret": {
+                  "type": "boolean"
+                },
+                "is_set": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "key",
+                "value",
+                "secret",
+                "is_set"
+              ]
+            }
+          },
+          "config_file_exists": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "config_file_exists"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "adminToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Admin-Token"
+      }
+    }
+  },
+  "security": [
+    {
+      "adminToken": []
+    }
+  ]
+}
