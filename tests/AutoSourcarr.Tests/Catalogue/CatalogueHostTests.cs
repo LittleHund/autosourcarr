@@ -59,8 +59,10 @@ public static class CatalogueHostTests
         await using var f = await Fixture.Create();
         var profilePath = FormattableString.Invariant($"/api/admin/profiles/{Entry}");
         var metadataPath = FormattableString.Invariant($"/api/admin/metadata-fields/{Entry}");
-        Check.Equal(HttpStatusCode.Unauthorized, (await f.Request(HttpMethod.Get, profilePath)).StatusCode);
-        Check.Equal(HttpStatusCode.Unauthorized, (await f.Request(HttpMethod.Get, metadataPath)).StatusCode);
+        // The reader key identifies a reader device (phase 5 roles): admin routes refuse it with 403; no key is 401.
+        Check.Equal(HttpStatusCode.Forbidden, (await f.Request(HttpMethod.Get, profilePath)).StatusCode);
+        Check.Equal(HttpStatusCode.Forbidden, (await f.Request(HttpMethod.Get, metadataPath)).StatusCode);
+        Check.Equal(HttpStatusCode.Unauthorized, (await f.Request(HttpMethod.Get, metadataPath, reader: false)).StatusCode);
         Check.Equal(HttpStatusCode.NotFound, (await f.Request(HttpMethod.Get, "/api/admin/profiles/17", admin: true)).StatusCode);
         var profile = new JsonObject { ["revision"] = 0, ["profile"] = new JsonObject { ["sources"] = new JsonArray(Source), ["quality"] = "quality" } };
         var saved = await Body(await f.Request(HttpMethod.Put, profilePath, admin: true, body: profile));
