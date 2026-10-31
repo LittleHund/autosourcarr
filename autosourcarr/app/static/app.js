@@ -764,7 +764,7 @@ async function loadAttention(force=false){
   if(attentionPromise)return attentionPromise;
   if(!force&&Date.now()-attentionLastLoad<10000)return;
   attentionLastLoad=Date.now();
-  attentionPromise=(async()=>{attentionState=await api('/api/admin/attention',{timeoutMs:5000,suppressClientError:true,noMutationRefresh:true,cache:'no-store'});renderAttention();})();
+  attentionPromise=(async()=>{attentionState=await apiV1({timeoutMs:5000,suppressClientError:true,noMutationRefresh:true,cache:'no-store'}).getAttention();renderAttention();})();
   try{await attentionPromise;}catch(e){if(surfaceIsActive('attention'))$('#attentionSummary').textContent='Unable to refresh assistance: '+e.message;throw e;}finally{attentionPromise=null;}
 }
 $('#refreshAttention').onclick=()=>loadAttention(true).catch(e=>toast(e.message));
@@ -773,7 +773,7 @@ $('#attentionItems').addEventListener('click',async event=>{
   const id=button.dataset.attentionWebview||button.dataset.attentionRetry,item=attentionState.items.find(x=>x.id===id);if(!item)return;
   if(button.dataset.attentionWebview){openSourceWebview(item.base_url,item.source_id);return;}
   button.disabled=true;
-  try{await api(`/api/admin/attention/${encodeURIComponent(id)}/retry`,{method:'POST',body:'{}',noMutationRefresh:true,timeoutMs:5000,suppressClientError:true});toast('Verification check queued');await loadAttention(true);}
+  try{await apiV1({noMutationRefresh:true,timeoutMs:5000,suppressClientError:true}).retryAttention(id);toast('Verification check queued');await loadAttention(true);}
   catch(e){toast('Unable to retry verification: '+e.message);button.disabled=false;}
 });
 

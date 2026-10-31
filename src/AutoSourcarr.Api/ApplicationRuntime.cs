@@ -193,6 +193,12 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             {
                 CheckDatabaseTarget = path => DatabaseRelocation.CheckTarget(owner.Database, path),
                 Tasks = owner.Tasks, Jobs = owner.Jobs, Events = owner.Events, Errors = owner.Errors,
+                SourceRuntime = new SourceRuntimeServices
+                {
+                    Engine = owner.SourceEngineJson, Client = owner._source.Client, Attention = owner._attention,
+                    SourceCapabilities = () => owner._source?.CapabilityService, MainCapabilities = () => owner._mainCapabilities, AdminLock = owner._admin,
+                    RecordError = error => owner.Errors.Record("Source attention", error.Message, "attention-retry|" + error.GetType().Name)
+                },
                 Diagnostics = new DiagnosticExporter(owner.Io, owner.Identity, owner.Errors, owner.Logs, () => owner.Settings, new RuntimeDiagnosticSources(owner)),
             };
             if (!string.IsNullOrWhiteSpace(startup.Settings.MainSuwayomiUrl))
@@ -268,8 +274,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
 
     /// <summary>
     /// /api/v1/health for the Status page (port of main.py health). Databases, counts and errors are real; the
-    /// source engine, main Suwayomi and translation checks belong to the parts replaced in phases 4 and 7, so
-    /// they are reported as not checked (checked=false) instead of guessing.
+    /// source engine is checked (phase 4); main Suwayomi and translation checks belong to phase 7, so they are reported
+    /// as not checked (checked=false) instead of guessing.
     /// </summary>
     internal async Task<JsonObject> HealthAsync(CancellationToken cancellationToken)
     {
@@ -279,6 +285,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         catch (Exception error) when (error is not OperationCanceledException)
         { stats = new JsonObject { ["error"] = "Status counts are not available (" + error.GetType().Name + ")." }; }
         var errors = Errors.Snapshot(5, includeResolved: false);
+        var source = await SourceHealthAsync(settings, cancellationToken).ConfigureAwait(false);
         static JsonObject NotChecked(string url, bool configured, string phase) => new()
         {
             ["ok"] = null, ["checked"] = false, ["configured"] = configured, ["url"] = url,
@@ -290,7 +297,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             ["version"] = Identity.Version,
             ["captured_at"] = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
             ["instance_id"] = Identity.InstanceId,
-            ["source_host"] = NotChecked(settings.EffectiveSourceUrl, true, "4"),
+            ["source_host"] = source,
             ["main_suwayomi"] = NotChecked(settings.MainSuwayomiUrl, !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl), "7"),
             ["translation"] = NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "7"),
             ["library"] = new JsonObject { ["ok"] = null, ["checked"] = false },
@@ -303,6 +310,37 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 ["items"] = errors["items"]?.DeepClone() ?? new JsonArray(),
                 ["groups"] = errors["groups"]?.DeepClone() ?? new JsonArray()
             }
+        };
+    }
+
+    /// <summary>The Status page's source engine check: the source host's own health (or the external engine's).</summary>
+    private async Task<JsonObject> SourceHealthAsync(AutoSourcarrSettings settings, CancellationToken cancellationToken)
+    {
+        var engine = SourceEngineJson();
+        var url = SourceRuntime.Client.SourceHost ? "built-in source host" : settings.EffectiveSourceUrl;
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            var detail = SourceRuntime.Client.SourceHost
+                ? await SourceRuntime.Client.HostAsync(HttpMethod.Get, "/v1/health", null, timeout.Token).ConfigureAwait(false) as JsonObject ?? new JsonObject()
+                : await SourceRuntime.Client.HealthAsync(timeout.Token).ConfigureAwait(false);
+            return new JsonObject { ["ok"] = true, ["checked"] = true, ["configured"] = true, ["url"] = url, ["engine"] = engine, ["detail"] = detail.DeepClone() };
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        { return new JsonObject { ["ok"] = false, ["checked"] = true, ["configured"] = true, ["url"] = url, ["engine"] = engine, ["warning"] = "The source engine did not answer within 5 s." }; }
+        catch (Exception error) when (error is SuwayomiException or SourceWorkDeferredException or HttpRequestException)
+        { return new JsonObject { ["ok"] = false, ["checked"] = true, ["configured"] = true, ["url"] = url, ["engine"] = engine, ["warning"] = Privacy.Text(error.Message) }; }
+    }
+
+    /// <summary>Source engine status for /api/v1/source-engine and the health page.</summary>
+    internal JsonObject SourceEngineJson()
+    {
+        var status = SourceRuntime.Cached();
+        return new JsonObject
+        {
+            ["mode"] = status.Mode, ["state"] = status.State, ["ready"] = status.Ready, ["restarts"] = status.Restarts,
+            ["error"] = status.Error, ["engine"] = SourceRuntime.Client.SourceHost ? "autosourcarr-source-host" : "suwayomi"
         };
     }
 

@@ -48,12 +48,22 @@ class NetworkHelper(
     }
     // Tachidesk <--
 
+    // AutoSourcarr: the saved Source browser identity (AUTOSOURCARR_SOURCE_USER_AGENT) is the starting value.
     private val userAgent =
         MutableStateFlow(
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            System.getenv("AUTOSOURCARR_SOURCE_USER_AGENT")?.trim()?.takeIf { it.isNotEmpty() } ?: DEFAULT_USER_AGENT,
         )
     val userAgentFlow = userAgent.asStateFlow()
+
+    fun setUserAgent(value: String) {
+        userAgent.value = value
+    }
+
+    companion object {
+        const val DEFAULT_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
 
     fun defaultUserAgentProvider(): String = userAgent.value
 

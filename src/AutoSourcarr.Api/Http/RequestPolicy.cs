@@ -21,7 +21,7 @@ public static class RequestPolicy
         var control = method == "POST" && (ResetControls.Contains(path) || Starts(path, "/api/admin/instance/", "/api/admin/source-orphans/", "/api/admin/source-maintenance/", "/api/admin/source-extensions/", "/api/admin/source-health/"))
             || method == "PUT" && (path == "/api/admin/source-health/daily" || Match(path, @"^/api/admin/sources/[^/]+/preferences$"));
         control |= method is "POST" or "PUT" or "DELETE" && (Starts(path, "/api/admin/library/", "/api/admin/profiles/", "/api/admin/downloads", "/api/admin/review-workbench/",
-            "/api/admin/metadata-fields/", "/api/admin/serving-upgrades/", "/api/admin/policy-simulator/", "/api/admin/engine/compatibility")
+            "/api/admin/metadata-fields/", "/api/admin/serving-upgrades/", "/api/admin/policy-simulator/", "/api/admin/engine/compatibility", "/api/v1/engine/")
             || path.StartsWith("/api/admin/candidates/", StringComparison.Ordinal) && path.EndsWith("/quality", StringComparison.Ordinal)
             || (path.StartsWith("/api/admin/tasks/", StringComparison.Ordinal) || path.StartsWith("/api/v1/tasks/", StringComparison.Ordinal)) && path.EndsWith("/retry-safe", StringComparison.Ordinal));
         return !control && !(method is "GET" or "HEAD" && Monitoring.Contains(path));

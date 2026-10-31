@@ -147,6 +147,8 @@ public sealed class ApiV1Services
     public Func<string, string>? CheckDatabaseTarget { get; init; }
     /// <summary>Phase 3: the task list, job queue, single event stream, grouped errors and diagnostics download.</summary>
     public TaskRegistry? Tasks { get; init; }
+    /// <summary>Source engine, browser, attention and compatibility routes (phase 4); null answers 503.</summary>
+    public SourceRuntimeServices? SourceRuntime { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -507,6 +509,7 @@ public static class ApiV1Endpoints
             .Produces<RuntimeMetricsSnapshot>(StatusCodes.Status200OK);
 
         MapJobs(endpoints, group, services, json);
+        SourceRuntimeV1Endpoints.Map(group, services, json);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

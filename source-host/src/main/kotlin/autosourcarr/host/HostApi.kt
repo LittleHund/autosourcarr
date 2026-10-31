@@ -117,6 +117,24 @@ class HostApi(
     ) {
         when {
             method == "GET" && parts == listOf("health") -> reply(exchange, 200, health())
+            // Source browser identity and data (the app's Source browser page).
+            method == "GET" && parts == listOf("browser") -> reply(exchange, 200, browserJson())
+            method == "PUT" && parts == listOf("browser", "user-agent") -> {
+                val agent = body(exchange)["user_agent"]?.jsonPrimitive?.contentOrNull?.trim() ?: ""
+                require(agent.length <= 1024 && agent.all { it.code in 32..126 }) { "User agent must be at most 1024 printable ASCII characters" }
+                val network = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
+                network.setUserAgent(agent.ifEmpty { eu.kanade.tachiyomi.network.NetworkHelper.DEFAULT_USER_AGENT })
+                reply(exchange, 200, browserJson())
+            }
+            method == "POST" && parts == listOf("browser", "clear-data") -> {
+                Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>().cookieStore.removeAll()
+                runCatching { if (WebViewEngine.ready()) org.cef.network.CefCookieManager.getGlobalManager()?.deleteCookies("", "") }
+                reply(exchange, 200, browserJson())
+            }
+            method == "POST" && parts == listOf("sources", "reload") -> {
+                store.reloadAll()
+                reply(exchange, 200, health())
+            }
             // Diagnostic: one GET through the source client with the Cloudflare interceptor (FlareSolverr or WebView).
             method == "POST" && parts == listOf("webview", "fetch") -> {
                 val url = body(exchange)["url"]?.jsonPrimitive?.contentOrNull ?: throw IllegalArgumentException("Send url")
@@ -516,6 +534,16 @@ class HostApi(
             put("java", System.getProperty("java.version"))
             put("webview", WebViewEngine.state)
         }
+
+    private fun browserJson(): JsonObject {
+        val network = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
+        return buildJsonObject {
+            put("user_agent", network.defaultUserAgentProvider())
+            put("default_user_agent", eu.kanade.tachiyomi.network.NetworkHelper.DEFAULT_USER_AGENT)
+            put("webview", WebViewEngine.state)
+            put("cookies", network.cookieStore.getStoredCookies().size)
+        }
+    }
 
     private fun webViewFetch(url: String): JsonObject {
         val network = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()

@@ -25,7 +25,7 @@ vm.runInContext(fs.readFileSync(__dirname+'/../app/static/workbench.js','utf8'),
  assert.equal(elements['#exportErrors'].disabled,false);
  elements['#repositoryList']={innerHTML:''};elements['#restartRepositorySources']={disabled:false};elements['#repositoryStatus']={};
  vm.runInContext('repositoryState={can_restart:true,repositories:[]};',ctx);ctx.renderRepositories();
- let restarts=0;ctx.api=async(path,opts)=>{assert.equal(path,'/api/admin/source-browser/restart');assert.equal(opts.method,'POST');restarts++;return {queued:true};};
+ let restarts=0;ctx.api=async(path,opts)=>{assert.equal(path,'/api/v1/source-browser/restart');assert.equal(opts.method,'POST');restarts++;return {queued:true};};
  await ctx.applySavedRepositories();assert.equal(restarts,1);assert.match(elements['#repositoryStatus'].textContent,/sign-ins are retained/);
  vm.runInContext('repositoryState.can_restart=false;',ctx);ctx.renderRepositories();await ctx.applySavedRepositories();
  assert.equal(restarts,1);assert.equal(elements['#restartRepositorySources'].disabled,true);
