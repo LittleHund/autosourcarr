@@ -48,23 +48,12 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
 15 warnings
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:31 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:52 Unresolved reference 'getMangaDetails'.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:77 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:82 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:155:87 Unresolved reference 'url'.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:50 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:71 Unresolved reference 'getChapterList'.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:156:102 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:159:69 Cannot infer type for value parameter 'index'. Specify it explicitly.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/source-host/src/main/kotlin/autosourcarr/host/HostApi.kt:159:76 Cannot infer type for value parameter 'chapter'. Specify it explicitly.
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':source-host:compileKotlin' (registered by plugin 'org.jetbrains.kotlin.jvm').
-> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.btapi.BuildToolsApiCompilationWork
-   > Compilation error. See log for more details
+Execution failed for task ':source-host:shadowJar' (registered by plugin class 'com.github.jengelman.gradle.plugins.shadow.ShadowJavaPlugin').
+> Cannot expand ZIP '/home/runner/.gradle/caches/modules-2/files-2.1/org.graalvm.js/js-community/25.3.4.1/5d1a621727968286375a9ae92b5660fd480ee9ec/js-community-25.3.4.1.pom'.
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -72,4 +61,4 @@ Execution failed for task ':source-host:compileKotlin' (registered by plugin 'or
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 2m 10s
+BUILD FAILED in 1m 8s
