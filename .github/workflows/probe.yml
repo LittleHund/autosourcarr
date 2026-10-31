@@ -95,7 +95,10 @@ jobs:
               fi
             fi
           fi
-          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" > probe/result.txt
+          # Repair runner isolation (phase 6e).
+          { uname -r; python3 -c 'import ctypes; print("landlock abi", ctypes.CDLL(None).syscall(444, None, 0, 1))'; cat /proc/sys/kernel/yama/ptrace_scope; bash scripts/repair-runner-check.sh; echo "exit=$?"; } > probe/repair-runner-check.txt 2>&1
+          rr=$(grep -o 'exit=[0-9]*' probe/repair-runner-check.txt | tail -1)
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" > probe/result.txt
           cat probe/result.txt
       - name: Commit results
         if: always()
