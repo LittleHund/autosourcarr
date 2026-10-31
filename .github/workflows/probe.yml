@@ -51,7 +51,9 @@ jobs:
           grep -E "error [A-Z]+[0-9]+|warning [A-Z]+[0-9]+" probe/build.log | sed 's#/home/runner/work/autosourcarr/autosourcarr/##' | sort -u > probe/build-errors.txt
           t=skipped; o=skipped; c=skipped
           if [ $b -eq 0 ]; then
-            dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build > probe/test.log 2>&1; t=$?
+            command -v nginx >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q nginx-light; } > probe/nginx.log 2>&1
+            nginx -v >> probe/nginx.log 2>&1
+            AUTOSOURCARR_REQUIRE_NGINX=1 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build > probe/test.log 2>&1; t=$?
             grep -E "^FAIL " -A 25 probe/test.log > probe/test-failures.txt
             tail -c 2000 probe/test.log | grep -o '"total":[0-9]*,"passed":[0-9]*,"failed":[0-9]*' > probe/test-summary.txt
             dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-openapi api/openapi.json > probe/openapi.log 2>&1; o=$?
