@@ -20,6 +20,8 @@ dependencies {
     implementation(libs.injekt)
     implementation(libs.rxjava)
     implementation(libs.jsoup)
+    // Extensions use BouncyCastle ciphers (e.g. Mangago: AES/CBC/ZEROBYTEPADDING); Suwayomi registers it too.
+    implementation(libs.bouncycastle)
 
     // Extension loading: dex -> jar, bytecode fixes, manifests, icons.
     implementation(libs.asm)
