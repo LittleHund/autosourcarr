@@ -2134,7 +2134,7 @@ window.setSourceOrphan=async(pkg,orphaned,button)=>{
   if(button)button.disabled=true;
   ++sourceExtensionReadRevision;
   try{
-    const result=await api(`/api/admin/source-orphans/${encodeURIComponent(pkg)}/${orphaned?'mark':'unmark'}`,{method:'POST',timeoutMs:15000,noMutationRefresh:true});
+    const result=await api(`/api/v1/source-orphans/${encodeURIComponent(pkg)}/${orphaned?'mark':'unmark'}`,{method:'POST',timeoutMs:15000,noMutationRefresh:true});
     ++sourceExtensionReadRevision;
     const index=(sourceExtensionState.extensions||[]).findIndex(x=>String(x.pkgName)===String(pkg));
     if(index>=0&&result.extension)sourceExtensionState.extensions[index]={...sourceExtensionState.extensions[index],...result.extension};

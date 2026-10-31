@@ -68,7 +68,7 @@
     if(typeof CustomEvent==='function'&&typeof document.dispatchEvent==='function')document.dispatchEvent(new CustomEvent('autosourcarr:raw-selected',{detail:{package:'Installed sources',jobId:null}}));
     for(const id of buttons)get(id).disabled=true;
     try{
-      const result=await api('/api/admin/source-maintenance/installed',{signal:read.signal,suppressClientError:true});
+      const result=await api('/api/v1/source-maintenance/installed',{signal:read.signal,suppressClientError:true});
       if(own!==generation)return;
       const select=get('sourceRawInstalledPackage');select.replaceChildren();
       for(const row of result.items||[]){const option=document.createElement('option');option.value=row.pkgName;option.textContent=(row.name||row.pkgName)+' · '+row.versionName;select.append(option);}

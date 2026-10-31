@@ -116,7 +116,8 @@ public static class RepositoryManifest
         }
     }
 
-    private static byte[] ExpandGzip(byte[] body)
+    /// <summary>Strict single-member gzip expansion bounded to <see cref="MaximumBytes"/>; shared with <see cref="ExtensionIndex"/>.</summary>
+    internal static byte[] ExpandGzip(byte[] body)
     {
         if (body.Length < 18 || body[2] != 8 || (body[3] & 0xe0) != 0) throw Invalid("Repository gzip manifest could not be decoded");
         var offset = 10; var flags = body[3];

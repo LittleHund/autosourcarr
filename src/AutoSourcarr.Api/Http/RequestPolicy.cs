@@ -4,7 +4,7 @@ namespace AutoSourcarr.Api.Http;
 
 public static class RequestPolicy
 {
-    private static readonly HashSet<string> Polls = ["/api/admin/imports", "/api/admin/matrix", "/api/admin/source-health", "/api/admin/source-maintenance", "/api/admin/source-maintenance/control"];
+    private static readonly HashSet<string> Polls = ["/api/admin/imports", "/api/admin/matrix", "/api/admin/source-health", "/api/admin/source-maintenance", "/api/admin/source-maintenance/control", "/api/v1/source-maintenance"];
     private static readonly HashSet<string> NonInteractive = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events", "/api/admin/duplicates", "/api/admin/duplicate-candidates", "/api/admin/entries/summaries", "/api/admin/matrix/chapter-stats"];
     private static readonly HashSet<string> NoMutationTask = ["/api/admin/entries/summaries", "/api/admin/duplicate-candidates", "/api/admin/matrix/chapter-stats", "/api/admin/duplicates/automatic",
         "/api/admin/imports/clear-history", "/api/admin/imports/reset-rejections", "/api/admin/imports/reset-manual-autoresolve", "/api/admin/ui-preferences", "/api/admin/maintenance/refresh-metadata",
@@ -18,7 +18,8 @@ public static class RequestPolicy
     public static bool CatalogAdmission(string method, string path)
     {
         if (!path.StartsWith("/api/", StringComparison.Ordinal)) return false;
-        var control = method == "POST" && (ResetControls.Contains(path) || Starts(path, "/api/admin/instance/", "/api/admin/source-orphans/", "/api/admin/source-maintenance/", "/api/admin/source-extensions/", "/api/admin/source-health/"))
+        var control = method == "POST" && (ResetControls.Contains(path) || Starts(path, "/api/admin/instance/", "/api/admin/source-orphans/", "/api/admin/source-maintenance/", "/api/admin/source-extensions/", "/api/admin/source-health/",
+            "/api/v1/source-orphans/", "/api/v1/source-maintenance/"))
             || method == "PUT" && (path == "/api/admin/source-health/daily" || Match(path, @"^/api/admin/sources/[^/]+/preferences$"));
         control |= method is "POST" or "PUT" or "DELETE" && (Starts(path, "/api/admin/library/", "/api/admin/profiles/", "/api/admin/downloads", "/api/admin/review-workbench/",
             "/api/admin/metadata-fields/", "/api/admin/serving-upgrades/", "/api/admin/policy-simulator/", "/api/admin/engine/compatibility", "/api/v1/engine/")

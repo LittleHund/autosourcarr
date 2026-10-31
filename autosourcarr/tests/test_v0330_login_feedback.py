@@ -25,7 +25,7 @@ globalThis.open=()=>({opener:'caller',location:{replace:url=>{
 }}});
 const fetch=async(path,options={})=>{
  requests.push({path,opts:options});let data,status=200;
- if(path==='/api/admin/source-maintenance')data={mode:'integrated',configured:true,reachable:true,web_control:true,ai_provider:{provider:'chatgpt'},jobs:[],watch:{}};
+ if(path==='/api/v1/source-maintenance')data={mode:'integrated',configured:true,reachable:true,web_control:true,ai_provider:{provider:'chatgpt'},jobs:[],watch:{}};
  else if(path.endsWith('/installed'))data={items:[]};
  else if(path.endsWith('/control'))data={busy:false,state:'idle',message:'Ready'};
  else if(path.endsWith('/control/login')){

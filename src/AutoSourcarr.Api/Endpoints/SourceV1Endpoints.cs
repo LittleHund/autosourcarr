@@ -157,7 +157,7 @@ internal static class SourceV1Endpoints
             {
                 if (services.Sources is not { } sources) return Unavailable();
                 var refresh = string.Equals(context.Request.Query["refresh"].ToString(), "true", StringComparison.OrdinalIgnoreCase);
-                try { return Results.Json(await sources.Client.ExtensionsAsync(refresh, context.RequestAborted).ConfigureAwait(false), json.JsonObject); }
+                try { return Results.Json(Annotated(services, await sources.Client.ExtensionsAsync(refresh, context.RequestAborted).ConfigureAwait(false)), json.JsonObject); }
                 catch (SourceWorkDeferredException error) { return Problem(503, error.Message); }
                 catch (SuwayomiException error) { return Problem(503, "Unable to read the extension catalog: " + error.Message); }
             }))
@@ -174,9 +174,10 @@ internal static class SourceV1Endpoints
                 await sources.AdminLock.WaitAsync(context.RequestAborted).ConfigureAwait(false);
                 try
                 {
-                    var extension = await sources.Client.UpdateExtensionAsync(context.Request.RouteValues["pkgName"]?.ToString() ?? "", action, context.RequestAborted).ConfigureAwait(false);
+                    var package = context.Request.RouteValues["pkgName"]?.ToString() ?? "";
+                    var extension = await sources.Client.UpdateExtensionAsync(package, action, context.RequestAborted).ConfigureAwait(false);
                     _ = SyncAsync(sources);
-                    return Results.Json(new JsonObject { ["extension"] = extension?.DeepClone(), ["source_sync_pending"] = true }, json.JsonObject);
+                    return Results.Json(new JsonObject { ["extension"] = AnnotatedExtension(services, package, extension), ["source_sync_pending"] = true }, json.JsonObject);
                 }
                 catch (ArgumentException error) { return Problem(400, error.Message); }
                 catch (SourceWorkDeferredException error) { return Problem(503, error.Message); }
@@ -267,5 +268,33 @@ internal static class SourceV1Endpoints
             .WithSummary("Details of one title as its source reports them (refreshed from the source).")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status502BadGateway);
+    }
+
+    /// <summary>
+    /// 0.4.x classified the extension list with the orphan labels (is_orphaned, orphan_reason, can_mark_orphan,
+    /// can_unmark_orphan, repository_missing) so orphans leave the Installed list. Without the orphan service, or
+    /// with unreadable orphan state, the list is returned as the engine sent it.
+    /// </summary>
+    private static JsonObject Annotated(ApiV1Services services, JsonObject result)
+    {
+        if (services.SourceInventory is not { } inventory || result["extensions"] is not JsonArray rows) return result;
+        try
+        {
+            var extensions = rows.OfType<JsonObject>().ToList();
+            inventory.Orphans.AcceptInventory(extensions);
+            var annotated = inventory.Orphans.Annotate(extensions, SourceInventoryV1Endpoints.ConfiguredRepositories(services));
+            result["extensions"] = new JsonArray(annotated.Select(row => (JsonNode?)row).ToArray());
+        }
+        catch (Exception error) when (error is InvalidDataException or IOException or UnauthorizedAccessException) { }
+        return result;
+    }
+
+    private static JsonNode? AnnotatedExtension(ApiV1Services services, string package, JsonObject? extension)
+    {
+        if (services.SourceInventory is not { } inventory) return extension?.DeepClone();
+        inventory.Orphans.UpdateInventoryPackage(package, extension);
+        if (extension is null) return null;
+        try { return inventory.Orphans.Annotate([extension], SourceInventoryV1Endpoints.ConfiguredRepositories(services))[0]; }
+        catch (Exception error) when (error is InvalidDataException or IOException or UnauthorizedAccessException) { return extension.DeepClone(); }
     }
 }

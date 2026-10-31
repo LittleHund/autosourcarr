@@ -69,7 +69,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const original=extension('local',{can_mark_orphan:true});sourceExtensionState.extensions=[original];
 const old=loadSourceExtensions(),oldResponse=pending.shift();
 const button={disabled:false},mark=setSourceOrphan('local',true,button);assert(button.disabled);
-assert.equal(requests[1].path,'/api/admin/source-orphans/local/mark');
+assert.equal(requests[1].path,'/api/v1/source-orphans/local/mark');
 pending.shift().resolve({extension:{...original,is_orphaned:true},message:'Marked'});await mark;
 assert.equal($('#sourceInstalledOrphanPanel').open,true);assert.equal(button.disabled,false);
 oldResponse.resolve({extensions:[original]});await tick();

@@ -38,7 +38,7 @@ globalThis.open=()=>({opener:'caller',location:{replace:url=>{
 const fetch=async(path,options={})=>{
  requests.push({path,opts:options});
  let data,status=200;
- if(path==='/api/admin/source-maintenance')data={mode:'integrated',configured:true,reachable:true,web_control:true,ai_provider:{provider:'chatgpt'},jobs:[],watch:{}};
+ if(path==='/api/v1/source-maintenance')data={mode:'integrated',configured:true,reachable:true,web_control:true,ai_provider:{provider:'chatgpt'},jobs:[],watch:{}};
  else if(path.endsWith('/control')){controlReads++;data=control;}
  else if(path.endsWith('/installed'))return {status,ok:true,headers:{get:()=>''},json:()=>inventoryWait};
  else if(path.endsWith('/control/login')){
@@ -79,7 +79,7 @@ control={busy:true,state:'running',action:'login',operation_id:'aaaaaaaa-aaaa-4a
 const fetch=async(path,options={})=>{
  requests.push({path,opts:options});
  let data,status=200;
- if(path==='/api/admin/source-maintenance')data={mode:'integrated',configured:true,reachable:true,web_control:true,ai_provider:{provider:'chatgpt'},jobs:[],watch:{}};
+ if(path==='/api/v1/source-maintenance')data={mode:'integrated',configured:true,reachable:true,web_control:true,ai_provider:{provider:'chatgpt'},jobs:[],watch:{}};
  else if(path.endsWith('/installed'))data={items:[]};
  else if(path.endsWith('/control')){
   controlReads++;
@@ -190,7 +190,7 @@ const statusWait=new Promise((resolve,reject)=>{finishStatus=resolve;rejectStatu
 control={busy:true,state:'running',action:'login',operation_id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',message:'Enter code',device_code:'AAAA-1111',verification_url:official,expires_at:Date.now()/1000+900};
 const fetch=async(path,options={})=>{
  requests.push({path,opts:options});let data;
- if(path==='/api/admin/source-maintenance'){
+ if(path==='/api/v1/source-maintenance'){
   if(holdStatus){holdStatus=false;return statusWait;}
   data={mode:'integrated',configured:true,reachable:true,web_control:true,ai_provider:{provider:'chatgpt'},jobs:[],watch:{}};
  }else if(path.endsWith('/control')){controlReads++;data=control;}

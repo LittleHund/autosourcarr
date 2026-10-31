@@ -15,5 +15,8 @@
     <PackageVersion Include="Dapper" Version="2.1.66" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <!-- Phase 6b: generated index.pb parser. Grpc.Tools only runs protoc at build time. -->
+    <PackageVersion Include="Google.Protobuf" Version="3.29.3" />
+    <PackageVersion Include="Grpc.Tools" Version="2.69.0" />
   </ItemGroup>
 </Project>

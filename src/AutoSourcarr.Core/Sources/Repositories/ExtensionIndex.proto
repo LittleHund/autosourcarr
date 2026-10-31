@@ -1,0 +1,47 @@
+// Mihon/Keiyoushi extension repository index (index.pb), as read by
+// source-host/src/main/kotlin/autosourcarr/host/ExtensionRepos.kt (readProto)
+// and autosourcarr/app/source_orphans.py (parse_index).
+// Only the fields AutoSourcarr reads are declared; everything else is kept as unknown fields.
+syntax = "proto3";
+
+package autosourcarr.repositories;
+
+option csharp_namespace = "AutoSourcarr.Core.Sources.Repositories.Generated";
+
+message IndexDocument {
+  string name = 1;
+  string badge_label = 2;
+  // Kotlin iterates every field-101 occurrence; protobuf merging of a repeated
+  // occurrence of this singular message concatenates the extension lists the same way.
+  IndexExtensionList extension_list = 101;
+}
+
+message IndexExtensionList {
+  repeated IndexExtension extensions = 1;
+}
+
+message IndexExtension {
+  string name = 1;
+  string pkg = 2;
+  IndexResources resources = 3;
+  string lib = 4;
+  int64 code = 5;
+  string version = 6;
+  // Kotlin reads this varint as Long.toInt(); parse_index treats 2 and 3 as NSFW.
+  int32 content_warning = 7;
+  repeated IndexSource sources = 8;
+}
+
+message IndexResources {
+  string apk_url = 1;
+  string icon_url = 2;
+  string jar_url = 501;
+}
+
+message IndexSource {
+  // Signed 64-bit varint: negative source ids arrive as ten-byte two's-complement varints.
+  int64 id = 1;
+  string name = 2;
+  string lang = 3;
+  string base_url = 4;
+}
