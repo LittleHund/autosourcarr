@@ -173,6 +173,14 @@ def main():
             passed += 1 if result["ok"] else 0
         print(json.dumps(result), flush=True)
     cloudflare_ok = None
+    if args.cloudflare_url:
+        # The WebView downloads its Chromium build on first start: wait for it (up to 6 minutes).
+        deadline = time.time() + 360; state = ""
+        while time.time() < deadline:
+            state = str(call(args.host, "GET", "/v1/health").get("webview", ""))
+            if state == "ready" or state.startswith("failed") or state == "disabled": break
+            time.sleep(5)
+        print(json.dumps({"webview": state}), flush=True)
     for url in args.cloudflare_url:
         result = cloudflare(args.host, url)
         print(json.dumps({"cloudflare": True, **result}), flush=True)
