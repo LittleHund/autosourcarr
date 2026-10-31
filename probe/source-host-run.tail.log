@@ -1,18 +1,152 @@
 kotlin-logging: initializing... active logger factory: Slf4jLoggerFactory
-Exception in thread "main" java.lang.ExceptionInInitializerError
-	at xyz.nulldev.androidcompat.AndroidCompatInitializer.init(AndroidCompatInitializer.kt:16)
-	at autosourcarr.host.MainKt.main(Main.kt:31)
-	at autosourcarr.host.MainKt.main(Main.kt)
-Caused by: com.typesafe.config.ConfigException$Missing: merge of hardcoded value,compat-reference.conf @ jar:file:/home/runner/work/autosourcarr/autosourcarr/.build/autosourcarr-source-host.jar!/compat-reference.conf: 1: No configuration setting found for key 'server'
-	at com.typesafe.config.impl.SimpleConfig.findKeyOrNull(SimpleConfig.java:157)
-	at com.typesafe.config.impl.SimpleConfig.findKey(SimpleConfig.java:150)
-	at com.typesafe.config.impl.SimpleConfig.findOrNull(SimpleConfig.java:177)
-	at com.typesafe.config.impl.SimpleConfig.find(SimpleConfig.java:189)
-	at com.typesafe.config.impl.SimpleConfig.find(SimpleConfig.java:194)
-	at com.typesafe.config.impl.SimpleConfig.getString(SimpleConfig.java:251)
-	at xyz.nulldev.ts.config.LoggingKt.debugLogsEnabled(Logging.kt:139)
-	at xyz.nulldev.ts.config.ConfigManager.loadConfigs(ConfigManager.kt:84)
-	at xyz.nulldev.ts.config.ConfigManager.<init>(ConfigManager.kt:30)
-	at xyz.nulldev.ts.config.GlobalConfigManager.<init>(ConfigManager.kt:200)
-	at xyz.nulldev.ts.config.GlobalConfigManager.<clinit>(ConfigManager.kt)
-	... 3 more
+19:09:33.503 [main] INFO autosourcarr.host.Main -- Loaded 0 extensions with 0 sources
+19:09:33.640 [main] INFO autosourcarr.host.Main -- AutoSourcarr source host 0.5.0 listening on 127.0.0.1:4567
+19:09:36.414 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://github.com/keiyoushi/extensions/releases/download/0d83f6b-0/tachiyomi-all.mangadex-v1.6.0.apk h2
+19:09:36.550 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 302 https://github.com/keiyoushi/extensions/releases/download/0d83f6b-0/tachiyomi-all.mangadex-v1.6.0.apk (135ms, 0-byte body)
+19:09:36.616 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://release-assets.githubusercontent.com/github-production-release-asset/740717768/51846dd9-bc03-49d5-8278-03b0872decd5?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-10-31T20%3A02%3A12Z&rscd=attachment%3B+filename%3Dtachiyomi-all.mangadex-v1.6.0.apk&rsct=application%2Fvnd.android.package-archive&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-10-31T19%3A02%3A04Z&ske=2026-10-31T20%3A02%3A12Z&sks=b&skv=2018-11-09&sig=NDxaAOW%2B2WjtRpWsuV6syfDq77A6ppAHEZW%2FyVXe%2FM8%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5MzQ3NDA3NiwibmJmIjoxNzkzNDczNzc2LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.OXKiwEMhsn_g6yVxQj2UeRs3M5vBy2BKfeikIrZaM4Y&response-content-disposition=attachment%3B%20filename%3Dtachiyomi-all.mangadex-v1.6.0.apk&response-content-type=application%2Fvnd.android.package-archive h2
+19:09:36.637 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://release-assets.githubusercontent.com/github-production-release-asset/740717768/51846dd9-bc03-49d5-8278-03b0872decd5?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-10-31T20%3A02%3A12Z&rscd=attachment%3B+filename%3Dtachiyomi-all.mangadex-v1.6.0.apk&rsct=application%2Fvnd.android.package-archive&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-10-31T19%3A02%3A04Z&ske=2026-10-31T20%3A02%3A12Z&sks=b&skv=2018-11-09&sig=NDxaAOW%2B2WjtRpWsuV6syfDq77A6ppAHEZW%2FyVXe%2FM8%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5MzQ3NDA3NiwibmJmIjoxNzkzNDczNzc2LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.OXKiwEMhsn_g6yVxQj2UeRs3M5vBy2BKfeikIrZaM4Y&response-content-disposition=attachment%3B%20filename%3Dtachiyomi-all.mangadex-v1.6.0.apk&response-content-type=application%2Fvnd.android.package-archive (20ms, 105194-byte body)
+19:09:37.520 [source-host-http] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.mangadex-v1.6.0.jar
+19:09:37.528 [source-host-http] WARN autosourcarr.host.HostApi -- Request POST /v1/extensions/install-url failed
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    f3.<init>(Ljava/lang/String;)V @12: putfield
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[1]) is not assignable to 'c3'
+  Current Frame:
+    bci: @12
+    flags: { }
+    locals: { 'f3', 'java/lang/String' }
+    stack: { 'f3', 'java/lang/Object' }
+  Bytecode:
+    0000000: 2ab7 0053 2abb 0004 59b7 0053 b500 552a
+    0000010: 01bb 0057 5905 b700 5a04 01b8 0060 b500
+    0000020: 62b2 0067 4d12 02b6 006d 4e2d b600 7157
+    0000030: 2abb 0073 592b 2c2d bb00 5759 06b7 005a
+    0000040: b700 76b5 0078 2abb 007a 59b7 007b b500
+    0000050: 7db1                                   
+
+	at eu.kanade.tachiyomi.extension.all.mangadex.MangaDex.<init>(Unknown Source)
+	at keiyoushi.source.Generated.createSources(Unknown Source)
+	at autosourcarr.host.ExtensionStore.load(ExtensionStore.kt:189)
+	at autosourcarr.host.ExtensionStore.installApk(ExtensionStore.kt:136)
+	at autosourcarr.host.ExtensionStore.installFromUrl(ExtensionStore.kt:89)
+	at autosourcarr.host.HostApi.route(HostApi.kt:136)
+	at autosourcarr.host.HostApi.handle(HostApi.kt:85)
+	at autosourcarr.host.HostApi.start$lambda$1(HostApi.kt:70)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:82)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:969)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:945)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+19:09:37.530 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://github.com/keiyoushi/extensions/releases/download/0d83f6b-0/tachiyomi-en.mangapill-v1.6.0.apk h2
+19:09:37.642 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 302 https://github.com/keiyoushi/extensions/releases/download/0d83f6b-0/tachiyomi-en.mangapill-v1.6.0.apk (111ms, 0-byte body)
+19:09:37.643 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://release-assets.githubusercontent.com/github-production-release-asset/740717768/ac60b623-0647-4a7a-9f13-2add367b6e17?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-10-31T19%3A44%3A31Z&rscd=attachment%3B+filename%3Dtachiyomi-en.mangapill-v1.6.0.apk&rsct=application%2Fvnd.android.package-archive&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-10-31T18%3A44%3A19Z&ske=2026-10-31T19%3A44%3A31Z&sks=b&skv=2018-11-09&sig=zMFsTNKzySUHlnvo1alU4UZO5LFD%2BWbIARqoKwHlT4o%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5MzQ3NDA3NywibmJmIjoxNzkzNDczNzc3LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.kjNQuPOI4F9MFKzFp2KcsFxDnAp1_BL4RrSzSx6PYgg&response-content-disposition=attachment%3B%20filename%3Dtachiyomi-en.mangapill-v1.6.0.apk&response-content-type=application%2Fvnd.android.package-archive h2
+19:09:37.671 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://release-assets.githubusercontent.com/github-production-release-asset/740717768/ac60b623-0647-4a7a-9f13-2add367b6e17?sp=r&sv=2018-11-09&sr=b&spr=https&se=2026-10-31T19%3A44%3A31Z&rscd=attachment%3B+filename%3Dtachiyomi-en.mangapill-v1.6.0.apk&rsct=application%2Fvnd.android.package-archive&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2026-10-31T18%3A44%3A19Z&ske=2026-10-31T19%3A44%3A31Z&sks=b&skv=2018-11-09&sig=zMFsTNKzySUHlnvo1alU4UZO5LFD%2BWbIARqoKwHlT4o%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc5MzQ3NDA3NywibmJmIjoxNzkzNDczNzc3LCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.kjNQuPOI4F9MFKzFp2KcsFxDnAp1_BL4RrSzSx6PYgg&response-content-disposition=attachment%3B%20filename%3Dtachiyomi-en.mangapill-v1.6.0.apk&response-content-type=application%2Fvnd.android.package-archive (27ms, 52987-byte body)
+19:09:37.764 [source-host-http] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangapill-v1.6.0.jar
+19:09:37.769 [source-host-http] WARN autosourcarr.host.HostApi -- Request POST /v1/extensions/install-url failed
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    keiyoushi/source/Generated.a(Lkeiyoushi/source/Generated;)Lokhttp3/OkHttpClient; @397: invokespecial
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[4]) is not assignable to 'q'
+  Current Frame:
+    bci: @397
+    flags: { }
+    locals: { 'keiyoushi/source/Generated', 'okhttp3/Interceptor', 'okhttp3/OkHttpClient$Builder', 'java/util/List', 'java/util/Iterator' }
+    stack: { 'okhttp3/OkHttpClient$Builder', uninitialized 377, uninitialized 377, 'p', 'java/lang/Object' }
+  Bytecode:
+    0000000: 2ab6 0054 b600 5ab6 0060 4d2c b600 664c
+    0000010: 2bc6 000c 2bb9 006c 0100 9a01 ed2b b900
+    0000020: 7201 004e 2db9 0077 0100 9901 dd2d b900
+    0000030: 7b01 00c0 007d b600 83b6 0087 1289 b800
+    0000040: 8f99 ffe3 2bb9 006c 0100 9a01 b32b b900
+    0000050: 7201 004e 2db9 0077 0100 9901 a32d b900
+    0000060: 7b01 00c0 007d b600 83b6 0087 1291 b800
+    0000070: 8f99 ffe3 2bb9 006c 0100 9a01 792b b900
+    0000080: 7201 004c 2bb9 0077 0100 9901 692b b900
+    0000090: 7b01 00c0 007d b600 83b6 0087 1293 b800
+    00000a0: 8f99 ffe3 2cb6 0096 4e2d c600 0f2d b900
+    00000b0: 6c01 0099 0006 a700 372d b900 7201 004c
+    00000c0: 2bb9 0077 0100 9900 272b b900 7b01 00c0
+    00000d0: 007d b600 83b6 0087 1298 b800 8f9a 0006
+    00000e0: a7ff e0bb 009a 5912 9cb7 009f bf2d c600
+    00000f0: 0f2d b900 6c01 0099 0006 a700 2f2d b900
+    0000100: 7201 004c 2bb9 0077 0100 9900 1f2b b900
+    0000110: 7b01 00c0 007d c100 a19a 0006 a7ff e8bb
+    0000120: 009a 5912 a3b7 009f bf2c b600 664e 2db9
+    0000130: 0072 0100 3a04 1904 b900 7701 0099 0020
+    0000140: 1904 b900 7b01 004c 2bc0 007d b600 83b6
+    0000150: 0087 1293 b800 8f99 ffdf a700 0501 4c2b
+    0000160: c000 7d4c 2bc6 0013 2d2b b900 a902 0057
+    0000170: 2d2b b900 ac02 0057 2cbb 00ae 59bb 0035
+    0000180: 592a 04b7 0038 bb00 7f59 b700 afb7 00b2
+    0000190: b600 b657 2cbb 00b8 5907 bd00 ba59 03b2
+    00001a0: 00c0 5359 04b2 00c5 5359 05b2 00ca 5359
+    00001b0: 06b2 00cf 53b7 00d2 b600 b657 2cbb 00d4
+    00001c0: 5904 b700 d7b6 00da 572c b200 ddb6 00da
+    00001d0: 572c b600 96b9 0072 0100 4b2a b900 7701
+    00001e0: 0099 000d 2ab9 007b 0100 57a7 fff0 2cb6
+    00001f0: 00e0 b0bb 009a 5912 e2b7 009f bfbb 009a
+    0000200: 5912 e4b7 009f bfbb 009a 5912 e6b7 009f
+    0000210: bf                                     
+  Stackmap Table:
+    append_frame(@29,Object[#165],Object[#98])
+    append_frame(@36,Object[#116])
+    same_frame(@84)
+    full_frame(@132,{Object[#2],Object[#116],Object[#98],Object[#116]},{})
+    full_frame(@185,{Object[#2],Object[#116],Object[#98],Object[#165]},{})
+    same_frame(@192)
+    same_frame(@227)
+    same_frame(@237)
+    same_frame(@253)
+    same_frame(@260)
+    same_frame(@287)
+    same_frame(@297)
+    full_frame(@310,{Object[#2],Object[#127],Object[#98],Object[#165],Object[#116]},{})
+    same_frame(@349)
+    same_frame(@351)
+    full_frame(@376,{Object[#2],Object[#125],Object[#98],Object[#165],Object[#116]},{})
+    full_frame(@475,{Object[#116],Object[#125],Object[#98],Object[#165],Object[#116]},{})
+    same_frame(@494)
+    full_frame(@499,{Object[#2],Object[#127],Object[#98],Object[#116]},{})
+    full_frame(@509,{Object[#2],Object[#165],Object[#98],Object[#116]},{})
+    chop_frame(@519,1)
+
+	at java.base/java.lang.Class.getDeclaredConstructors0(Native Method)
+	at java.base/java.lang.Class.privateGetDeclaredConstructors(Class.java:3551)
+	at java.base/java.lang.Class.getConstructor0(Class.java:3756)
+	at java.base/java.lang.Class.getDeclaredConstructor(Class.java:2932)
+	at suwayomi.tachidesk.manga.impl.util.PackageTools.loadExtensionSourcesWithLockHeld(PackageTools.kt:193)
+	at suwayomi.tachidesk.manga.impl.util.PackageTools.loadExtensionSources(PackageTools.kt:211)
+	at autosourcarr.host.ExtensionStore$load$instance$1.invokeSuspend(ExtensionStore.kt:185)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)
+	at kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)
+	at kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)
+	at kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source)
+	at autosourcarr.host.ExtensionStore.load(ExtensionStore.kt:185)
+	at autosourcarr.host.ExtensionStore.installApk(ExtensionStore.kt:136)
+	at autosourcarr.host.ExtensionStore.installFromUrl(ExtensionStore.kt:89)
+	at autosourcarr.host.HostApi.route(HostApi.kt:136)
+	at autosourcarr.host.HostApi.handle(HostApi.kt:85)
+	at autosourcarr.host.HostApi.start$lambda$1(HostApi.kt:70)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.AuthFilter.doFilter(AuthFilter.java:82)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:101)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange$LinkHandler.handle(ServerImpl.java:969)
+	at jdk.httpserver/com.sun.net.httpserver.Filter$Chain.doFilter(Filter.java:98)
+	at jdk.httpserver/sun.net.httpserver.ServerImpl$Exchange.run(ServerImpl.java:945)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
