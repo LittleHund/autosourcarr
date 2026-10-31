@@ -116,7 +116,8 @@ LIB14_REPO = "https://raw.githubusercontent.com/tachiyomiorg/extensions/repo/"
 
 def lib14_item(address, username, password):
     """Komga from the archived Tachiyomi repository: built with extensions-lib 1.4 (version 1.4.x), checked against a
-    Komga server (in CI: scripts/komga-fixture.sh, one CBZ comic)."""
+    Komga server (default: Komga's public demo). Its first titles may be EPUBs without page images, so up to 30
+    titles are browsed for one with pages."""
     rows = json.loads(urllib.request.urlopen(LIB14_REPO + "index.min.json", timeout=60).read())
     row = next(r for r in rows if r["pkg"] == "eu.kanade.tachiyomi.extension.all.komga")
     if not str(row["version"]).startswith("1.4."): raise RuntimeError("Komga in the archive is %s, not lib 1.4" % row["version"])
@@ -156,9 +157,10 @@ def main():
     parser.add_argument("--lib14", action="store_true", help="also install and check a lib 1.4 APK from the repository history; it must pass")
     parser.add_argument("--cloudflare-url", action="append", default=[], help="a real page behind Cloudflare; reported, required only with --require-cloudflare")
     parser.add_argument("--require-cloudflare", action="store_true")
-    parser.add_argument("--komga-url", default="http://127.0.0.1:25600")
-    parser.add_argument("--komga-user", default="ci@example.org")
-    parser.add_argument("--komga-password", default="ci-komga-pass")
+    # Komga's public demo server and its published demo account; it holds EPUBs and comics.
+    parser.add_argument("--komga-url", default="https://demo.komga.org")
+    parser.add_argument("--komga-user", default="demo@komga.org")
+    parser.add_argument("--komga-password", default="komga-demo")
     parser.add_argument("--challenge-url", default="", help="a local JavaScript challenge (scripts/fake-cloudflare.py); it must pass")
     args = parser.parse_args()
     index = repository(args.index)
