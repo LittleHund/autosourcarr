@@ -74,17 +74,15 @@ class HostApi(
 
     private fun handle(exchange: HttpExchange) {
         try {
-            exchange.use {
-                if (HostConfig.token.isNotEmpty() && !sameToken(exchange.requestHeaders.getFirst("X-Source-Host-Token") ?: "")) {
-                    throw HttpError(401, "Missing or wrong X-Source-Host-Token")
-                }
-                val parts = exchange.requestURI.rawPath.split('/').filter { it.isNotEmpty() }.map { URLDecoder.decode(it, StandardCharsets.UTF_8) }
-                val query = query(exchange.requestURI.rawQuery)
-                when {
-                    parts.size >= 2 && parts[0] == "api" && parts[1] == "v1" -> images(exchange, parts.drop(2))
-                    parts.firstOrNull() == "v1" -> route(exchange, exchange.requestMethod, parts.drop(1), query)
-                    else -> throw HttpError(404, "Unknown path")
-                }
+            if (HostConfig.token.isNotEmpty() && !sameToken(exchange.requestHeaders.getFirst("X-Source-Host-Token") ?: "")) {
+                throw HttpError(401, "Missing or wrong X-Source-Host-Token")
+            }
+            val parts = exchange.requestURI.rawPath.split('/').filter { it.isNotEmpty() }.map { URLDecoder.decode(it, StandardCharsets.UTF_8) }
+            val query = query(exchange.requestURI.rawQuery)
+            when {
+                parts.size >= 2 && parts[0] == "api" && parts[1] == "v1" -> images(exchange, parts.drop(2))
+                parts.firstOrNull() == "v1" -> route(exchange, exchange.requestMethod, parts.drop(1), query)
+                else -> throw HttpError(404, "Unknown path")
             }
         } catch (error: HttpError) {
             reply(exchange, error.status, problem(error.message ?: "Error"))
@@ -98,6 +96,8 @@ class HostApi(
             logger.warn(error) { "Request ${exchange.requestMethod} ${exchange.requestURI.rawPath} failed" }
             // A source error (site down, changed layout, Cloudflare) is the source's answer, not a host failure.
             reply(exchange, 502, problem(error.message ?: error.javaClass.simpleName, error.javaClass.simpleName))
+        } finally {
+            exchange.close()
         }
     }
 
@@ -602,9 +602,13 @@ class HostApi(
         body: JsonElement,
     ) {
         val bytes = json.encodeToString(JsonElement.serializer(), body).toByteArray(StandardCharsets.UTF_8)
-        exchange.responseHeaders.set("Content-Type", "application/json; charset=utf-8")
-        exchange.sendResponseHeaders(status, bytes.size.toLong())
-        exchange.responseBody.write(bytes)
+        try {
+            exchange.responseHeaders.set("Content-Type", "application/json; charset=utf-8")
+            exchange.sendResponseHeaders(status, bytes.size.toLong())
+            exchange.responseBody.write(bytes)
+        } catch (error: java.io.IOException) {
+            logger.debug(error) { "The client went away before the answer was sent" }
+        }
     }
 
     private fun sameToken(supplied: String): Boolean =

@@ -10,7 +10,6 @@ package suwayomi.tachidesk.manga.impl.util
 import android.content.pm.PackageInfo
 import android.content.pm.Signature
 import android.os.Bundle
-import com.googlecode.d2j.dex.Dex2jar
 import com.googlecode.d2j.reader.MultiDexFileReader
 import com.googlecode.dex2jar.tools.BaksmaliBaseDexExceptionHandler
 import eu.kanade.tachiyomi.util.lang.Hash
@@ -63,19 +62,11 @@ object PackageTools {
 
         val reader = MultiDexFileReader.open(dexFile.readBytes())
         val handler = BaksmaliBaseDexExceptionHandler()
-        Dex2jar
-            .from(reader)
-            .withExceptionHandler(handler)
-            .reUseReg(false)
-            .topoLogicalSort()
-            .skipDebug(true)
-            .optimizeSynchronized(false)
-            .printIR(false)
-            .noCode(false)
-            .skipExceptions(false)
-            .dontSanitizeNames(true)
-            .computeFrames(true)
-            .to(jarFile)
+        // AutoSourcarr: same dex2jar options as Suwayomi, plus the R8 constructor fix (AutoSourcarrDex2jar).
+        val translator = com.googlecode.d2j.dex.AutoSourcarrDex2jar(reader, handler)
+        translator.to(jarFile)
+        val added = autosourcarr.host.ExtensionConstructors.add(jarFile, translator.constructorFixes)
+        if (added > 0) logger.info { "Added $added constructors that R8 removed (${dexFile.fileName})" }
         if (handler.hasException()) {
             val rootPath = HostConfig.extensionsDir.toPath()
             val errorFile: Path = rootPath.resolve("${dexFile.nameWithoutExtension}-error.txt")
