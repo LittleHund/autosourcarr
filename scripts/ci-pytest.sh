@@ -7,7 +7,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 baseline=tests/python-baseline-failures.txt
 report=$(mktemp)
-PYTHONPATH=autosourcarr python -m pytest -q -p no:cacheprovider autosourcarr/tests 2>&1 | tee "$report" | tail -3
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=autosourcarr python -m pytest -q -p no:cacheprovider autosourcarr/tests 2>&1 | tee "$report" | tail -3
 grep '^FAILED' "$report" | sed -e 's/^FAILED //' -e 's/ - .*//' | sort -u > "$report.failed"
 sort -u "$baseline" > "$report.baseline"
 new=$(comm -13 "$report.baseline" "$report.failed")
@@ -18,7 +18,12 @@ if [[ -n "$new" ]]; then
   # GitHub annotations: visible through the API even when the raw log is not.
   while IFS= read -r test; do echo "::error title=new pytest failure::$test"; done <<< "$new"
   echo "::error title=pytest summary::$(tail -1 "$report")"
-  grep -E '^(E |FAILED|ERROR)' "$report" | head -40 | while IFS= read -r line; do echo "::warning::$line"; done
+  while IFS= read -r test; do
+    # The failure section of this test (pytest's "____ name ____" header), first 30 lines.
+    name=${test##*::}; name=${name%%[*}
+    awk -v n="$name" 'BEGIN{p=0} /^_{3,} .* _{3,}$/{p=index($0," " n)>0 || index($0," " n "[")>0} p&&c<30{print; c++}' "$report" \
+      | while IFS= read -r line; do echo "::warning title=${name}::${line}"; done
+  done <<< "$new"
   exit 1
 fi
 echo "No new Python failures (baseline $(wc -l < "$report.baseline") known)."

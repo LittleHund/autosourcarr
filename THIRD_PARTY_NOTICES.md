@@ -24,7 +24,7 @@ Matching character-property ranges use Unicode 15.0 data exposed by the referenc
 Python `unicodedata` module. Persistent proxy-identity keys use the retained Unicode
 15 full case-fold mapping. Unicode character data is copyright Unicode, Inc. and
 is covered by the [Unicode data terms](https://www.unicode.org/license.txt).
-The full Unicode license is retained under `src/AutoSourcarr.Core/Text/Notices/`
+The full Unicode license is retained under `src/AutoSourcarr.Core/Unicode/Notices/`
 and copied into the build/publish output with the character tables.
 
 SharpCompress retains the existing BZIP2 and LZMA raw-ZIP formats alongside stored

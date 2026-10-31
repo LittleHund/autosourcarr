@@ -1,4 +1,4 @@
-namespace AutoSourcarr.Core.Text;
+namespace AutoSourcarr.Core.Unicode;
 
 /// <summary>Retained Unicode15 text boundaries, independent of the host culture/runtime tables.</summary>
 public static class UnicodeText

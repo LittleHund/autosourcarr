@@ -1,4 +1,4 @@
-namespace AutoSourcarr.Core.Text;
+namespace AutoSourcarr.Core.Unicode;
 
 /// <summary>Python's ordinal Unicode code-point ordering, including retained lone surrogate values.</summary>
 public sealed class UnicodeCodePointComparer : IComparer<string>

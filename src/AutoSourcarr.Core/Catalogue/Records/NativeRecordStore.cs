@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Matching;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 using AutoSourcarr.Core.Catalogue.Sharing;
 using AutoSourcarr.Core.Catalogue.Gallery;
 using AutoSourcarr.Core.Persistence;

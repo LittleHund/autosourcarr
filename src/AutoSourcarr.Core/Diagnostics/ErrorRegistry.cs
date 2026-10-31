@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Privacy;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 
 namespace AutoSourcarr.Core.Diagnostics;
 

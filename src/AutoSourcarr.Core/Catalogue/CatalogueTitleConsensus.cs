@@ -1,6 +1,6 @@
 using System.Text;
 using AutoSourcarr.Core.Matching;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 
 namespace AutoSourcarr.Core.Catalogue;
 

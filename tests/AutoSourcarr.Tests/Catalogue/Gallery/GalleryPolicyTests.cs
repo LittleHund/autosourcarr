@@ -52,7 +52,7 @@ public static class GalleryPolicyTests
                     actual = JsonSerializer.SerializeToNode(GalleryTagEquivalence.Mapping(rows, reviews, strict)); break;
                 case "canonical":
                     var mapping = row["mapping"]!.AsObject().ToDictionary(pair => pair.Key, pair => pair.Value!.GetValue<string>(), StringComparer.Ordinal);
-                    actual = new JsonArray(GalleryTagEquivalence.CanonicalKeys(row["tags"]!.AsArray(), mapping).Order(AutoSourcarr.Core.Text.UnicodeCodePointComparer.Instance).Select(value => JsonValue.Create(value)).ToArray()); break;
+                    actual = new JsonArray(GalleryTagEquivalence.CanonicalKeys(row["tags"]!.AsArray(), mapping).Order(AutoSourcarr.Core.Unicode.UnicodeCodePointComparer.Instance).Select(value => JsonValue.Create(value)).ToArray()); break;
                 default: throw new InvalidDataException("Unknown gallery oracle case");
             }
             Equivalent(row["result"], actual, "gallery case " + count.ToString(CultureInfo.InvariantCulture) + "/" + Text(row["kind"])); count++;

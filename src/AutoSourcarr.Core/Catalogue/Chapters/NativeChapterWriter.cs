@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 using AutoSourcarr.Core.Catalogue.Sharing;
 using AutoSourcarr.Core.Catalogue.Gallery;
 using AutoSourcarr.Core.Persistence;

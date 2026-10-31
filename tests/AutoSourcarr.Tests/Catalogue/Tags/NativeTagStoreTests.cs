@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Settings;
 using AutoSourcarr.Core.Catalogue.Gallery;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Catalogue.Tags;
 using Microsoft.Data.Sqlite;

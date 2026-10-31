@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Reader;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 using AutoSourcarr.Core.Persistence;
 
 namespace AutoSourcarr.Core.Sources.Configuration;

@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using AutoSourcarr.Core.Concurrency;
 using AutoSourcarr.Core.Diagnostics;
 using AutoSourcarr.Core.Privacy;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 
 namespace AutoSourcarr.Core.Diagnostics;
 

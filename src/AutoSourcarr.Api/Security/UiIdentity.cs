@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Settings;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 using Microsoft.AspNetCore.Http;
 
 namespace AutoSourcarr.Api.Security;

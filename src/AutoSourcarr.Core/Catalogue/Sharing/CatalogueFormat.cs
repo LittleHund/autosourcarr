@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using AutoSourcarr.Core.Serialization;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 
 namespace AutoSourcarr.Core.Catalogue.Sharing;
 

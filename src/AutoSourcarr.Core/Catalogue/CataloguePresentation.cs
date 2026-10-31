@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Matching;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 
 namespace AutoSourcarr.Core.Catalogue;
 

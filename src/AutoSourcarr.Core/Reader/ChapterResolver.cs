@@ -35,7 +35,7 @@ public static class ChapterResolver
 
     public static bool ProbablyOfficialSource(string name, string baseUrl)
     {
-        var label = Regex.Replace(AutoSourcarr.Core.Text.UnicodeCaseFold.Fold(name), "[^a-z0-9]+", " ").Trim();
+        var label = Regex.Replace(AutoSourcarr.Core.Unicode.UnicodeCaseFold.Fold(name), "[^a-z0-9]+", " ").Trim();
         string[] labels = ["manga plus", "mangaplus", "webtoon", "comikey", "tapas", "tappytoon", "pocket comics", "pocketcomics", "manta", "lezhin", "toomics", "azuki", "manga up", "mangaup", "k manga", "kmanga", "viz manga", "manga plaza", "mangaplaza", "renta", "coolmic", "inkr"];
         if (labels.Contains(label, StringComparer.Ordinal)) return true;
         var host = Uri.TryCreate(baseUrl, UriKind.Absolute, out var url) ? url.Host.ToLowerInvariant() : "";

@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Matching;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Catalogue.Tags;
 

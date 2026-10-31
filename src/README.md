@@ -8,7 +8,7 @@ and backend are unchanged. This is an unfinished migration, without a published
 
 | Project | Responsibilities |
 | --- | --- |
-| Core | One feature folder per area, each holding its models, logic and data access (Sonarr's `NzbDrone.Core` layout): Catalogue (Chapters, Records, Structure, Tags, Gallery, Sharing), Matching, Reader, Sources (Runtime, Inventory, Repositories, Configuration, Controls), Repair (Artifacts, Runner), Jobs, Settings; plus the shared Persistence, Diagnostics, Privacy, Imaging, Concurrency, Serialization, Collections and Text folders |
+| Core | One feature folder per area, each holding its models, logic and data access (Sonarr's `NzbDrone.Core` layout): Catalogue (Chapters, Records, Structure, Tags, Gallery, Sharing), Matching, Reader, Sources (Runtime, Inventory, Repositories, Configuration, Controls), Repair (Artifacts, Runner), Jobs, Settings; plus the shared Persistence, Diagnostics, Privacy, Imaging, Concurrency, Serialization, Collections and Unicode folders |
 | Api | Executable core host today, owned startup/shutdown, authorization, request ownership and one endpoint file per area under `Endpoints/` |
 | Host | Finite unprivileged startup resolver (the former Bootstrap); becomes the real host entry point in conversion phase 1 |
 | `../native` | Finite container bootstrap, source ownership/observation and constrained repair launchers; image integration remains open |

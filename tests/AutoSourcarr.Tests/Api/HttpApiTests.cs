@@ -11,7 +11,7 @@ using AutoSourcarr.Core.Privacy;
 using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Sources;
 using AutoSourcarr.Core.Persistence;
-using AutoSourcarr.Core.Text;
+using AutoSourcarr.Core.Unicode;
 using AutoSourcarr.Core.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

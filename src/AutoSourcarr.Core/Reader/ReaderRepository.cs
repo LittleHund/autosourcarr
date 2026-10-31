@@ -239,7 +239,7 @@ public sealed class ReaderRepository
         foreach (var row in rows) row["resolver_score"] = ChapterResolver.Score(row, context.Priorities, maxPages, context.Official);
         if (applyProfile) context.Profile.Rank(rows, context.Languages);
         // LINQ ordering is stable, matching Python list.sort on tied scores/names.
-        var sorted = rows.OrderByDescending(row => ReaderValue.Number(row, "resolver_score")).ThenBy(row => ReaderValue.Text(row, "source_name"), AutoSourcarr.Core.Text.UnicodeCodePointComparer.Instance).ToArray();
+        var sorted = rows.OrderByDescending(row => ReaderValue.Number(row, "resolver_score")).ThenBy(row => ReaderValue.Text(row, "source_name"), AutoSourcarr.Core.Unicode.UnicodeCodePointComparer.Instance).ToArray();
         rows.Clear(); rows.AddRange(sorted);
         if (!applyProfile || rows.Count < 2) return;
         var preferred = _database.Read(DatabaseFile.Catalog, session =>
