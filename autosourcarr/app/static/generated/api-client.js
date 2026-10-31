@@ -241,7 +241,7 @@
        */
       checkSetupReader(body, options) { return call('POST', '/api/v1/setup/reader-preflight', body, options); },
       /**
-       * Report the Cloudflare handlers now. The source host solves challenges when a source meets one, so nothing is queued.
+       * Report the Cloudflare handlers now. The source host solves challenges when a source meets one; queued is true when a handler is ready.
        * POST /api/v1/source-engine/challenges
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -419,7 +419,7 @@
        */
       restartAfterSetup(options) { return call('POST', '/api/v1/setup/restart', undefined, options); },
       /**
-       * Load every installed extension again (new headers, changed settings). Installed extensions and sign-ins stay.
+       * Apply the saved repositories and load every installed extension again (new headers, changed settings). Installed extensions and sign-ins stay.
        * POST /api/v1/source-browser/restart
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
