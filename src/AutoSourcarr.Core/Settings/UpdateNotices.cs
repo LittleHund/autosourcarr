@@ -27,6 +27,13 @@ public static class UpdateNotices
         var previous = document.Update;
         if (previous is not null && previous.AppVersion == appVersion)
             return null;
+        if (previous is { AppVersion.Length: 0 })
+        {
+            // Written by the env conversion of this same start: its notice already says what happened.
+            previous.AppVersion = appVersion;
+            store.WriteDocument(document);
+            return null;
+        }
 
         UpdateNotice? notice = null;
         if (previous is not null)
@@ -60,6 +67,8 @@ public static class UpdateNotices
                     CreatedAt = (now ?? DateTimeOffset.UtcNow).UtcDateTime.ToString("O", CultureInfo.InvariantCulture)
                 };
         }
+        if (notice is not null && previous?.Notice is { } earlier)
+            notice.Items.InsertRange(0, earlier.Items); // an undismissed earlier notice stays visible
         document.Update = new ConfigUpdateRecord { AppVersion = appVersion, Defaults = defaults, Notice = notice ?? previous?.Notice };
         store.WriteDocument(document);
         return notice;

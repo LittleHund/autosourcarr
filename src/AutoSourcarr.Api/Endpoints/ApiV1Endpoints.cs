@@ -18,7 +18,7 @@ namespace AutoSourcarr.Api.Endpoints;
 public sealed record SettingItem(
     string Key, string Label, string Description, string Group, string Type, string? Value, bool Secret, bool IsSet,
     string? Default, string ComposeVariable, bool ComposeRecommended, bool OverriddenByEnvironment, string? WizardStep,
-    bool Advanced, double? Minimum, double? Maximum, IReadOnlyList<SettingChoice> Choices);
+    bool Advanced, double? Minimum, double? Maximum, IReadOnlyList<SettingChoice> Choices, bool Editable, bool SavedInApp, string? Problem);
 
 public sealed record SettingsGroup(string Name, IReadOnlyList<SettingItem> Items);
 
@@ -88,6 +88,7 @@ public sealed record ProblemResponse(string Detail);
 [JsonSerializable(typeof(RuntimeMetricsSnapshot))]
 [JsonSerializable(typeof(JsonObject))]
 [JsonSerializable(typeof(ProblemResponse))]
+[JsonSerializable(typeof(string))]
 public sealed partial class ApiJsonContext : JsonSerializerContext;
 
 /// <summary>What the typed /api/v1 endpoints need; tests and the OpenAPI generator pass stand-ins.</summary>
@@ -95,8 +96,10 @@ public sealed class ApiV1Services
 {
     public ApiV1Services(Func<AutoSourcarrSettings> settings, string configurationRoot, ConversionReport? conversion,
         IReadOnlyDictionary<string, string?>? environment = null, Action<IReadOnlyDictionary<string, string?>>? registerSecrets = null,
-        CatalogueStatusStats? status = null, Action? stop = null, Func<bool>? bundledImage = null)
+        CatalogueStatusStats? status = null, Action? stop = null, Func<bool>? bundledImage = null,
+        Func<CancellationToken, Task<JsonObject>>? health = null)
     {
+        Health = health;
         Settings = settings;
         ConfigurationRoot = configurationRoot;
         Conversion = conversion;
@@ -113,6 +116,7 @@ public sealed class ApiV1Services
     public IReadOnlyDictionary<string, string?> Environment { get; }
     public SettingsEditor Editor { get; }
     public CatalogueStatusStats? Status { get; }
+    public Func<CancellationToken, Task<JsonObject>>? Health { get; }
     public Action? Stop { get; }
     public Func<bool> BundledImage { get; }
     internal int Restarting;
@@ -124,22 +128,39 @@ public sealed class ApiV1Services
         var revision = Editor.Revision();
         var saved = Editor.SavedSettings();
         var effective = Editor.Effective();
+        var managed = Editor.ManagedKeys();
         var groups = SettingsSchema.Entries
             .GroupBy(entry => entry.Group)
             .OrderBy(group => group.Key, StringComparer.Ordinal)
             .Select(group => new SettingsGroup(group.Key, group.OrderBy(entry => entry.Key, StringComparer.Ordinal).Select(entry =>
             {
                 var value = effective.GetValueOrDefault(entry.Key);
+                var overridden = Environment.GetValueOrDefault(entry.Key) is not null && !managed.Contains(entry.Key);
                 return new SettingItem(entry.Key, entry.Label, entry.Description, entry.Group, entry.Type,
                     entry.Secret ? null : value, entry.Secret, entry.Secret ? !string.IsNullOrEmpty(value) : saved.ContainsKey(entry.Key),
-                    entry.Default, entry.ComposeVariable, entry.ComposeRecommended, Editor.OverriddenByEnvironment(entry.Key),
-                    entry.WizardStep, entry.Advanced, entry.Minimum, entry.Maximum, entry.Choices);
+                    entry.Default, entry.ComposeVariable, entry.ComposeRecommended, overridden,
+                    entry.WizardStep, entry.Advanced, entry.Minimum, entry.Maximum, entry.Choices, entry.Editable, managed.Contains(entry.Key),
+                    entry.Secret ? null : Problem(entry, value));
             }).ToArray()))
             .ToArray();
         return new(revision, new ConfigStore(ConfigurationRoot).Exists, groups);
     }
 
-    public ConversionSummary ConversionSummary() => Conversion is { } report
+    /// <summary>A value that the Settings page would refuse, e.g. a Compose variable outside the schema's limits.</summary>
+    private static string? Problem(SettingSchemaEntry entry, string? value)
+    {
+        if (string.IsNullOrEmpty(value) || entry.Type is "url" or "translation" or "path")
+            return null; // addresses and folders are checked where they are used; empty is allowed there
+        try
+        {
+            using var document = JsonDocument.Parse(JsonSerializer.Serialize(value, ApiJsonContext.Default.String));
+            SettingsEditor.Normalize(entry, document.RootElement);
+            return null;
+        }
+        catch (SettingsValidationException error) { return error.Message; }
+    }
+
+    public ConversionSummary ConversionSummary() => (Conversion ?? EnvConversion.Saved(ConfigurationRoot)) is { } report
         ? new(true, report.ConvertedAt, report.BackupDirectory, report.SettingKeys, report.SourceHostKeys, report.ExtraKeys,
             report.EncryptedKeys, report.InvalidKeys, report.KeysWithoutValue)
         : new(false, null, null, [], [], [], [], [], []);
@@ -384,6 +405,16 @@ public static class ApiV1Endpoints
             }))
             .WithName("getStatusStats")
             .WithSummary("Catalogue, chapter, source, cache and storage counts; refreshed at most every 15 seconds.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        group.MapGet("/health", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                if (services.Health is null) return Problem(503, "Health is not available in this host.");
+                return Results.Json(await services.Health(context.RequestAborted).ConfigureAwait(false), json.JsonObject);
+            }))
+            .WithName("getHealth")
+            .WithSummary("Status page: version, databases, catalogue counts, active errors and dependency checks.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapGet("/diagnostics/metrics", (Func<HttpContext, IResult>)(_ =>

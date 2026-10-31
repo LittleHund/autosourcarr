@@ -150,7 +150,7 @@ public static class ApiV1Tests
                 paths["/api/v1/settings"]!["put"]!["requestBody"]!["content"]!["application/json"]!["schema"]!["$ref"]!.GetValue<string>());
             foreach (var path in new[] { "/api/v1/setup", "/api/v1/setup/finish", "/api/v1/setup/reader-preflight", "/api/v1/setup/restart",
                          "/api/v1/settings/schema", "/api/v1/settings/update-notice", "/api/v1/config", "/api/v1/storage/database",
-                         "/api/v1/status/stats", "/api/v1/diagnostics/metrics" })
+                         "/api/v1/status/stats", "/api/v1/diagnostics/metrics", "/api/v1/health" })
                 Check.True(paths.ContainsKey(path), "OpenAPI misses " + path);
             // Stable output: building twice gives identical text, so CI can diff the generated client.
             Check.Equal(text, host.GetTestClient().GetStringAsync("/api/v1/openapi.json").GetAwaiter().GetResult());

@@ -100,6 +100,11 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner.Privacy.Register(environment);
             owner.Privacy.Register(SettingsLoader.ToEnvironment(startup.Settings, includeSecrets: true)
                 .ToDictionary(pair => pair.Key, pair => (string?)pair.Value, StringComparer.Ordinal));
+            // CON-5: every secret kept in config.json is redacted too, not only the ones the settings model reads
+            // (source-host and kept extra values, e.g. old Authelia passwords copied by the conversion).
+            foreach (var (_, section) in new ConfigStore(startup.ConfigurationRoot).Load().Sections())
+                owner.Privacy.Register(section.Where(pair => SettingsSecrets.IsSecretKey(pair.Key))
+                    .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal));
             cancellationToken.ThrowIfCancellationRequested();
             await owner.Io.RunAsync(() =>
             {
@@ -131,9 +136,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._source.Client.Attention = owner._attention;
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
                 owner._dataDirectory!, () => owner.Settings, owner.Io, owner._source.Client, owner.Tasks, owner.Lanes, owner.Logs, cancellationToken).ConfigureAwait(false);
-            owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, environment,
+            owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
-                () => owner.RequestStop?.Invoke());
+                () => owner.RequestStop?.Invoke(), health: owner.HealthAsync);
             if (!string.IsNullOrWhiteSpace(startup.Settings.MainSuwayomiUrl))
             {
                 owner._main = new(startup.Settings, startup.Settings.MainSuwayomiUrl,
@@ -203,6 +208,46 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             try { await next(context).ConfigureAwait(false); }
             finally { context.RequestAborted = original; }
         }
+    }
+
+    /// <summary>
+    /// /api/v1/health for the Status page (port of main.py health). Databases, counts and errors are real; the
+    /// source engine, main Suwayomi and translation checks belong to the parts replaced in phases 4 and 7, so
+    /// they are reported as not checked (checked=false) instead of guessing.
+    /// </summary>
+    internal async Task<JsonObject> HealthAsync(CancellationToken cancellationToken)
+    {
+        var settings = Settings;
+        JsonObject stats;
+        try { stats = await _apiV1!.Status!.SnapshotAsync(cancellationToken).ConfigureAwait(false); }
+        catch (Exception error) when (error is not OperationCanceledException)
+        { stats = new JsonObject { ["error"] = "Status counts are not available (" + error.GetType().Name + ")." }; }
+        var errors = Errors.Snapshot(5, includeResolved: false);
+        static JsonObject NotChecked(string url, bool configured, string phase) => new()
+        {
+            ["ok"] = null, ["checked"] = false, ["configured"] = configured, ["url"] = url,
+            ["warning"] = "Not checked by this version; the check returns with conversion phase " + phase + "."
+        };
+        return new JsonObject
+        {
+            ["ok"] = true,
+            ["version"] = Identity.Version,
+            ["captured_at"] = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+            ["instance_id"] = Identity.InstanceId,
+            ["source_host"] = NotChecked(settings.EffectiveSourceUrl, true, "4"),
+            ["main_suwayomi"] = NotChecked(settings.MainSuwayomiUrl, !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl), "7"),
+            ["translation"] = NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "7"),
+            ["library"] = new JsonObject { ["ok"] = null, ["checked"] = false },
+            ["stats"] = stats,
+            ["errors"] = new JsonObject
+            {
+                ["active"] = errors["grouped_active_count"]?.DeepClone() ?? errors["active_count"]?.DeepClone(),
+                ["active_errors"] = errors["grouped_active_error_count"]?.DeepClone() ?? errors["active_error_count"]?.DeepClone(),
+                ["active_warnings"] = errors["grouped_active_warning_count"]?.DeepClone() ?? errors["active_warning_count"]?.DeepClone(),
+                ["items"] = errors["items"]?.DeepClone() ?? new JsonArray(),
+                ["groups"] = errors["groups"]?.DeepClone() ?? new JsonArray()
+            }
+        };
     }
 
     private async Task<IResult> LivenessAsync(HttpContext context)

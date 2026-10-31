@@ -20,7 +20,8 @@ public static class SettingsLoader
         IReadOnlyDictionary<string, string?>? configuration = null)
     {
         // Precedence, lowest first: .env in the working directory, config.json,
-        // container environment (Compose overrides), then wizard-managed values.
+        // container environment (Compose overrides), then values saved in the app
+        // (config.json managed_keys; before the conversion, the 0.4.x wizard values).
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         Overlay(values, dotenv);
         Overlay(values, configuration);

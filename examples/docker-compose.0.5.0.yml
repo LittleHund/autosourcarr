@@ -6,12 +6,14 @@
 # Coming from 0.4.x: point /config at your existing config folder. On the first start the
 # old autosourcarr.env (and source-host.env) is converted once into config.json; the env
 # files stay where they are and an identical copy goes to /config/backups/. After that,
-# REMOVE the old "env_file:" line from your Compose: every variable it injects counts as an
-# override and wins over the Settings page (the page marks such settings as overridden).
+# remove the old "env_file:" line from your Compose. Settings you save in the app still win
+# over it, but every other setting would keep the old file's value.
 #
-# Every setting can still be set here as an environment variable with the same name; such
-# a variable wins over config.json. The full list with defaults is in docs/settings.md.
-# Keep this list short.
+# Every setting can also be set here as an environment variable with the same name. Such a
+# variable wins over the default and over config.json values you never changed in the app;
+# a value you save in the app wins over it (use "Use default" on the Settings page to hand a
+# setting back to Compose). Folders and identities (DATA_DIR, DATABASE_DIR, SOURCE_ENGINE_UID/GID,
+# ...) can only be set here. The full list with defaults is in docs/settings.md.
 #
 # The image is published from conversion phase 13; until then this file is a preview.
 services:
@@ -25,8 +27,8 @@ services:
       - ./config:/config
       - ./data:/data
     environment:
-      TZ: Europe/Amsterdam
-      # Optional overrides (see docs/settings.md, column "Compose"):
+      # Optional (see docs/settings.md, columns "Compose" and "Compose only"):
+      # TZ: Europe/Amsterdam
       # SOURCE_ENGINE_UID: "568"
       # SOURCE_ENGINE_GID: "568"
       # DATABASE_DIR: /database

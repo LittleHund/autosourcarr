@@ -37,22 +37,28 @@ public static class StartupConfigurationLoader
             ? EnvConversion.EnsureConverted(configurationRoot, now ?? DateTimeOffset.UtcNow)
             : null;
         var store = new ConfigStore(configurationRoot);
-        var configuration = store.Load();
-        // Once config.json exists it is the only saved configuration: the 0.4.x wizard values were copied
-        // into it by the conversion, and Settings/setup now save there. Old env-file wizard values must not
-        // override it any more (the recovery above still ran, so a half-finished 0.4.x save is undone first).
-        if (store.Exists)
-            managed = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var document = store.ReadDocument();
+        var configuration = document is null ? ConfigValues.Empty : store.Load(document);
+        // Once config.json exists it is the only saved configuration: the 0.4.x wizard values were copied into
+        // it by the conversion (and stay "managed"), and Settings/setup now save there. Values you saved in the
+        // app win over Compose variables, like 0.4.x wizard values did; everything else in config.json is
+        // below Compose (ARC-5). The env-file recovery above still ran, so a half-finished 0.4.x save is undone first.
+        if (document is not null)
+            managed = configuration.Settings
+                .Where(pair => pair.Value is not null && document.ManagedKeys.Contains(pair.Key, StringComparer.Ordinal))
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         var settings = SettingsLoader.Load(dotenv, inherited, managed, bundledImage, configuration.Settings);
-        return new(settings, configurationRoot, conversion);
+        return new(settings, configurationRoot, conversion, inherited);
     }
 }
 
 public sealed class StartupConfigurationSnapshot
 {
-    internal StartupConfigurationSnapshot(AutoSourcarrSettings settings, string configurationRoot, ConversionReport? conversion = null)
+    internal StartupConfigurationSnapshot(AutoSourcarrSettings settings, string configurationRoot, ConversionReport? conversion = null,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         Settings = settings;
+        Environment = environment ?? new Dictionary<string, string?>(StringComparer.Ordinal);
         ConfigurationRoot = configurationRoot;
         Conversion = conversion;
         SourceRequest = SourceStartupRequest.FromSettings(settings);
@@ -63,5 +69,7 @@ public sealed class StartupConfigurationSnapshot
     /// <summary>Set when this start converted autosourcarr.env to config.json.</summary>
     public ConversionReport? Conversion { get; }
     public SourceStartupRequest SourceRequest { get; }
+    /// <summary>The container environment as it was at start (before the app sets TZ), for "overridden by Compose".</summary>
+    public IReadOnlyDictionary<string, string?> Environment { get; }
     public override string ToString() => "AutoSourcarr startup configuration (values redacted)";
 }
