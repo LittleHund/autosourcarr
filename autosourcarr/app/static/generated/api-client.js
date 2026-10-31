@@ -233,6 +233,15 @@
        */
       changePassword(body, options) { return call('POST', '/api/v1/auth/password', body, options); },
       /**
+       * Install, update or uninstall an extension; the source list refreshes in the background.
+       * POST /api/v1/source-extensions/{pkgName}/action
+       * @param {string} pkgName
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      changeSourceExtension(pkgName, body, options) { return call('POST', `/api/v1/source-extensions/${encodeURIComponent(pkgName)}/action`, body, options); },
+      /**
        * Check which API features the source or main engine answers (target: source or main) and save the report.
        * POST /api/v1/engine/{target}/compatibility
        * @param {string} target
@@ -302,6 +311,14 @@
        */
       createOwner(body, options) { return call('POST', '/api/v1/auth/setup', body, options); },
       /**
+       * Create a source group (members share one priority; the member with the most chapters serves).
+       * POST /api/v1/source-groups
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      createSourceGroup(body, options) { return call('POST', '/api/v1/source-groups', body, options); },
+      /**
        * Owner only: remove an account (not the owner); its sessions end.
        * DELETE /api/v1/accounts/{accountId}
        * @param {string} accountId
@@ -309,6 +326,14 @@
        * @returns {Promise<JsonObject>}
        */
       deleteAccount(accountId, options) { return call('DELETE', `/api/v1/accounts/${encodeURIComponent(accountId)}`, undefined, options); },
+      /**
+       * Delete a source group; its members become ungrouped.
+       * DELETE /api/v1/source-groups/{groupId}
+       * @param {string} groupId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      deleteSourceGroup(groupId, options) { return call('DELETE', `/api/v1/source-groups/${encodeURIComponent(groupId)}`, undefined, options); },
       /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
@@ -458,6 +483,36 @@
        */
       getSourceEngine(options) { return call('GET', '/api/v1/source-engine', undefined, options); },
       /**
+       * Installed and available extensions from the configured repositories (?refresh=true reloads the repositories).
+       * GET /api/v1/source-extensions
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceExtensions(options) { return call('GET', '/api/v1/source-extensions', undefined, options); },
+      /**
+       * Details of one title as its source reports them (refreshed from the source).
+       * GET /api/v1/source-manga/{mangaId}
+       * @param {string} mangaId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceManga(mangaId, options) { return call('GET', `/api/v1/source-manga/${encodeURIComponent(mangaId)}`, undefined, options); },
+      /**
+       * The extension's own settings for this source (as in Mihon), with current values.
+       * GET /api/v1/sources/{sourceId}/preferences
+       * @param {string} sourceId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourcePreferences(sourceId, options) { return call('GET', `/api/v1/sources/${encodeURIComponent(sourceId)}/preferences`, undefined, options); },
+      /**
+       * Available sources with enabled, priority, group and language choices, and the source groups.
+       * GET /api/v1/sources
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSources(options) { return call('GET', '/api/v1/sources', undefined, options); },
+      /**
        * Catalogue, chapter, source, cache and storage counts; refreshed at most every 15 seconds.
        * GET /api/v1/status/stats
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -555,6 +610,15 @@
        */
       saveSettings(body, options) { return call('PUT', '/api/v1/settings', body, options); },
       /**
+       * Change one extension setting of this source.
+       * PUT /api/v1/sources/{sourceId}/preferences
+       * @param {string} sourceId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setSourcePreference(sourceId, body, options) { return call('PUT', `/api/v1/sources/${encodeURIComponent(sourceId)}/preferences`, body, options); },
+      /**
        * Save the source browser identity and apply it to the running engine (sources rebuild their headers).
        * PUT /api/v1/source-browser/user-agent
        * @param {JsonObject} body
@@ -562,6 +626,45 @@
        * @returns {Promise<JsonObject>}
        */
       setSourceUserAgent(body, options) { return call('PUT', '/api/v1/source-browser/user-agent', body, options); },
+      /**
+       * Read the installed sources from the engine and store them (new sources get the default choices; empty engine lists keep existing ones).
+       * POST /api/v1/sources/sync
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      syncSources(options) { return call('POST', '/api/v1/sources/sync', undefined, options); },
+      /**
+       * Update every installed extension that has a newer version.
+       * POST /api/v1/source-extensions/update-all
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      updateAllSourceExtensions(options) { return call('POST', '/api/v1/source-extensions/update-all', undefined, options); },
+      /**
+       * Change a source's choices: enabled, priority, group, official, matching rules.
+       * PUT /api/v1/sources/{sourceId}
+       * @param {string} sourceId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      updateSource(sourceId, body, options) { return call('PUT', `/api/v1/sources/${encodeURIComponent(sourceId)}`, body, options); },
+      /**
+       * Rename a source group or change its priority.
+       * PUT /api/v1/source-groups/{groupId}
+       * @param {string} groupId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      updateSourceGroup(groupId, body, options) { return call('PUT', `/api/v1/source-groups/${encodeURIComponent(groupId)}`, body, options); },
+      /**
+       * Install a source APK by drag and drop after the checks: archive structure, manifest and entry point, no native code; lists permissions and web addresses.
+       * POST /api/v1/source-extensions/upload
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      uploadSourceExtension(options) { return call('POST', '/api/v1/source-extensions/upload', undefined, options); },
     };
   }
 
