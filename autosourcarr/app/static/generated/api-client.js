@@ -33,6 +33,20 @@
    */
 
   /**
+   * @typedef {Object} DatabaseMoveRequest
+   * @property {string} path
+   */
+
+  /**
+   * @typedef {Object} DatabaseMoveResponse
+   * @property {string} from_directory
+   * @property {string} target_directory
+   * @property {number} catalog_bytes
+   * @property {number} origins_bytes
+   * @property {string} message
+   */
+
+  /**
    * @typedef {Object} DatabaseStorageView
    * @property {string} active_dir
    * @property {(string|null)} configured_dir
@@ -271,6 +285,14 @@
        * @returns {Promise<UpdateNoticeResponse>}
        */
       getUpdateNotice(options) { return call('GET', '/api/v1/settings/update-notice', undefined, options); },
+      /**
+       * Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.
+       * POST /api/v1/storage/database/move
+       * @param {DatabaseMoveRequest} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<DatabaseMoveResponse>}
+       */
+      moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
