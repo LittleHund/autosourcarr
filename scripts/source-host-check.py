@@ -98,7 +98,7 @@ def check(host, item, query, lang):
         result["image_bytes"] = len(image); result["image_type"] = kind
         result["ok"] = True
     except Exception as error:  # report and continue with the next package
-        result["ok"] = False; result["failed_at"] = step; result["error"] = str(error)[:600]
+        result["ok"] = False; result["failed_at"] = step; result["error"] = str(error)[:3000]
     result["seconds"] = round(time.time() - started, 1)
     return result
 
