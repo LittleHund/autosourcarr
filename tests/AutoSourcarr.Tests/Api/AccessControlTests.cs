@@ -71,8 +71,15 @@ public static class AccessControlTests
         Check.Equal(admin.Id, reopened.VerifyPassword("helper", "helper-password")!.Id);
         var old = reopened.AutomaticAdminToken;
         Check.True(reopened.RegenerateAdminToken() != old);
-        Check.True(reopened.ResetOwnerLogin() && reopened.SetupRequired && reopened.VerifyPassword("owner", "new-owner-password") is null);
-        Check.Equal(owner.Id, reopened.CreateOwner("Owner", "reset-password-1").Id);
+        var code = reopened.ResetOwnerLogin();
+        Check.True(code is { Length: 12 } && reopened.SetupRequired && reopened.SetupCodeRequired && reopened.ResetApplied);
+        Check.True(reopened.VerifyPassword("owner", "new-owner-password") is null);
+        Check.Throws<AccountException>(() => reopened.CreateOwner("Owner", "reset-password-1"));
+        Check.Throws<AccountException>(() => reopened.CreateOwner("Helper", "reset-password-1", code));
+        Check.Equal(owner.Id, reopened.CreateOwner("Owner", "reset-password-1", code).Id);
+        Check.True(!reopened.SetupCodeRequired);
+        reopened.ClearResetMarker();
+        Check.True(!reopened.ResetApplied);
     }
 
     private static void Throttle()
@@ -80,15 +87,17 @@ public static class AccessControlTests
         var now = DateTimeOffset.Parse("2026-10-31T20:00:00Z", System.Globalization.CultureInfo.InvariantCulture);
         var throttle = new LoginThrottle(() => now);
         var bursts = 0;
-        for (var i = 0; i < 4; i++) { Check.Equal(TimeSpan.Zero, throttle.Before("10.0.0.1", "owner")); bursts += throttle.Failed("10.0.0.1", "owner") ? 1 : 0; }
-        bursts += throttle.Failed("10.0.0.1", "owner") ? 1 : 0;
-        Check.Equal(TimeSpan.FromSeconds(2), throttle.Before("10.0.0.1", "someone"));
-        Check.Equal(TimeSpan.FromSeconds(2), throttle.Before("10.0.0.9", "Owner"));
-        for (var i = 0; i < 15; i++) bursts += throttle.Failed("10.0.0.1", "owner") ? 1 : 0;
-        Check.True(throttle.Before("10.0.0.1", "owner") is null, "refused after 20");
+        // Attempts count before the check: four go through at once, the fifth waits.
+        for (var i = 0; i < 4; i++) { Check.Equal(TimeSpan.Zero, throttle.Before("10.0.0.1", "owner")); bursts += throttle.Failed() ? 1 : 0; }
+        Check.Equal(TimeSpan.FromSeconds(2), throttle.Before("10.0.0.1", " Owner "));
+        Check.Equal(TimeSpan.FromSeconds(4), throttle.Before("10.0.0.9", "OWNER"));
+        for (var i = 0; i < 20; i++) { _ = throttle.Before("10.0.0.1", "owner"); bursts += throttle.Failed() ? 1 : 0; }
+        Check.True(throttle.Before("10.0.0.1", "owner") is null, "this address is refused for this name");
+        Check.True(throttle.Before("10.0.0.7", "owner") is not null, "the owner can still sign in from elsewhere (slowed)");
         Check.Equal(1, bursts);
         now = now.AddMinutes(16);
         Check.Equal(TimeSpan.Zero, throttle.Before("10.0.0.1", "owner"));
+        throttle.Succeeded("10.0.0.1", "owner");
         var log = new SecurityLog(new Sandbox().Path);
         log.Record("login-failed", "owner", "10.0.0.1");
         Check.Throws<ArgumentException>(() => log.Record("unknown", "x", "y"));
@@ -178,6 +187,19 @@ public static class AccessControlTests
         using var guest = app.Client(("Cookie", AccessControlMiddleware.SessionCookie + "=" + guestSession), ("Sec-Fetch-Site", "same-origin"));
         Check.Equal("app-page", await guest.GetStringAsync("/"));
         Check.Equal("guest", (await guest.GetFromJsonAsync<JsonObject>("/api/v1/auth/me"))!["role"]!.GetValue<string>());
+        // Guest reads the policy allows also pass the /api/v1 filter.
+        Check.Equal(HttpStatusCode.OK, (await guest.GetAsync("/api/v1/health")).StatusCode);
+        Check.Equal(HttpStatusCode.Forbidden, (await guest.GetAsync("/API/V1/KEYS")).StatusCode);
+        Check.Equal(HttpStatusCode.Forbidden, (await guest.GetAsync("/api/v1/keys/")).StatusCode);
+        // Case and trailing slash cannot skip the cross-site check or the policy.
+        using (var crossSite = app.Client(("Cookie", AccessControlMiddleware.SessionCookie + "=" + guestSession), ("Sec-Fetch-Site", "cross-site")))
+            Check.Equal(HttpStatusCode.Forbidden, (await crossSite.PostAsync("/API/V1/ACCOUNTS", new StringContent("{}"))).StatusCode);
+        Check.True(AccessPolicy.Required("POST", "/API/V1/ACCOUNTS/") == AccessLevel.Owner);
+        // Proxy identity headers count only from trusted proxies.
+        Check.True(AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("172.18.0.5"), ""));
+        Check.True(!AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("203.0.113.9"), ""));
+        Check.True(!AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("192.168.1.20"), "172.18.0.0/16"));
+        Check.True(AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("172.18.3.4"), "10.0.0.1, 172.18.0.0/16"));
         var denied = app.Runtime.Access!.Log.Snapshot("access-denied")["items"]!.AsArray();
         Check.True(denied.Count > 0, "refusals of signed-in callers are logged");
     }

@@ -469,6 +469,9 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("auth_owner_external_user")]
     public string AuthOwnerExternalUser { get; init; } = "";
 
+    [System.Text.Json.Serialization.JsonPropertyName("auth_trusted_proxies")]
+    public string AuthTrustedProxies { get; init; } = "";
+
     [System.Text.Json.Serialization.JsonPropertyName("auth_reset_owner")]
     public bool AuthResetOwner { get; init; }
 
@@ -630,6 +633,7 @@ public sealed partial record AutoSourcarrSettings
         new("AUTH_ADMIN_GROUPS", nameof(AuthAdminGroups), SettingKind.Text, false, []),
         new("AUTH_GUEST_GROUPS", nameof(AuthGuestGroups), SettingKind.Text, false, []),
         new("AUTH_OWNER_EXTERNAL_USER", nameof(AuthOwnerExternalUser), SettingKind.Text, false, []),
+        new("AUTH_TRUSTED_PROXIES", nameof(AuthTrustedProxies), SettingKind.Text, false, []),
         new("AUTH_RESET_OWNER", nameof(AuthResetOwner), SettingKind.Boolean, false, []),
     ];
 }

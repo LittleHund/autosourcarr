@@ -52,6 +52,9 @@
         state.me = await client().getMe();
         $('securityWho').textContent = `Signed in as ${state.me.user || 'unknown'} (${state.me.role}, ${state.me.via}).`;
         $('securitySignOut').hidden = state.me.via !== 'session';
+        const admin = ['owner', 'admin'].includes(state.me.role) || state.me.via === 'admin-token';
+        for (const panel of document.querySelectorAll('#settingsSecurityPane > section')) panel.hidden = !admin;
+        if (!admin) return;
         const keys = await client().getKeys();
         state.token = keys.admin_token || '';
         renderToken(); renderKeys(keys.keys || []);

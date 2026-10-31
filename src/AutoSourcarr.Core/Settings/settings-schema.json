@@ -722,8 +722,13 @@
     },
     "AUTH_RESET_OWNER": {
       "group": "Security",
-      "description": "Last-resort owner reset: set to true in Compose for one start when the owner has lost the password and every recovery code. The next start clears the owner's password (data is kept), the login page asks for a new one, and the event is logged. Remove it afterwards.",
+      "description": "Last-resort owner reset: set to true in Compose and restart once when the owner has lost the password and every recovery code. That start clears the owner's password (data is kept) and writes a one-time setup code to the server log; the login page asks for it and a new password. It applies once per use of the variable; remove it afterwards.",
       "compose": "only"
+    },
+    "AUTH_TRUSTED_PROXIES": {
+      "group": "Security",
+      "description": "Addresses of your reverse proxy (comma-separated IPs or CIDR ranges, for example 172.18.0.0/16). Only requests from them may name the user (Remote-User, Remote-Groups) for external sign-in or give the client address and https (X-Forwarded-For, X-Forwarded-Proto). Empty: loopback and private networks are trusted; set it when the app's port can be reached from other machines.",
+      "compose": "allowed"
     }
   }
 }

@@ -14,6 +14,8 @@ public sealed class AccessControlServices
     public required SecurityLog Log { get; init; }
     public required Func<AutoSourcarrSettings> Settings { get; init; }
     public LoginThrottle Throttle { get; init; } = new();
+    /// <summary>Adds a new secret (a regenerated admin token) to the redaction list.</summary>
+    public Action<string>? RegisterSecret { get; init; }
     /// <summary>Called once per burst of failed sign-ins (admins are told: error registry now, notifications in SET-11).</summary>
     public Action<string>? Burst { get; init; }
 }
@@ -32,8 +34,16 @@ public static class AccessPolicy
         "/api/v1/status/stats", "/api/v1/health"
     ];
 
+    /// <summary>Routing ignores case and a trailing slash, so the policy compares the same canonical form.</summary>
+    public static string Canonical(string path)
+    {
+        var lower = path.ToLowerInvariant();
+        return lower.Length > 1 ? lower.TrimEnd('/') : lower;
+    }
+
     public static AccessLevel Required(string method, string path)
     {
+        path = Canonical(path);
         if (PublicPaths.Contains(path) || path.StartsWith("/static/", StringComparison.Ordinal)) return AccessLevel.Public;
         if (path == "/api/v1/auth/me" || path == "/api/v1/auth/password") return AccessLevel.Guest;
         if (path.StartsWith("/api/v1/accounts", StringComparison.Ordinal) || path == "/api/v1/keys/admin-token/regenerate") return AccessLevel.Owner;
@@ -66,7 +76,7 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var path = context.Request.Path.Value ?? "";
+        var path = AccessPolicy.Canonical(context.Request.Path.Value ?? "");
         if (context.Items.ContainsKey(ApiAuthorization.ReaderRequestItem)) { await next(context).ConfigureAwait(false); return; }
         var caller = await ResolveAsync(context).ConfigureAwait(false);
         context.Items[CallerItem] = caller;
@@ -80,7 +90,9 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
             return;
         }
         if (settings.AuthMethod == "basic") context.Response.Headers.WWWAuthenticate = "Basic realm=\"AutoSourcarr\", charset=\"UTF-8\"";
-        if (!path.StartsWith("/api/", StringComparison.Ordinal) && settings.AuthMethod == "forms" && HttpMethods.IsGet(context.Request.Method))
+        // The login page also creates the first owner, with Basic sign-in too (no pop-up account exists yet).
+        if (!path.StartsWith("/api/", StringComparison.Ordinal) && HttpMethods.IsGet(context.Request.Method)
+            && (settings.AuthMethod == "forms" || settings.AuthMethod == "basic" && services.Accounts.SetupRequired))
         {
             context.Response.Redirect("/login?next=" + Uri.EscapeDataString(path + context.Request.QueryString));
             return;
@@ -94,12 +106,48 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
     public static Caller CallerOf(HttpContext context) =>
         context.Items.TryGetValue(CallerItem, out var value) && value is Caller caller ? caller : Caller.Anonymous;
 
-    public static string Address(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "";
+    /// <summary>The client address: the last X-Forwarded-For entry (the one the trusted proxy added) when the request comes from it.</summary>
+    public static string Address(HttpContext context)
+    {
+        var remote = context.Connection.RemoteIpAddress?.ToString() ?? "";
+        if (context.Items.TryGetValue(TrustedProxyItem, out var trusted) && trusted is true)
+        {
+            var forwarded = context.Request.Headers["X-Forwarded-For"].ToString().Split(',')[^1].Trim();
+            if (forwarded.Length is > 0 and < 64) return forwarded;
+        }
+        return remote;
+    }
+
+    public const string TrustedProxyItem = "AutoSourcarr.TrustedProxy";
+
+    /// <summary>AUTH_TRUSTED_PROXIES (IPs or CIDR); empty trusts loopback and private networks only.</summary>
+    public static bool FromTrustedProxy(System.Net.IPAddress? remote, string configured)
+    {
+        if (remote is null) return true; // in-process or Unix socket: no network peer at all
+        if (remote.IsIPv4MappedToIPv6) remote = remote.MapToIPv4();
+        var entries = configured.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (entries.Length == 0)
+        {
+            if (System.Net.IPAddress.IsLoopback(remote)) return true;
+            var bytes = remote.GetAddressBytes();
+            return remote.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
+                ? bytes[0] == 10 || bytes[0] == 172 && bytes[1] is >= 16 and <= 31 || bytes[0] == 192 && bytes[1] == 168
+                : (bytes[0] & 0xfe) == 0xfc;
+        }
+        foreach (var entry in entries)
+        {
+            if (System.Net.IPNetwork.TryParse(entry, out var network) && network.Contains(remote)) return true;
+            if (System.Net.IPAddress.TryParse(entry, out var single) && single.Equals(remote)) return true;
+        }
+        return false;
+    }
 
     private async Task<Caller> ResolveAsync(HttpContext context)
     {
         var request = context.Request;
         var settings = services.Settings();
+        var trusted = FromTrustedProxy(context.Connection.RemoteIpAddress, settings.AuthTrustedProxies);
+        context.Items[TrustedProxyItem] = trusted;
         var bearer = request.Headers.Authorization.ToString();
         var token = request.Headers["X-Admin-Token"].ToString();
         if (bearer.StartsWith("bearer ", StringComparison.OrdinalIgnoreCase)) token = token.Length > 0 ? token : bearer[7..].Trim();
@@ -119,7 +167,8 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
                     _ => new Caller(Role.Reader, key.Name, "key", key.Id)
                 };
         }
-        if (settings.AuthMethod == "external") return External(request, settings);
+        // Proxy identity headers count only from a trusted proxy: anyone else could send them.
+        if (settings.AuthMethod == "external") return trusted ? External(request, settings) : Caller.Anonymous;
         if (settings.AuthMethod == "basic" && bearer.StartsWith("basic ", StringComparison.OrdinalIgnoreCase))
             return await BasicAsync(context, bearer[6..].Trim()).ConfigureAwait(false);
         if (settings.AuthMethod == "forms" && request.Cookies.TryGetValue(SessionCookie, out var session)
@@ -149,12 +198,13 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
     }
 
     // Basic sends the password with every request: a verified pair is remembered for a minute (by fingerprint only).
-    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (Caller Caller, DateTimeOffset Until)> _basic = new(StringComparer.Ordinal);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (Caller Caller, DateTimeOffset Until, long Version)> _basic = new(StringComparer.Ordinal);
 
     private async Task<Caller> BasicAsync(HttpContext context, string encoded)
     {
         var fingerprint = PasswordHashing.Fingerprint("basic|" + encoded);
-        if (_basic.TryGetValue(fingerprint, out var cached) && cached.Until > DateTimeOffset.UtcNow) return cached.Caller;
+        // Any change to accounts (password, removal) drops the remembered pair.
+        if (_basic.TryGetValue(fingerprint, out var cached) && cached.Until > DateTimeOffset.UtcNow && cached.Version == services.Accounts.Version) return cached.Caller;
         if (_basic.Count > 1000) _basic.Clear();
         string name, password;
         try
@@ -168,7 +218,7 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
         var account = await SignInAsync(context, name, password).ConfigureAwait(false);
         if (account is null) return Caller.Anonymous;
         var caller = new Caller(account.Role, account.Name, "basic", account.Id);
-        _basic[fingerprint] = (caller, DateTimeOffset.UtcNow.AddMinutes(1));
+        _basic[fingerprint] = (caller, DateTimeOffset.UtcNow.AddMinutes(1), services.Accounts.Version);
         return caller;
     }
 
@@ -194,7 +244,7 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
         if (account is null)
         {
             services.Log.Record("login-failed", name, address);
-            if (services.Throttle.Failed(address, name)) services.Burst?.Invoke("Many failed sign-ins in the last minutes (latest from " + address + ").");
+            if (services.Throttle.Failed()) services.Burst?.Invoke("Many failed sign-ins in the last minutes (latest from " + address + ").");
             return null;
         }
         services.Throttle.Succeeded(address, name);
@@ -204,12 +254,17 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
     public static void IssueCookie(HttpContext context, string session) =>
         context.Response.Cookies.Append(SessionCookie, session, new CookieOptions
         {
-            HttpOnly = true, SameSite = SameSiteMode.Strict, Secure = context.Request.IsHttps, Path = "/",
+            HttpOnly = true, SameSite = SameSiteMode.Strict, Secure = IsHttps(context), Path = "/",
             MaxAge = AccountStore.SessionLifetime, IsEssential = true
         });
 
     public static void ClearCookie(HttpContext context) =>
-        context.Response.Cookies.Delete(SessionCookie, new CookieOptions { Path = "/", SameSite = SameSiteMode.Strict, Secure = context.Request.IsHttps });
+        context.Response.Cookies.Delete(SessionCookie, new CookieOptions { Path = "/", SameSite = SameSiteMode.Strict, Secure = IsHttps(context) });
+
+    /// <summary>HTTPS directly, or reported by a trusted proxy that ends HTTPS (X-Forwarded-Proto).</summary>
+    private static bool IsHttps(HttpContext context) => context.Request.IsHttps
+        || context.Items.TryGetValue(TrustedProxyItem, out var trusted) && trusted is true
+            && context.Request.Headers["X-Forwarded-Proto"].ToString().Split(',')[0].Trim().Equals("https", StringComparison.OrdinalIgnoreCase);
 
     private static bool Same(string actual, string expected)
     {

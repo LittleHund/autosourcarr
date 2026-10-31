@@ -20,7 +20,7 @@ public static class CrossSiteWritePolicy
     /// <summary>Pure rule, so the policy can be checked without an HTTP context.</summary>
     public static bool IsCrossSiteWrite(string method, string path, string secFetchSite, string origin, string host, string forwardedHost)
     {
-        if (method is "GET" or "HEAD" or "OPTIONS" || !ProtectedPrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.Ordinal)))
+        if (method is "GET" or "HEAD" or "OPTIONS" || !ProtectedPrefixes.Any(prefix => path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
             return false;
         if (string.Equals(secFetchSite.Trim(), "cross-site", StringComparison.OrdinalIgnoreCase))
             return true;
