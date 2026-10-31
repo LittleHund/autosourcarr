@@ -457,6 +457,21 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonIgnore]
     public string AutosourcarrReaderApiToken { get; init; } = "";
 
+    [System.Text.Json.Serialization.JsonPropertyName("auth_method")]
+    public string AuthMethod { get; init; } = "forms";
+
+    [System.Text.Json.Serialization.JsonPropertyName("auth_admin_groups")]
+    public string AuthAdminGroups { get; init; } = "admins";
+
+    [System.Text.Json.Serialization.JsonPropertyName("auth_guest_groups")]
+    public string AuthGuestGroups { get; init; } = "";
+
+    [System.Text.Json.Serialization.JsonPropertyName("auth_owner_external_user")]
+    public string AuthOwnerExternalUser { get; init; } = "";
+
+    [System.Text.Json.Serialization.JsonPropertyName("auth_reset_owner")]
+    public bool AuthResetOwner { get; init; }
+
     [System.Text.Json.Serialization.JsonPropertyName("authelia_user_header")]
     public string AutheliaUserHeader { get; init; } = "";
 
@@ -611,5 +626,10 @@ public sealed partial record AutoSourcarrSettings
         new("ADMIN_TOKEN", nameof(AdminToken), SettingKind.Text, true, []),
         new("AUTOSOURCARR_READER_API_TOKEN", nameof(AutosourcarrReaderApiToken), SettingKind.Text, true, []),
         new("AUTHELIA_USER_HEADER", nameof(AutheliaUserHeader), SettingKind.Text, false, []),
+        new("AUTH_METHOD", nameof(AuthMethod), SettingKind.Text, false, ["forms", "basic", "external"]),
+        new("AUTH_ADMIN_GROUPS", nameof(AuthAdminGroups), SettingKind.Text, false, []),
+        new("AUTH_GUEST_GROUPS", nameof(AuthGuestGroups), SettingKind.Text, false, []),
+        new("AUTH_OWNER_EXTERNAL_USER", nameof(AuthOwnerExternalUser), SettingKind.Text, false, []),
+        new("AUTH_RESET_OWNER", nameof(AuthResetOwner), SettingKind.Boolean, false, []),
     ];
 }

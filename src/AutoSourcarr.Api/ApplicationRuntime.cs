@@ -41,6 +41,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private NativeSourceSnapshots? _snapshots;
     private SourceEngineController? _source;
     private SourceAttention? _attention;
+    private AutoSourcarr.Api.Security.AccessControlServices? _access;
+    internal AutoSourcarr.Api.Security.AccessControlServices? Access => _access;
     private CatalogueRuntime? _catalogue;
     private string? _dataDirectory;
     private SuwayomiClient? _main;
@@ -192,6 +194,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._source.Client.Attention = owner._attention;
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
                 owner._dataDirectory!, () => owner.Settings, owner.Io, owner._source.Client, owner.Tasks, owner.Lanes, owner.Logs, cancellationToken).ConfigureAwait(false);
+            owner._access = OpenAccounts(owner, startup);
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
@@ -199,7 +202,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))))
             {
                 CheckDatabaseTarget = path => DatabaseRelocation.CheckTarget(owner.Database, path),
-                Tasks = owner.Tasks, Jobs = owner.Jobs, Events = owner.Events, Errors = owner.Errors,
+                Tasks = owner.Tasks, Jobs = owner.Jobs, Events = owner.Events, Errors = owner.Errors, Access = owner._access,
                 SourceRuntime = new SourceRuntimeServices
                 {
                     Engine = owner.SourceEngineJson, Client = owner._source.Client, Attention = owner._attention,
@@ -241,7 +244,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         _static = new(Path.GetFullPath(staticRoot));
         app.Use(next => context => OwnRequestAsync(context, next));
         app.UseAutoSourcarrHttp(Version, () => Settings, RecordUnexpected, Admission, Lanes, Tasks, Privacy,
-            prefix => Errors.ResolvePrefix(prefix));
+            prefix => Errors.ResolvePrefix(prefix), _access);
         app.UseStaticFiles(new StaticFileOptions { RequestPath = "/static", FileProvider = _static });
         app.UseEndpoints(endpoints =>
         {
@@ -251,6 +254,11 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 return Results.File(Path.Combine(_static.Root, "index.html"), "text/html; charset=utf-8");
             });
             endpoints.MapMethods("/api/v1/live", ["GET", "HEAD"], (Func<HttpContext, Task<IResult>>)LivenessAsync);
+            endpoints.MapGet("/login", (HttpContext context) =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                return Results.File(Path.Combine(_static.Root, "login.html"), "text/html; charset=utf-8");
+            });
             endpoints.MapUiPreferences(Preferences, Io, () => Settings);
             endpoints.MapErrors(Errors, Io, () => Settings);
             endpoints.MapEngineCompatibility(_source!.CapabilityService, _mainCapabilities, () => Settings, _admin);
@@ -317,6 +325,33 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 ["items"] = errors["items"]?.DeepClone() ?? new JsonArray(),
                 ["groups"] = errors["groups"]?.DeepClone() ?? new JsonArray()
             }
+        };
+    }
+
+    /// <summary>
+    /// Phase 5: accounts and keys (config/accounts), the security log (data folder), the one-time owner reset
+    /// (AUTH_RESET_OWNER, AUTH-10) and the external owner binding (AUTH_OWNER_EXTERNAL_USER, AUTH-2).
+    /// </summary>
+    private static AutoSourcarr.Api.Security.AccessControlServices OpenAccounts(ApplicationRuntime owner, StartupConfigurationSnapshot startup)
+    {
+        var settings = startup.Settings;
+        var accounts = new AutoSourcarr.Core.Accounts.AccountStore(startup.ConfigurationRoot);
+        var log = new AutoSourcarr.Core.Accounts.SecurityLog(owner._dataDirectory!);
+        owner.Privacy.Register(new Dictionary<string, string?> { ["automatic_admin_token"] = accounts.AutomaticAdminToken });
+        if (settings.AuthResetOwner && accounts.ResetOwnerLogin())
+        {
+            log.Record("owner-reset", "server", "", "AUTH_RESET_OWNER: the owner's password was cleared; set a new one on the login page and remove the variable.");
+            owner.Logs.Record("Accounts", "Owner sign-in reset by AUTH_RESET_OWNER. Set a new password on the login page, then remove AUTH_RESET_OWNER.");
+        }
+        if (settings.AuthMethod == "external" && settings.AuthOwnerExternalUser.Trim().Length > 0 && accounts.SetupRequired)
+        {
+            var bound = accounts.BindExternalOwner(settings.AuthOwnerExternalUser);
+            log.Record("owner-created", bound.Name, "", "bound to the external account");
+        }
+        return new AutoSourcarr.Api.Security.AccessControlServices
+        {
+            Accounts = accounts, Log = log, Settings = () => owner.Settings,
+            Burst = message => owner.Errors.Record("Security", message, "failed-login-burst", severity: "warning")
         };
     }
 

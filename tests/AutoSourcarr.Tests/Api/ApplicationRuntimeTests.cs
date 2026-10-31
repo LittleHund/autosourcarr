@@ -100,7 +100,17 @@ public static class ApplicationRuntimeTests
             using var http = new RunningHttp(runtime, temp.Path); using var client = http.Host.GetTestClient();
             var live = await client.GetFromJsonAsync<JsonObject>("/api/v1/live");
             Check.True(live!["ok"]!.GetValue<bool>()); Check.Equal("0.4.3-migration", live["version"]!.GetValue<string>());
-            Check.Equal("host-index", await client.GetStringAsync("/"));
+            // Accounts (phase 5): the page needs a sign-in; the login page and static files are public.
+            using (var page = await client.GetAsync("/"))
+            {
+                Check.Equal(HttpStatusCode.Redirect, page.StatusCode);
+                Check.Equal("/login?next=%2F", page.Headers.Location!.OriginalString);
+            }
+            using (var adminPage = new HttpRequestMessage(HttpMethod.Get, "/"))
+            {
+                adminPage.Headers.Add("X-Admin-Token", settings.AdminToken);
+                Check.Equal("host-index", await (await client.SendAsync(adminPage)).Content.ReadAsStringAsync());
+            }
             Check.Equal("host-static", await client.GetStringAsync("/static/probe.txt"));
             Check.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/admin/ui-preferences")).StatusCode);
             Check.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/reader/v1/live")).StatusCode);

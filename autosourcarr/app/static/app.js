@@ -156,12 +156,13 @@ function applyThemeStyle(value,save=false){
 applyTheme(readLocalUiPreference('theme')||'blue',readLocalUiPreference('customColor')||DEFAULT_CUSTOM_COLOR);
 function applyDensity(value){const density=String(value||'')==='compact'?'compact':'comfortable';document.documentElement.dataset.density=density;writeLocalUiPreference('density',density);document.querySelectorAll('.densityChoice').forEach(b=>{const active=b.dataset.density===density;b.classList.toggle('active',active);b.setAttribute('aria-checked',active?'true':'false');});}
 function setSettingsSubtab(value,save=true){
-  const name=['configuration','browser','services'].includes(value)?value:'customization';
+  const name=['configuration','browser','services','security'].includes(value)?value:'customization';
   document.querySelectorAll('.settingsSubtab').forEach(b=>{b.classList.toggle('active',b.dataset.settingsSubtab===name);b.setAttribute('aria-selected',String(b.dataset.settingsSubtab===name));});
-  for(const [key,id] of [['customization','settingsCustomizationPane'],['configuration','settingsConfigurationPane'],['browser','settingsBrowserPane'],['services','settingsServicesPane']]){const pane=document.getElementById(id);if(pane){pane.hidden=name!==key;pane.classList.toggle('active',name===key);}}
+  for(const [key,id] of [['customization','settingsCustomizationPane'],['configuration','settingsConfigurationPane'],['browser','settingsBrowserPane'],['services','settingsServicesPane'],['security','settingsSecurityPane']]){const pane=document.getElementById(id);if(pane){pane.hidden=name!==key;pane.classList.toggle('active',name===key);}}
   document.querySelectorAll('.settingsConfigAction').forEach(x=>x.hidden=name!=='configuration');
   writeLocalUiPreference('settingsSubtab',name);if(save&&uiPreferencesState.loaded)queueUiPreferenceSave('settingsSubtab',name);
   if(document.querySelector('#settings.active'))ensureSettingsPane().catch(e=>toast(e.message));
+  if(name==='security'&&typeof loadSecurityPane==='function')loadSecurityPane();
 }
 applyDensity(readLocalUiPreference('density')||'comfortable');
 function updateUiPreferenceOwner(){
@@ -348,6 +349,9 @@ async function api(url, opts = {}) {
     // was dispatched. Retry its old 401 once with the current credential.
     if (r.status === 401 && token && token !== requestToken && !opts._adminAuthRetried) return await api(url, {...opts,_adminAuthRetried:true});
     if (r.status === 401) {
+      // Accounts (0.5.0): the login page signs in; the admin-token prompt stays for token-only access.
+      let signIn='';try{signIn=String((await r.clone().json()).login||'');}catch(_){}
+      if(signIn.startsWith('/')){location.href=signIn+'?next='+encodeURIComponent(location.pathname+location.search+location.hash);throw new Error('Sign-in required.');}
       if(!opts._adminAuthRetried&&!adminAuthDismissed){
         const t = prompt(token?'The saved admin token was rejected. Enter the current admin token':'Admin token');
         if(t){token=t;try{localStorage.setItem('sc_admin_token',t);}catch(_){}return await api(url,{...opts,_adminAuthRetried:true});}
