@@ -67,6 +67,8 @@ object PackageTools {
         translator.to(jarFile)
         val added = autosourcarr.host.ExtensionConstructors.add(jarFile, translator.constructorFixes)
         if (added > 0) logger.info { "Added $added constructors that R8 removed (${dexFile.fileName})" }
+        val repaired = autosourcarr.host.ExtensionBytecodeRepair.repair(jarFile)
+        if (repaired.casts > 0) logger.info { "Added ${repaired.casts} casts in ${repaired.classes} classes for the JVM verifier (${dexFile.fileName})" }
         if (handler.hasException()) {
             val rootPath = HostConfig.extensionsDir.toPath()
             val errorFile: Path = rootPath.resolve("${dexFile.nameWithoutExtension}-error.txt")

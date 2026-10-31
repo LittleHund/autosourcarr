@@ -23,6 +23,9 @@ dependencies {
 
     // Extension loading: dex -> jar, bytecode fixes, manifests, icons.
     implementation(libs.asm)
+    // Verifier-guided repair of translated extension classes (ExtensionBytecodeRepair); same version as asm.
+    implementation("org.ow2.asm:asm-tree:9.9.1")
+    implementation("org.ow2.asm:asm-analysis:9.9.1")
     implementation(libs.serialization.xml.core)
     implementation(libs.serialization.xml)
     implementation(libs.commonscompress)

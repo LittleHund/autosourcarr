@@ -92,12 +92,42 @@ public final class AutoSourcarrDex2jar {
         throw new IOException("cant find zipfs support");
     }
 
-    static void fixConstructorOwners(IrMethod irMethod, Set<String> fixes) {
+    /**
+     * R8 skips constructors it proves trivial: "new X" may be initialised with a superclass constructor, and a
+     * constructor may call a constructor further up than its direct superclass. Dalvik allows both, the JVM allows
+     * neither. Both calls are retargeted (to X.<init>, or to the direct superclass) and recorded so the missing
+     * forwarding constructors are added after translation.
+     */
+    static void fixConstructorOwners(IrMethod irMethod, Set<String> fixes, Map<String, String> parentsByName) {
         Map<Local, String> created = new HashMap<>();
+        Set<Local> self = new java.util.HashSet<>();
+        boolean constructor = "<init>".equals(irMethod.name);
         for (Stmt p : irMethod.stmts) {
+            if (p.st == Stmt.ST.IDENTITY && p.getOp1().vt == Value.VT.LOCAL && p.getOp2().vt == Value.VT.THIS_REF) {
+                self.add((Local) p.getOp1());
+                continue;
+            }
+            if (p.st == Stmt.ST.ASSIGN && p.getOp1().vt == Value.VT.LOCAL && p.getOp2().vt == Value.VT.LOCAL && self.contains((Local) p.getOp2())) {
+                self.add((Local) p.getOp1());
+                continue;
+            }
             if (p.st == Stmt.ST.ASSIGN && p.getOp1().vt == Value.VT.LOCAL && p.getOp2().vt == Value.VT.NEW) {
                 created.put((Local) p.getOp1(), ((NewExpr) p.getOp2()).type);
                 continue;
+            }
+            if (constructor && p.st == Stmt.ST.VOID_INVOKE && p.getOp() instanceof InvokeExpr) {
+                InvokeExpr call = (InvokeExpr) p.getOp();
+                if (call.vt == Value.VT.INVOKE_SPECIAL && "<init>".equals(call.getName()) && call.getOps().length > 0
+                        && call.getOps()[0].vt == Value.VT.LOCAL && self.contains((Local) call.getOps()[0])) {
+                    String own = toInternalClassName(irMethod.owner);
+                    String target = toInternalClassName(call.getOwner());
+                    String parent = parentsByName.get(own);
+                    if (parent != null && !target.equals(own) && !target.equals(parent)) {
+                        fixes.add("L" + parent + ";|" + call.getOwner() + "|" + String.join(",", call.getProto().getParameterTypes()));
+                        call.method = new Method("L" + parent + ";", "<init>", call.getProto());
+                    }
+                    continue;
+                }
             }
             if (p.st != Stmt.ST.VOID_INVOKE || !(p.getOp() instanceof InvokeExpr)) continue;
             InvokeExpr ie = (InvokeExpr) p.getOp();
@@ -235,7 +265,7 @@ public final class AutoSourcarrDex2jar {
                     T_REMOVE_CONST.transform(irMethod);
                 }
                 // AutoSourcarr: R8 may initialise a new X with a superclass constructor; see fixConstructorOwners.
-                fixConstructorOwners(irMethod, constructorFixes);
+                fixConstructorOwners(irMethod, constructorFixes, parentsByName);
                 T_NEW.transform(irMethod);
                 T_FILL_ARRAY.transform(irMethod);
                 T_AGG.transform(irMethod);
