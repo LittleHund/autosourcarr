@@ -1,6 +1,6 @@
-sha=5d7b95f93b9793b845cd5ddd9710bda46ac1b897
+sha=0c0c0653b68046c83d7889b5c04014b527cc3f36
 restore=0
 build=0
-test=0
+test=1
 openapi=0
 client=0

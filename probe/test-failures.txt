@@ -1,0 +1,26 @@
+FAIL crawl pages: a page stays until every record succeeded; failed records retry alone; bad pages keep the cursor
+System.IO.InvalidDataException: Invalid feed identity; cursor retained
+   at AutoSourcarr.Core.Jobs.CrawlPages.SavePage(String key, Int64 page, JsonObject payload) in /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Jobs/DueScheduler.cs:line 106
+   at AutoSourcarr.Tests.Jobs.DueSchedulerTests.<>c.<Register>b__0_3() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Jobs/DueSchedulerTests.cs:line 64
+   at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 29
+::error title=crawl pages%3A a page stays until every record succeeded; failed records retry alone; bad pages keep the cursor::System.IO.InvalidDataException%3A Invalid feed identity; cursor retained | at AutoSourcarr.Core.Jobs.CrawlPages.SavePage(String key%2C Int64 page%2C JsonObject payload) in /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Jobs/DueScheduler.cs%3Aline 106 | at AutoSourcarr.Tests.Jobs.DueSchedulerTests.<>c.<Register>b__0_3() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Jobs/DueSchedulerTests.cs%3Aline 64 | at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 29
+PASS api v1 jobs: task list, cancel, clear history, job queue, errors and clear are admin-only /api/v1 routes
+PASS api v1 jobs: an interrupted task is replayed only by a registered safe replay of its kind
+PASS live events: text/event-stream with ids, no proxy buffering, heartbeat and Last-Event-ID resume
+PASS live events: job changes arrive through nginx at once (X-Accel-Buffering: no)
+PASS schema stamp: new files get application_id ASC1 and user_version 1; reopen keeps them
+PASS schema stamp: a newer revision or a foreign application_id is refused unchanged
+PASS storage blobs: TEXT and BLOB stream exact UTF8 bytes with Int64 row IDs
+PASS storage blobs: read-only identifiers are not SQL and writes never change bytes
+PASS storage blobs: escaped stream and callback failure close the actual handle
+PASS storage blobs: async callbacks and boxed awaitables cannot escape a lease
+PASS storage blobs: cross-thread and asynchronous stream IO are refused
+PASS storage blobs: same-row mutation expires the handle and outer write rolls back
+PASS storage blobs: missing/non-streamable cells fail without blocking later work
+PASS storage blobs: cancellation and reset retain ownership until physical read ends
+PASS repair: unsupported local platform cannot enable source execution
+PASS repair: asset tampering blocks use of the guest
+PASS repair: launch permits KVM only and exposes no host network or shared folders
+PASS repair: arbitrary workspace and unbounded resource requests are rejected
+PASS repair protocol: frame round trip retains opaque IDs and Unicode
+PASS repair protocol: oversize, corrupt UTF8 and ambiguous frames are refused

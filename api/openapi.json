@@ -26,6 +26,27 @@
         }
       }
     },
+    "/api/v1/diagnostics": {
+      "get": {
+        "operationId": "getDiagnostics",
+        "summary": "PERF-9: all logs and diagnostics in one download, with secrets and private data removed.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/diagnostics/metrics": {
       "get": {
         "operationId": "getRuntimeMetrics",
@@ -47,10 +68,83 @@
         }
       }
     },
+    "/api/v1/errors": {
+      "get": {
+        "operationId": "getErrors",
+        "summary": "Recent errors grouped by cause with counts, newest first (resolved ones included).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/errors/clear": {
+      "post": {
+        "operationId": "clearErrors",
+        "summary": "Remove resolved errors (or all errors with resolved_only=false).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorsClearRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorsClearResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "getHealth",
         "summary": "Status page: version, databases, catalogue counts, active errors and dependency checks.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/jobs": {
+      "get": {
+        "operationId": "getJobs",
+        "summary": "Job queue: workers, running and queued jobs with ETA, and per-type run limit, average time, failures and freezes.",
         "responses": {
           "200": {
             "description": "Success",
@@ -443,12 +537,146 @@
               }
             }
           },
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatabaseMoveQueued"
+                }
+              }
+            }
+          },
           "400": {
             "description": "Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/tasks": {
+      "get": {
+        "operationId": "getTasks",
+        "summary": "Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/clear-history": {
+      "post": {
+        "operationId": "clearTaskHistory",
+        "summary": "Remove completed and failed tasks from the list; running and queued work stays.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/cancel": {
+      "post": {
+        "operationId": "cancelTask",
+        "summary": "Cancel a queued or running task. Work already done stays; the task is listed as failed with \u0022Cancelled by user\u0022.",
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskActionResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/tasks/{taskId}/retry-safe": {
+      "post": {
+        "operationId": "retryTask",
+        "summary": "Replay an interrupted task only when replaying it cannot change data twice (read-only observations).",
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
                 }
               }
             }
@@ -596,6 +824,25 @@
           "keys_without_value"
         ]
       },
+      "DatabaseMoveQueued": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "target_directory": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "target_directory",
+          "message"
+        ]
+      },
       "DatabaseMoveRequest": {
         "type": "object",
         "properties": {
@@ -677,6 +924,31 @@
           "move_available",
           "move_note",
           "pending_relocation"
+        ]
+      },
+      "ErrorsClearRequest": {
+        "type": "object",
+        "properties": {
+          "resolved_only": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resolved_only"
+        ]
+      },
+      "ErrorsClearResponse": {
+        "type": "object",
+        "properties": {
+          "cleared": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cleared"
         ]
       },
       "JsonObject": {
@@ -1418,6 +1690,25 @@
           "integrated",
           "can_restart",
           "reader_build"
+        ]
+      },
+      "TaskActionResponse": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "state",
+          "message"
         ]
       },
       "UpdateNoticeResponse": {
