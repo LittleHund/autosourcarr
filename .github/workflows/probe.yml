@@ -1,0 +1,67 @@
+name: probe
+
+# Scratch compile/test probe for the ci-probe branch only. Every step tolerates failure and the job
+# always succeeds (so GitHub sends no failure mail); results are committed back under probe/.
+on:
+  push:
+    branches: [ci-probe]
+    paths-ignore: ['probe/**']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: autosourcarr
+          POSTGRES_PASSWORD: autosourcarr
+          POSTGRES_DB: autosourcarr
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U autosourcarr"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      AUTOSOURCARR_TEST_POSTGRES: postgres://autosourcarr:autosourcarr@localhost:5432/autosourcarr
+      AUTOSOURCARR_TEST_ROOT: ${{ runner.temp }}/autosourcarr-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Probe
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p probe
+          sha=$(git rev-parse HEAD)
+          dotnet restore AutoSourcarr.slnx > probe/restore.log 2>&1; r=$?
+          dotnet build AutoSourcarr.slnx -c Release --no-restore > probe/build.log 2>&1; b=$?
+          grep -E "error [A-Z]+[0-9]+|warning [A-Z]+[0-9]+" probe/build.log | sed 's#/home/runner/work/autosourcarr/autosourcarr/##' | sort -u > probe/build-errors.txt
+          t=skipped; o=skipped; c=skipped
+          if [ $b -eq 0 ]; then
+            dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build > probe/test.log 2>&1; t=$?
+            grep -E "^FAIL " -A 25 probe/test.log > probe/test-failures.txt
+            tail -c 2000 probe/test.log | grep -o '"total":[0-9]*,"passed":[0-9]*,"failed":[0-9]*' > probe/test-summary.txt
+            dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-openapi api/openapi.json > probe/openapi.log 2>&1; o=$?
+            [ $o -eq 0 ] && { node scripts/generate-api-client.mjs >> probe/openapi.log 2>&1; c=$?; }
+          fi
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" > probe/result.txt
+          cat probe/result.txt
+      - name: Commit results
+        if: always()
+        run: |
+          git config user.name "probe"; git config user.email "probe@users.noreply.github.com"
+          git add -f probe api autosourcarr/app/static/generated $(git ls-files -m -- '**/packages.lock.json') 2>/dev/null
+          git commit -q -m "probe results [skip ci]" || true
+          git push -q origin HEAD:ci-probe || true
