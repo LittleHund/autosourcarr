@@ -14,7 +14,7 @@ def png(shade):
 with zipfile.ZipFile(sys.argv[1], "w") as archive:
     for index, shade in enumerate((40, 120, 200), 1): archive.writestr("%03d.png" % index, png(shade))
 PY
-docker run -d --name komga -p 127.0.0.1:25600:25600 -v "$root/config:/config" -v "$root/comics:/comics" gotson/komga:1.21.2 >/dev/null
+docker run -d --name komga -p 127.0.0.1:25600:25600 -v "$root/config:/config" -v "$root/comics:/comics" gotson/komga:latest >/dev/null
 for i in $(seq 1 90); do curl -sf http://127.0.0.1:25600/api/v1/claim >/dev/null 2>&1 && break; sleep 2; done
 curl -sf -X POST http://127.0.0.1:25600/api/v1/claim -H 'X-Komga-Email: ci@example.org' -H 'X-Komga-Password: ci-komga-pass' >/dev/null
 curl -sf -u ci@example.org:ci-komga-pass -X POST http://127.0.0.1:25600/api/v1/libraries -H 'Content-Type: application/json' \
