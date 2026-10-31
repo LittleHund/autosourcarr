@@ -73,19 +73,24 @@ emit('    }');
 emit('  }');
 emit('');
 emit('  /**');
-emit('   * @param {{adminToken?: (() => string)|string, baseUrl?: string, fetch?: typeof fetch}} [options]');
+emit('   * Either give `request(path, options)` (the app\'s own request helper: auth, timeouts, errors; it gets');
+emit('   * `method`, a JSON `body` string and any per-call options) or let the client use `fetch` itself.');
+emit('   * @param {{request?: (path: string, options: Object) => Promise<*>, adminToken?: (() => string)|string, baseUrl?: string, fetch?: typeof fetch}} [options]');
 emit('   */');
 emit('  function createClient(options) {');
 emit('    const settings = options || {};');
 emit("    const base = settings.baseUrl || '';");
-emit('    const send = settings.fetch || global.fetch.bind(global);');
 emit("    const token = () => typeof settings.adminToken === 'function' ? settings.adminToken() : (settings.adminToken || '');");
-emit('    async function call(method, path, body, signal) {');
+emit('    async function call(method, path, body, extra) {');
+emit('      const callOptions = extra || {};');
+emit('      const json = body === undefined ? undefined : JSON.stringify(body);');
+emit('      if (settings.request) return settings.request(base + path, { ...callOptions, method, body: json });');
+emit('      const send = settings.fetch || global.fetch.bind(global);');
 emit("      const headers = { Accept: 'application/json' };");
 emit('      const admin = token();');
 emit("      if (admin) headers['X-Admin-Token'] = admin;");
-emit("      if (body !== undefined) headers['Content-Type'] = 'application/json';");
-emit("      const response = await send(base + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal, credentials: 'same-origin' });");
+emit("      if (json !== undefined) headers['Content-Type'] = 'application/json';");
+emit("      const response = await send(base + path, { method, headers, body: json, signal: callOptions.signal, credentials: 'same-origin' });");
 emit("      const text = await response.text();");
 emit('      let parsed = null;');
 emit('      if (text) { try { parsed = JSON.parse(text); } catch (_) { parsed = text; } }');
@@ -113,14 +118,14 @@ for (const { path, method, operation } of operations) {
   emit(`       * ${method.toUpperCase()} ${path}`);
   for (const p of params) emit(`       * @param {string} ${p}`);
   if (hasBody) emit(`       * @param {${typeOf(bodySchema)}} body`);
-  emit('       * @param {AbortSignal} [signal]');
+  emit('       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`');
   emit(`       * @returns {Promise<${returns}>}`);
   emit('       */');
-  const signature = [...params, ...(hasBody ? ['body'] : []), 'signal'].join(', ');
+  const signature = [...params, ...(hasBody ? ['body'] : []), 'options'].join(', ');
   const url = params.length
     ? '`' + path.replace(/\{([^}]+)\}/g, (_, name) => '${encodeURIComponent(' + name + ')}') + '`'
     : `'${path}'`;
-  emit(`      ${operation.operationId}(${signature}) { return call('${method.toUpperCase()}', ${url}, ${hasBody ? 'body' : 'undefined'}, signal); },`);
+  emit(`      ${operation.operationId}(${signature}) { return call('${method.toUpperCase()}', ${url}, ${hasBody ? 'body' : 'undefined'}, options); },`);
 }
 emit('    };');
 emit('  }');

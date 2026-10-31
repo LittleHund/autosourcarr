@@ -90,7 +90,8 @@ public static class EnvConversion
             Settings = ConfigStore.Encrypt(settings, secrets),
             SourceHost = ConfigStore.Encrypt(sourceHost, secrets),
             Extra = ConfigStore.Encrypt(extra, secrets),
-            Conversion = conversion
+            Conversion = conversion,
+            Setup = FinishedSetup(store.Root, conversion.ConvertedAt)
         };
         store.WriteDocument(document);
         try
@@ -119,6 +120,26 @@ public static class EnvConversion
             InvalidKeys = InvalidSettings(settings),
             KeysWithoutValue = withoutValue.ToArray()
         };
+    }
+
+    /// <summary>A 0.4.x install that finished its setup wizard must not be asked again after the conversion.</summary>
+    private static ConfigSetupRecord? FinishedSetup(string root, string convertedAt)
+    {
+        try
+        {
+            var raw = ConfigFiles.ReadBounded(Path.Combine(root, "setup-state.json"));
+            if (raw is null)
+                return null;
+            using var state = System.Text.Json.JsonDocument.Parse(raw);
+            if (state.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object
+                || !state.RootElement.TryGetProperty("completed", out var completed) || completed.ValueKind != System.Text.Json.JsonValueKind.True)
+                return null;
+            return new ConfigSetupRecord { Completed = true, CompletedAt = convertedAt, Transaction = "converted-from-0.4" };
+        }
+        catch (Exception error) when (error is System.Text.Json.JsonException or ConfigurationException)
+        {
+            return null; // an unreadable old state only means the wizard is offered again
+        }
     }
 
     private static IReadOnlyDictionary<string, string?> Parse(byte[]? raw, string name)

@@ -153,19 +153,24 @@
   }
 
   /**
-   * @param {{adminToken?: (() => string)|string, baseUrl?: string, fetch?: typeof fetch}} [options]
+   * Either give `request(path, options)` (the app's own request helper: auth, timeouts, errors; it gets
+   * `method`, a JSON `body` string and any per-call options) or let the client use `fetch` itself.
+   * @param {{request?: (path: string, options: Object) => Promise<*>, adminToken?: (() => string)|string, baseUrl?: string, fetch?: typeof fetch}} [options]
    */
   function createClient(options) {
     const settings = options || {};
     const base = settings.baseUrl || '';
-    const send = settings.fetch || global.fetch.bind(global);
     const token = () => typeof settings.adminToken === 'function' ? settings.adminToken() : (settings.adminToken || '');
-    async function call(method, path, body, signal) {
+    async function call(method, path, body, extra) {
+      const callOptions = extra || {};
+      const json = body === undefined ? undefined : JSON.stringify(body);
+      if (settings.request) return settings.request(base + path, { ...callOptions, method, body: json });
+      const send = settings.fetch || global.fetch.bind(global);
       const headers = { Accept: 'application/json' };
       const admin = token();
       if (admin) headers['X-Admin-Token'] = admin;
-      if (body !== undefined) headers['Content-Type'] = 'application/json';
-      const response = await send(base + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal, credentials: 'same-origin' });
+      if (json !== undefined) headers['Content-Type'] = 'application/json';
+      const response = await send(base + path, { method, headers, body: json, signal: callOptions.signal, credentials: 'same-origin' });
       const text = await response.text();
       let parsed = null;
       if (text) { try { parsed = JSON.parse(text); } catch (_) { parsed = text; } }
@@ -177,103 +182,103 @@
        * Check draft reader addresses and key without saving them.
        * POST /api/v1/setup/reader-preflight
        * @param {ReaderPreflightRequest} body
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<ReaderPreflightResponse>}
        */
-      checkSetupReader(body, signal) { return call('POST', '/api/v1/setup/reader-preflight', body, signal); },
+      checkSetupReader(body, options) { return call('POST', '/api/v1/setup/reader-preflight', body, options); },
       /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<UpdateNoticeResponse>}
        */
-      dismissUpdateNotice(signal) { return call('POST', '/api/v1/settings/update-notice/dismiss', undefined, signal); },
+      dismissUpdateNotice(options) { return call('POST', '/api/v1/settings/update-notice/dismiss', undefined, options); },
       /**
        * Save the wizard's changes to config.json in one step; a repeated request id returns the first result.
        * POST /api/v1/setup/finish
        * @param {SetupFinishRequest} body
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<SetupFinishResponse>}
        */
-      finishSetup(body, signal) { return call('POST', '/api/v1/setup/finish', body, signal); },
+      finishSetup(body, options) { return call('POST', '/api/v1/setup/finish', body, options); },
       /**
        * The running values the UI needs to describe this instance.
        * GET /api/v1/config
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<ConfigView>}
        */
-      getConfig(signal) { return call('GET', '/api/v1/config', undefined, signal); },
+      getConfig(options) { return call('GET', '/api/v1/config', undefined, options); },
       /**
        * Where the databases are and how large they are.
        * GET /api/v1/storage/database
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<DatabaseStorageView>}
        */
-      getDatabaseStorage(signal) { return call('GET', '/api/v1/storage/database', undefined, signal); },
+      getDatabaseStorage(options) { return call('GET', '/api/v1/storage/database', undefined, options); },
       /**
        * Timing samples per work phase (no URLs, titles or keys).
        * GET /api/v1/diagnostics/metrics
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<RuntimeMetricsSnapshot>}
        */
-      getRuntimeMetrics(signal) { return call('GET', '/api/v1/diagnostics/metrics', undefined, signal); },
+      getRuntimeMetrics(options) { return call('GET', '/api/v1/diagnostics/metrics', undefined, options); },
       /**
        * Effective settings grouped as on the Settings page; secret values are hidden.
        * GET /api/v1/settings
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<SettingsOverview>}
        */
-      getSettings(signal) { return call('GET', '/api/v1/settings', undefined, signal); },
+      getSettings(options) { return call('GET', '/api/v1/settings', undefined, options); },
       /**
        * What this start converted from autosourcarr.env to config.json.
        * GET /api/v1/settings/conversion
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<ConversionSummary>}
        */
-      getSettingsConversion(signal) { return call('GET', '/api/v1/settings/conversion', undefined, signal); },
+      getSettingsConversion(options) { return call('GET', '/api/v1/settings/conversion', undefined, options); },
       /**
        * The settings schema: name, type, default, description, secret, Compose variable and wizard step.
        * GET /api/v1/settings/schema
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<SettingsSchemaResponse>}
        */
-      getSettingsSchema(signal) { return call('GET', '/api/v1/settings/schema', undefined, signal); },
+      getSettingsSchema(options) { return call('GET', '/api/v1/settings/schema', undefined, options); },
       /**
        * Setup wizard fields with the current values; secrets show only whether one is saved.
        * GET /api/v1/setup
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<SetupView>}
        */
-      getSetup(signal) { return call('GET', '/api/v1/setup', undefined, signal); },
+      getSetup(options) { return call('GET', '/api/v1/setup', undefined, options); },
       /**
        * Catalogue, chapter, source, cache and storage counts; refreshed at most every 15 seconds.
        * GET /api/v1/status/stats
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      getStatusStats(signal) { return call('GET', '/api/v1/status/stats', undefined, signal); },
+      getStatusStats(options) { return call('GET', '/api/v1/status/stats', undefined, options); },
       /**
        * What the last update changed in your settings, until dismissed.
        * GET /api/v1/settings/update-notice
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<UpdateNoticeResponse>}
        */
-      getUpdateNotice(signal) { return call('GET', '/api/v1/settings/update-notice', undefined, signal); },
+      getUpdateNotice(options) { return call('GET', '/api/v1/settings/update-notice', undefined, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<RestartResponse>}
        */
-      restartAfterSetup(signal) { return call('POST', '/api/v1/setup/restart', undefined, signal); },
+      restartAfterSetup(options) { return call('POST', '/api/v1/setup/restart', undefined, options); },
       /**
        * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
        * PUT /api/v1/settings
        * @param {SettingsSaveRequest} body
-       * @param {AbortSignal} [signal]
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<SettingsSaveResponse>}
        */
-      saveSettings(body, signal) { return call('PUT', '/api/v1/settings', body, signal); },
+      saveSettings(body, options) { return call('PUT', '/api/v1/settings', body, options); },
     };
   }
 

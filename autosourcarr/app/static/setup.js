@@ -5,7 +5,8 @@
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const steps=[['welcome','Your AutoSourcarr','A guided review, one subject at a time.'],['library','Connect your library','Connect to the main Suwayomi for this instance.'],['sources','Sources and access','Choose where extensions come from and how access challenges are handled.'],['matching','Matching and discovery','Choose what runs automatically. Uncertain matches still need review.'],['readers','Reader extensions','Use different addresses for readers inside Docker and outside your network.'],['performance','Speed and capacity','Start with the current limits. Larger limits can overload websites and make requests slower.'],['tools','Translation and tools','Use the included tools or connect an existing translation server.'],['repair','Repair and AI','Choose a provider and connect its account here. API credentials are saved when you finish.'],['access','Access and identity','Keep account credentials separate from reader access.'],['links','Your other apps','Optional browser shortcuts. Each application keeps its own login.'],['review','Review and finish','Only changed values will replace their saved settings.']];
   let snapshot=null,draft={},step=0,required=false,busy=false,completed=false,resolveFirst=null,previousFocus=null,transaction=null,opening=false;
-  const call=(path,options={})=>api('/api/admin/setup'+path,{timeoutMs:2500,...options,cache:'no-store',noMutationRefresh:true,suppressClientError:true});
+  // Setup talks to /api/v1/setup through the generated client; api() keeps auth, timeouts and errors.
+  const setupApi=()=>AutoSourcarrApi.createClient({request:(path,options)=>api(path,{timeoutMs:2500,...options,cache:'no-store',noMutationRefresh:true,suppressClientError:true})});
   let cleared=new Set(),accountGeneration=0,accountRevision=0,accountRead=0,accountTimer=null,loginOwned=false,loginOpened=null,accountError='',closing=false;
   let readerGeneration=0,readerChecking=false,readerProblem=false,readerResult=null,readerResultSaved=false;
   const repair=(path,options={})=>api('/api/admin/source-maintenance'+path,{timeoutMs:45000,...options,cache:'no-store',noMutationRefresh:true,suppressClientError:true});
@@ -53,7 +54,7 @@
     const current=()=>owner===readerGeneration&&snapshot===saved&&!completed&&!closing&&!busy&&!$('#setupModal').hidden&&$('#setupReaderBuildStatus')===status&&['readers','review'].includes(steps[step][0]);
     readerChecking=true;readerProblem=false;readerResult=null;readerResultSaved=false;updateReaderBuildStatus();
     try{
-      const data=await call('/reader-preflight',{method:'POST',timeoutMs:5000,body:JSON.stringify({revision:saved.revision,changes:changes()})});
+      const data=await setupApi().checkSetupReader({revision:saved.revision,changes:changes()},{timeoutMs:5000});
       if(!current())return;
       const result=validReaderBuild(data.reader_build);
       if(data.revision!==saved.revision||!result)throw new Error('Reader check returned no current result');
@@ -196,7 +197,7 @@
     }
     opening=true;
     try{
-      const data=await call('');
+      const data=await setupApi().getSetup();
       let resume=false;try{resume=sessionStorage.getItem('autosourcarr.setup.accounts')==='1';}catch(_){}
       if(first&&data.completed&&!resume){rememberComplete();return;}
       snapshot=data;required=first&&!data.completed;draft=Object.fromEntries(data.fields.map(f=>[f.key,clone(f.value)]));
@@ -213,7 +214,7 @@
   async function finish(){
     invalidateReaderPreflight();busy=true;$('#setupNext').disabled=true;$('#setupBack').disabled=true;$('#setupCancel').disabled=true;
     try{
-      const result=await call('/finish',{method:'POST',timeoutMs:15000,body:JSON.stringify({revision:snapshot.revision,transaction,changes:changes()})});
+      const result=await setupApi().finishSetup({revision:snapshot.revision,transaction,changes:changes()},{timeoutMs:15000});
       const links=Object.fromEntries(snapshot.fields.filter(f=>f.key.endsWith('_BROWSER_URL')).map(f=>[f.key,draft[f.key]]));
       completed=true;required=false;draft={};snapshot=null;rememberComplete();$('#setupReload').hidden=true;
       if(typeof settingsState!=='undefined'){settingsState.data=null;settingsState.dirty=false;settingsState.editRevision++;}
@@ -296,7 +297,7 @@
   }
   async function checkCleanup(id,attempt){
     try{
-      const data=await call('');if(transaction!==id||!completed)return;
+      const data=await setupApi().getSetup();if(transaction!==id||!completed)return;
       const result=data.cleanup;
       if(result&&result.status!=='pending'){
         $('#setupCleanup').textContent=result.status==='completed'?`Cleanup checked ${result.checked} files; removed ${result.removed.length} obsolete files.${result.skipped?' Some files could not be accessed.':''}${result.limited?' Scan reached its time or file limit.':''} Retained data and unknown files were kept.`:result?.message||'Setup saved; cleanup could not finish.';
@@ -308,7 +309,7 @@
   }
   async function restart(){
     const button=$('#setupRestart');button.disabled=true;
-    try{sessionStorage.setItem('autosourcarr.setup.accounts','1');await call('/restart',{method:'POST',body:'{}'});button.textContent='Restart requested — refresh when ready to continue account setup';}
+    try{sessionStorage.setItem('autosourcarr.setup.accounts','1');await setupApi().restartAfterSetup();button.textContent='Restart requested — refresh when ready to continue account setup';}
     catch(e){error(e.message);button.disabled=false;}
   }
   $('#setupBack').onclick=()=>{if(busy||loginOwned)return;capture();step--;render();};
@@ -321,7 +322,7 @@
   $('#setupReload').onclick=async()=>{
     if(busy||!confirm('Discard this setup draft and reload saved settings?'))return;
     busy=true;$('#setupReload').disabled=true;invalidateReaderPreflight();
-    try{const data=await call('');snapshot=data;draft=Object.fromEntries(data.fields.map(f=>[f.key,clone(f.value)]));cleared.clear();readerResult=validReaderBuild(data.reader_build);readerResultSaved=true;step=0;transaction=requestId();render();}
+    try{const data=await setupApi().getSetup();snapshot=data;draft=Object.fromEntries(data.fields.map(f=>[f.key,clone(f.value)]));cleared.clear();readerResult=validReaderBuild(data.reader_build);readerResultSaved=true;step=0;transaction=requestId();render();}
     catch(e){error('Could not reload: '+e.message);}
     finally{busy=false;$('#setupReload').disabled=false;}
   };
