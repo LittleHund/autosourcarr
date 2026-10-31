@@ -1,0 +1,26 @@
+FAIL settings config: newer or damaged config.json is refused unchanged
+System.NullReferenceException: Object reference not set to an instance of an object.
+   at AutoSourcarr.Core.Settings.ConfigStore.Load() in /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Settings/ConfigStore.cs:line 119
+   at AutoSourcarr.Tests.ConfigStoreTests.<>c__DisplayClass2_1.<Register>b__14() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Settings/ConfigStoreTests.cs:line 122
+   at AutoSourcarr.Tests.Check.Throws[T](Action run) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 72
+   at AutoSourcarr.Tests.ConfigStoreTests.<>c.<Register>b__2_3() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Settings/ConfigStoreTests.cs:line 122
+   at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 29
+::error title=settings config%3A newer or damaged config.json is refused unchanged::System.NullReferenceException%3A Object reference not set to an instance of an object. | at AutoSourcarr.Core.Settings.ConfigStore.Load() in /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Settings/ConfigStore.cs%3Aline 119 | at AutoSourcarr.Tests.ConfigStoreTests.<>c__DisplayClass2_1.<Register>b__14() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Settings/ConfigStoreTests.cs%3Aline 122 | at AutoSourcarr.Tests.Check.Throws[T](Action run) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 72 | at AutoSourcarr.Tests.ConfigStoreTests.<>c.<Register>b__2_3() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Settings/ConfigStoreTests.cs%3Aline 122 | at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 29
+PASS settings config: change list names keys only, never values
+PASS api v1: settings need the admin token and never return secret values
+PASS api v1: admin endpoints are not reachable through the reader alias
+PASS api v1: openapi.json describes the typed contract from the same JSON types
+PASS startup composition: canonical root is resolved before stale full settings validation
+PASS startup composition: CWD dotenv interpolation uses prior file values and explicit environment
+PASS startup composition: missing dotenv, canonical root precedence and invalid UTF8
+PASS startup handoff: versioned canonical request round trips exact IDs with a boot nonce
+PASS startup handoff: forged nonce, malformed/noncanonical frames and arbitrary fields are refused
+PASS startup handoff: serialization carries no general configuration or native acceptance
+PASS startup identity original oracle: fixture custody and string-loader-only scope
+PASS startup identity original string-loader oracle: defaults
+PASS startup identity original string-loader oracle: file-only
+PASS startup identity original string-loader oracle: environment-over-file
+PASS startup identity original string-loader oracle: empty-env-does-not-fall-back
+PASS startup identity original string-loader oracle: negative-uid-integrated
+PASS startup identity original string-loader oracle: independent-gid-override
+PASS startup identity original string-loader oracle: canonical-and-source-host-decoys
