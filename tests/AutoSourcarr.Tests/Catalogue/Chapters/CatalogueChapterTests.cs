@@ -190,7 +190,7 @@ public static class CatalogueChapterTests
         }
         public void C(Func<DatabaseSession, int> action) => Database.Write(DatabaseFile.Catalog, action); public void O(Func<DatabaseSession, int> action) => Database.Write(DatabaseFile.Origins, action);
         public object? Scalar(string sql, DatabaseFile file = DatabaseFile.Catalog) => Database.Read(file, c => c.Scalar(sql)); public long Count(string table, DatabaseFile file = DatabaseFile.Catalog) => Convert.ToInt64(Scalar("SELECT COUNT(*) FROM " + table, file), CultureInfo.InvariantCulture);
-        public JsonObject Snapshot(DatabaseFile file) => Database.Read(file, c => { var result = new JsonObject(); foreach (var table in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")) result[table.Text("name")] = Rows(c, table.Text("name")); return result; });
+        public JsonObject Snapshot(DatabaseFile file) => Database.Read(file, c => { var result = new JsonObject(); foreach (var table in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name<>'VersionInfo' ORDER BY name")) result[table.Text("name")] = Rows(c, table.Text("name")); return result; });
         public void Cleaned() => Check.Equal(0, Directory.EnumerateFileSystemEntries(Work).Count());
         public void Dispose() { Database.Dispose(); _sandbox.Dispose(); }
     }

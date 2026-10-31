@@ -183,7 +183,7 @@ grep -q '/api/admin/manual-actions' autosourcarr/app/static/app.js
 grep -q 'CREATE TABLE IF NOT EXISTS manual_title_scopes' autosourcarr/app/db.py
   grep -q 'autoButton.disabled=!!automatic.paused' autosourcarr/app/static/app.js
   grep -q 'id="databaseStoragePath"' autosourcarr/app/static/index.html
-  grep -q '/api/admin/storage/database/move' autosourcarr/app/static/app.js
+  grep -q 'apiV1().getDatabaseStorage()' autosourcarr/app/static/app.js
   grep -q 'deferredUiRenders' autosourcarr/app/static/app.js
   grep -q 'entryInspectorGeneration' autosourcarr/app/static/app.js
   grep -q 'id="duplicateScopeSubbed"' autosourcarr/app/static/index.html
@@ -426,7 +426,7 @@ assert 'Has possible match' in imports_block and 'No possible match' in imports_
 assert 'Source reference found' in imports_block and 'Has English hint' in imports_block, 'Imports source/translation review filters are missing'
 js = Path('autosourcarr/app/static/app.js').read_text()
 assert 'importPassesReviewFilter' in js and 'importReviewFilter' in js, 'Imports review-filter behavior is missing'
-for required in ('/api/admin/browse','/api/admin/maintenance/unmatch-duplicates','/api/admin/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/admin/maintenance/refresh-metadata','/api/admin/maintenance/reset-covers','/api/admin/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','/api/admin/settings/env','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','/api/admin/errors','openErrors','loadErrors'):
+for required in ('/api/admin/browse','/api/admin/maintenance/unmatch-duplicates','/api/admin/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/admin/maintenance/refresh-metadata','/api/admin/maintenance/reset-covers','/api/admin/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','apiV1().getSettings()','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','/api/admin/errors','openErrors','loadErrors'):
     assert required in js, required
 assert '<h3>All known titles</h3>' not in js, 'Inspector should separate canonical main title from alternate titles'
 assert 'refreshAfterManualEdit' not in js, 'manual matching must update the open browser in-place instead of reloading both matrices after every click'

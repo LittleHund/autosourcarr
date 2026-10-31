@@ -129,7 +129,10 @@ public sealed partial class CatalogueMetadata(Func<double> minimumColorConfidenc
         var modes = strong.Select(p => p.Mode).Distinct(StringComparer.Ordinal).ToArray();
         var resultMode = modes.Length > 1 ? "mixed" : modes.FirstOrDefault() ?? "unknown";
         var confidence = strong.Length == 0 ? 0 : modes.Length > 1 ? strong.Min(p => p.Confidence) : strong.Max(p => p.Confidence);
-        c.Execute("UPDATE entries SET color_mode=$mode,color_confidence=$confidence WHERE id=$id", ("$mode", resultMode), ("$confidence", confidence), ("$id", entryId));
+        // Stored only when it changed (PERF-5), and only from a write session: a read snapshot computes the same value without writing.
+        if (c.CanWrite)
+            c.Execute("UPDATE entries SET color_mode=$mode,color_confidence=$confidence WHERE id=$id AND (color_mode,color_confidence) IS NOT ($mode,$confidence)",
+                ("$mode", resultMode), ("$confidence", confidence), ("$id", entryId));
         return new JsonObject { ["entry_id"] = entryId, ["color_mode"] = resultMode, ["confidence"] = confidence };
     }
 
@@ -141,7 +144,9 @@ public sealed partial class CatalogueMetadata(Func<double> minimumColorConfidenc
             .Select(row => CandidateMediaMode(row.Text("source_title"), row.Text("genre"))).Append(TextMatcher.TitleMediaVariant(title))
             .Where(mode => mode != "unknown").Distinct(StringComparer.Ordinal).ToArray();
         var value = modes.Length > 1 ? "mixed" : modes.FirstOrDefault() ?? "unknown";
-        c.Execute("UPDATE entries SET media_mode=$mode WHERE id=$id", ("$mode", value), ("$id", entryId)); return value;
+        if (c.CanWrite)
+            c.Execute("UPDATE entries SET media_mode=$mode WHERE id=$id AND media_mode IS NOT $mode", ("$mode", value), ("$id", entryId));
+        return value;
     }
 
     public static IReadOnlyList<JsonObject> NativeTitleRows(DatabaseSession c, long entryId)

@@ -1,5 +1,6 @@
 using System.Runtime.ExceptionServices;
 using AutoSourcarr.Core.Concurrency;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace AutoSourcarr.Core.Persistence;
@@ -22,38 +23,99 @@ public sealed class DatabaseSession
         _ownerThread = Environment.CurrentManagedThreadId;
         _commandTimeout = commandTimeout;
         Returns = returns;
+        CanWrite = write;
         if (write)
             _transaction = connection.BeginTransaction(deferred: false);
     }
 
-    public int Execute(string sql, params (string Name, object? Value)[] parameters)
+    /// <summary>False inside SqliteDatabase.Read: such a session only reads, so a snapshot can never write by accident.</summary>
+    public bool CanWrite { get; private set; }
+
+    /// <summary>A Write nested inside a Read of the same file upgrades the shared session for the rest of the outer call.</summary>
+    internal void AllowWrites()
     {
         CheckUsable();
+        CanWrite = true;
+    }
+
+    public int Execute(string sql, params (string Name, object? Value)[] parameters)
+    {
+        RequireWrite();
         _transaction ??= _connection.BeginTransaction(deferred: true);
-        using var command = Command(sql, parameters);
-        return command.ExecuteNonQuery();
+        return _connection.Execute(sql, Parameters(parameters), _transaction, _commandTimeout);
     }
 
     public object? Scalar(string sql, params (string Name, object? Value)[] parameters)
     {
-        using var command = Command(sql, parameters);
-        var value = command.ExecuteScalar();
+        CheckUsable();
+        var value = _connection.ExecuteScalar(sql, Parameters(parameters), _transaction, _commandTimeout);
         return value is DBNull ? null : value;
     }
 
+    /// <summary>Rows as name → value maps (Dapper does the reading; first column wins on duplicate names).</summary>
     public IReadOnlyList<DatabaseRow> Query(string sql, params (string Name, object? Value)[] parameters)
     {
-        using var command = Command(sql, parameters);
-        using var reader = command.ExecuteReader();
+        CheckUsable();
         var rows = new List<DatabaseRow>();
-        while (reader.Read())
+        foreach (var row in _connection.Query(sql, Parameters(parameters), _transaction, buffered: true, _commandTimeout))
         {
             var values = new Dictionary<string, object?>(StringComparer.Ordinal);
-            for (var i = 0; i < reader.FieldCount; i++)
-                values.TryAdd(reader.GetName(i), reader.IsDBNull(i) ? null : reader.GetValue(i));
+            foreach (var (name, value) in (IDictionary<string, object?>)row)
+                values.TryAdd(name, value is DBNull ? null : value);
             rows.Add(new(values));
         }
         return rows;
+    }
+
+    /// <summary>Typed rows mapped by Dapper (column name = property or constructor parameter name). Use @name parameters.</summary>
+    public IReadOnlyList<T> QueryAs<T>(string sql, object? parameters = null)
+    {
+        CheckUsable();
+        return _connection.Query<T>(sql, parameters, _transaction, buffered: true, _commandTimeout).AsList();
+    }
+
+    public T? FirstOrDefaultAs<T>(string sql, object? parameters = null)
+    {
+        CheckUsable();
+        return _connection.QueryFirstOrDefault<T>(sql, parameters, _transaction, _commandTimeout);
+    }
+
+    /// <summary>
+    /// Page-first read (PERF-5): only the rows shown are read, plus one to know whether more exist. The SQL must
+    /// have a deterministic ORDER BY on indexed columns and no LIMIT; use the last row's key for the next page.
+    /// </summary>
+    public DatabasePage<T> QueryPage<T>(string sql, object? parameters, int limit)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(limit, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(limit, 1000);
+        if (sql.Contains("LIMIT", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("QueryPage adds the LIMIT itself.", nameof(sql));
+        var rows = QueryAs<T>(sql + " LIMIT " + (limit + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), parameters);
+        return new(rows.Take(limit).ToArray(), rows.Count > limit);
+    }
+
+    public int ExecuteWith(string sql, object parameters)
+    {
+        RequireWrite();
+        _transaction ??= _connection.BeginTransaction(deferred: true);
+        return _connection.Execute(sql, parameters, _transaction, _commandTimeout);
+    }
+
+    private void RequireWrite()
+    {
+        CheckUsable();
+        if (!CanWrite)
+            throw new InvalidOperationException("A read session cannot change data; use SqliteDatabase.Write for this work.");
+    }
+
+    private static DynamicParameters? Parameters((string Name, object? Value)[] parameters)
+    {
+        if (parameters.Length == 0)
+            return null;
+        var dynamic = new DynamicParameters();
+        foreach (var (name, value) in parameters)
+            dynamic.Add(name, value);
+        return dynamic;
     }
 
     /// <summary>Reads one TEXT/BLOB cell without materializing it in Query's row objects.</summary>
@@ -165,18 +227,6 @@ public sealed class DatabaseSession
             throw new InvalidOperationException("Database work must finish before its lease is released; asynchronous callbacks are not supported.");
     }
 
-    private SqliteCommand Command(string sql, (string Name, object? Value)[] parameters)
-    {
-        CheckUsable();
-        var command = _connection.CreateCommand();
-        command.CommandText = sql;
-        command.Transaction = _transaction;
-        command.CommandTimeout = _commandTimeout;
-        foreach (var (name, value) in parameters)
-            command.Parameters.AddWithValue(name, value ?? DBNull.Value);
-        return command;
-    }
-
     private void CheckOwner()
     {
         ObjectDisposedException.ThrowIf(_closed, this);
@@ -222,3 +272,6 @@ internal sealed class SynchronousReturnBoundary
     private static bool Contains(Exception error, Exception expected) => ReferenceEquals(error, expected)
         || error is AggregateException aggregate && aggregate.InnerExceptions.Any(inner => Contains(inner, expected));
 }
+
+/// <summary>One page of a page-first query and whether another page follows.</summary>
+public sealed record DatabasePage<T>(IReadOnlyList<T> Items, bool HasMore);

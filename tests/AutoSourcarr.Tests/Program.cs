@@ -82,6 +82,7 @@ RepairArtifactFileTests.Register(suite);
 StartupIdentityTests.Register(suite);
 ConfigStoreTests.Register(suite);
 SettingsSchemaTests.Register(suite);
+DataLayerTests.Register(suite);
 ApiV1Tests.Register(suite);
 StartupConfigurationTests.Register(suite);
 StartupIdentityOracleTests.Register(suite);

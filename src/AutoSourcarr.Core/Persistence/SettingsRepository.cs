@@ -22,7 +22,7 @@ public sealed class SettingsRepository(SqliteDatabase database)
         var raw = value?.ToJsonString() ?? "null";
         database.Write(DatabaseFile.Catalog, session => session.Execute("""
             INSERT INTO settings(key,value) VALUES($key,$value)
-            ON CONFLICT(key) DO UPDATE SET value=excluded.value
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE settings.value IS NOT excluded.value
             """, ("$key", key), ("$value", raw)));
     }
 
@@ -42,6 +42,7 @@ public sealed class SettingsRepository(SqliteDatabase database)
         session.Execute("""
             INSERT INTO user_ui_preferences(user_key,values_json,updated_at) VALUES($key,$value,$at)
             ON CONFLICT(user_key) DO UPDATE SET values_json=excluded.values_json,updated_at=excluded.updated_at
+            WHERE user_ui_preferences.values_json IS NOT excluded.values_json
             """, ("$key", key), ("$value", raw), ("$at", DateTimeOffset.UtcNow.ToString("O")));
         return current;
     });

@@ -7,6 +7,7 @@ using AutoSourcarr.Core.Catalogue;
 using AutoSourcarr.Core.Diagnostics;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Settings;
+using Microsoft.Data.Sqlite;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -70,6 +71,10 @@ public sealed record DatabaseStorageView(string ActiveDir, string? ConfiguredDir
 
 public sealed record ProblemResponse(string Detail);
 
+public sealed record DatabaseMoveRequest(string Path);
+
+public sealed record DatabaseMoveResponse(string FromDirectory, string TargetDirectory, long CatalogBytes, long OriginsBytes, string Message);
+
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(SettingsOverview))]
 [JsonSerializable(typeof(SettingsSaveRequest))]
@@ -85,6 +90,8 @@ public sealed record ProblemResponse(string Detail);
 [JsonSerializable(typeof(RestartResponse))]
 [JsonSerializable(typeof(ConfigView))]
 [JsonSerializable(typeof(DatabaseStorageView))]
+[JsonSerializable(typeof(DatabaseMoveRequest))]
+[JsonSerializable(typeof(DatabaseMoveResponse))]
 [JsonSerializable(typeof(RuntimeMetricsSnapshot))]
 [JsonSerializable(typeof(JsonObject))]
 [JsonSerializable(typeof(ProblemResponse))]
@@ -97,9 +104,12 @@ public sealed class ApiV1Services
     public ApiV1Services(Func<AutoSourcarrSettings> settings, string configurationRoot, ConversionReport? conversion,
         IReadOnlyDictionary<string, string?>? environment = null, Action<IReadOnlyDictionary<string, string?>>? registerSecrets = null,
         CatalogueStatusStats? status = null, Action? stop = null, Func<bool>? bundledImage = null,
-        Func<CancellationToken, Task<JsonObject>>? health = null)
+        Func<CancellationToken, Task<JsonObject>>? health = null, Func<DatabasePaths>? databasePaths = null,
+        Func<string, DatabaseMoveResult>? moveDatabase = null)
     {
         Health = health;
+        DatabasePaths = databasePaths;
+        MoveDatabase = moveDatabase;
         Settings = settings;
         ConfigurationRoot = configurationRoot;
         Conversion = conversion;
@@ -117,6 +127,8 @@ public sealed class ApiV1Services
     public SettingsEditor Editor { get; }
     public CatalogueStatusStats? Status { get; }
     public Func<CancellationToken, Task<JsonObject>>? Health { get; }
+    public Func<DatabasePaths>? DatabasePaths { get; }
+    public Func<string, DatabaseMoveResult>? MoveDatabase { get; }
     public Action? Stop { get; }
     public Func<bool> BundledImage { get; }
     internal int Restarting;
@@ -215,12 +227,15 @@ public sealed class ApiV1Services
     public DatabaseStorageView DatabaseStorage()
     {
         var settings = Settings();
-        var paths = DatabasePaths.Resolve(settings);
+        var paths = DatabasePaths?.Invoke() ?? Core.Persistence.DatabasePaths.Resolve(settings);
         static long Size(string path) => new[] { path, path + "-wal", path + "-shm" }.Where(File.Exists).Sum(file => new FileInfo(file).Length);
         var catalog = Size(paths.Catalog);
         var origins = Size(paths.Origins);
-        return new(paths.Directory, settings.DatabaseDir, catalog, origins, catalog + origins, false,
-            "Moving the databases from here arrives with the new data layer (conversion phase 2). Until then keep DATABASE_DIR unchanged; changing it alone would start with empty databases.",
+        var available = MoveDatabase is not null;
+        return new(paths.Directory, settings.DatabaseDir, catalog, origins, catalog + origins, available,
+            available
+                ? "Enter an absolute folder mounted into this container. AutoSourcarr pauses database work, copies and checks both databases, then switches to them; the old files stay as a safety copy."
+                : "Moving the databases is not available in this host.",
             null);
     }
 
@@ -396,6 +411,27 @@ public static class ApiV1Endpoints
             .WithName("getDatabaseStorage")
             .WithSummary("Where the databases are and how large they are.")
             .Produces<DatabaseStorageView>(StatusCodes.Status200OK);
+
+        group.MapPost("/storage/database/move", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                if (services.MoveDatabase is null) return Problem(409, "Moving the databases is not available in this host.");
+                var body = await Read(context, json.DatabaseMoveRequest).ConfigureAwait(false);
+                if (body?.Path is null) return Problem(400, "Send the absolute target folder as path.");
+                try
+                {
+                    var result = await Task.Run(() => services.MoveDatabase(body.Path)).ConfigureAwait(false);
+                    return Results.Json(new DatabaseMoveResponse(result.FromDirectory, result.TargetDirectory, result.CatalogBytes, result.OriginsBytes, result.Message), json.DatabaseMoveResponse);
+                }
+                catch (ArgumentException error) { return Problem(400, error.Message); }
+                catch (Exception error) when (error is InvalidDataException or IOException or TimeoutException or SqliteException)
+                { return Problem(409, error.Message + " The databases stay where they were."); }
+            }))
+            .WithName("moveDatabaseStorage")
+            .WithSummary("Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.")
+            .Accepts<DatabaseMoveRequest>("application/json")
+            .Produces<DatabaseMoveResponse>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 
         group.MapGet("/status/stats", (Func<HttpContext, Task<IResult>>)(async context =>
             {

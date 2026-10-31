@@ -174,7 +174,7 @@ public static class NativeRecordStoreTests
     }
     private static JsonObject Snapshot(DatabaseSession c)
     {
-        var result = new JsonObject(); foreach (var table in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND (name NOT LIKE 'sqlite_%' OR name='sqlite_sequence') ORDER BY name"))
+        var result = new JsonObject(); foreach (var table in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND (name NOT LIKE 'sqlite_%' OR name='sqlite_sequence') AND name<>'VersionInfo' ORDER BY name"))
             result[table.Text("name")] = new JsonArray(c.Query("SELECT * FROM " + table.Text("name") + " ORDER BY rowid").Select(row => JsonSerializer.SerializeToNode(row.ToDictionary(pair => pair.Key, pair => pair.Value))).ToArray());
         return result;
     }

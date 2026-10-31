@@ -112,7 +112,7 @@ public static class CatalogueQueryTests
         var parts = new List<string>();
         foreach (var file in new[] { DatabaseFile.Catalog, DatabaseFile.Origins }) database.Read(file, c =>
         {
-            foreach (var table in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name<>'entry_preferred_titles' ORDER BY name"))
+            foreach (var table in c.Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name<>'VersionInfo' AND name<>'entry_preferred_titles' ORDER BY name"))
             {
                 var name = table.Text("name"); var escaped = name.Replace("\"", "\"\"", StringComparison.Ordinal);
                 parts.Add(file + ":" + name + ":" + string.Join('|', c.Query("SELECT * FROM \"" + escaped + "\"").Select(row => JsonSerializer.Serialize(row)).Order(StringComparer.Ordinal)));

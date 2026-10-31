@@ -527,7 +527,7 @@ public static class StorageTests
             database.Read(file, session =>
             {
                 var contract = expected.GetProperty(name);
-                var tables = session.Query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").Select(r => r.Text("name")).ToArray();
+                var tables = session.Query("SELECT name FROM sqlite_master WHERE type='table' AND name<>'VersionInfo' ORDER BY name").Select(r => r.Text("name")).ToArray();
                 Check.Equal(contract.GetProperty("columns").EnumerateObject().Count(), tables.Length);
                 foreach (var table in tables)
                 {
@@ -538,7 +538,7 @@ public static class StorageTests
                         Check.JsonEqual(contract.GetProperty("rows").GetProperty(table), JsonSerializer.SerializeToElement(session.Query($"SELECT * FROM \"{table}\" ORDER BY rowid")), name + ".rows." + table);
                     Check.JsonEqual(contract.GetProperty("foreignKeys").GetProperty(table), JsonSerializer.SerializeToElement(session.Query($"PRAGMA foreign_key_list(\"{table}\")")), name + ".foreignKeys." + table);
                 }
-                Check.JsonEqual(contract.GetProperty("indexes"), JsonSerializer.SerializeToElement(session.Query("SELECT name,tbl_name FROM sqlite_master WHERE type='index' ORDER BY name")));
+                Check.JsonEqual(contract.GetProperty("indexes"), JsonSerializer.SerializeToElement(session.Query("SELECT name,tbl_name FROM sqlite_master WHERE type='index' AND tbl_name<>'VersionInfo' ORDER BY name")));
                 Check.Equal("ok", session.Scalar("PRAGMA integrity_check") as string);
                 Check.Equal(0, session.Query("PRAGMA foreign_key_check").Count);
                 return 0;

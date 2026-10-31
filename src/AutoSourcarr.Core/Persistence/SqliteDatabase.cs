@@ -131,7 +131,11 @@ public sealed class SqliteDatabase : IDisposable
         {
             DatabaseSession.ThrowFailure(boundary.Failure);
             if (_sessions.Value!.TryGetValue(file, out var nested))
+            {
+                if (write && !nested.CanWrite)
+                    nested.AllowWrites();
                 result = nested.Savepoint(operation);
+            }
             else
             {
                 connection = Open(file);
