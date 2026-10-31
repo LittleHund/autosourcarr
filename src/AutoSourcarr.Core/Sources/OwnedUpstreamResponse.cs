@@ -27,10 +27,13 @@ public sealed class OwnedUpstreamResponse : IDisposable, IAsyncDisposable
         CancellationToken = deadline.Token;
         CallerCancellationToken = callerToken;
         ContentHeaders = response.Content.Headers;
+        StatusCode = (int)response.StatusCode;
     }
 
     // Exposing HttpResponseMessage/HttpContent would bypass body ownership.
     public HttpContentHeaders ContentHeaders { get; }
+    /// <summary>HTTP status; only callers that asked for error answers (the source host's JSON errors) ever see a non-2xx.</summary>
+    public int StatusCode { get; }
     public CancellationToken CancellationToken { get; }
     public CancellationToken CallerCancellationToken { get; }
     internal bool IsClosing => _operations.IsStopping;

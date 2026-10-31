@@ -116,7 +116,10 @@ class ExtensionStore(
             meta.getString(PackageTools.METADATA_NAME)
                 ?: info.applicationInfo.nonLocalizedLabel?.toString()?.substringAfter("Tachiyomi: ")
                 ?: pkg
-        val libLabel = meta.getString(PackageTools.METADATA_EXTENSION_LIB)?.takeUnless { it == "0" } ?: info.versionName.substringBeforeLast('.')
+        // tachiyomix.extensionLib may be a resource reference ("{4:...}") in the parsed manifest: use the version prefix then.
+        val libLabel =
+            meta.getString(PackageTools.METADATA_EXTENSION_LIB)?.takeIf { Regex("""^\d+(\.\d+)?$""").matches(it) && it != "0" }
+                ?: info.versionName.substringBeforeLast('.')
 
         val jarName = "$pkg-v${info.versionName}.jar"
         val jar = File(root, jarName).toPath()

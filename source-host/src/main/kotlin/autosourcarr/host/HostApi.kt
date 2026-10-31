@@ -185,7 +185,7 @@ class HostApi(
         rest: List<String>,
         query: Map<String, String>,
     ) {
-        val entry = SourceRegistry.get(id) ?: throw NoSuchElementException("Source ${id.toULong()} is not installed")
+        val entry = SourceRegistry.get(id) ?: throw NoSuchElementException("Source $id is not installed")
         when {
             method == "GET" && rest.isEmpty() -> reply(exchange, 200, sourceJson(entry))
             method == "GET" && rest == listOf("mangas") -> {
@@ -206,7 +206,7 @@ class HostApi(
                             }
                         }
                     }
-                val sourceId = id.toULong().toString()
+                val sourceId = id.toString()
                 val stored = result.mangas.map { db.upsertListed(sourceId, it) }
                 reply(exchange, 200, buildJsonObject {
                     put("hasNextPage", result.hasNextPage)
@@ -258,7 +258,7 @@ class HostApi(
                 val body = body(exchange)
                 val fetchManga = body["fetchManga"]?.jsonPrimitive?.booleanOrNull ?: true
                 val fetchChapters = body["fetchChapters"]?.jsonPrimitive?.booleanOrNull ?: true
-                val entry = SourceRegistry.get(manga.sourceId.toULong().toLong()) ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
+                val entry = SourceRegistry.get(parseSourceId(manga.sourceId)) ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
                 val source = entry.source
                 val input = SManga.create().apply { url = manga.url; title = manga.title; thumbnail_url = manga.thumbnailUrl; initialized = manga.initialized }
                 val known = db.chapters(id).map { row -> SChapter.create().apply { url = row.url; name = row.name } }
@@ -294,9 +294,30 @@ class HostApi(
         exchange: HttpExchange,
         parts: List<String>,
     ) {
+        if (exchange.requestMethod == "GET" && parts == listOf("settings", "about")) {
+            reply(exchange, 200, buildJsonObject {
+                put("name", "AutoSourcarr source host")
+                put("version", HostConfig.HOST_VERSION)
+                put("revision", HostConfig.COMPAT_VERSION)
+            })
+            return
+        }
+        if (exchange.requestMethod == "GET" && parts.size == 3 && parts[0] == "manga" && parts[2] == "chapters") {
+            val id = parts[1].toLongOrNull() ?: throw IllegalArgumentException("Bad manga id")
+            db.manga(id) ?: throw NoSuchElementException("Unknown manga")
+            // Suwayomi's REST chapter list: "index" is the chapter's source order (used in page paths).
+            reply(exchange, 200, JsonArray(db.chapters(id).map { chapter -> buildJsonObject {
+                put("id", chapter.id)
+                put("index", chapter.sourceOrder)
+                put("name", chapter.name)
+                put("url", chapter.url)
+                put("mangaId", chapter.mangaId)
+            } }))
+            return
+        }
         if (exchange.requestMethod != "GET" || parts.size < 3 || parts[0] != "manga") throw HttpError(404, "Unknown path")
         val manga = db.manga(parts[1].toLongOrNull() ?: throw IllegalArgumentException("Bad manga id")) ?: throw NoSuchElementException("Unknown manga")
-        val source = SourceRegistry.get(manga.sourceId.toULong().toLong())?.source as? HttpSource ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
+        val source = SourceRegistry.get(parseSourceId(manga.sourceId))?.source as? HttpSource ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
         when {
             parts.size == 3 && parts[2] == "thumbnail" -> {
                 val url = manga.thumbnailUrl ?: throw NoSuchElementException("This title has no cover")
@@ -342,7 +363,7 @@ class HostApi(
             }
         }
         val manga = db.manga(chapter.mangaId)!!
-        val source = SourceRegistry.get(manga.sourceId.toULong().toLong())?.source ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
+        val source = SourceRegistry.get(parseSourceId(manga.sourceId))?.source ?: throw NoSuchElementException("Source ${manga.sourceId} is not installed")
         val input = SChapter.create().apply { url = chapter.url; name = chapter.name }
         val pages = backoff.run(source.id) { runBlocking { source.getPageList(input) } }
         val text =
@@ -412,11 +433,12 @@ class HostApi(
             put("source", buildJsonObject {
                 val nodes =
                     if (local != null) {
-                        local.sourceIds.mapNotNull { id -> SourceRegistry.get(id.toULong().toLong()) }.map { entry ->
+                        local.sourceIds.mapNotNull { id -> SourceRegistry.get(parseSourceId(id)) }.map { entry ->
                             buildJsonObject {
-                                put("id", entry.source.id.toULong().toString())
+                                put("id", entry.source.id.toString())
                                 put("name", entry.source.name)
                                 put("lang", entry.source.lang)
+                                put("baseUrl", (entry.source as? HttpSource)?.baseUrl)
                                 put("isConfigurable", entry.source is ConfigurableSource)
                             }
                         }
@@ -426,6 +448,7 @@ class HostApi(
                                 put("id", source.id)
                                 put("name", source.name)
                                 put("lang", source.lang)
+                                put("baseUrl", source.baseUrl)
                                 put("isConfigurable", false)
                             }
                         }
@@ -492,7 +515,7 @@ class HostApi(
         buildJsonObject {
             val source = entry.source
             val http = source as? HttpSource
-            put("id", source.id.toULong().toString())
+            put("id", source.id.toString())
             put("name", source.name)
             put("lang", source.lang)
             put("displayName", "${source.name} (${source.lang.uppercase()})")
@@ -573,7 +596,8 @@ class HostApi(
             else -> JsonPrimitive(value.toString())
         }
 
-    private fun parseSourceId(text: String): Long = text.toULongOrNull()?.toLong() ?: throw IllegalArgumentException("Source ids are unsigned integers")
+    /** Source ids are 64-bit; Suwayomi and the AutoSourcarr catalogue write them signed, the repository index unsigned. Both are read. */
+    private fun parseSourceId(text: String): Long = text.toLongOrNull() ?: text.toULongOrNull()?.toLong() ?: throw IllegalArgumentException("Bad source id")
 
     private fun limited(
         exchange: HttpExchange,
