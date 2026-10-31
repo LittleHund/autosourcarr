@@ -1973,7 +1973,7 @@ function closeErrors(){
 }
 
 // Sources
-async function putSource(id,body){return api('/api/v1/sources/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify(body)});}
+async function putSource(id,body){return api('/api/v1/source-settings/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify(body)});}
 function renderSourceGroupManager(){
   const root=$('#sourceGroupManager');if(!root)return;
   root.innerHTML=sourceGroupDefinitions.length?sourceGroupDefinitions.map(g=>`<div class="sourceGroupEditor" data-source-group-id="${Number(g.id)}"><input data-role="name" value="${esc(g.name)}" aria-label="Source group name"><label class="sourceGroupPriorityLabel">Priority <input data-role="priority" type="number" min="1" max="100000" value="${Number(g.priority)||1000}" aria-label="Source group priority"></label><span class="muted">${Number(g.member_variants||0)} variant(s)</span><button onclick="renameSourceGroup(${Number(g.id)},this)">Save</button><button onclick="openMatchingPolicy('group','${Number(g.id)}')">Matching rules</button><button class="danger ghost" onclick="deleteSourceGroup(${Number(g.id)})">Delete</button></div>`).join(''):'<span class="muted">No custom source groups yet.</span>';
@@ -2020,7 +2020,7 @@ function renderSources(){
   t.innerHTML='<tr><th>Group</th><th>Priority</th><th>Source</th><th>Languages</th><th>Search</th><th>Chapters</th><th>Base URL</th></tr>'+rows.join('');
   renderSourceGroupManager();
 }
-async function loadSources(){const d=await api('/api/v1/sources');sourceRows=d.items||[];sourceGroupDefinitions=d.groups||[];sourceGroups=sourceFamilies(sourceRows);renderSources();populateBrowseFilters();populateConnectedSourceFilters();globalThis.AutoSourcarrNavigation?.filtersReady();}
+async function loadSources(){const d=await api('/api/v1/source-settings');sourceRows=d.items||[];sourceGroupDefinitions=d.groups||[];sourceGroups=sourceFamilies(sourceRows);renderSources();populateBrowseFilters();populateConnectedSourceFilters();globalThis.AutoSourcarrNavigation?.filtersReady();}
 function syncSourceRowsToMatrices(){
   for(const data of [matrixData,subbedData])if(data)data.sources=sourceRows.map(row=>({...row}));
 }
@@ -2050,7 +2050,7 @@ window.deleteSourceGroup=async(groupId)=>{if(!confirm('Delete this source group?
 window.setSourceLanguage=async(i,sourceId,checked)=>{const g=sourceGroups[i];if(!g)return;const variant=g.variants.find(v=>String(v.source_id)===String(sourceId));if(!variant)return;const hadSelected=selectedVariants(g).length>0;const search=hadSelected?groupSearch(g):true,chapters=hadSelected?groupChapters(g):true;const patch={enabled_language:!!checked,enabled_search:!!checked&&search,enabled_chapters:!!checked&&chapters};const previous={enabled_language:variant.enabled_language,enabled_search:variant.enabled_search,enabled_chapters:variant.enabled_chapters};applySourcePatch(sourceId,patch);rerenderSourceDrivenUi();toast(`${langLabel(variant.lang)} ${checked?'enabled':'disabled'}`);try{await putSource(sourceId,patch);loadSources().catch(()=>{});}catch(e){applySourcePatch(sourceId,previous);rerenderSourceDrivenUi();toast('Source update failed: '+e.message);}};
 window.setAllSourceLanguages=async(i,checked)=>{const g=sourceGroups[i];if(!g)return;const hadSelected=selectedVariants(g).length>0;const search=hadSelected?groupSearch(g):true,chapters=hadSelected?groupChapters(g):true;const patches=g.variants.map(v=>[v.source_id,{enabled_language:!!checked,enabled_search:!!checked&&search,enabled_chapters:!!checked&&chapters}]);const previous=patches.map(([id,p])=>[id,Object.fromEntries(Object.keys(p).map(k=>[k,sourceRows.find(x=>String(x.source_id)===String(id))?.[k]]))]);patches.forEach(([id,p])=>applySourcePatch(id,p));rerenderSourceDrivenUi();toast(checked?'All languages selected':'Languages cleared');try{await Promise.all(patches.map(([id,p])=>putSource(id,p)));loadSources().catch(()=>{});}catch(e){previous.forEach(([id,p])=>applySourcePatch(id,p));rerenderSourceDrivenUi();toast('Source update failed: '+e.message);}};
 if($('#sourceAvailability'))$('#sourceAvailability').onchange=renderSources;
-$('#syncSources').onclick=async()=>{toast('Syncing sources…');try{await api('/api/v1/sources/sync',{method:'POST',timeoutMs:15000});await loadSources();syncSourceRowsToMatrices();rerenderSourceDrivenUi();toast('Sources synced');}catch(e){toast('Source sync failed: '+e.message);}};
+$('#syncSources').onclick=async()=>{toast('Syncing sources…');try{await api('/api/v1/source-settings/sync',{method:'POST',timeoutMs:15000});await loadSources();syncSourceRowsToMatrices();rerenderSourceDrivenUi();toast('Sources synced');}catch(e){toast('Source sync failed: '+e.message);}};
 
 
 function setSourceSubtab(name,persist=true){

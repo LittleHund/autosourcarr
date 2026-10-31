@@ -513,7 +513,7 @@ async function openSourceWebview(url='',sourceId=''){
   // Open synchronously with the user's click so popup blockers do not discard
   // the authenticated result. The token stays in the API header/HttpOnly cookie.
   const view=window.open('about:blank','_blank');if(!view){toast('Allow a new tab to open the source WebView.');return;}view.opener=null;
-  try{if(!target&&sourceId){const data=await api('/api/v1/sources',{noMutationRefresh:true,timeoutMs:5000});const base=(data.items||[]).find(x=>String(x.source_id)===String(sourceId))?.base_url;try{target=safeSourceWebviewUrl(new URL(url||base,base).href);}catch(_){target=safeSourceWebviewUrl(base);}}
+  try{if(!target&&sourceId){const data=await api('/api/v1/source-settings',{noMutationRefresh:true,timeoutMs:5000});const base=(data.items||[]).find(x=>String(x.source_id)===String(sourceId))?.base_url;try{target=safeSourceWebviewUrl(new URL(url||base,base).href);}catch(_){target=safeSourceWebviewUrl(base);}}
   const result=await api('/api/admin/source-webview/session',{method:'POST',noMutationRefresh:true,timeoutMs:6000});if(result.url!=='/api/admin/source-webview')throw new Error('Invalid WebView address');view.location.href=result.url+(target?'#'+encodeURIComponent(target):'');}
   catch(e){view.close();toast('Unable to open source WebView: '+e.message);}
 }
