@@ -13,7 +13,7 @@
     if(loading||!visible())return;
     loading=true;clearTimeout(timer);const own=++generation,setupOwn=setupRevision,accountAtStart=controlPaintRevision;
     try{
-      const data=await api('/api/admin/source-maintenance',{timeoutMs:25000,suppressClientError:true});
+      const data=await api('/api/v1/source-maintenance',{timeoutMs:25000,suppressClientError:true});
       if(own!==generation||setupOwn!==setupRevision)return;
       const status=byId('sourceRepairStatus');
       storageError=data.storage_error||'';
@@ -30,7 +30,7 @@
       byId('sourceRepairForm').querySelector('button[type=submit]').disabled=repairSubmitting||repairBlocked()||!!storageError;
       if(!storageError&&repairBlocked())status.textContent=knownIsolation.message+' Expand Source repair readiness below.';
       if(workspaceVisible()&&data.configured&&data.reachable!==false&&!installedLoaded){
-        const inventory=await api('/api/admin/source-maintenance/installed',{timeoutMs:25000,suppressClientError:true});
+        const inventory=await api('/api/v1/source-maintenance/installed',{timeoutMs:25000,suppressClientError:true});
         const select=byId('sourceRepairPackage'),previous=select.value;select.replaceChildren();
         for(const row of inventory.items||[]){const option=document.createElement('option');option.value=row.pkgName;if(option.dataset)option.dataset.originalVersion=String(row.versionName||'');option.textContent=`${row.name} · ${row.versionName}${row.isObsolete?' · missing from catalog':''}`;select.append(option);}
         if([...select.options].some(o=>o.value===previous))select.value=previous;
@@ -171,12 +171,12 @@
   byId('rollbackSourceRepair').addEventListener('click',async event=>{
     if(!confirm('Restore the binary that was installed before the last repair? The source engine restarts briefly.'))return;
     event.target.disabled=true;
-    try{await api('/api/admin/source-maintenance/rollback',{method:'POST'});await load();}
+    try{await api('/api/v1/source-maintenance/rollback',{method:'POST'});await load();}
     catch(e){toast(e.message);}finally{event.target.disabled=false;}
   });
   byId('sourceRepairWatch').addEventListener('change',async event=>{
     const enabled=event.target.checked;event.target.disabled=true;
-    try{await api('/api/admin/source-maintenance/watch',{method:'PUT',body:JSON.stringify({enabled})});await load();}
+    try{await api('/api/v1/source-maintenance/watch',{method:'PUT',body:JSON.stringify({enabled})});await load();}
     catch(e){event.target.checked=!enabled;toast(e.message);}finally{event.target.disabled=false;}
   });
   function resetOriginalConfirmation(){
@@ -192,7 +192,7 @@
     if(!version){status.textContent='Refresh installed sources before confirming the original APK.';return;}
     button.disabled=true;status.textContent='Retaining original APK for '+pkg+'…';
     try{
-      const result=await api('/api/admin/source-maintenance/original-apk/'+encodeURIComponent(pkg),{
+      const result=await api('/api/v1/source-maintenance/original-apk/'+encodeURIComponent(pkg),{
         method:'POST',body:file,headers:{'Content-Type':'application/vnd.android.package-archive','X-AutoSourcarr-Original-Apk-Confirmed':'true','X-AutoSourcarr-Original-Apk-Version':version},timeoutMs:45000,noMutationRefresh:true});
       status.textContent=pkg+': '+(result.message||'Original APK retained. Start a new repair to verify the match.');
       if(input.files?.[0]===file){input.value='';resetOriginalConfirmation();}

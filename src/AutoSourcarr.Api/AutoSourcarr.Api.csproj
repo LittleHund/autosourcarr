@@ -7,4 +7,9 @@
   <ItemGroup>
     <ProjectReference Include="../AutoSourcarr.Core/AutoSourcarr.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The 0.4.x orphan seed list (source_orphans_seed.json): embedded, not published as web content. -->
+    <Content Remove="Resources/source-orphans-seed.json" />
+    <EmbeddedResource Include="Resources/source-orphans-seed.json" LogicalName="AutoSourcarr.Api.source-orphans-seed.json" />
+  </ItemGroup>
 </Project>

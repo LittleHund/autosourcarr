@@ -13,6 +13,10 @@
     <PackageReference Include="Dapper" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Google.Protobuf" />
+    <PackageReference Include="Grpc.Tools" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <!-- Mihon/Keiyoushi index.pb; message types stay internal behind ExtensionIndex. -->
+    <Protobuf Include="Sources/Repositories/ExtensionIndex.proto" GrpcServices="None" Access="Internal" />
     <!-- Manifest resource names follow the folder path: AutoSourcarr.Core.<Folder>.<file> -->
     <EmbeddedResource Include="Matching/*.json" />
     <EmbeddedResource Include="Unicode/*.json" />

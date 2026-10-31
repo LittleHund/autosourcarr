@@ -16,7 +16,7 @@
     if(verb==='install'&&!confirm('Install this original archived source into the integrated source engine? Archived code is unverified and may no longer work. The source engine may restart briefly.'))return;
     state.busy=true;++state.generation;pending();
     try{
-      const result=await api(`/api/admin/source-orphans/${encodeURIComponent(pkg)}/${verb}`,{method:'POST',timeoutMs:verb==='repair'?45000:20000,noMutationRefresh:true});
+      const result=await api(`/api/v1/source-orphans/${encodeURIComponent(pkg)}/${verb}`,{method:'POST',timeoutMs:verb==='repair'?45000:20000,noMutationRefresh:true});
       toast(result.message||(verb==='install'?'Archived installation queued':'Repair preparation queued. Follow progress in Tasks.'));
       if(verb==='repair')window.openSourceRepairTask?.();
       await load();
@@ -78,7 +78,7 @@
   async function load(){
     clearTimeout(state.timer);const generation=++state.generation;
     try{
-      const data=await api('/api/admin/source-orphans',{timeoutMs:15000,suppressClientError:true});
+      const data=await api('/api/v1/source-orphans',{timeoutMs:15000,suppressClientError:true});
       if(generation!==state.generation)return;
       state.data=data;render();
     }catch(error){if(generation===state.generation){byId('sourceOrphanStatus').textContent='Unable to load archived sources: '+error.message;byId('sourceInstalledOrphanStatus').textContent='Unable to load installed orphans: '+error.message;}}
@@ -87,7 +87,7 @@
   byId('refreshSourceOrphans').onclick=async()=>{
     if(state.busy||state.data?.refresh?.state==='running')return;
     state.busy=true;++state.generation;pending();
-    try{const result=await api('/api/admin/source-orphans/refresh',{method:'POST',timeoutMs:15000,noMutationRefresh:true});toast(result.message||'Repository history collection queued');await load();}
+    try{const result=await api('/api/v1/source-orphans/refresh',{method:'POST',timeoutMs:15000,noMutationRefresh:true});toast(result.message||'Repository history collection queued');await load();}
     catch(error){byId('sourceOrphanStatus').textContent='Unable to collect repository history: '+error.message;}
     finally{state.busy=false;pending();}
   };

@@ -13,6 +13,7 @@ NuGet versions and package content hashes are recorded in each project's
 | SQLite engine | Public domain; SQLitePCLRaw's package wrapper has its own notices | [SQLite copyright](https://www.sqlite.org/copyright.html) |
 | Unidecode.NET 2.2.1 | Copyright 2020 Dima Stefantsov, Vitalii Ganzha, Sergey Kuznetsov; MIT | [Pinned package source](https://github.com/thecoderok/Unidecode.NET/tree/2c695e1520675cb3bba225d055adef3400c7ab09) |
 | SharpCompress 0.50.6 | Adam Hathcock; MIT; incorporated Bouncy Castle notices retained | [Pinned package source](https://github.com/adamhathcock/sharpcompress/tree/542ed974d4fc276b59d378f6ae2c16eb7cafd38a) |
+| Google.Protobuf 3.29.3 | Copyright 2008 Google Inc.; BSD-3-Clause (Grpc.Tools 2.69.0 runs protoc at build time only and is not redistributed) | [Protocol Buffers repository](https://github.com/protocolbuffers/protobuf) |
 | Magick.NET-Q8-AnyCPU and Magick.NET.Core 15.0.0 | Copyright 2013–2026 Dirk Lemstra; Apache-2.0; ImageMagick Studio LLC and incorporated libraries retain their own licenses | [Pinned package source](https://github.com/dlemstra/Magick.NET/tree/79bb8700d7fe3a564f62926ab299fc2520cb2269) |
 
 Unidecode.NET's publisher separately attributes its character tables to Python

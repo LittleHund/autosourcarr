@@ -153,6 +153,8 @@ public sealed class ApiV1Services
     public AutoSourcarr.Api.Security.AccessControlServices? Access { get; init; }
     /// <summary>Source list, groups, choices and preferences (phase 6); null answers 503.</summary>
     public SourceServices? Sources { get; init; }
+    /// <summary>Orphan sources and the source-maintenance inventory routes (phase 6d); null answers 503.</summary>
+    public SourceInventoryServices? SourceInventory { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -516,6 +518,7 @@ public static class ApiV1Endpoints
         SourceRuntimeV1Endpoints.Map(group, services, json);
         AccountsV1Endpoints.Map(endpoints, group, services, json);
         SourceV1Endpoints.Map(group, services, json);
+        SourceInventoryV1Endpoints.Map(group, services, json);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),
