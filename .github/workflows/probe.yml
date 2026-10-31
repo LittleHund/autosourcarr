@@ -85,9 +85,14 @@ jobs:
               tail -c 20000 probe/source-host-run.log > probe/source-host-run.tail.log
               grep -v " DEBUG " probe/source-host-run.log | grep -A45 -E "VerifyError|WARN|ERROR" | head -400 > probe/source-host-warnings.log || true
               rm -f probe/source-host-run.log
+              if [ "$b" = 0 ]; then
+                AUTOSOURCARR_TEST_SOURCE_HOST_JAR=$PWD/.build/autosourcarr-source-host.jar AUTOSOURCARR_REQUIRE_SOURCE_HOST=1 \
+                  timeout 900 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --filter "source host:" > probe/source-host-csharp.log 2>&1; hcs=$?
+                tail -c 30000 probe/source-host-csharp.log > probe/source-host-csharp.tail.log; rm -f probe/source-host-csharp.log
+              fi
             fi
           fi
-          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" > probe/result.txt
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" > probe/result.txt
           cat probe/result.txt
       - name: Commit results
         if: always()
