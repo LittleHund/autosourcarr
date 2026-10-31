@@ -42,6 +42,7 @@ public sealed class TaskRegistry(Func<DateTimeOffset>? clock = null)
     { State = "failed", Error = error.Length > 0 ? error : "Task failed", Message = message ?? row.Message });
     public void Cancel(string id, string message = "Cancelled by user") => Finish(id, row => row with
     { State = "failed", CancelRequested = true, Error = message, Message = message });
+    public TaskRecord? Find(string id) { lock (_gate) return _records.GetValueOrDefault(id); }
     public bool IsRunning(string id) { lock (_gate) return _records.TryGetValue(id, out var row) && row.State == "running"; }
     public bool IsCancellationRequested(string id) { lock (_gate) return _records.TryGetValue(id, out var row) && row.CancelRequested; }
 

@@ -13,6 +13,8 @@ public sealed class ErrorRegistry(RuntimeIdentity identity, SupportPrivacy priva
     private readonly LinkedList<JsonObject> _order = [];
     private readonly int _limit = Math.Max(20, maximumEntries);
     private readonly Func<DateTimeOffset> _clock = clock ?? (() => DateTimeOffset.UtcNow);
+    /// <summary>Raised after an error is recorded, resolved or cleared (outside the lock); feeds the event stream.</summary>
+    public event Action? Changed;
 
     public string Record(string component, string message, string? key = null, string severity = "error", string path = "", string method = "",
         int statusCode = 500, string errorType = "", string detail = "", JsonObject? sourceContext = null, bool pinned = false, JsonObject? context = null, Exception? exception = null)
@@ -32,6 +34,7 @@ public sealed class ErrorRegistry(RuntimeIdentity identity, SupportPrivacy priva
         recordLog?.Invoke(new() { ["component"] = component, ["message"] = message, ["error_type"] = errorType, ["status_code"] = statusCode,
             ["path"] = privacy.Text(path), ["method"] = method, ["detail"] = Cut(fullDetail, 12000), ["exception_chain"] = chain.DeepClone() });
         var now = Now();
+        string recorded;
         lock (_gate)
         {
             JsonObject item;
@@ -56,19 +59,24 @@ public sealed class ErrorRegistry(RuntimeIdentity identity, SupportPrivacy priva
                 var victim = _order.FirstOrDefault(row => D.Flag(row, "resolved")) ?? _order.FirstOrDefault(row => !D.Flag(row, "pinned")) ?? _order.First!.Value;
                 Remove(D.Text(victim, "key"));
             }
-            return id;
+            recorded = id;
         }
+        Changed?.Invoke();
+        return recorded;
     }
 
     public int Resolve(string? key = null, string? component = null) => ResolveWhere((signature, row) => (key is null || signature == key) && (component is null || D.Text(row, "component") == component));
     public int ResolvePrefix(string prefix) => prefix.Length == 0 ? 0 : ResolveWhere((signature, _) => signature.StartsWith(prefix, StringComparison.Ordinal));
     public int Clear(bool resolvedOnly = true)
     {
+        int cleared;
         lock (_gate)
         {
             var keys = _order.Where(row => !resolvedOnly || D.Flag(row, "resolved")).Select(row => D.Text(row, "key")).ToArray();
-            foreach (var key in keys) Remove(key); return keys.Length;
+            foreach (var key in keys) Remove(key); cleared = keys.Length;
         }
+        if (cleared > 0) Changed?.Invoke();
+        return cleared;
     }
     public JsonObject Snapshot(int limit = 50, bool includeResolved = true)
     {
@@ -93,6 +101,7 @@ public sealed class ErrorRegistry(RuntimeIdentity identity, SupportPrivacy priva
             foreach (var (signature, node) in _items)
                 if (predicate(signature, node.Value) && !D.Flag(node.Value, "resolved"))
                 { node.Value["resolved"] = true; node.Value["resolved_at"] = now; changed++; }
+        if (changed > 0) Changed?.Invoke();
         return changed;
     }
     private void Remove(string key) { if (_items.Remove(key, out var node)) _order.Remove(node); }

@@ -5,6 +5,7 @@ using AutoSourcarr.Api.Http;
 using AutoSourcarr.Api.Security;
 using AutoSourcarr.Core.Catalogue;
 using AutoSourcarr.Core.Diagnostics;
+using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Settings;
 using Microsoft.Data.Sqlite;
@@ -75,6 +76,15 @@ public sealed record DatabaseMoveRequest(string Path);
 
 public sealed record DatabaseMoveResponse(string FromDirectory, string TargetDirectory, long CatalogBytes, long OriginsBytes, string Message);
 
+/// <summary>The move was accepted and runs as a job; follow it in the task list (or the event stream) by <c>task_id</c>.</summary>
+public sealed record DatabaseMoveQueued(string TaskId, string TargetDirectory, string Message);
+
+public sealed record ErrorsClearRequest(bool? ResolvedOnly);
+
+public sealed record ErrorsClearResponse(int Cleared);
+
+public sealed record TaskActionResponse(string TaskId, string State, string Message);
+
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
 [JsonSerializable(typeof(SettingsOverview))]
 [JsonSerializable(typeof(SettingsSaveRequest))]
@@ -92,6 +102,10 @@ public sealed record DatabaseMoveResponse(string FromDirectory, string TargetDir
 [JsonSerializable(typeof(DatabaseStorageView))]
 [JsonSerializable(typeof(DatabaseMoveRequest))]
 [JsonSerializable(typeof(DatabaseMoveResponse))]
+[JsonSerializable(typeof(DatabaseMoveQueued))]
+[JsonSerializable(typeof(ErrorsClearRequest))]
+[JsonSerializable(typeof(ErrorsClearResponse))]
+[JsonSerializable(typeof(TaskActionResponse))]
 [JsonSerializable(typeof(RuntimeMetricsSnapshot))]
 [JsonSerializable(typeof(JsonObject))]
 [JsonSerializable(typeof(ProblemResponse))]
@@ -129,6 +143,19 @@ public sealed class ApiV1Services
     public Func<CancellationToken, Task<JsonObject>>? Health { get; }
     public Func<DatabasePaths>? DatabasePaths { get; }
     public Func<string, DatabaseMoveResult>? MoveDatabase { get; }
+    /// <summary>Checks a move target before the move is queued (absolute, mounted, empty, writable, not linked).</summary>
+    public Func<string, string>? CheckDatabaseTarget { get; init; }
+    /// <summary>Phase 3: the task list, job queue, single event stream, grouped errors and diagnostics download.</summary>
+    public TaskRegistry? Tasks { get; init; }
+    public JobQueue? Jobs { get; init; }
+    public EventStream? Events { get; init; }
+    public ErrorRegistry? Errors { get; init; }
+    public DiagnosticExporter? Diagnostics { get; init; }
+    /// <summary>Safe replays of interrupted tasks by task kind (0.4.x: read-only library observations only).</summary>
+    public IReadOnlyDictionary<string, Func<TaskRecord, CancellationToken, Task<JsonObject>>> SafeRetries { get; init; } =
+        new Dictionary<string, Func<TaskRecord, CancellationToken, Task<JsonObject>>>(StringComparer.Ordinal);
+    /// <summary>Heartbeat interval of the event stream (comment line; keeps proxies from closing an idle stream).</summary>
+    public TimeSpan EventHeartbeat { get; init; } = TimeSpan.FromSeconds(15);
     public Action? Stop { get; }
     public Func<bool> BundledImage { get; }
     internal int Restarting;
@@ -417,6 +444,24 @@ public static class ApiV1Endpoints
                 if (services.MoveDatabase is null) return Problem(409, "Moving the databases is not available in this host.");
                 var body = await Read(context, json.DatabaseMoveRequest).ConfigureAwait(false);
                 if (body?.Path is null) return Problem(400, "Send the absolute target folder as path.");
+                if (services.Jobs is { } jobs && services.CheckDatabaseTarget is { } check)
+                {
+                    // The copy can take minutes: check the folder now, then run the move as an exclusive job so a
+                    // proxy timeout cannot cut it off and the task list shows its progress and result.
+                    string target;
+                    try { target = check(body.Path); }
+                    catch (ArgumentException error) { return Problem(400, error.Message); }
+                    var move = services.MoveDatabase;
+                    var handle = jobs.Enqueue(DatabaseMoveJob, target, async job =>
+                    {
+                        job.Report(message: "Pausing database work, copying and checking both databases");
+                        var result = await Task.Run(() => move(target), job.CancellationToken).ConfigureAwait(false);
+                        job.Result(result.Message);
+                    }, origin: "manual", title: "Move databases to " + target, context: target);
+                    return Results.Json(new DatabaseMoveQueued(handle.Id, target, handle.Merged
+                        ? "A move to this folder is already queued or running; follow it in the task list."
+                        : "The move is queued. AutoSourcarr waits for running jobs, then copies, checks and switches both databases."), json.DatabaseMoveQueued, statusCode: 202);
+                }
                 try
                 {
                     var result = await Task.Run(() => services.MoveDatabase(body.Path)).ConfigureAwait(false);
@@ -430,6 +475,7 @@ public static class ApiV1Endpoints
             .WithSummary("Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.")
             .Accepts<DatabaseMoveRequest>("application/json")
             .Produces<DatabaseMoveResponse>(StatusCodes.Status200OK)
+            .Produces<DatabaseMoveQueued>(StatusCodes.Status202Accepted)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 
@@ -459,11 +505,180 @@ public static class ApiV1Endpoints
             .WithSummary("Timing samples per work phase (no URLs, titles or keys).")
             .Produces<RuntimeMetricsSnapshot>(StatusCodes.Status200OK);
 
+        MapJobs(endpoints, group, services, json);
+
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),
                     "application/json; charset=utf-8")))
             .ExcludeFromDescription();
         return group;
+    }
+
+    /// <summary>Exclusive and disk-heavy: nothing else runs while both databases are copied and switched.</summary>
+    public static readonly JobType DatabaseMoveJob = new("database-move", "Move databases", JobPriority.High,
+        JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromMinutes(30));
+
+    private static void MapJobs(IEndpointRouteBuilder endpoints, RouteGroupBuilder group, ApiV1Services services, ApiJsonContext json)
+    {
+        group.MapGet("/tasks", (Func<HttpContext, IResult>)(context =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                if (services.Tasks is null) return Problem(503, "The task list is not available in this host.");
+                var snapshot = services.Tasks.Snapshot();
+                return Results.Json(services.Jobs?.Annotate(snapshot) ?? snapshot, json.JsonObject);
+            }))
+            .WithName("getTasks")
+            .WithSummary("Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        group.MapPost("/tasks/clear-history", (Func<HttpContext, IResult>)(_ =>
+            {
+                if (services.Tasks is null) return Problem(503, "The task list is not available in this host.");
+                var result = services.Tasks.ClearHistory();
+                services.Events?.Publish("tasks", new JsonObject { ["change"] = "history-cleared" });
+                return Results.Json(result, json.JsonObject);
+            }))
+            .WithName("clearTaskHistory")
+            .WithSummary("Remove completed and failed tasks from the list; running and queued work stays.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        group.MapPost("/tasks/{taskId}/cancel", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                if (services.Tasks is null) return Problem(503, "The task list is not available in this host.");
+                var id = context.Request.RouteValues["taskId"]?.ToString() ?? "";
+                if (!await services.Tasks.RequestCancelAsync(id).ConfigureAwait(false))
+                    return Problem(409, "This task is not running or cannot be cancelled safely.");
+                return Results.Json(new TaskActionResponse(id, "failed", "Cancelled by user"), json.TaskActionResponse);
+            }))
+            .WithName("cancelTask")
+            .WithSummary("Cancel a queued or running task. Work already done stays; the task is listed as failed with \"Cancelled by user\".")
+            .Produces<TaskActionResponse>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
+
+        group.MapPost("/tasks/{taskId}/retry-safe", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                if (services.Tasks is null) return Problem(503, "The task list is not available in this host.");
+                var id = context.Request.RouteValues["taskId"]?.ToString() ?? "";
+                var row = services.Tasks.Find(id);
+                if (row is null || row.CancelRequested || !row.Interrupted || !services.SafeRetries.TryGetValue(row.Kind, out var replay))
+                    return Problem(409, "This task cannot be safely replayed. Review its original action.");
+                var result = await replay(row, context.RequestAborted).ConfigureAwait(false);
+                result["note"] ??= "Read-only observation retried; no previous change was replayed";
+                return Results.Json(result, json.JsonObject);
+            }))
+            .WithName("retryTask")
+            .WithSummary("Replay an interrupted task only when replaying it cannot change data twice (read-only observations).")
+            .Produces<JsonObject>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
+
+        group.MapGet("/jobs", (Func<HttpContext, IResult>)(context =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                if (services.Jobs is null) return Problem(503, "The job queue is not available in this host.");
+                return Results.Json(services.Jobs.Snapshot(), json.JsonObject);
+            }))
+            .WithName("getJobs")
+            .WithSummary("Job queue: workers, running and queued jobs with ETA, and per-type run limit, average time, failures and freezes.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        group.MapGet("/errors", (Func<HttpContext, IResult>)(context =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                if (services.Errors is null) return Problem(503, "The error list is not available in this host.");
+                return Results.Json(services.Errors.Snapshot(100, includeResolved: true), json.JsonObject);
+            }))
+            .WithName("getErrors")
+            .WithSummary("Recent errors grouped by cause with counts, newest first (resolved ones included).")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        group.MapPost("/errors/clear", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                if (services.Errors is null) return Problem(503, "The error list is not available in this host.");
+                var body = await Read(context, json.ErrorsClearRequest).ConfigureAwait(false);
+                var cleared = services.Errors.Clear(body?.ResolvedOnly ?? true);
+                services.Events?.Publish("errors", new JsonObject { ["change"] = "cleared" });
+                return Results.Json(new ErrorsClearResponse(cleared), json.ErrorsClearResponse);
+            }))
+            .WithName("clearErrors")
+            .WithSummary("Remove resolved errors (or all errors with resolved_only=false).")
+            .Accepts<ErrorsClearRequest>("application/json")
+            .Produces<ErrorsClearResponse>(StatusCodes.Status200OK);
+
+        group.MapGet("/diagnostics", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                if (services.Diagnostics is null) return Problem(503, "Diagnostics are not available in this host.");
+                return Results.Json(await services.Diagnostics.ExportAsync(context.RequestAborted).ConfigureAwait(false), json.JsonObject);
+            }))
+            .WithName("getDiagnostics")
+            .WithSummary("PERF-9: all logs and diagnostics in one download, with secrets and private data removed.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        // Server-sent events are not JSON, so the stream sits next to the typed contract (still admin-only, and
+        // refused through the reader alias). The browser reads it with fetch so it can send the admin token.
+        // A Delegate handler (not a RequestDelegate), so the admin filter really runs.
+        endpoints.MapGet("/api/v1/events", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                await StreamEventsAsync(context, services).ConfigureAwait(false);
+                return Results.Empty;
+            }))
+            .AddEndpointFilter(new AdminAuthorizationFilter(services.Settings))
+            .ExcludeFromDescription();
+    }
+
+    /// <summary>
+    /// UI-13 live updates: text/event-stream with ids. <c>Last-Event-ID</c> (or <c>?last_event_id=</c>) resumes after a
+    /// reconnect; <c>?topics=tasks,jobs</c> filters. A comment line is sent as heartbeat, and <c>X-Accel-Buffering: no</c>
+    /// tells nginx not to buffer, so events reach the browser at once through a reverse proxy.
+    /// </summary>
+    internal static async Task StreamEventsAsync(HttpContext context, ApiV1Services services)
+    {
+        if (services.Events is null)
+        {
+            await Problem(503, "Live updates are not available in this host.").ExecuteAsync(context).ConfigureAwait(false);
+            return;
+        }
+        var request = context.Request;
+        long? last = null;
+        var header = request.Headers["Last-Event-ID"].ToString();
+        if (header.Length == 0) header = request.Query["last_event_id"].ToString();
+        if (long.TryParse(header, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parsed)) last = parsed;
+        var topicText = request.Query["topics"].ToString();
+        IReadOnlySet<string>? topics = topicText.Length == 0 ? null
+            : topicText.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.Ordinal);
+        var response = context.Response;
+        response.StatusCode = 200;
+        response.ContentType = "text/event-stream; charset=utf-8";
+        response.Headers.CacheControl = "no-cache, no-transform";
+        response.Headers["X-Accel-Buffering"] = "no";
+        context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
+        using var subscription = services.Events.Subscribe(last, topics);
+        var token = context.RequestAborted;
+        try
+        {
+            await Write(response, $"retry: 3000\n: connected, last id {services.Events.LastId}\n\n", token).ConfigureAwait(false);
+            while (!token.IsCancellationRequested)
+            {
+                AppEvent? item;
+                try { item = await subscription.NextAsync(services.EventHeartbeat, token).ConfigureAwait(false); }
+                catch (EventStreamOverflowException overflow)
+                {
+                    await Write(response, $"id: {overflow.Id}\nevent: resync\ndata: {{\"reason\":\"This connection fell behind; reload the page data.\"}}\n\n", token).ConfigureAwait(false);
+                    return;
+                }
+                if (item is null) { await Write(response, ": heartbeat\n\n", token).ConfigureAwait(false); continue; }
+                var data = new JsonObject { ["id"] = item.Id, ["topic"] = item.Topic, ["at"] = item.At, ["data"] = item.Data.DeepClone() };
+                await Write(response, $"id: {item.Id}\nevent: {item.Topic}\ndata: {data.ToJsonString()}\n\n", token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (IOException) when (token.IsCancellationRequested) { }
+    }
+
+    private static async Task Write(HttpResponse response, string text, CancellationToken token)
+    {
+        await response.WriteAsync(text, token).ConfigureAwait(false);
+        await response.Body.FlushAsync(token).ConfigureAwait(false);
     }
 
     private static IReadOnlyList<SettingChangeItem> Changes(SettingsSaveResult result) =>

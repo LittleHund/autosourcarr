@@ -19,8 +19,19 @@ public static class DatabaseRelocation
     public static DatabaseMoveResult Move(SqliteDatabase database, string target, Action<string> saveDirectory, TimeSpan? drainTimeout = null,
         Func<string, IDisposable>? claimTarget = null)
     {
-        ArgumentNullException.ThrowIfNull(database);
         ArgumentNullException.ThrowIfNull(saveDirectory);
+        target = CheckTarget(database, target);
+        // The instance lock on the new folder is taken before copying, so a second AutoSourcarr cannot use it.
+        IDisposable? claim;
+        try { claim = claimTarget?.Invoke(target); }
+        catch (IOException error) { throw new ArgumentException("Another AutoSourcarr instance already uses that folder.", error); }
+        return MoveChecked(database, target, saveDirectory, drainTimeout, claim);
+    }
+
+    /// <summary>Checks a move target and returns it normalized; <see cref="ArgumentException"/> explains a refusal.</summary>
+    public static string CheckTarget(SqliteDatabase database, string target)
+    {
+        ArgumentNullException.ThrowIfNull(database);
         target = (target ?? "").Trim();
         if (target.Length == 0 || !Path.IsPathFullyQualified(target))
             throw new ArgumentException("Enter an absolute folder path mounted into this container, for example /database.");
@@ -43,11 +54,11 @@ public static class DatabaseRelocation
         try { PrivateDocumentStore.ValidateDirectory(target); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
         { throw new ArgumentException("That folder or one of its parent folders is a link (symlink); AutoSourcarr refuses linked database folders at startup, so it cannot be used.", error); }
-        // The instance lock on the new folder is taken before copying, so a second AutoSourcarr cannot use it.
-        IDisposable? claim;
-        try { claim = claimTarget?.Invoke(target); }
-        catch (IOException error) { throw new ArgumentException("Another AutoSourcarr instance already uses that folder.", error); }
+        return target;
+    }
 
+    private static DatabaseMoveResult MoveChecked(SqliteDatabase database, string target, Action<string> saveDirectory, TimeSpan? drainTimeout, IDisposable? claim)
+    {
         var switched = false;
         try
         {

@@ -190,13 +190,13 @@ async function exportErrors(){
   let backend=lastBackendErrors,exportHealth=lastHealthSnapshot;
   try{
     try{
-      support=await api('/api/admin/diagnostics',{cache:'no-store',timeoutMs:8000,suppressClientError:true,noMutationRefresh:true});
+      support=await apiV1({cache:'no-store',timeoutMs:8000,suppressClientError:true,noMutationRefresh:true}).getDiagnostics();
       support.browser_received_at=new Date().toISOString();backend=support.errors||backend;
       exportHealth=support.health||exportHealth;
       if(support.partial_error)failure='Some local diagnostics could not be collected.';
     }catch(e){
       failure='Detailed snapshot unavailable: '+e.message;
-      try{backend=await api('/api/admin/errors?limit=100&include_resolved=true',{cache:'no-store',timeoutMs:6000,suppressClientError:true,noMutationRefresh:true});}
+      try{backend=await apiV1({cache:'no-store',timeoutMs:6000,suppressClientError:true,noMutationRefresh:true}).getErrors();}
       catch(error){failure+='; error-history refresh failed: '+error.message;}
     }
     try{if(typeof loadAttention==='function')await loadAttention(true);}catch(e){failure+='; assistance refresh failed: '+e.message;}

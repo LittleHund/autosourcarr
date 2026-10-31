@@ -393,6 +393,71 @@ async function api(url, opts = {}) {
 // Typed client for /api/v1, generated from the server's OpenAPI document (scripts/generate-api-client.mjs).
 // Requests still go through api() above: same admin token, timeouts and error handling.
 function apiV1(defaults={}){return AutoSourcarrApi.createClient({request:(path,options)=>api(path,{...defaults,...options})});}
+// UI-13 live updates: one server-sent event stream (/api/v1/events). It is read with fetch, not EventSource, so the
+// admin token header can be sent. Events only say *what* changed; the page then reloads that part. Reconnects resume
+// from the last event id; a "resync" event (the server no longer holds the gap) reloads everything.
+const liveEvents={connected:false,lastId:null,controller:null,retryMs:3000,handlers:{},started:false};
+function onLiveEvent(topic,handler){(liveEvents.handlers[topic]||=[]).push(handler);return()=>{const list=liveEvents.handlers[topic]||[];const at=list.indexOf(handler);if(at>=0)list.splice(at,1);};}
+function dispatchLiveEvent(topic,data){
+  for(const handler of [...(liveEvents.handlers[topic]||[]),...(liveEvents.handlers['*']||[])]){try{handler(data,topic);}catch(e){console.error('Live update handler failed',e);}}
+}
+function parseLiveBlock(block){
+  let id=null,event='message';const data=[];
+  for(const line of block.split('\n')){
+    if(!line||line.startsWith(':'))continue;
+    const colon=line.indexOf(':');const field=colon<0?line:line.slice(0,colon);let value=colon<0?'':line.slice(colon+1);if(value.startsWith(' '))value=value.slice(1);
+    if(field==='id')id=value;else if(field==='event')event=value;else if(field==='data')data.push(value);else if(field==='retry'&&/^\d+$/.test(value))liveEvents.retryMs=Number(value);
+  }
+  return {id,event,data:data.join('\n')};
+}
+async function runLiveEvents(){
+  if(liveEvents.started)return;liveEvents.started=true;
+  for(;;){
+    const controller=new AbortController();liveEvents.controller=controller;
+    try{
+      const headers={Accept:'text/event-stream'};
+      if(token)headers['X-Admin-Token']=token;
+      if(liveEvents.lastId)headers['Last-Event-ID']=liveEvents.lastId;
+      const response=await fetch('/api/v1/events',{headers,cache:'no-store',signal:controller.signal,credentials:'same-origin'});
+      if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
+      liveEvents.connected=true;
+      const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
+      for(;;){
+        const {value,done}=await reader.read();if(done)break;
+        buffer+=decoder.decode(value,{stream:true}).replace(/\r\n?/g,'\n');
+        let cut;
+        while((cut=buffer.indexOf('\n\n'))>=0){
+          const block=buffer.slice(0,cut);buffer=buffer.slice(cut+2);
+          const item=parseLiveBlock(block);if(!item.data&&item.event==='message')continue;
+          if(item.id)liveEvents.lastId=item.id;
+          let payload=null;try{payload=item.data?JSON.parse(item.data):null;}catch(_){payload=null;}
+          if(item.event==='resync')liveEvents.lastId=null;
+          dispatchLiveEvent(item.event,payload);
+        }
+      }
+    }catch(e){if(e?.name!=='AbortError')console.debug('Live updates disconnected',e?.message||e);}
+    liveEvents.connected=false;
+    await new Promise(resolve=>setTimeout(resolve,document.hidden?Math.max(15000,liveEvents.retryMs):liveEvents.retryMs));
+  }
+}
+let liveTasksTimer=null;
+function liveTasksChanged(){if(liveTasksTimer)return;liveTasksTimer=setTimeout(()=>{liveTasksTimer=null;loadTasks().catch(()=>{});},150);}
+onLiveEvent('tasks',liveTasksChanged);
+onLiveEvent('jobs',liveTasksChanged);
+onLiveEvent('errors',()=>{const panel=document.getElementById('errorPanel');if(panel&&!panel.hidden&&typeof loadErrors==='function')loadErrors().catch(()=>{});});
+onLiveEvent('resync',()=>{liveTasksChanged();});
+// Waits until a task leaves the running list; resolves with its final row (state, message, error).
+async function waitForTask(taskId,{timeoutMs=3600000}={}){
+  const deadline=Date.now()+timeoutMs;
+  for(;;){
+    const snapshot=await apiV1({timeoutMs:12000,suppressClientError:true,cache:'no-store'}).getTasks();
+    const row=(snapshot.items||[]).find(item=>item.id===taskId);
+    if(!row)return {state:'failed',error:'The task is no longer listed; see the task history.'};
+    if(row.state!=='running')return row;
+    if(Date.now()>deadline)return {state:'failed',error:'Still running; follow it in the task list.'};
+    await new Promise(resolve=>{let off=null;const timer=setTimeout(()=>{off?.();resolve();},liveEvents.connected?10000:2000);off=onLiveEvent('jobs',data=>{if(data?.id===taskId){clearTimeout(timer);off?.();resolve();}});});
+  }
+}
 window.addEventListener('unhandledrejection', e => {
   const reason=e.reason;
   if(reason?.expectedCancellation || reason?.name==='AbortError') return;
@@ -1459,7 +1524,7 @@ function taskUiDiagnosticContext(){
 }
 window.cancelTask=async(taskId,button)=>{
   if(button)button.disabled=true;
-  try{await api(`/api/admin/tasks/${encodeURIComponent(taskId)}/cancel`,{method:'POST'});toast('Task cancelled');await loadTasks();}
+  try{await apiV1().cancelTask(taskId);toast('Task cancelled');await loadTasks();}
   catch(e){toast('Unable to cancel task: '+e.message);if(button)button.disabled=false;}
 };
 
@@ -1469,7 +1534,7 @@ async function loadTasks(){
   if(tasksLoadPromise)return tasksLoadPromise;
   tasksLoadPromise=(async()=>{
     try{
-      tasksState=await api('/api/admin/tasks',{timeoutMs:12000,suppressClientError:true,cache:'no-store'});
+      tasksState=await apiV1({timeoutMs:12000,suppressClientError:true,cache:'no-store'}).getTasks();
       tasksLastSuccess=Date.now();tasksPollFailures=0;
       if(typeof updateActivityStrip==='function')updateActivityStrip();
       if(surfaceIsActive('tasks'))requestSurfaceRender('tasks');else renderTasks();
@@ -1494,7 +1559,7 @@ function startTaskPolling(){
     const running=Number(tasksState.running||0)>0;
     const tasksOpen=!!document.querySelector('#tasks.active');
     const importsOpen=!!document.querySelector('#imports.active');
-    const delay=document.hidden?60000:(tasksPollFailures?Math.min(30000,3000*2**Math.min(tasksPollFailures,4)):(running||tasksOpen||importsOpen?3000:30000));
+    const delay=document.hidden?60000:(tasksPollFailures?Math.min(30000,3000*2**Math.min(tasksPollFailures,4)):liveEvents.connected?30000:(running||tasksOpen||importsOpen?3000:30000));
     tasksPollTimer=setTimeout(poll,delay);
   };
   poll();
@@ -1570,8 +1635,13 @@ async function moveDatabaseStorage(){
   if(!confirm(`Move both AutoSourcarr databases to ${path}?\n\nAutoSourcarr pauses database work, copies and checks both databases, then switches to the new folder. The old files stay where they are as a safety copy.`))return;
   if(button)button.disabled=true;
   try{
-    const r=await apiV1({timeoutMs:300000}).moveDatabaseStorage({path});
+    const r=await apiV1({timeoutMs:30000}).moveDatabaseStorage({path});
     toast(r.message||'Databases moved');
+    // The move runs as a job: wait for it in the task list (live events wake this up early).
+    if(r.task_id){
+      const result=await waitForTask(r.task_id,{timeoutMs:6*60*60*1000});
+      toast(result.state==='completed'?(result.message||'Databases moved'):'Database move failed: '+(result.error||result.message||'see the task list'));
+    }
     await Promise.allSettled([loadDatabaseStorage(),loadEnvSettings({force:true})]);
   }catch(e){toast('Database move failed: '+e.message);}
   finally{if(button)button.disabled=!databaseStorageState?.move_available;}
@@ -1846,7 +1916,7 @@ async function loadErrors(){
   renderErrorsSnapshot();
   if(summary&&!lastBackendErrors.items?.length&&!clientErrors.length)summary.textContent='Loading recent error history…';
 
-  const backendPromise=api('/api/admin/errors?limit=50&include_resolved=true',{cache:'no-store',timeoutMs:6000,suppressClientError:true,priority:'high'});
+  const backendPromise=apiV1({cache:'no-store',timeoutMs:6000,suppressClientError:true,priority:'high'}).getErrors();
   // Attach both outcomes now: health may reject while history is still pending.
   const healthPromise=api('/api/v1/health',{cache:'no-store',timeoutMs:20000,suppressClientError:true,priority:'high'})
     .then(value=>({ok:true,value}),error=>({ok:false,error}));
@@ -3745,7 +3815,7 @@ if($('#refreshTasks'))$('#refreshTasks').onclick=()=>loadTasks().catch(e=>toast(
 if($('#clearTaskHistory'))$('#clearTaskHistory').onclick=async()=>{
   if(!confirm('Clear completed, failed and cancelled task history? Running tasks and repairs awaiting review will be kept. Repair evidence stays on disk; finished repair rows are hidden until this app restarts.'))return;
   const b=$('#clearTaskHistory');b.disabled=true;
-  try{const r=await api('/api/admin/tasks/clear-history',{method:'POST',body:'{}'});await loadTasks();const n=Number(r.cleared||0);toast(`Cleared ${n} task history entr${n===1?'y':'ies'}`);}
+  try{const r=await apiV1().clearTaskHistory();await loadTasks();const n=Number(r.cleared||0);toast(`Cleared ${n} task history entr${n===1?'y':'ies'}`);}
   catch(e){toast('Unable to clear task history: '+e.message);}
   finally{b.disabled=false;}
 };
@@ -3848,7 +3918,7 @@ if($('#refreshErrors'))$('#refreshErrors').onclick=()=>loadErrors().catch(e=>toa
 if($('#clearResolvedErrors'))$('#clearResolvedErrors').onclick=async()=>{
   const b=$('#clearResolvedErrors');if(b)b.disabled=true;
   try{
-    await api('/api/admin/errors/clear?resolved_only=true',{method:'POST',body:'{}',timeoutMs:8000,suppressClientError:true});
+    await apiV1({timeoutMs:8000,suppressClientError:true}).clearErrors({resolved_only:true});
     clientErrors=clientErrors.filter(item=>!item.resolved);
     await loadErrors();
     toast('Resolved error history cleared');
@@ -3875,6 +3945,7 @@ async function bootstrapAutoSourcarr(){
     rememberClientError('Unable to load server user preferences',{component:'User preferences',path:'/api/admin/ui-preferences',method:'GET',severity:'warning',detail:String(e?.message||e)});
   });
   startTaskPolling();
+  runLiveEvents();
   health();
   scheduleMetadataLivePoll();
   scheduleDuplicateHeartbeat();

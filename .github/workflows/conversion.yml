@@ -46,9 +46,12 @@ jobs:
         run: dotnet restore AutoSourcarr.slnx --locked-mode   # lock files are committed; drift fails here
       - name: Build (warnings are errors)
         run: dotnet build AutoSourcarr.slnx -c Release --no-restore
+      - name: nginx for the live-update proxy test
+        run: command -v nginx >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q nginx-light; }
       - name: Test
         env:
           AUTOSOURCARR_TEST_ROOT: ${{ runner.temp }}/autosourcarr-tests
+          AUTOSOURCARR_REQUIRE_NGINX: "1"
         run: dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build
       - name: OpenAPI document and UI client are current
         # The typed UI client is generated from the API; a stale committed copy fails the build.
