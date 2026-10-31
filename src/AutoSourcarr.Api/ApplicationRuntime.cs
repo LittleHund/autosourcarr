@@ -54,7 +54,13 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     {
         Settings = settings; Identity = RuntimeIdentity.Create(Version);
         Tasks = new(); Lanes = new(settings, Tasks); Errors = new(Identity, Privacy);
+        // PERF-8: one event stream; task and error changes are coalesced so a busy list does not flood the browser.
+        Tasks.Changed += () => Events.Pulse("tasks", TimeSpan.FromMilliseconds(250));
+        Errors.Changed += () => Events.Pulse("errors", TimeSpan.FromMilliseconds(500));
+        Jobs = new(Tasks, Events, Errors);
     }
+    internal EventStream Events { get; } = new();
+    internal JobQueue Jobs { get; }
     internal AutoSourcarrSettings Settings { get; }
     internal RuntimeIdentity Identity { get; }
     internal SupportPrivacy Privacy { get; } = new();
@@ -143,7 +149,12 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
                 moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory),
-                    claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))));
+                    claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))))
+            {
+                CheckDatabaseTarget = path => DatabaseRelocation.CheckTarget(owner.Database, path),
+                Tasks = owner.Tasks, Jobs = owner.Jobs, Events = owner.Events, Errors = owner.Errors,
+                Diagnostics = new DiagnosticExporter(owner.Io, owner.Identity, owner.Errors, owner.Logs, () => owner.Settings, new RuntimeDiagnosticSources(owner)),
+            };
             if (!string.IsNullOrWhiteSpace(startup.Settings.MainSuwayomiUrl))
             {
                 owner._main = new(startup.Settings, startup.Settings.MainSuwayomiUrl,
@@ -317,6 +328,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             }
         }
         await Attempt("HTTP drain", BeginHttpStopAsync).ConfigureAwait(false);
+        await Attempt("Job queue", () => Jobs.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -343,6 +355,27 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         try { _roots?.Dispose(); } catch (Exception error) { errors.Add(error); }
         _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose();
         if (errors.Count > 0) throw new AggregateException("Application shutdown retained cleanup failures.", errors);
+    }
+
+    /// <summary>What the diagnostics download reads from the running app (cached values only; no remote probes).</summary>
+    private sealed class RuntimeDiagnosticSources(ApplicationRuntime owner) : IDiagnosticSources
+    {
+        public CachedDiagnosticSources CaptureCached()
+        {
+            var runtime = new JsonObject
+            {
+                ["app_version"] = owner.Identity.Version, ["instance_id"] = owner.Identity.InstanceId,
+                ["source_engine_mode"] = owner.Settings.SourceEngineMode, ["app_services_mode"] = owner.Settings.AppServicesMode,
+                ["database_dir"] = owner._database?.Paths.Directory, ["event_subscribers"] = owner.Events.SubscriberCount,
+                ["last_event_id"] = owner.Events.LastId,
+            };
+            var jobs = owner.Jobs.Snapshot();
+            var source = new JsonObject { ["mode"] = owner.Settings.SourceEngineMode, ["checked"] = false,
+                ["note"] = "Source engine health returns with conversion phase 4." };
+            var services = new JsonObject { ["jobs"] = jobs };
+            return new(runtime, null, source, services, owner.Jobs.Annotate(owner.Tasks.Snapshot()));
+        }
+        public JsonObject ImportContext(JsonArray errors) => new() { ["note"] = "Import context returns with conversion phase 9." };
     }
 
     /// <summary>Held regular-file locks, not deletion/recreation markers. Raw-source storage

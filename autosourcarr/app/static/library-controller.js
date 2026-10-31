@@ -61,7 +61,7 @@
     if(event.target.closest('[data-library-scope]'))queueMicrotask(()=>load({reset:true}));
     if(event.target.closest('[data-safe-task-retry]')){
       const button=event.target.closest('[data-safe-task-retry]');button.disabled=true;
-      api('/api/admin/tasks/'+encodeURIComponent(button.dataset.safeTaskRetry)+'/retry-safe',{method:'POST',body:'{}'}).then(()=>loadTasks()).catch(e=>toast(e.message)).finally(()=>{button.disabled=false;});
+      apiV1().retryTask(button.dataset.safeTaskRetry).then(()=>loadTasks()).catch(e=>toast(e.message)).finally(()=>{button.disabled=false;});
     }
   });
   window.AutoSourcarrLibrary={load,render,hasData:()=>!!payload};

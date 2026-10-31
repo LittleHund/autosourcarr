@@ -17,7 +17,7 @@ public sealed class RuntimeMetrics
 {
     public const int SamplesPerPhase = 128;
     public static IReadOnlyList<string> Phases { get; } =
-        ["admission", "crawl", "journal", "metadata", "observation", "projection", "quality_decode", "source"];
+        ["admission", "crawl", "job_run", "journal", "metadata", "observation", "projection", "quality_decode", "source"];
     public static RuntimeMetrics Shared { get; } = new();
 
     private readonly object _gate = new();
