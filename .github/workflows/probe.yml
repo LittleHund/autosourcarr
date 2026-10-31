@@ -83,6 +83,7 @@ jobs:
               python3 scripts/source-host-check.py --pkgs "${SOURCE_HOST_PKGS:-eu.kanade.tachiyomi.extension.all.mangadex,eu.kanade.tachiyomi.extension.en.mangapill,eu.kanade.tachiyomi.extension.en.weebcentral,eu.kanade.tachiyomi.extension.en.mangatown,eu.kanade.tachiyomi.extension.all.webtoons}" --require 1 > probe/source-host-check.txt 2>&1; hc=$?
               kill %1 2>/dev/null; sleep 2
               tail -c 20000 probe/source-host-run.log > probe/source-host-run.tail.log
+              grep -v " DEBUG " probe/source-host-run.log | grep -A45 -E "VerifyError|WARN|ERROR" | head -400 > probe/source-host-warnings.log || true
               rm -f probe/source-host-run.log
             fi
           fi
