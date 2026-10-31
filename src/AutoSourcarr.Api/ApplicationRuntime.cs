@@ -334,7 +334,6 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         await Attempt("HTTP drain", BeginHttpStopAsync).ConfigureAwait(false);
         await Attempt("Job queue", () => Jobs.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
-        if (_journal is not null) await Attempt("Task history", () => _journal.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -343,6 +342,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         if (_native is not null) await Attempt("Native lifetime", () => _native.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Source status watch cancellation", () => _watchStop.CancelAsync()).ConfigureAwait(false);
         if (_sourceWatch is not null) await Attempt("Source status watch", () => _sourceWatch).ConfigureAwait(false);
+        // Last task changes (stopped jobs, finished lifetimes) are flushed before the I/O lane and the database close.
+        if (_journal is not null) await Attempt("Task history", () => _journal.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("General physical I/O", () => Io.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_database is not null)
             await Attempt("Database close", async () =>
