@@ -63,6 +63,6 @@ jobs:
         if: always()
         run: |
           git config user.name "probe"; git config user.email "probe@users.noreply.github.com"
-          git add -f probe api autosourcarr/app/static/generated $(git ls-files -m -- '**/packages.lock.json') 2>/dev/null
+          git add -f probe api autosourcarr/app/static/generated $(find src tests -name packages.lock.json)
           git commit -q -m "probe results [skip ci]" || true
           git push -q origin HEAD:ci-probe || true
