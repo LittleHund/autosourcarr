@@ -47,6 +47,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private SourceEngineCapabilityContract? _mainCapabilities;
     private PhysicalFileProvider? _static;
     private ApiV1Services? _apiV1;
+    private TaskJournal? _journal;
     private Task? _writer, _sourceWatch, _close;
     private bool _configured;
 
@@ -141,6 +142,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false)
                 : await SourceEngineController.CreateIntegratedAsync(startup.Settings, owner._native, launch, environment, owner._admin, owner.Io,
                     owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false);
+            // Task history survives restarts (0.4.x task_journal): finished tasks are reloaded, interrupted ones are marked.
+            owner._journal = new TaskJournal(owner.Database, owner.Tasks, owner.Io, owner.Privacy);
+            await owner._journal.StartAsync(cancellationToken).ConfigureAwait(false);
             owner._attention = new(owner.Database, owner.Io, privacy: owner.Privacy);
             owner._source.Client.Attention = owner._attention;
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
@@ -330,6 +334,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         await Attempt("HTTP drain", BeginHttpStopAsync).ConfigureAwait(false);
         await Attempt("Job queue", () => Jobs.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_journal is not null) await Attempt("Task history", () => _journal.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);

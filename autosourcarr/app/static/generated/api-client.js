@@ -33,6 +33,13 @@
    */
 
   /**
+   * @typedef {Object} DatabaseMoveQueued
+   * @property {string} task_id
+   * @property {string} target_directory
+   * @property {string} message
+   */
+
+  /**
    * @typedef {Object} DatabaseMoveRequest
    * @property {string} path
    */
@@ -56,6 +63,16 @@
    * @property {boolean} move_available
    * @property {string} move_note
    * @property {(Object<string, *>|null)} pending_relocation
+   */
+
+  /**
+   * @typedef {Object} ErrorsClearRequest
+   * @property {(boolean|null)} resolved_only
+   */
+
+  /**
+   * @typedef {Object} ErrorsClearResponse
+   * @property {number} cleared
    */
 
   /**
@@ -151,6 +168,13 @@
    */
 
   /**
+   * @typedef {Object} TaskActionResponse
+   * @property {string} task_id
+   * @property {string} state
+   * @property {string} message
+   */
+
+  /**
    * @typedef {Object} UpdateNoticeResponse
    * @property {boolean} present
    * @property {({from_version?: string, to_version?: string, created_at?: string, items?: Array<{key?: string, kind?: string, old_default?: (string|null), new_default?: (string|null), message?: string}>}|null)} notice
@@ -193,6 +217,14 @@
     }
     return {
       /**
+       * Cancel a queued or running task. Work already done stays; the task is listed as failed with "Cancelled by user".
+       * POST /api/v1/tasks/{taskId}/cancel
+       * @param {string} taskId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<TaskActionResponse>}
+       */
+      cancelTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/cancel`, undefined, options); },
+      /**
        * Check draft reader addresses and key without saving them.
        * POST /api/v1/setup/reader-preflight
        * @param {ReaderPreflightRequest} body
@@ -200,6 +232,21 @@
        * @returns {Promise<ReaderPreflightResponse>}
        */
       checkSetupReader(body, options) { return call('POST', '/api/v1/setup/reader-preflight', body, options); },
+      /**
+       * Remove resolved errors (or all errors with resolved_only=false).
+       * POST /api/v1/errors/clear
+       * @param {ErrorsClearRequest} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<ErrorsClearResponse>}
+       */
+      clearErrors(body, options) { return call('POST', '/api/v1/errors/clear', body, options); },
+      /**
+       * Remove completed and failed tasks from the list; running and queued work stays.
+       * POST /api/v1/tasks/clear-history
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      clearTaskHistory(options) { return call('POST', '/api/v1/tasks/clear-history', undefined, options); },
       /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
@@ -230,12 +277,33 @@
        */
       getDatabaseStorage(options) { return call('GET', '/api/v1/storage/database', undefined, options); },
       /**
+       * PERF-9: all logs and diagnostics in one download, with secrets and private data removed.
+       * GET /api/v1/diagnostics
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getDiagnostics(options) { return call('GET', '/api/v1/diagnostics', undefined, options); },
+      /**
+       * Recent errors grouped by cause with counts, newest first (resolved ones included).
+       * GET /api/v1/errors
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getErrors(options) { return call('GET', '/api/v1/errors', undefined, options); },
+      /**
        * Status page: version, databases, catalogue counts, active errors and dependency checks.
        * GET /api/v1/health
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       getHealth(options) { return call('GET', '/api/v1/health', undefined, options); },
+      /**
+       * Job queue: workers, running and queued jobs with ETA, and per-type run limit, average time, failures and freezes.
+       * GET /api/v1/jobs
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getJobs(options) { return call('GET', '/api/v1/jobs', undefined, options); },
       /**
        * Timing samples per work phase (no URLs, titles or keys).
        * GET /api/v1/diagnostics/metrics
@@ -279,6 +347,13 @@
        */
       getStatusStats(options) { return call('GET', '/api/v1/status/stats', undefined, options); },
       /**
+       * Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work.
+       * GET /api/v1/tasks
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getTasks(options) { return call('GET', '/api/v1/tasks', undefined, options); },
+      /**
        * What the last update changed in your settings, until dismissed.
        * GET /api/v1/settings/update-notice
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -300,6 +375,14 @@
        * @returns {Promise<RestartResponse>}
        */
       restartAfterSetup(options) { return call('POST', '/api/v1/setup/restart', undefined, options); },
+      /**
+       * Replay an interrupted task only when replaying it cannot change data twice (read-only observations).
+       * POST /api/v1/tasks/{taskId}/retry-safe
+       * @param {string} taskId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      retryTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/retry-safe`, undefined, options); },
       /**
        * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
        * PUT /api/v1/settings

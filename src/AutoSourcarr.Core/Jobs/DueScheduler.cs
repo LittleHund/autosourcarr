@@ -101,8 +101,9 @@ public sealed class CrawlPages(SqliteDatabase database, TimeProvider? time = nul
     {
         if (payload["mangas"] is not JsonArray rows || payload["hasNextPage"] is not JsonValue next || next.GetValueKind() is not (JsonValueKind.True or JsonValueKind.False) || rows.Count > 500)
             throw new InvalidDataException("Incomplete or oversized source page; cursor retained");
+        // Python: type(r['id']) is int and r['id'] > 0 (1.0 or "1" are refused).
         if (rows.Any(row => row is not JsonObject item || item["id"] is not JsonValue id || id.GetValueKind() != JsonValueKind.Number
-                || !id.TryGetValue<long>(out var value) || value <= 0))
+                || !long.TryParse(id.ToJsonString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value) || value <= 0))
             throw new InvalidDataException("Invalid feed identity; cursor retained");
         var items = new JsonArray(rows.Select(row =>
         {

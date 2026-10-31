@@ -4,6 +4,8 @@ const staticRoot=process.env.AUTOSOURCARR_UI_STATIC||path.join(__dirname,'../app
 const app=fs.readFileSync(path.join(staticRoot,'app.js'),'utf8');
 const repairs=fs.readFileSync(path.join(staticRoot,'repair-tasks.js'),'utf8');
 const tags=fs.readFileSync(path.join(staticRoot,'tag-review.js'),'utf8');
+const apiClient=fs.readFileSync(path.join(staticRoot,'generated/api-client.js'),'utf8');
+const apiV1Source=app.slice(app.indexOf('function apiV1('),app.indexOf('\n',app.indexOf('function apiV1(')));
 const block=(source,start,end)=>source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start)));
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function deferred(){let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no;});return {promise,resolve,reject};}
@@ -119,10 +121,12 @@ test('reconciliation started before a mutation cannot undo current optimism',asy
 test('early diagnostics health rejection is handled while history remains pending',async()=>{
   const renders=[],h=harness({clientErrors:[],lastBackendErrors:{items:[]},lastHealthSnapshot:null,clientHealthError:null,
     renderErrorsSnapshot:(_backend,_health,error)=>renders.push(error),renderStatus:()=>{},groupBrowserDiagnostics:()=>[]});
+  h.run(apiClient);h.run(apiV1Source);
   h.run(block(app,'async function loadErrors(){','function openErrors(){'));
   const unhandled=[],listener=error=>unhandled.push(error);process.on('unhandledRejection',listener);
   try{
-    const loading=h.context.loadErrors(),history=h.requests.find(r=>r.url.includes('/errors?')),health=h.requests.find(r=>r.url==='/api/v1/health');
+    const loading=h.context.loadErrors();await tick();
+    const history=h.requests.find(r=>r.url==='/api/v1/errors'),health=h.requests.find(r=>r.url==='/api/v1/health');
     health.reject(Error('Health unavailable'));await tick();assert.deepEqual(unhandled,[]);
     history.resolve({items:[{message:'Saved issue'}],active_count:1});const result=await loading;
     assert.equal(result.active,1);assert.match(h.context.clientHealthError.message,/Health unavailable/);assert(renders.length>=3);
