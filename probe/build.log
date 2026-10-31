@@ -1,9 +1,10 @@
-/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Sources/Runtime/SourceHostProcess.cs(124,26): error CS1061: 'Func<IReadOnlyDictionary<string, string>>' does not contain a definition for 'ContainsKey' and no accessible extension method 'ContainsKey' accepting a first argument of type 'Func<IReadOnlyDictionary<string, string>>' could be found (are you missing a using directive or an assembly reference?) [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+  AutoSourcarr.Core -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/bin/Release/net10.0/AutoSourcarr.Core.dll
+  AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
+  AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
+  AutoSourcarr.Tests -> /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/bin/Release/net10.0/AutoSourcarr.Tests.dll
 
-Build FAILED.
-
-/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Sources/Runtime/SourceHostProcess.cs(124,26): error CS1061: 'Func<IReadOnlyDictionary<string, string>>' does not contain a definition for 'ContainsKey' and no accessible extension method 'ContainsKey' accepting a first argument of type 'Func<IReadOnlyDictionary<string, string>>' could be found (are you missing a using directive or an assembly reference?) [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+Build succeeded.
     0 Warning(s)
-    1 Error(s)
+    0 Error(s)
 
-Time Elapsed 00:00:09.45
+Time Elapsed 00:00:28.48

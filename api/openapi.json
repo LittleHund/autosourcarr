@@ -628,7 +628,7 @@
     "/api/v1/source-browser/restart": {
       "post": {
         "operationId": "restartSources",
-        "summary": "Load every installed extension again (new headers, changed settings). Installed extensions and sign-ins stay.",
+        "summary": "Apply the saved repositories and load every installed extension again (new headers, changed settings). Installed extensions and sign-ins stay.",
         "responses": {
           "202": {
             "description": "Success",
@@ -731,7 +731,7 @@
     "/api/v1/source-engine/challenges": {
       "post": {
         "operationId": "checkSourceChallenges",
-        "summary": "Report the Cloudflare handlers now. The source host solves challenges when a source meets one, so nothing is queued.",
+        "summary": "Report the Cloudflare handlers now. The source host solves challenges when a source meets one; queued is true when a handler is ready.",
         "responses": {
           "200": {
             "description": "Success",
