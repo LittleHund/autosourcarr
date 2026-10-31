@@ -507,11 +507,11 @@
       getSourcePreferences(sourceId, options) { return call('GET', `/api/v1/sources/${encodeURIComponent(sourceId)}/preferences`, undefined, options); },
       /**
        * Available sources with enabled, priority, group and language choices, and the source groups.
-       * GET /api/v1/sources
+       * GET /api/v1/source-settings
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      getSources(options) { return call('GET', '/api/v1/sources', undefined, options); },
+      getSources(options) { return call('GET', '/api/v1/source-settings', undefined, options); },
       /**
        * Catalogue, chapter, source, cache and storage counts; refreshed at most every 15 seconds.
        * GET /api/v1/status/stats
@@ -628,11 +628,11 @@
       setSourceUserAgent(body, options) { return call('PUT', '/api/v1/source-browser/user-agent', body, options); },
       /**
        * Read the installed sources from the engine and store them (new sources get the default choices; empty engine lists keep existing ones).
-       * POST /api/v1/sources/sync
+       * POST /api/v1/source-settings/sync
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      syncSources(options) { return call('POST', '/api/v1/sources/sync', undefined, options); },
+      syncSources(options) { return call('POST', '/api/v1/source-settings/sync', undefined, options); },
       /**
        * Update every installed extension that has a newer version.
        * POST /api/v1/source-extensions/update-all
@@ -642,13 +642,13 @@
       updateAllSourceExtensions(options) { return call('POST', '/api/v1/source-extensions/update-all', undefined, options); },
       /**
        * Change a source's choices: enabled, priority, group, official, matching rules.
-       * PUT /api/v1/sources/{sourceId}
+       * PUT /api/v1/source-settings/{sourceId}
        * @param {string} sourceId
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      updateSource(sourceId, body, options) { return call('PUT', `/api/v1/sources/${encodeURIComponent(sourceId)}`, body, options); },
+      updateSource(sourceId, body, options) { return call('PUT', `/api/v1/source-settings/${encodeURIComponent(sourceId)}`, body, options); },
       /**
        * Rename a source group or change its priority.
        * PUT /api/v1/source-groups/{groupId}

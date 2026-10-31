@@ -1485,7 +1485,7 @@
         }
       }
     },
-    "/api/v1/sources": {
+    "/api/v1/source-settings": {
       "get": {
         "operationId": "getSources",
         "summary": "Available sources with enabled, priority, group and language choices, and the source groups.",
@@ -1506,7 +1506,7 @@
         }
       }
     },
-    "/api/v1/sources/sync": {
+    "/api/v1/source-settings/sync": {
       "post": {
         "operationId": "syncSources",
         "summary": "Read the installed sources from the engine and store them (new sources get the default choices; empty engine lists keep existing ones).",
@@ -1527,7 +1527,7 @@
         }
       }
     },
-    "/api/v1/sources/{sourceId}": {
+    "/api/v1/source-settings/{sourceId}": {
       "put": {
         "operationId": "updateSource",
         "summary": "Change a source\u0027s choices: enabled, priority, group, official, matching rules.",
