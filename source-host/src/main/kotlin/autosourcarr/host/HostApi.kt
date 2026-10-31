@@ -515,10 +515,11 @@ class HostApi(
                     row["sourceOrder"]?.jsonPrimitive?.intOrNull ?: 0, null, -1,
                 )
             }
-        val (mangaCount, chapterCount) = db.importIds(mangas, chapters)
+        val (mangaCount, chapterCount, conflicts) = db.importIds(mangas, chapters)
         reply(exchange, 200, buildJsonObject {
             put("mangas", mangaCount)
             put("chapters", chapterCount)
+            put("conflicts", conflicts)
         })
     }
 
@@ -684,7 +685,27 @@ class HostApi(
     ): java.io.InputStream {
         val length = exchange.requestHeaders.getFirst("Content-Length")?.toLongOrNull()
         if (length != null && length > maximum) throw IllegalArgumentException("The upload is larger than ${maximum / 1024 / 1024} MiB")
-        return exchange.requestBody
+        // Chunked uploads have no Content-Length: count while reading.
+        val input = exchange.requestBody
+        return object : java.io.FilterInputStream(input) {
+            private var total = 0L
+
+            private fun count(n: Int): Int {
+                if (n > 0) {
+                    total += n
+                    if (total > maximum) throw IllegalArgumentException("The upload is larger than ${maximum / 1024 / 1024} MiB")
+                }
+                return n
+            }
+
+            override fun read(): Int = super.read().also { if (it >= 0) count(1) }
+
+            override fun read(
+                b: ByteArray,
+                off: Int,
+                len: Int,
+            ): Int = count(super.read(b, off, len))
+        }
     }
 
     private fun body(exchange: HttpExchange): JsonObject {

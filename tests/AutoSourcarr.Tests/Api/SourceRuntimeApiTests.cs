@@ -34,7 +34,8 @@ public static class SourceRuntimeApiTests
                     "/v1/health" => new() { ["ok"] = true, ["webview"] = "ready", ["sources"] = 3 },
                     "/v1/browser/user-agent" => Browser(agent = JsonNode.Parse(body)!["user_agent"]!.GetValue<string>() is { Length: > 0 } set ? set : SourceEngineEnvironment.DefaultUserAgent),
                     "/v1/browser" or "/v1/browser/clear-data" => Browser(agent),
-                    "/v1/sources/reload" => new() { ["ok"] = true },
+                    "/v1/sources/reload" or "/v1/extensions/fetch" => new() { ["ok"] = true },
+                    "/v1/extension-stores" => new() { ["urls"] = JsonNode.Parse(body)!["urls"]!.DeepClone() },
                     _ => throw new InvalidOperationException(request.RequestUri.AbsolutePath)
                 };
                 return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(answer.ToJsonString(), Encoding.UTF8, "application/json") };
@@ -53,7 +54,7 @@ public static class SourceRuntimeApiTests
             var engine = Json(client.GetAsync("/api/v1/source-engine").GetAwaiter().GetResult(), HttpStatusCode.OK);
             Check.Equal("ready", engine["automatic_challenges"]!["state"]!.GetValue<string>());
             Check.Equal(3, engine["host"]!["sources"]!.GetValue<int>());
-            Check.Equal(false, Json(client.PostAsync("/api/v1/source-engine/challenges", null).GetAwaiter().GetResult(), HttpStatusCode.OK)["queued"]!.GetValue<bool>());
+            Check.Equal(true, Json(client.PostAsync("/api/v1/source-engine/challenges", null).GetAwaiter().GetResult(), HttpStatusCode.OK)["queued"]!.GetValue<bool>());
 
             var browser = Json(client.GetAsync("/api/v1/source-browser").GetAwaiter().GetResult(), HttpStatusCode.OK);
             Check.Equal("default", browser["preferences"]!["preset"]!.GetValue<string>());
@@ -74,6 +75,10 @@ public static class SourceRuntimeApiTests
             {
                 Check.True(calls.Any(call => call.StartsWith("POST /v1/browser/clear-data", StringComparison.Ordinal)), string.Join('\n', calls));
                 Check.True(calls.Any(call => call.StartsWith("POST /v1/sources/reload", StringComparison.Ordinal)), string.Join('\n', calls));
+                // Apply saved repositories: the saved list (Keiyoushi by default) goes to the host before the reload.
+                var stores = calls.FindIndex(call => call.StartsWith("PUT /v1/extension-stores", StringComparison.Ordinal));
+                Check.True(stores >= 0 && calls[stores].Contains("keiyoushi", StringComparison.OrdinalIgnoreCase), string.Join('\n', calls));
+                Check.True(stores < calls.FindIndex(call => call.StartsWith("POST /v1/sources/reload", StringComparison.Ordinal)));
             }
             Check.Equal(HttpStatusCode.ServiceUnavailable, client.GetAsync("/api/v1/attention").GetAwaiter().GetResult().StatusCode);
             Check.Equal(HttpStatusCode.Conflict, client.PostAsync("/api/v1/engine/source/compatibility", null).GetAwaiter().GetResult().StatusCode);

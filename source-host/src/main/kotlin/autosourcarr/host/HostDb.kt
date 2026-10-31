@@ -275,39 +275,66 @@ class HostDb(
         }
 
     /** Cutover from Suwayomi: keeps the ids the AutoSourcarr catalogue already stores. Existing rows are left alone. */
+    /**
+     * Cutover: takes the ids the catalogue already uses (from the main Suwayomi) so stored references stay valid.
+     * A title or chapter the host has already seen under another id is moved to the imported id (its chapters and
+     * pages follow). An imported id that already belongs to a different title or chapter is reported as a conflict.
+     * Returns (titles, chapters, conflicts).
+     */
     fun importIds(
         mangas: List<Triple<Long, String, String>>,
         chapters: List<Chapter>,
-    ): Pair<Int, Int> =
+    ): Triple<Int, Int, Int> =
         synchronized(gate) {
             var mangaCount = 0
             var chapterCount = 0
+            var conflicts = 0
+            fun scalar(sql: String, vararg values: Any): Long? =
+                connection.prepareStatement(sql).use { st ->
+                    values.forEachIndexed { i, v -> st.setObject(i + 1, v) }
+                    st.executeQuery().use { if (it.next()) it.getLong(1) else null }
+                }
+            fun exec(sql: String, vararg values: Any): Int =
+                connection.prepareStatement(sql).use { st ->
+                    values.forEachIndexed { i, v -> st.setObject(i + 1, v) }
+                    st.executeUpdate()
+                }
             connection.autoCommit = false
             try {
-                connection.prepareStatement("INSERT OR IGNORE INTO manga(id, source_id, url) VALUES(?,?,?)").use { statement ->
-                    for ((id, source, url) in mangas) {
-                        statement.setLong(1, id)
-                        statement.setString(2, source)
-                        statement.setString(3, url)
-                        mangaCount += statement.executeUpdate()
+                for ((id, source, url) in mangas) {
+                    val existing = scalar("SELECT id FROM manga WHERE source_id=? AND url=?", source, url)
+                    val holder = scalar("SELECT id FROM manga WHERE id=?", id)
+                    when {
+                        existing == id -> Unit
+                        holder != null -> conflicts++
+                        existing != null -> {
+                            exec("UPDATE manga SET id=? WHERE id=?", id, existing)
+                            exec("UPDATE chapter SET manga_id=? WHERE manga_id=?", id, existing)
+                            mangaCount++
+                        }
+                        else -> mangaCount += exec("INSERT INTO manga(id, source_id, url) VALUES(?,?,?)", id, source, url)
                     }
                 }
-                connection
-                    .prepareStatement(
-                        "INSERT OR IGNORE INTO chapter(id, manga_id, url, name, source_order, chapter_number, upload_date, scanlator) VALUES(?,?,?,?,?,?,?,?)",
-                    ).use { statement ->
-                        for (chapter in chapters) {
-                            statement.setLong(1, chapter.id)
-                            statement.setLong(2, chapter.mangaId)
-                            statement.setString(3, chapter.url)
-                            statement.setString(4, chapter.name)
-                            statement.setInt(5, chapter.sourceOrder)
-                            statement.setDouble(6, chapter.chapterNumber)
-                            statement.setLong(7, chapter.uploadDate)
-                            statement.setString(8, chapter.scanlator)
-                            chapterCount += statement.executeUpdate()
-                        }
+                for (chapter in chapters) {
+                    if (scalar("SELECT id FROM manga WHERE id=?", chapter.mangaId) == null) {
+                        conflicts++
+                        continue
                     }
+                    val existing = scalar("SELECT id FROM chapter WHERE manga_id=? AND url=?", chapter.mangaId, chapter.url)
+                    val holder = scalar("SELECT id FROM chapter WHERE id=?", chapter.id)
+                    when {
+                        existing == chapter.id -> Unit
+                        holder != null -> conflicts++
+                        existing != null -> chapterCount += exec("UPDATE chapter SET id=? WHERE id=?", chapter.id, existing)
+                        else ->
+                            chapterCount +=
+                                exec(
+                                    "INSERT INTO chapter(id, manga_id, url, name, source_order, chapter_number, upload_date, scanlator) VALUES(?,?,?,?,?,?,?,?)",
+                                    chapter.id, chapter.mangaId, chapter.url, chapter.name, chapter.sourceOrder, chapter.chapterNumber,
+                                    chapter.uploadDate, chapter.scanlator ?: "",
+                                )
+                    }
+                }
                 connection.commit()
             } catch (error: Throwable) {
                 connection.rollback()
@@ -315,7 +342,7 @@ class HostDb(
             } finally {
                 connection.autoCommit = true
             }
-            mangaCount to chapterCount
+            Triple(mangaCount, chapterCount, conflicts)
         }
 
     private fun mangaBy(

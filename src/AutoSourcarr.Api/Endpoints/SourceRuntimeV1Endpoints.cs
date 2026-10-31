@@ -46,11 +46,12 @@ internal static class SourceRuntimeV1Endpoints
                 var engine = await EngineAsync(runtime, context.RequestAborted).ConfigureAwait(false);
                 // The source host solves challenges on demand (WebView, or FlareSolverr when configured): there is no
                 // separate setup to queue. The answer reports the handlers as they are now.
-                engine["queued"] = false;
+                // queued = a handler is ready for the next challenge (the UI's "queued" message).
+                engine["queued"] = engine["automatic_challenges"]?["state"]?.GetValue<string>() == "ready";
                 return Results.Json(engine, json.JsonObject);
             }))
             .WithName("checkSourceChallenges")
-            .WithSummary("Report the Cloudflare handlers now. The source host solves challenges when a source meets one, so nothing is queued.")
+            .WithSummary("Report the Cloudflare handlers now. The source host solves challenges when a source meets one; queued is true when a handler is ready.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapGet("/source-browser", (Func<HttpContext, Task<IResult>>)(async context =>
@@ -97,7 +98,14 @@ internal static class SourceRuntimeV1Endpoints
         MapHostAction(group, services, json, "/source-browser/clear-data", "/v1/browser/clear-data", "clearSourceBrowserData",
             "Remove the engine's cookies and browser data (sign-ins and Cloudflare clearances). Installed extensions stay.");
         MapHostAction(group, services, json, "/source-browser/restart", "/v1/sources/reload", "restartSources",
-            "Load every installed extension again (new headers, changed settings). Installed extensions and sign-ins stay.");
+            "Apply the saved repositories and load every installed extension again (new headers, changed settings). Installed extensions and sign-ins stay.",
+            async (runtime, token) =>
+            {
+                // The host reads repositories at start only: hand it the saved list and refresh its catalogue first.
+                var urls = new JsonArray(services.Editor.ExtensionRepositories().Select(url => (JsonNode)JsonValue.Create(url)!).ToArray());
+                await runtime.Client.HostAsync(HttpMethod.Put, "/v1/extension-stores", new JsonObject { ["urls"] = urls }, token).ConfigureAwait(false);
+                await runtime.Client.HostAsync(HttpMethod.Post, "/v1/extensions/fetch", null, token).ConfigureAwait(false);
+            });
 
         group.MapGet("/attention", (Func<HttpContext, Task<IResult>>)(async context =>
             {
@@ -148,7 +156,8 @@ internal static class SourceRuntimeV1Endpoints
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
     }
 
-    private static void MapHostAction(RouteGroupBuilder group, ApiV1Services services, ApiJsonContext json, string route, string hostPath, string name, string summary)
+    private static void MapHostAction(RouteGroupBuilder group, ApiV1Services services, ApiJsonContext json, string route, string hostPath, string name, string summary,
+        Func<SourceRuntimeServices, CancellationToken, Task>? before = null)
     {
         group.MapPost(route, (Func<HttpContext, Task<IResult>>)(async context =>
             {
@@ -157,6 +166,7 @@ internal static class SourceRuntimeV1Endpoints
                 await runtime.AdminLock.WaitAsync(context.RequestAborted).ConfigureAwait(false);
                 try
                 {
+                    if (before is not null) await before(runtime, context.RequestAborted).ConfigureAwait(false);
                     await runtime.Client.HostAsync(HttpMethod.Post, hostPath, null, context.RequestAborted).ConfigureAwait(false);
                     return Results.Json(new JsonObject { ["queued"] = true }, json.JsonObject, statusCode: 202);
                 }
@@ -184,17 +194,23 @@ internal static class SourceRuntimeV1Endpoints
         var engine = runtime.Engine();
         var health = await HostJsonAsync(runtime, "/v1/health", cancellationToken).ConfigureAwait(false);
         var webview = Text(health["webview"]) ?? "";
-        var flare = runtime.Client.SourceHost ? "" : "configured in the external engine";
         engine["host"] = health.DeepClone();
-        engine["automatic_challenges"] = new JsonObject
-        {
-            ["state"] = webview == "ready" ? "ready" : webview.StartsWith("failed", StringComparison.Ordinal) ? "failed" : webview == "disabled" ? "disabled" : "starting",
-            ["message"] = runtime.Client.SourceHost
-                ? webview == "ready" ? "Cloudflare checks are solved in the built-in WebView when a source meets one."
-                    : webview.Length == 0 ? "WebView state unknown." : "WebView: " + webview + "."
-                : "The external engine handles Cloudflare checks (" + flare + ").",
-            ["sources"] = new JsonArray()
-        };
+        engine["automatic_challenges"] = runtime.Client.SourceHost
+            ? new JsonObject
+            {
+                ["state"] = webview == "ready" ? "ready" : webview.StartsWith("failed", StringComparison.Ordinal) ? "failed" : webview == "disabled" ? "disabled"
+                    : health.ContainsKey("error") ? "unavailable" : "starting",
+                ["message"] = webview == "ready" ? "Cloudflare checks are solved in the built-in WebView when a source meets one."
+                    : health.ContainsKey("error") ? "The source host is not answering." : webview.Length == 0 ? "WebView state unknown." : "WebView: " + webview + ".",
+                ["sources"] = new JsonArray()
+            }
+            : new JsonObject
+            {
+                // Suwayomi (native image or external engine) handles challenges itself; this app cannot see its state.
+                ["state"] = "unknown",
+                ["message"] = "Cloudflare checks are handled by the configured Suwayomi engine.",
+                ["sources"] = new JsonArray()
+            };
         return engine;
     }
 
