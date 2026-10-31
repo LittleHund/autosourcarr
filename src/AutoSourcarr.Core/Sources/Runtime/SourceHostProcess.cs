@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace AutoSourcarr.Core.Sources.Runtime;
@@ -11,7 +12,7 @@ namespace AutoSourcarr.Core.Sources.Runtime;
 /// token made for this run. A host that exits is started again after 2 s, 5 s, 15 s, 30 s and then every 60 s; the
 /// ladder resets after ten minutes of uptime. The host keeps its own state (extensions, ids) in its data folder.
 /// </summary>
-public sealed class SourceHostProcess : IAsyncDisposable
+public sealed partial class SourceHostProcess : IAsyncDisposable
 {
     private static readonly TimeSpan[] RestartDelays = [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(60)];
     private readonly object _gate = new();
@@ -22,6 +23,7 @@ public sealed class SourceHostProcess : IAsyncDisposable
     private readonly HttpClient _health;
     private Process? _process;
     private Process? _display;
+    private bool _group;
     private string _displayName = "";
     private Task? _watch;
     private int _restarts;
@@ -123,7 +125,9 @@ public sealed class SourceHostProcess : IAsyncDisposable
 
     private void Launch()
     {
-        var start = new ProcessStartInfo(_java) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
+        var setsid = OperatingSystem.IsLinux() ? new[] { "/usr/bin/setsid", "/bin/setsid" }.FirstOrDefault(File.Exists) : null;
+        var start = new ProcessStartInfo(setsid ?? _java) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
+        if (setsid is not null) start.ArgumentList.Add(_java);
         start.ArgumentList.Add("-jar");
         start.ArgumentList.Add(_jar);
         start.Environment.Clear();
@@ -138,7 +142,7 @@ public sealed class SourceHostProcess : IAsyncDisposable
         process.ErrorDataReceived += (_, line) => Output(line.Data);
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        lock (_gate) _process = process;
+        lock (_gate) { _process = process; _group = setsid is not null; }
         _log("Source host started (process " + process.Id.ToString(CultureInfo.InvariantCulture) + ").");
     }
 
@@ -161,6 +165,7 @@ public sealed class SourceHostProcess : IAsyncDisposable
             try { await process.WaitForExitAsync(_stop.Token).ConfigureAwait(false); }
             catch (OperationCanceledException) { return; }
             if (_stop.IsCancellationRequested) return;
+            KillGroup(process.Id);
             if (DateTimeOffset.UtcNow - started > TimeSpan.FromMinutes(10)) failures = 0;
             var delay = RestartDelays[Math.Min(failures, RestartDelays.Length - 1)];
             failures++;
@@ -182,6 +187,17 @@ public sealed class SourceHostProcess : IAsyncDisposable
         }
     }
 
+    /// <summary>setsid made the host a process-group leader (group id = its pid): stop what is left of the group.</summary>
+    private void KillGroup(int processId)
+    {
+        bool group;
+        lock (_gate) group = _group;
+        if (group && OperatingSystem.IsLinux() && processId > 1) _ = KillSignal(-processId, 9);
+    }
+
+    [LibraryImport("libc", EntryPoint = "kill", SetLastError = true)]
+    private static partial int KillSignal(int processId, int signal);
+
     public async ValueTask DisposeAsync()
     {
         if (_stop.IsCancellationRequested) return;
@@ -193,6 +209,7 @@ public sealed class SourceHostProcess : IAsyncDisposable
         {
             try { process.StandardInput.Close(); } catch (InvalidOperationException) { }
             try { process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
+            KillGroup(process.Id);
             using var wait = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             try { await process.WaitForExitAsync(wait.Token).ConfigureAwait(false); } catch (OperationCanceledException) { }
         }

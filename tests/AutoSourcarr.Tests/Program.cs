@@ -27,6 +27,8 @@ AutoSourcarr.Tests.Jobs.EventStreamTests.Register(suite);
 AutoSourcarr.Tests.Jobs.DueSchedulerTests.Register(suite);
 AutoSourcarr.Tests.Jobs.LiveEventsHttpTests.Register(suite);
 AutoSourcarr.Tests.Sources.SourceHostIntegrationTests.Register(suite);
+AutoSourcarr.Tests.Sources.SourceBrowserPreferencesTests.Register(suite);
+AutoSourcarr.Tests.Api.SourceRuntimeApiTests.Register(suite);
 SchemaStampTests.Register(suite);
 DatabaseBlobTests.Register(suite);
 RepairIsolationTests.Register(suite);
