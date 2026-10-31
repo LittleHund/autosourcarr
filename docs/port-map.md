@@ -61,6 +61,26 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | RuntimeMetrics | done for jobs (`job_run` phase) |
 | UI pages of this phase | done: task list, cancel, clear history, safe retry, error panel and diagnostics download call `/api/v1` through the generated client; live updates through `/api/v1/events` (fetch stream with the admin token), task polling falls back to 30 s while live |
 
+### Phase 4 (extension host), ticked 2026-10-31
+
+| Row | Result |
+| --- | --- |
+| Extension host (plan text, PIPE-7) | done: `source-host/` Kotlin host (Java 25, built inside Suwayomi v2.4.2366 commit 40bc5da5 by scripts/build-source-host.sh); vendored Tachiyomi API + Suwayomi loader; R8-optimised APKs load with JVM verification on (AutoSourcarrDex2jar, ExtensionConstructors, getCommonSuperClass fix, ExtensionBytecodeRepair); REST API in Suwayomi's data shape, per-run token, loopback only; SQLite id store incl. tachiyomix 1.6 `memo`; BouncyCastle provider |
+| Done when: 10 Keiyoushi sources | done: 12 of 13 pass install → search → details → chapters → pages → image in CI (MangaDex, MangaPill, Weeb Central, Mangatown, Webtoons, MANGA Plus, MangaBuddy, Mangahere, MangaFox, Asura Scans, Flame Comics, Mangago); Mangakakalot fails on a real Cloudflare challenge (below) |
+| Done when: a 1.4 extension works | done: Komga 1.4.50 from the archived Tachiyomi repository: install, preferences, browse, details, chapters, pages, image against Komga's demo server |
+| Done when: a Cloudflare source passes via WebView | partial: WebView (JCEF from the JetBrains Runtime release, off screen, own Xvfb) solves a JavaScript challenge end to end in CI (local challenge server: 503 + cookie script → cf_clearance → retry with the browser's user agent); a real Cloudflare managed challenge (kakamanga.com) stayed on "Just a moment..." from GitHub's network for 90 s. FlareSolverr stays the other route; interactive solving by the user is phase 6/7 |
+| Back-off (SRC-6) | done: SourceBackoff 30 min / 2 h / 6 h / 12 h after 3 failures; `SourceBackedOff` → deferred work in C#; Needs attention unchanged (SourceAttention) |
+| `source_engine.py`, `source_engine_contract.py` → SourceEngineController | done for the host: CreateHostedAsync; status (state, ready, restarts, error) from SourceHostProcess; capability contract answered by the host |
+| `child_process.py` → Sources/Runtime | done: SourceHostProcess (supervised `java -jar`, health wait, restart ladder 2/5/15/30/60 s, own process group via setsid so Chromium helpers stop with it, own Xvfb, app marked not dumpable) |
+| `internal_services.py` → SourceEngineEnvironment | done: SourceHostEnvironment reuses it (source-host.env, EXTENSION_STORES, FlareSolverr, saved user agent), rebuilt for each launch |
+| `suwayomi.py` → SuwayomiClient | done: host mode (ForSourceHost; every GraphQL operation the app uses answered by host REST in the same data shape, same validation); the GraphQL client stays as the slim client for the main Suwayomi (import ids: host `/v1/import-ids`, re-keys or reports conflicts) |
+| `lifecycle.py` → Host entry | decided: the web entry stays in AutoSourcarr.Api; `AUTOSOURCARR_SOURCE_HOST_JAR` selects the hosted path; the native PID 1 launcher and resolver are removed with the image switch (phase 13) |
+| SourceRuntimeEndpoints (8) + engine/compatibility | done: `GET /api/v1/source-engine`, `POST /source-engine/challenges`, `GET /source-browser`, `PUT /source-browser/user-agent`, `POST /source-browser/clear-data`, `POST /source-browser/restart` (applies saved repositories, reloads extensions), `GET /attention`, `POST /attention/{attentionId}/retry`, `POST /engine/{target}/compatibility` |
+| `source_browser.py` presets/clear (SRC-5) | done for the host: SourceBrowserPreferences (0.4.x presets and rules), live user agent change, clear cookies (store + Chromium); interactive "Open in WebView" → phase 7 (SourceBrowser) |
+| Source-engine health in `/api/v1/health` | done: `source_host` is a real check (host health or external engine) |
+| UI pages of this phase | done: source engine card, source browser panel, challenge check, apply saved repositories, Needs attention, engine compatibility call `/api/v1` through the generated client |
+| Audit fixes (fresh-agent audit) | 8 findings → 7 fixed (no disposed Process in status, no relaunch after dispose, failed first start retried and the app starts without the host, startup-only host error, environment rebuilt per launch, saved repositories applied, id import conflicts, counted upload limit, challenge state per engine, app not dumpable); 1 scoped: a separate user for the host comes with the low-rights runner (phase 6) and the new image (phase 13) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
@@ -89,7 +109,7 @@ Section 3 left 124 of the 246 routes without a phase. Each phase now owns its ro
 | `catalog_identity.py` | Catalogue/Sharing (phase 9) | CatalogueIdentity | exists |
 | `catalog_layout.py` | Catalogue/Gallery (phase 10) | GalleryLayout | new |
 | `catalog_views.py` | Catalogue (phase 10) | CataloguePresentation | exists |
-| `child_process.py` | Sources/Runtime (phase 4) | SourceEngineController | exists (process ownership) |
+| `child_process.py` | Sources/Runtime (phase 4) | SourceHostProcess | done (phase 4) |
 | `color_profile.py` | Matching (phase 8) | ColorProfile | new (GalleryMetadata covers the evidence part) |
 | `config.py` | Settings (phase 1) | AutoSourcarrSettings / SettingsLoader | exists |
 | `cover_cache.py` | Imaging (phase 10) | CoverCache | exists |
@@ -149,7 +169,7 @@ Section 3 left 124 of the 246 routes without a phase. Each phase now owns its ro
 | `source_browser.py` | Connections (phase 7) | SourceBrowser (WebView sessions, CON-1) | new (phase 7) |
 | `source_challenges.py` | Connections (phase 7) | ChallengeSolvers (built-in / FlareSolverr / Byparr, CON-2) | new (phase 7) |
 | `source_controls.py` | Sources/Controls (phase 6) | SourcePreferenceService / SourcePreferenceContract | exists |
-| `source_engine.py` | Sources/Runtime (phase 4) | SourceEngineController | exists |
+| `source_engine.py` | Sources/Runtime (phase 4) | SourceEngineController + SourceHostProcess | done (phase 4) |
 | `source_engine_contract.py` | Sources/Runtime (phase 4) | SourceEngineCapabilityContract | exists |
 | `source_errors.py` | Sources (phase 6) | SourceFailures | exists |
 | `source_health.py` | Sources (phase 6) | SourceHealthCoordinator / SourceHealthStore / SourceHealthProbe | exists |

@@ -225,6 +225,14 @@
        */
       cancelTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/cancel`, undefined, options); },
       /**
+       * pw
+       * POST /api/v1/auth/password
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      changePassword(body, options) { return call('POST', '/api/v1/auth/password', body, options); },
+      /**
        * Check which API features the source or main engine answers (target: source or main) and save the report.
        * POST /api/v1/engine/{target}/compatibility
        * @param {string} target
@@ -270,6 +278,38 @@
        */
       clearTaskHistory(options) { return call('POST', '/api/v1/tasks/clear-history', undefined, options); },
       /**
+       * create
+       * POST /api/v1/accounts
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      createAccount(body, options) { return call('POST', '/api/v1/accounts', body, options); },
+      /**
+       * create
+       * POST /api/v1/keys
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      createKey(body, options) { return call('POST', '/api/v1/keys', body, options); },
+      /**
+       * setup
+       * POST /api/v1/auth/setup
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      createOwner(body, options) { return call('POST', '/api/v1/auth/setup', body, options); },
+      /**
+       * delete
+       * DELETE /api/v1/accounts/{accountId}
+       * @param {string} accountId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      deleteAccount(accountId, options) { return call('DELETE', `/api/v1/accounts/${encodeURIComponent(accountId)}`, undefined, options); },
+      /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -285,12 +325,26 @@
        */
       finishSetup(body, options) { return call('POST', '/api/v1/setup/finish', body, options); },
       /**
+       * accounts
+       * GET /api/v1/accounts
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getAccounts(options) { return call('GET', '/api/v1/accounts', undefined, options); },
+      /**
        * Sources that need a person (verification, sign-in): open items with the next automatic retry.
        * GET /api/v1/attention
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       getAttention(options) { return call('GET', '/api/v1/attention', undefined, options); },
+      /**
+       * status
+       * GET /api/v1/auth/status
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getAuthStatus(options) { return call('GET', '/api/v1/auth/status', undefined, options); },
       /**
        * The running values the UI needs to describe this instance.
        * GET /api/v1/config
@@ -334,12 +388,33 @@
        */
       getJobs(options) { return call('GET', '/api/v1/jobs', undefined, options); },
       /**
+       * keys
+       * GET /api/v1/keys
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getKeys(options) { return call('GET', '/api/v1/keys', undefined, options); },
+      /**
+       * me
+       * GET /api/v1/auth/me
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getMe(options) { return call('GET', '/api/v1/auth/me', undefined, options); },
+      /**
        * Timing samples per work phase (no URLs, titles or keys).
        * GET /api/v1/diagnostics/metrics
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<RuntimeMetricsSnapshot>}
        */
       getRuntimeMetrics(options) { return call('GET', '/api/v1/diagnostics/metrics', undefined, options); },
+      /**
+       * events
+       * GET /api/v1/security/events
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSecurityEvents(options) { return call('GET', '/api/v1/security/events', undefined, options); },
       /**
        * Effective settings grouped as on the Settings page; secret values are hidden.
        * GET /api/v1/settings
@@ -404,6 +479,21 @@
        */
       getUpdateNotice(options) { return call('GET', '/api/v1/settings/update-notice', undefined, options); },
       /**
+       * login
+       * POST /api/v1/auth/login
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      login(body, options) { return call('POST', '/api/v1/auth/login', body, options); },
+      /**
+       * logout
+       * POST /api/v1/auth/logout
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      logout(options) { return call('POST', '/api/v1/auth/logout', undefined, options); },
+      /**
        * Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.
        * POST /api/v1/storage/database/move
        * @param {DatabaseMoveRequest} body
@@ -411,6 +501,13 @@
        * @returns {Promise<DatabaseMoveResponse>}
        */
       moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
+      /**
+       * regen
+       * POST /api/v1/keys/admin-token/regenerate
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      regenerateAdminToken(options) { return call('POST', '/api/v1/keys/admin-token/regenerate', undefined, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
@@ -441,6 +538,14 @@
        * @returns {Promise<JsonObject>}
        */
       retryTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/retry-safe`, undefined, options); },
+      /**
+       * revoke
+       * DELETE /api/v1/keys/{keyId}
+       * @param {string} keyId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      revokeKey(keyId, options) { return call('DELETE', `/api/v1/keys/${encodeURIComponent(keyId)}`, undefined, options); },
       /**
        * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
        * PUT /api/v1/settings

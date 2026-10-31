@@ -699,6 +699,31 @@
     "AUTHELIA_USER_HEADER": {
       "group": "Background refresh",
       "compose": "allowed"
+    },
+    "AUTH_METHOD": {
+      "group": "Security",
+      "description": "How people sign in: forms (login page, the default), basic (the browser's sign-in pop-up) or external (a sign-in proxy such as Authelia sends the user name and groups in headers). API keys and the admin token work with every method.",
+      "compose": "allowed"
+    },
+    "AUTH_ADMIN_GROUPS": {
+      "group": "Security",
+      "description": "External sign-in: comma-separated provider groups whose members get the admin role (for example admins). Groups never make someone the owner.",
+      "compose": "allowed"
+    },
+    "AUTH_GUEST_GROUPS": {
+      "group": "Security",
+      "description": "External sign-in: comma-separated provider groups whose members get the read-only guest role. Leave empty to refuse users who are in no admin group.",
+      "compose": "allowed"
+    },
+    "AUTH_OWNER_EXTERNAL_USER": {
+      "group": "Security",
+      "description": "External sign-in: the provider user name bound as owner on first boot. Only this account can become owner; group mappings never can.",
+      "compose": "allowed"
+    },
+    "AUTH_RESET_OWNER": {
+      "group": "Security",
+      "description": "Last-resort owner reset: set to true in Compose for one start when the owner has lost the password and every recovery code. The next start clears the owner's password (data is kept), the login page asks for a new one, and the event is logged. Remove it afterwards.",
+      "compose": "only"
     }
   }
 }

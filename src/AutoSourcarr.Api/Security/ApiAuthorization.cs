@@ -48,13 +48,20 @@ public sealed class AdminAuthorizationFilter(Func<AutoSourcarrSettings> settings
         // under /api/v1 must never answer through it, even when no admin token is configured.
         if (context.HttpContext.Items.ContainsKey(ApiAuthorization.ReaderRequestItem))
             return ValueTask.FromResult<object?>(Results.Json(new { detail = "Not found" }, statusCode: 404));
+        // With accounts (the app), the access check already decided who is calling: admin reach is required here.
+        if (context.HttpContext.Items.TryGetValue(AccessControlMiddleware.CallerItem, out var value) && value is AutoSourcarr.Core.Accounts.Caller caller)
+            return caller.AdminReach ? next(context)
+                : ValueTask.FromResult<object?>(Results.Json(new { detail = "Administrator rights needed" }, statusCode: caller.Role == AutoSourcarr.Core.Accounts.Role.None ? 401 : 403));
         return ApiAuthorization.AdminAllowed(context.HttpContext.Request, settings()) ? next(context)
             : ValueTask.FromResult<object?>(Results.Json(new { detail = "Invalid admin token" }, statusCode: 401));
     }
 }
 
-public sealed class ReaderAuthorizationMiddleware(RequestDelegate next, Func<AutoSourcarrSettings> settings)
+public sealed class ReaderAuthorizationMiddleware(RequestDelegate next, Func<AutoSourcarrSettings> settings, Func<string, bool> deviceKey)
 {
+    /// <summary>Without accounts (tests, tools): only the configured reader token.</summary>
+    public ReaderAuthorizationMiddleware(RequestDelegate next, Func<AutoSourcarrSettings> settings) : this(next, settings, _ => false) { }
+
     public async Task InvokeAsync(HttpContext context)
     {
         var path = context.Request.Path.Value ?? "";
@@ -65,6 +72,8 @@ public sealed class ReaderAuthorizationMiddleware(RequestDelegate next, Func<Aut
             await ApiJson.ProblemAsync(context, 405, "AutoSourcarr reader API is read-only").ConfigureAwait(false); return;
         }
         var current = settings();
+        // AUTH-4: a reader key made for one device (Keys page) works like the reader token and can be revoked alone.
+        if (deviceKey(Supplied(context.Request))) { await ContinueAsync(context, path).ConfigureAwait(false); return; }
         if (current.AutosourcarrReaderApiToken.Trim().Length == 0)
         { await ApiJson.ProblemAsync(context, 503, "AutoSourcarr reader API token is not configured").ConfigureAwait(false); return; }
         if (!ApiAuthorization.ReaderAllowed(context.Request, current))
@@ -72,6 +81,19 @@ public sealed class ReaderAuthorizationMiddleware(RequestDelegate next, Func<Aut
             context.Response.Headers.WWWAuthenticate = "Bearer";
             await ApiJson.ProblemAsync(context, 401, "Invalid AutoSourcarr reader API token").ConfigureAwait(false); return;
         }
+        await ContinueAsync(context, path).ConfigureAwait(false);
+    }
+
+    private static string Supplied(HttpRequest request)
+    {
+        var supplied = request.Headers["X-AutoSourcarr-Api-Key"].ToString().Trim();
+        var authorization = request.Headers.Authorization.ToString().Trim();
+        if (supplied.Length == 0 && authorization.StartsWith("bearer ", StringComparison.OrdinalIgnoreCase)) supplied = authorization[7..].Trim();
+        return supplied;
+    }
+
+    private async Task ContinueAsync(HttpContext context, string path)
+    {
         var original = context.Request.Path;
         context.Request.Path = ApiAuthorization.InternalPrefix + path[ApiAuthorization.ReaderPrefix.Length..];
         context.Items[ApiAuthorization.ReaderRequestItem] = true;

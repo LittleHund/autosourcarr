@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Sign in · AutoSourcarr</title>
+<link href="/static/ui.css?v=0.5.0" rel="stylesheet"/>
+<link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico?v=0.5.0"/>
+<style>
+  body{min-height:100vh;display:grid;place-items:center;margin:0;padding:16px;box-sizing:border-box}
+  .loginCard{width:100%;max-width:380px;display:grid;gap:12px;padding:24px;border-radius:12px;background:var(--panel,#1c2230);box-shadow:0 8px 30px rgba(0,0,0,.25)}
+  .loginCard h1{display:flex;gap:10px;align-items:center;margin:0 0 4px;font-size:1.4rem}
+  .loginCard label{display:grid;gap:4px}
+  .loginCard input{padding:10px;font-size:1rem}
+  .loginCard button{padding:10px;font-size:1rem}
+  .loginError{color:var(--danger,#e66);min-height:1.2em;margin:0}
+</style>
+</head>
+<body>
+<main class="loginCard" aria-labelledby="loginTitle">
+  <h1 id="loginTitle"><img src="/static/icons/app-icon-64.png?v=0.5.0" width="32" height="32" alt=""/>AutoSourcarr</h1>
+  <p id="loginIntro" class="muted">Sign in to continue.</p>
+  <form id="loginForm" novalidate>
+    <div style="display:grid;gap:12px">
+      <label>Name<input id="loginName" name="username" autocomplete="username" required maxlength="64"/></label>
+      <label>Password<input id="loginPassword" name="password" type="password" autocomplete="current-password" required maxlength="1024"/></label>
+      <label id="confirmRow" hidden>Repeat password<input id="loginConfirm" type="password" autocomplete="new-password" maxlength="1024"/></label>
+      <button id="loginSubmit" class="goodAction" type="submit">Sign in</button>
+      <p id="loginError" class="loginError" role="alert" aria-live="assertive"></p>
+    </div>
+  </form>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let setup = false;
+  const next = (() => { const value = new URLSearchParams(location.search).get('next') || '/'; return value.startsWith('/') && !value.startsWith('//') ? value : '/'; })();
+  async function post(path, body) {
+    const response = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body), credentials: 'same-origin' });
+    let data = {}; try { data = await response.json(); } catch (_) {}
+    if (!response.ok) throw new Error(data.detail || ('Sign-in failed (HTTP ' + response.status + ').'));
+    return data;
+  }
+  async function start() {
+    try {
+      const status = await (await fetch('/api/v1/auth/status', { credentials: 'same-origin', cache: 'no-store' })).json();
+      if (status.signed_in) { location.replace(next); return; }
+      if (status.method === 'external') { $('loginIntro').textContent = 'This instance uses your sign-in portal. Open AutoSourcarr through it.'; $('loginForm').hidden = true; return; }
+      if (status.method === 'basic') { $('loginIntro').textContent = 'This instance uses the browser sign-in window. Reload the page to sign in.'; $('loginForm').hidden = true; return; }
+      setup = !!status.setup_required;
+      if (setup) {
+        $('loginIntro').textContent = 'First start: create the owner account. The owner is the first admin and manages accounts and keys.';
+        $('confirmRow').hidden = false; $('loginPassword').autocomplete = 'new-password'; $('loginSubmit').textContent = 'Create owner account';
+      }
+    } catch (error) { $('loginError').textContent = 'AutoSourcarr is not answering: ' + error.message; }
+  }
+  $('loginForm').addEventListener('submit', async event => {
+    event.preventDefault(); $('loginError').textContent = '';
+    const username = $('loginName').value.trim(), password = $('loginPassword').value;
+    if (!username || !password) { $('loginError').textContent = 'Enter a name and a password.'; return; }
+    if (setup && password !== $('loginConfirm').value) { $('loginError').textContent = 'The passwords differ.'; return; }
+    if (setup && password.length < 8) { $('loginError').textContent = 'Use at least 8 characters.'; return; }
+    $('loginSubmit').disabled = true;
+    try { await post(setup ? '/api/v1/auth/setup' : '/api/v1/auth/login', { username, password }); location.replace(next); }
+    catch (error) { $('loginError').textContent = error.message; }
+    finally { $('loginSubmit').disabled = false; }
+  });
+  start();
+})();
+</script>
+</body>
+</html>

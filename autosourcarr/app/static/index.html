@@ -522,6 +522,7 @@
 <button class="settingsSubtab" data-settings-subtab="configuration" type="button">Application settings</button>
 <button class="settingsSubtab" data-settings-subtab="services" type="button">Services</button>
 <button class="settingsSubtab" data-settings-subtab="browser" type="button">Source browser</button>
+<button class="settingsSubtab" data-settings-subtab="security" type="button">Security</button>
 </div>
 <div class="settingsSubpane active" id="settingsCustomizationPane"><div class="browserStatus muted" id="preferenceSaveState" role="status">Preferences load from your user profile.</div>
 <button hidden="" id="retryPreferenceSave" type="button">Retry saving preferences</button><div class="appearanceWorkspace"><div class="appearanceControls"><details class="statusPanel appearanceSettingsPanel" data-customization-section="theme" data-default-open="true" open="">
@@ -581,6 +582,17 @@ proxy_set_header Remote-Groups $groups;</code></pre><p class="muted">These are t
 <section class="statusPanel"><h3>User agent</h3><p class="muted">Choose the browser identity sent to sources. Applying or resetting it briefly restarts the source process.</p><label for="sourceUserAgentPreset">Browser identity</label><select id="sourceUserAgentPreset" disabled><option value="default">Engine default (reset)</option></select><label for="sourceUserAgentValue">User-agent string</label><textarea id="sourceUserAgentValue" rows="3" maxlength="1024" spellcheck="false" readonly></textarea><p class="muted" id="sourceUserAgentRuntime">Current runtime identity is being checked.</p><p class="muted">An extension with its own headers may override this value. Cloudflare solvers may use their own matching user agent and cookies.</p><div class="toolbar wrap"><button id="applySourceUserAgent" class="goodAction" type="button" disabled>Apply and restart sources</button><button id="resetSourceUserAgent" type="button" disabled>Reset to engine default</button></div></section>
 <section class="statusPanel"><h3>Cookies and WebView data</h3><p>Clear source website cookies, sign-ins, local storage and WebView cache. This also resets the configured solver session if reachable.</p><p class="muted">Source extensions, library databases, downloads and application settings are retained. Open source WebViews will close and sources will restart.</p><button class="dangerAction" id="clearSourceBrowserData" type="button" disabled>Clear source cookies and WebView data</button></section>
 </div></div>
+<div class="settingsSubpane" hidden id="settingsSecurityPane">
+<div class="toolbar wrap"><p class="muted grow" id="securityWho">Accounts, keys and the security log.</p><button id="securityRefresh" type="button">Refresh</button><button id="securitySignOut" type="button">Sign out</button></div>
+<section class="statusPanel"><h3>Admin token</h3><p class="muted">Created automatically. Scripts and the old admin-token prompt use it. Only the owner can replace it.</p><p><code id="securityAdminToken">…</code></p><div class="toolbar wrap"><button id="securityShowToken" type="button">Show</button><button id="securityRegenerateToken" class="dangerAction" type="button">Replace token</button></div></section>
+<section class="statusPanel"><h3>Keys</h3><p class="muted">One reader key per device (a lost phone is cut off without touching others), script keys with admin or read-only rights, and at most one permanent admin key. A key's secret is shown once.</p>
+<div class="toolbar wrap"><label>Name<input id="securityKeyName" maxlength="64" placeholder="Phone, script name…"/></label><label>Kind<select id="securityKeyKind"><option value="reader">Reader device</option><option value="script:guest">Script (read only)</option><option value="script:admin">Script (admin)</option><option value="admin">Permanent admin key</option></select></label><button id="securityCreateKey" class="goodAction" type="button">Create key</button></div>
+<p id="securityNewKey" class="notice" hidden></p><div id="securityKeys" class="muted">Loading…</div></section>
+<section class="statusPanel" id="securityAccountsPanel" hidden><h3>Accounts</h3><p class="muted">Owner only. Admins manage the app; guests can only read.</p>
+<div class="toolbar wrap"><label>Name<input id="securityUserName" maxlength="64"/></label><label>Password<input id="securityUserPassword" type="password" autocomplete="new-password" maxlength="1024"/></label><label>Role<select id="securityUserRole"><option value="admin">Admin</option><option value="guest">Guest</option></select></label><button id="securityCreateUser" class="goodAction" type="button">Add account</button></div>
+<div id="securityAccounts" class="muted">Loading…</div></section>
+<section class="statusPanel"><h3>Security log</h3><div class="toolbar wrap"><label>Show<select id="securityEventKind"><option value="">All events</option></select></label></div><div id="securityEvents" class="muted">Loading…</div></section>
+</div>
 <div class="settingsSubpane" hidden="" id="settingsConfigurationPane"><label class="settingsSearchLabel">Find a setting<input id="settingsSearch" placeholder="Search settings by name or description" type="search"/></label>
 <div class="notice settingsRestartNotice">
       Saving changes updates this instance's retained configuration. Application settings require an AutoSourcarr restart; supported setup settings apply when Finish completes. Saved source repositories can be applied from Sources without restarting the app.
@@ -688,5 +700,6 @@ proxy_set_header Remote-Groups $groups;</code></pre><p class="muted">These are t
 <script src="/static/instance-tools.js?v=0.4.5"></script>
 <script src="/static/reimagined-controls.js?v=0.4.5"></script>
 <script src="/static/reimagined.js?v=0.4.5"></script>
+<script src="/static/accounts.js?v=0.4.5"></script>
 <script src="/static/filter-summary.js?v=0.4.5"></script>
 </body></html>

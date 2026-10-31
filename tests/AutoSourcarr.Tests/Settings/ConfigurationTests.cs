@@ -13,7 +13,7 @@ public static class ConfigurationTests
         {
             using var expected = JsonDocument.Parse(File.ReadAllText(Fixture("settings-defaults.json")));
             var actual = SettingsLoader.ToEnvironment(SettingsLoader.Load(), includeSecrets: true);
-            Check.Equal(149, AutoSourcarrSettings.Definitions.Count);
+            Check.Equal(154, AutoSourcarrSettings.Definitions.Count);
             foreach (var field in expected.RootElement.EnumerateObject())
             {
                 if (field.Value.ValueKind == JsonValueKind.Null)
