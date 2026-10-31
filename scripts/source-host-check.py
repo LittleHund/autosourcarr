@@ -93,7 +93,11 @@ def check(host, item, query, lang):
         if not chapters: raise RuntimeError("no chapters in the first titles")
         result["chapters"] = len(chapters)
         step = "pages"
-        pages = call(host, "POST", "/v1/chapters/%d/pages" % chapters[-1]["id"])["pages"]
+        pages = []
+        # The oldest chapter first; a chapter without pages (e.g. a Komga book not analysed yet) moves on to the next.
+        for chapter in [chapters[-1], chapters[0], chapters[len(chapters) // 2]][:min(3, len(chapters))]:
+            pages = call(host, "POST", "/v1/chapters/%d/pages" % chapter["id"])["pages"]
+            if pages: break
         if not pages: raise RuntimeError("chapter has no pages")
         result["pages"] = len(pages)
         step = "image"
