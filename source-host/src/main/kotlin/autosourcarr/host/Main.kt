@@ -37,8 +37,12 @@ fun main() {
     val store = ExtensionStore(HostConfig.extensionsDir)
     store.loadInstalled()
     logger.info { "Loaded ${store.installed().size} extensions with ${SourceRegistry.all().size} sources" }
+    // Cloudflare clearance changed the user agent: sources rebuild their headers.
+    SourceRegistry.onUserAgentChanged = { store.reloadAll() }
 
-    val server = HostApi(store).start(HostConfig.bind, HostConfig.port)
+    val repos = ExtensionRepos(java.io.File(HostConfig.dataDir, "extension-stores.json"))
+    val db = HostDb(java.io.File(HostConfig.dataDir, "source-host.sqlite"))
+    val server = HostApi(store, repos, db, SourceBackoff()).start(HostConfig.bind, HostConfig.port)
     logger.info { "AutoSourcarr source host ${HostConfig.HOST_VERSION} listening on ${HostConfig.bind}:${HostConfig.port}" }
     Runtime.getRuntime().addShutdownHook(Thread { server.stop(1) })
 }

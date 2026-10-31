@@ -160,6 +160,10 @@ class ExtensionStore(
         load(pkg, File(root, extension.jar).toPath(), extension.className, extension.contentWarning)
     }
 
+    fun reloadAll() {
+        for (extension in installed()) runCatching { reload(extension.pkg) }
+    }
+
     fun uninstall(pkg: String): Boolean {
         val extension = synchronized(gate) { installed.remove(pkg)?.also { save() } } ?: return false
         unload(extension)
