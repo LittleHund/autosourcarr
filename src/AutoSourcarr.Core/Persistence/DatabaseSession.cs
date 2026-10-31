@@ -31,11 +31,18 @@ public sealed class DatabaseSession
     /// <summary>False inside SqliteDatabase.Read: such a session only reads, so a snapshot can never write by accident.</summary>
     public bool CanWrite { get; private set; }
 
-    /// <summary>A Write nested inside a Read of the same file upgrades the shared session for the rest of the outer call.</summary>
-    internal void AllowWrites()
+    /// <summary>
+    /// A Write nested inside a Read of the same file may write for the length of that nested call only.
+    /// When the read has no transaction yet, an IMMEDIATE one is started so the write lock is taken up front
+    /// (a deferred read-to-write upgrade under WAL can fail at once with SQLITE_BUSY_SNAPSHOT).
+    /// </summary>
+    internal T WithWrites<T>(Func<DatabaseSession, T> operation)
     {
         CheckUsable();
+        _transaction ??= _connection.BeginTransaction(deferred: false);
         CanWrite = true;
+        try { return Savepoint(operation); }
+        finally { CanWrite = false; }
     }
 
     public int Execute(string sql, params (string Name, object? Value)[] parameters)

@@ -95,6 +95,7 @@ public sealed partial class SourceConfigurationStore
                     if (priorities.TryGetValue(id, out var retained)) priority = retained;
                     else if (families.TryGetValue(family, out retained)) priority = retained;
                     else { priority = next; families[family] = priority; next = checked(next + 10); }
+                    // PERF-5: an unchanged source is not rewritten, so last_seen means "last changed" (0.4.x: last listed). Nothing decides on it.
                     session.Execute("""
                         INSERT INTO source_config(source_id,name,display_name,lang,base_url,icon_url,supports_latest,enabled_language,enabled_search,enabled_chapters,priority,last_seen,available,official,official_manual)
                         VALUES($id,$name,$display,$lang,$url,$icon,$latest,$enabled,$enabled,$enabled,$priority,$time,1,$official,0)

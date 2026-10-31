@@ -16,7 +16,8 @@ public static class DatabaseRelocation
 {
     private static readonly string[] Files = ["catalog.sqlite", "chapter-origins.sqlite"];
 
-    public static DatabaseMoveResult Move(SqliteDatabase database, string target, Action<string> saveDirectory, TimeSpan? drainTimeout = null)
+    public static DatabaseMoveResult Move(SqliteDatabase database, string target, Action<string> saveDirectory, TimeSpan? drainTimeout = null,
+        Func<string, IDisposable>? claimTarget = null)
     {
         ArgumentNullException.ThrowIfNull(database);
         ArgumentNullException.ThrowIfNull(saveDirectory);
@@ -38,8 +39,19 @@ public static class DatabaseRelocation
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         { throw new ArgumentException("AutoSourcarr cannot write to that folder. Check its permissions.", error); }
         finally { TryDelete(probe); }
+        // The same checks startup makes (no symlinked path parts), so a folder accepted here also starts after a restart.
+        try { PrivateDocumentStore.ValidateDirectory(target); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        { throw new ArgumentException("That folder or one of its parent folders is a link (symlink); AutoSourcarr refuses linked database folders at startup, so it cannot be used.", error); }
+        // The instance lock on the new folder is taken before copying, so a second AutoSourcarr cannot use it.
+        IDisposable? claim;
+        try { claim = claimTarget?.Invoke(target); }
+        catch (IOException error) { throw new ArgumentException("Another AutoSourcarr instance already uses that folder.", error); }
 
-        return database.Quiescent(paths =>
+        var switched = false;
+        try
+        {
+            var result = database.Quiescent(paths =>
         {
             var copies = new List<string>();
             try
@@ -60,6 +72,8 @@ public static class DatabaseRelocation
                     File.Move(copies[index], final);
                     copies[index] = final;
                 }
+                foreach (var final in copies)
+                    UseWal(final);
                 saveDirectory(target);
                 database.SwitchPaths(new DatabasePaths(target, Path.Combine(target, Files[0]), Path.Combine(target, Files[1])));
                 return new DatabaseMoveResult(paths.Directory, target, sizes[0], sizes[1],
@@ -72,6 +86,23 @@ public static class DatabaseRelocation
                 throw;
             }
         }, drainTimeout ?? TimeSpan.FromSeconds(60));
+            switched = true;
+            return result;
+        }
+        finally
+        {
+            if (!switched)
+                claim?.Dispose();
+        }
+    }
+
+    /// <summary>The copy is written as a self-contained rollback-journal file; the placed file goes back to WAL.</summary>
+    private static void UseWal(string path)
+    {
+        using var connection = Connect(path, SqliteOpenMode.ReadWrite);
+        connection.Open();
+        if (!string.Equals(Text(connection, "PRAGMA journal_mode=WAL"), "wal", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException($"{Path.GetFileName(path)} could not be switched to WAL mode; nothing was switched.");
     }
 
     private static SqliteConnection Connect(string path, SqliteOpenMode mode) => new(new SqliteConnectionStringBuilder
@@ -87,7 +118,7 @@ public static class DatabaseRelocation
         to.Open();
         from.BackupDatabase(to);
         using var command = to.CreateCommand();
-        command.CommandText = "PRAGMA journal_mode=DELETE"; // a self-contained file; the app switches it back to WAL on open
+        command.CommandText = "PRAGMA journal_mode=DELETE"; // a self-contained file while it is checked; UseWal switches the placed file back
         command.ExecuteNonQuery();
     }
 

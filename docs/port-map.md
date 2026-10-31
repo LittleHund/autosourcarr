@@ -37,7 +37,10 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | --- | --- |
 | `db.py` → Persistence | done: FluentMigrator 8.0.1 migrations per file (tags `catalog` / `origins`, VersionInfo per file); the 0.4.4 baseline runs the released SQL plus the 0.3.x → 0.4.4 steps, so 0.3.27 and 0.4.4 files upgrade in place (fixtures in tests/Fixtures/legacy); ASC1 stamp checked before and written after; Dapper 2.1.66 under DatabaseSession with typed rows and keyset paging (`QueryAs`, `QueryPage`); read sessions refuse writes; hot upserts write only changed rows |
 | SettingsEndpoints: `POST /api/admin/storage/database/move` | done: `POST /api/v1/storage/database/move` (DatabaseRelocation: drain, online backup, integrity/stamp/row-count check, switch, DATABASE_DIR saved in config.json) |
+| Engine-neutral export format (plan text) | exists: CatalogueFormat (JSON, portable UIDs, no SQLite types) from stage 26; its routes and the Postgres round trip are checked in phases 9 and 16 |
+| Page-first queries | API done (`QueryPage`, keyset, `LIMIT n+1`); each list adopts it when its routes are ported (phases 8–10) |
 | UI pages of this phase | done: Settings > Database storage move button calls `/api/v1` through the generated client |
+| Audit fixes (fresh-agent audit) | moved files go back to WAL and every start sets WAL; move refuses symlinked folders and takes the instance lock on the new folder first; a write nested in a read uses an IMMEDIATE transaction and writes only for its own call; status page and storage card use the live paths; `last_seen` on source_config / chapter_candidates now means "last changed" (decision, nothing reads it) |
 
 ### Route groups without a phase (assigned 2026-10-31)
 

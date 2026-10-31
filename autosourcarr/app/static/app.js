@@ -1555,7 +1555,7 @@ async function loadDatabaseStorage(){
     const pending=d.pending_relocation;
     if(state)state.textContent=`${fmtBytes(d.bytes||0)} · ${d.active_dir||'unknown'}`;
     if(detail){
-      if(!d.move_available||!pending)detail.textContent=d.move_note||'Moving the databases is not available in this version.';
+      if(!d.move_available)detail.textContent=d.move_note||'Moving the databases is not available in this version.';
       else if(pending&&pending.target_dir&&pending.activated_in_process)detail.textContent=`Using ${pending.target_dir} now. The old DB files are kept as a safety copy until the next redeploy verifies this location again.`;
       else if(pending&&pending.target_dir)detail.textContent=`Move staging to ${pending.target_dir}. The current DB remains authoritative until the final verified cut-over finishes.`;
       else detail.textContent='Enter an absolute writable path mounted into this container. AutoSourcarr copies, verifies and switches both DBs live without creating a fresh database.';

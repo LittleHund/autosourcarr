@@ -31,6 +31,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private readonly SemaphoreSlim _admin = new(1, 1);
     private readonly TaskCompletionSource<Exception> _fatal = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private InstanceRoots? _roots;
+    private readonly List<InstanceRoots> _movedRoots = [];
+
+    private InstanceRoots KeepRoot(InstanceRoots root) { lock (_movedRoots) _movedRoots.Add(root); return root; }
     private SqliteDatabase? _database;
     private SettingsRepository? _preferences;
     private SupportLogStore? _logs;
@@ -139,7 +142,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
-                moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory)));
+                moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory),
+                    claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))));
             if (!string.IsNullOrWhiteSpace(startup.Settings.MainSuwayomiUrl))
             {
                 owner._main = new(startup.Settings, startup.Settings.MainSuwayomiUrl,
@@ -333,6 +337,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         await Attempt("Diagnostic physical I/O", () => _logIo.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("HTTP ownership", () => _http.DisposeAsync().AsTask()).ConfigureAwait(false);
         try { _static?.Dispose(); } catch (Exception error) { errors.Add(error); }
+        lock (_movedRoots)
+            foreach (var root in _movedRoots)
+                try { root.Dispose(); } catch (Exception error) { errors.Add(error); }
         try { _roots?.Dispose(); } catch (Exception error) { errors.Add(error); }
         _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose();
         if (errors.Count > 0) throw new AggregateException("Application shutdown retained cleanup failures.", errors);
