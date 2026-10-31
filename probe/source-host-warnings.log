@@ -1,0 +1,239 @@
+19:31:25.593 [source-host-http] WARN autosourcarr.host.HostApi -- Request GET /v1/sources/2499283573021220255/mangas failed
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    g0.intercept(Lokhttp3/Interceptor$Chain;)Lokhttp3/Response; @927: invokevirtual
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[0]) is not assignable to 'd0'
+  Current Frame:
+    bci: @927
+    flags: { }
+    locals: { 'g0', 'okhttp3/Interceptor$Chain', integer, integer, integer, top, top, top, 'java/lang/String', 'java/lang/Object', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', top, 'okhttp3/Request', 'e0', 'okhttp3/Request$Builder', 'd1', 'java/lang/String', 'okhttp3/HttpUrl' }
+    stack: { 'java/lang/Object', 'java/lang/String' }
+  Bytecode:
+    0000000: 2ab4 0018 3d12 1e3a 0d2b b600 2257 1caa
+    0000010: 0000 0015 0000 0000 0000 0001 0000 0194
+    0000020: 0000 0167 2bb9 0028 0100 3a09 2b19 09b9
+    0000030: 002c 0200 3a08 1909 b600 32b6 0038 3e19
+    0000040: 0812 1e01 0501 b800 3e3a 0919 084c 1d9e
+    0000050: 0125 1908 4c19 08b6 0042 9901 1a19 084c
+    0000060: 1909 c601 1219 0904 bd00 4459 0312 4653
+    0000070: 0303 1006 01b8 004c 4cbb 004e 592b 100a
+    0000080: b800 54b7 0057 3a09 2bb9 005d 0100 4c2b
+    0000090: b900 6201 0099 002b 2bb9 0066 0100 c000
+    00000a0: 44b8 006a b600 6eb2 0074 b600 783a 0a19
+    00000b0: 0ab6 0022 5719 0919 0ab6 007c 57a7 ffd2
+    00000c0: 1909 b600 7f99 0006 a700 4c19 09b6 0082
+    00000d0: 3604 033d 1c15 04a2 003d 1909 1cb6 0086
+    00000e0: 4c84 0201 2bc0 0044 3a0a 1908 4c19 0a12
+    00000f0: 88b8 008e 9a00 8019 084c 190a 1290 b800
+    0000100: 8e9a 0073 190a 1292 b800 8e99 ffc9 1908
+    0000110: 4ca7 0063 1909 b600 7f99 0006 a700 3119
+    0000120: 09b6 0082 3604 033d 1c15 04a2 0022 1909
+    0000130: 1cb6 0086 4c84 0201 2bc0 0044 1294 0305
+    0000140: 01b8 0098 99ff e419 084c a700 2a19 08b6
+    0000150: 009c 4cbb 009e 5912 a0b7 00a3 3a08 1908
+    0000160: 1db6 00a7 572b 121e 1908 b600 a8b6 00ae
+    0000170: b600 b24c 2bb0 2bb9 0028 0100 b600 b53a
+    0000180: 08bb 00b7 59b7 00b8 3a09 1909 03b5 00bb
+    0000190: 2b19 0812 b719 09b6 00c1 b600 c3b9 002c
+    00001a0: 0200 b02b b900 2801 003a 1019 1012 c5b6
+    00001b0: 00c8 c000 c53a 1119 11c7 000f 2b19 10b9
+    00001c0: 002c 0200 4ca7 0a7f 1911 b400 cb3a 0c2b
+    00001d0: b900 cf01 003a 0819 08c6 000f 1908 b900
+    00001e0: d501 003a 08a7 0006 013a 0819 08b2 00db
+    00001f0: a600 0804 3ea7 0005 033e b200 e03a 0819
+    0000200: 10b6 00e4 3a15 1910 b600 b53a 1219 0cc6
+    0000210: 008e 1911 b400 e73a 0919 09c6 0059 1909
+--
+19:31:25.971 [source-host-http] WARN autosourcarr.host.HostApi -- Request GET /v1/sources/8448310129093543312/mangas failed
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    f.intercept(Lokhttp3/Interceptor$Chain;)Lokhttp3/Response; @873: invokevirtual
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[0]) is not assignable to 'c'
+  Current Frame:
+    bci: @873
+    flags: { }
+    locals: { 'f', 'okhttp3/Interceptor$Chain', integer, integer, integer, top, top, top, 'java/lang/String', 'java/lang/Object', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', top, 'okhttp3/Request', 'd', 'okhttp3/Request$Builder', 'k', 'java/lang/String', 'okhttp3/HttpUrl' }
+    stack: { 'java/lang/Object', 'java/lang/String' }
+  Bytecode:
+    0000000: 2ab4 0015 3d12 1b3a 0d2b b600 1f57 1caa
+    0000010: 0000 0011 0000 0000 0000 0000 0000 0162
+    0000020: 2bb9 0025 0100 3a09 2b19 09b9 0029 0200
+    0000030: 3a08 1909 b600 2fb6 0035 3e19 0812 1b01
+    0000040: 0501 b800 3b3a 0919 084c 1d9e 0124 1908
+    0000050: 4c19 08b6 003f 9901 1919 084c 1909 c601
+    0000060: 1119 0904 bd00 4159 0312 4353 0303 1006
+    0000070: 01b8 0049 4cbb 004b 592b 100a b800 51b7
+    0000080: 0054 3a09 2bb9 005a 0100 3a0a 190a b900
+    0000090: 5f01 0099 0029 190a b900 6301 00c0 0041
+    00000a0: b800 67b6 006b b200 71b6 0075 4c2b b600
+    00000b0: 1f57 1909 2bb6 0079 57a7 ffd3 1909 b600
+    00000c0: 7c99 0006 a700 4c19 09b6 007f 3604 033d
+    00000d0: 1c15 04a2 003d 1909 1cb6 0083 4c84 0201
+    00000e0: 2bc0 0041 3a0a 1908 4c19 0a12 85b8 008b
+    00000f0: 9a00 7f19 084c 190a 128d b800 8b9a 0072
+    0000100: 190a 128f b800 8b99 ffc9 1908 4ca7 0062
+    0000110: 1909 b600 7c99 0006 a700 3119 09b6 007f
+    0000120: 3604 033d 1c15 04a2 0022 1909 1cb6 0083
+    0000130: 4c84 0201 2bc0 0041 1291 0305 01b8 0095
+    0000140: 99ff e419 084c a700 2919 08b6 0099 3a08
+    0000150: bb00 9b59 129d b700 a04c 2b1d b600 a457
+    0000160: 1908 121b 2bb6 00a5 b600 abb6 00af 4c2b
+    0000170: b02b b900 2501 003a 1019 1012 b1b6 00b5
+    0000180: c000 b13a 1119 11c7 000f 2b19 10b9 0029
+    0000190: 0200 4ca7 0a79 1911 b400 b83a 0c2b b900
+    00001a0: bc01 003a 0819 08c6 000f 1908 b900 c201
+    00001b0: 003a 08a7 0006 013a 0819 08b2 00c8 a600
+    00001c0: 0804 3ea7 0005 033e b200 cd3a 0819 10b6
+    00001d0: 00d1 3a15 1910 b600 d43a 1219 0cc6 008b
+    00001e0: 1911 b400 d63a 0819 08c6 0058 1908 b600
+    00001f0: db12 ddb6 00e3 12dd b600 e601 b600 e93a
+    0000200: 0919 08b6 00ec 9900 0e19 15b6 00ec 9a00
+    0000210: 06a7 0030 1908 b800 f019 15b8 00f0 b800
+--
+19:31:26.417 [source-host-http] WARN autosourcarr.host.HostApi -- Request GET /v1/sources/2131019126180322627/mangas failed
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    h.intercept(Lokhttp3/Interceptor$Chain;)Lokhttp3/Response; @927: invokevirtual
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[0]) is not assignable to 'e'
+  Current Frame:
+    bci: @927
+    flags: { }
+    locals: { 'h', 'okhttp3/Interceptor$Chain', integer, integer, integer, top, top, top, 'java/lang/String', 'java/lang/Object', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', top, 'okhttp3/Request', 'f', 'okhttp3/Request$Builder', 'm', 'java/lang/String', 'okhttp3/HttpUrl' }
+    stack: { 'java/lang/Object', 'java/lang/String' }
+  Bytecode:
+    0000000: 2ab4 0018 3d12 1e3a 0d2b b600 2257 1caa
+    0000010: 0000 0015 0000 0000 0000 0001 0000 0194
+    0000020: 0000 0167 2bb9 0028 0100 3a09 2b19 09b9
+    0000030: 002c 0200 3a08 1909 b600 32b6 0038 3e19
+    0000040: 0812 1e01 0501 b800 3e3a 0919 084c 1d9e
+    0000050: 0125 1908 4c19 08b6 0042 9901 1a19 084c
+    0000060: 1909 c601 1219 0904 bd00 4459 0312 4653
+    0000070: 0303 1006 01b8 004c 4cbb 004e 592b 100a
+    0000080: b800 54b7 0057 3a09 2bb9 005d 0100 3a0a
+    0000090: 190a b900 6201 0099 0029 190a b900 6601
+    00000a0: 00c0 0044 b800 6ab6 006e b200 74b6 0078
+    00000b0: 4c2b b600 2257 1909 2bb6 007c 57a7 ffd3
+    00000c0: 1909 b600 7f99 0006 a700 4c19 09b6 0082
+    00000d0: 3604 033d 1c15 04a2 003d 1909 1cb6 0086
+    00000e0: 4c84 0201 2bc0 0044 3a0a 1908 4c19 0a12
+    00000f0: 88b8 008e 9a00 8019 084c 190a 1290 b800
+    0000100: 8e9a 0073 190a 1292 b800 8e99 ffc9 1908
+    0000110: 4ca7 0063 1909 b600 7f99 0006 a700 3119
+    0000120: 09b6 0082 3604 033d 1c15 04a2 0022 1909
+    0000130: 1cb6 0086 4c84 0201 2bc0 0044 1294 0305
+    0000140: 01b8 0098 99ff e419 084c a700 2a19 08b6
+    0000150: 009c 4cbb 009e 5912 a0b7 00a3 3a08 1908
+    0000160: 1db6 00a7 572b 121e 1908 b600 a8b6 00ae
+    0000170: b600 b24c 2bb0 2bb9 0028 0100 b600 b53a
+    0000180: 08bb 00b7 59b7 00b8 3a09 1909 03b5 00bb
+    0000190: 2b19 0812 b719 09b6 00c1 b600 c3b9 002c
+    00001a0: 0200 b02b b900 2801 003a 1019 1012 c5b6
+    00001b0: 00c8 c000 c53a 1119 11c7 000f 2b19 10b9
+    00001c0: 002c 0200 4ca7 0a7c 1911 b400 cb3a 0c2b
+    00001d0: b900 cf01 003a 0819 08c6 000f 1908 b900
+    00001e0: d501 003a 08a7 0006 013a 0819 08b2 00db
+    00001f0: a600 0804 3ea7 0005 033e b200 e03a 0819
+    0000200: 10b6 00e4 3a15 1910 b600 b53a 1219 0cc6
+    0000210: 008e 1911 b400 e73a 0919 09c6 0059 1909
+--
+19:31:26.777 [source-host-http] WARN autosourcarr.host.HostApi -- Request GET /v1/sources/2703831045012166262/mangas failed
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    f.intercept(Lokhttp3/Interceptor$Chain;)Lokhttp3/Response; @874: invokevirtual
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[0]) is not assignable to 'c'
+  Current Frame:
+    bci: @874
+    flags: { }
+    locals: { 'f', 'okhttp3/Interceptor$Chain', integer, integer, integer, top, top, top, 'java/lang/String', 'java/lang/Object', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', top, 'okhttp3/Request', 'd', 'okhttp3/Request$Builder', 'k', 'java/lang/String', 'okhttp3/HttpUrl' }
+    stack: { 'java/lang/Object', 'java/lang/String' }
+  Bytecode:
+    0000000: 2ab4 0015 3d12 1b3a 0d2b b600 1f57 1caa
+    0000010: 0000 0011 0000 0000 0000 0000 0000 0163
+    0000020: 2bb9 0025 0100 3a09 2b19 09b9 0029 0200
+    0000030: 3a08 1909 b600 2fb6 0035 3e19 0812 1b01
+    0000040: 0501 b800 3b3a 0919 084c 1d9e 0125 1908
+    0000050: 4c19 08b6 003f 9901 1a19 084c 1909 c601
+    0000060: 1219 0904 bd00 4159 0312 4353 0303 1006
+    0000070: 01b8 0049 4cbb 004b 592b 100a b800 51b7
+    0000080: 0054 3a09 2bb9 005a 0100 3a0a 190a b900
+    0000090: 5f01 0099 0029 190a b900 6301 00c0 0041
+    00000a0: b800 67b6 006b b200 71b6 0075 4c2b b600
+    00000b0: 1f57 1909 2bb6 0079 57a7 ffd3 1909 b600
+    00000c0: 7c99 0006 a700 4c19 09b6 007f 3604 033d
+    00000d0: 1c15 04a2 003d 1909 1cb6 0083 4c84 0201
+    00000e0: 2bc0 0041 3a0a 1908 4c19 0a12 85b8 008b
+    00000f0: 9a00 8019 084c 190a 128d b800 8b9a 0073
+    0000100: 190a 128f b800 8b99 ffc9 1908 4ca7 0063
+    0000110: 1909 b600 7c99 0006 a700 3119 09b6 007f
+    0000120: 3604 033d 1c15 04a2 0022 1909 1cb6 0083
+    0000130: 4c84 0201 2bc0 0041 1291 0305 01b8 0095
+    0000140: 99ff e419 084c a700 2a19 08b6 0099 4cbb
+    0000150: 009b 5912 9db7 00a0 3a08 1908 1db6 00a4
+    0000160: 572b 121b 1908 b600 a5b6 00ab b600 af4c
+    0000170: 2bb0 2bb9 0025 0100 3a10 1910 12b1 b600
+    0000180: b5c0 00b1 3a11 1911 c700 0f2b 1910 b900
+    0000190: 2902 004c a70a 7719 11b4 00b8 3a0c 2bb9
+    00001a0: 00bc 0100 3a08 1908 c600 0f19 08b9 00c2
+    00001b0: 0100 3a08 a700 0601 3a08 1908 b200 c8a6
+    00001c0: 0008 043e a700 0503 3eb2 00cd 3a08 1910
+    00001d0: b600 d13a 1519 10b6 00d4 3a12 190c c600
+    00001e0: 8b19 11b4 00d6 3a08 1908 c600 5819 08b6
+    00001f0: 00db 12dd b600 e312 ddb6 00e6 01b6 00e9
+    0000200: 3a09 1908 b600 ec99 000e 1915 b600 ec9a
+    0000210: 0006 a700 3019 08b8 00f0 1915 b800 f0b8
+--
+19:31:27.230 [source-host-http] WARN autosourcarr.host.HostApi -- Request GET /v1/sources/2522335540328470744/mangas failed
+java.lang.VerifyError: Bad type on operand stack
+Exception Details:
+  Location:
+    f.intercept(Lokhttp3/Interceptor$Chain;)Lokhttp3/Response; @1504: invokevirtual
+  Reason:
+    Type 'java/lang/Object' (current frame, stack[0]) is not assignable to 'c'
+  Current Frame:
+    bci: @1504
+    flags: { }
+    locals: { 'f', 'okhttp3/Interceptor$Chain', top, integer, integer, integer, top, top, top, 'java/lang/String', 'java/lang/Object', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', 'java/lang/String', 'okhttp3/HttpUrl', top, 'okhttp3/Request', 'd', 'okhttp3/Request$Builder', 'v', 'java/lang/String', 'okhttp3/HttpUrl' }
+    stack: { 'java/lang/Object', 'java/lang/String' }
+  Bytecode:
+    0000000: 2ab4 0018 3e12 203a 0e01 3a0a 2bb6 0024
+    0000010: 571d aa00 0000 001e 0000 0000 0000 0003
+    0000020: 0000 03cc 0000 039e 0000 0243 0000 0043
+    0000030: 2b2b b900 2a01 00b9 002e 0200 3a09 1909
+    0000040: 4ca7 0012 3a09 2b2b b900 2a01 00b9 002e
+    0000050: 0200 4c2b b02b b900 2a01 003a 0b19 0bb6
+    0000060: 0034 3a09 1909 b600 3a12 3cb8 0042 9a00
+    0000070: 0f2b 190b b900 2e02 004c a701 d919 09b6
+    0000080: 0046 03b9 004c 0200 4c2b c000 4eb6 0052
+    0000090: 9e00 06a7 0005 014c 2bc0 004e c600 5719
+    00000a0: 09b6 0046 03b9 004c 0200 c000 4e03 b800
+    00000b0: 58b6 005b 4cbb 005d 59b7 005e 3a0c 190c
+    00000c0: 125f b600 6519 0c12 66b6 006a 190c b200
+    00000d0: 70b6 0074 5719 0c04 b600 78bb 007a 592b
+    00000e0: 190c 1103 84b2 0080 1281 0d04 b700 844c
+    00000f0: a700 0501 4c19 09b6 0046 04b9 004c 0200
+    0000100: 3a09 1909 c000 4eb6 0052 9e00 06a7 0006
+    0000110: 013a 0919 09c0 004e 3a0c 190a 3a09 190c
+    0000120: c600 4b19 0c03 b800 58b6 005b 3a09 bb00
+    0000130: 5d59 b700 5e3a 0a19 0a12 5fb6 0065 190a
+    0000140: 1285 b600 6a19 0ab2 0088 b600 7457 190a
+    0000150: 04b6 0078 bb00 7a59 1909 190a 1103 84b2
+    0000160: 0080 1281 0d04 b700 843a 092b c600 0b2b
+    0000170: b600 8d3e a700 0503 3e19 09c6 000d 1909
+    0000180: b600 8d36 04a7 0006 0336 0411 03e8 1504
+    0000190: 1d60 8612 8e62 8bb2 0094 b800 9a3a 0a19
+    00001a0: 0ab6 0024 57bb 009c 5919 0ab7 009f 3a0c
+    00001b0: 190c 02b6 00a2 2bc6 001d 190c b600 a557
+    00001c0: 190c 128e 12a6 b600 aa2b 190c b600 ae19
+    00001d0: 0cb6 00b1 1909 c600 231d 8645 190c b600
+    00001e0: a557 190c 128e 2412 a662 b600 aa19 0919
+    00001f0: 0cb6 00ae 190c b600 b1bb 00b3 59b7 00b4
+    0000200: 3a09 190a b200 ba03 1909 b600 be57 b200
+    0000210: c44c 1909 b600 c83a 0919 09b6 0024 572b
