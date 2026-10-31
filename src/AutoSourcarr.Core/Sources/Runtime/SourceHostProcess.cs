@@ -121,7 +121,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     /// </summary>
     private async Task StartDisplayAsync(CancellationToken cancellationToken)
     {
-        if (_environment.ContainsKey("DISPLAY")) return;
+        if (_environment().ContainsKey("DISPLAY")) return;
         var xvfb = new[] { "/usr/bin/Xvfb", "/usr/local/bin/Xvfb" }.FirstOrDefault(File.Exists);
         if (xvfb is null) { _log("Xvfb is not installed; the source host WebView runs only if it finds a display."); return; }
         var start = new ProcessStartInfo(xvfb) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
