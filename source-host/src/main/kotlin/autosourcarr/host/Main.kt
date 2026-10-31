@@ -26,13 +26,20 @@ fun main() {
 
     val app = App()
     startKoin {
-        modules(createAppModule(app), androidCompatModule(), configManagerModule())
+        modules(
+            createAppModule(app),
+            androidCompatModule(),
+            configManagerModule(),
+            org.koin.dsl.module { single<xyz.nulldev.androidcompat.webkit.KcefWebViewProvider.InitBrowserHandler> { WebViewEngine.initBrowserHandler } },
+        )
     }
     AndroidCompatInitializer().init()
     AndroidCompat().startApp(app)
 
     val network = Injekt.get<NetworkHelper>()
     System.setProperty("http.agent", network.defaultUserAgentProvider())
+
+    WebViewEngine.start()
 
     val store = ExtensionStore(HostConfig.extensionsDir)
     store.loadInstalled()

@@ -21,6 +21,8 @@ public sealed class SourceHostProcess : IAsyncDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly HttpClient _health;
     private Process? _process;
+    private Process? _display;
+    private string _displayName = "";
     private Task? _watch;
     private int _restarts;
     private string _lastError = "";
@@ -56,6 +58,7 @@ public sealed class SourceHostProcess : IAsyncDisposable
     {
         if (!File.Exists(_jar)) throw new FileNotFoundException("The source host jar is missing.", _jar);
         Directory.CreateDirectory(_dataDirectory);
+        await StartDisplayAsync(cancellationToken).ConfigureAwait(false);
         Launch();
         await WaitHealthyAsync(timeout, cancellationToken).ConfigureAwait(false);
         lock (_gate) _watch ??= Task.Run(WatchAsync);
@@ -87,6 +90,37 @@ public sealed class SourceHostProcess : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// The host's WebView (Chromium) needs an X display even when it renders off screen. Without DISPLAY the app starts
+    /// its own Xvfb (when installed) and keeps it for the host's lifetime; -displayfd picks a free display number.
+    /// </summary>
+    private async Task StartDisplayAsync(CancellationToken cancellationToken)
+    {
+        if (_environment.ContainsKey("DISPLAY")) return;
+        var xvfb = new[] { "/usr/bin/Xvfb", "/usr/local/bin/Xvfb" }.FirstOrDefault(File.Exists);
+        if (xvfb is null) { _log("Xvfb is not installed; the source host WebView runs only if it finds a display."); return; }
+        var start = new ProcessStartInfo(xvfb) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var argument in new[] { "-displayfd", "1", "-screen", "0", "1280x1024x24", "-nolisten", "tcp" })
+            start.ArgumentList.Add(argument);
+        var display = Process.Start(start) ?? throw new InvalidOperationException("Xvfb could not be started.");
+        display.ErrorDataReceived += (_, _) => { };
+        display.BeginErrorReadLine();
+        using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        wait.CancelAfter(TimeSpan.FromSeconds(15));
+        string? number;
+        try { number = await display.StandardOutput.ReadLineAsync(wait.Token).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) { number = null; }
+        if (string.IsNullOrWhiteSpace(number) || !int.TryParse(number.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out _))
+        {
+            try { display.Kill(); } catch (InvalidOperationException) { }
+            display.Dispose();
+            _log("Xvfb did not report a display; the source host WebView will be unavailable.");
+            return;
+        }
+        lock (_gate) { _display = display; _displayName = ":" + number.Trim(); }
+        _log("Started Xvfb on display " + _displayName + " for the source host WebView.");
+    }
+
     private void Launch()
     {
         var start = new ProcessStartInfo(_java) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
@@ -98,6 +132,7 @@ public sealed class SourceHostProcess : IAsyncDisposable
         start.Environment["SOURCE_HOST_PORT"] = Port.ToString(CultureInfo.InvariantCulture);
         start.Environment["SOURCE_HOST_BIND"] = "127.0.0.1";
         start.Environment["SOURCE_HOST_TOKEN"] = Token;
+        lock (_gate) if (_displayName.Length > 0) start.Environment["DISPLAY"] = _displayName;
         var process = Process.Start(start) ?? throw new InvalidOperationException("The source host could not be started.");
         process.OutputDataReceived += (_, line) => Output(line.Data);
         process.ErrorDataReceived += (_, line) => Output(line.Data);
@@ -163,6 +198,13 @@ public sealed class SourceHostProcess : IAsyncDisposable
         }
         if (watch is not null) await watch.ConfigureAwait(false);
         process?.Dispose();
+        Process? display;
+        lock (_gate) display = _display;
+        if (display is not null)
+        {
+            try { if (!display.HasExited) display.Kill(); } catch (InvalidOperationException) { }
+            display.Dispose();
+        }
         _health.Dispose();
         _stop.Dispose();
     }

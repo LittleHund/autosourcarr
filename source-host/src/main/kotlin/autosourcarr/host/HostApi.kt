@@ -117,6 +117,11 @@ class HostApi(
     ) {
         when {
             method == "GET" && parts == listOf("health") -> reply(exchange, 200, health())
+            // Diagnostic: one GET through the source client with the Cloudflare interceptor (FlareSolverr or WebView).
+            method == "POST" && parts == listOf("webview", "fetch") -> {
+                val url = body(exchange)["url"]?.jsonPrimitive?.contentOrNull ?: throw IllegalArgumentException("Send url")
+                reply(exchange, 200, webViewFetch(url))
+            }
             // Extensions and repositories
             method == "GET" && parts == listOf("extensions") -> reply(exchange, 200, extensionList())
             method == "POST" && parts == listOf("extensions", "fetch") -> {
@@ -509,7 +514,33 @@ class HostApi(
             put("sources", SourceRegistry.all().size)
             put("backed_off_sources", backoff.count())
             put("java", System.getProperty("java.version"))
+            put("webview", WebViewEngine.state)
         }
+
+    private fun webViewFetch(url: String): JsonObject {
+        val network = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
+        val target = okhttp3.HttpUrl.Builder().scheme("https").host("x").build().resolve(url) ?: throw IllegalArgumentException("Bad url")
+        val started = System.nanoTime()
+        return runCatching {
+            network.cloudflareClient.newCall(okhttp3.Request.Builder().url(target).build()).execute().use { response ->
+                val text = response.body.string()
+                buildJsonObject {
+                    put("status", response.code)
+                    put("server", response.header("Server") ?: "")
+                    put("challenge_page", text.contains("challenge-platform") || text.contains("Just a moment"))
+                    put("clearance", network.cookieStore.get(target).any { it.name == "cf_clearance" })
+                    put("ms", (System.nanoTime() - started) / 1_000_000)
+                }
+            }
+        }.getOrElse { error ->
+            buildJsonObject {
+                put("status", 0)
+                put("error", error.message ?: error.javaClass.simpleName)
+                put("clearance", network.cookieStore.get(target).any { it.name == "cf_clearance" })
+                put("ms", (System.nanoTime() - started) / 1_000_000)
+            }
+        }
+    }
 
     private fun sourceJson(entry: SourceRegistry.Entry): JsonObject =
         buildJsonObject {

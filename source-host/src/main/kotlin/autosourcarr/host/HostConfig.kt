@@ -28,6 +28,9 @@ object HostConfig {
     val flareSolverrSessionTtl = MutableStateFlow(env("FLARESOLVERR_SESSION_TTL", "15").toInt())
     val flareSolverrAsResponseFallback = MutableStateFlow(env("FLARESOLVERR_RESPONSE_FALLBACK", "false").toBoolean())
 
+    /** The embedded Chromium for extension WebViews and Cloudflare (downloaded on first start, about 150 MB). */
+    val webViewEnabled: Boolean = env("WEBVIEW_ENABLED", "true").toBoolean()
+
     private fun env(
         name: String,
         default: String,
