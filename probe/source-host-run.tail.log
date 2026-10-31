@@ -1,0 +1,18 @@
+kotlin-logging: initializing... active logger factory: Slf4jLoggerFactory
+Exception in thread "main" java.lang.ExceptionInInitializerError
+	at xyz.nulldev.androidcompat.AndroidCompatInitializer.init(AndroidCompatInitializer.kt:16)
+	at autosourcarr.host.MainKt.main(Main.kt:31)
+	at autosourcarr.host.MainKt.main(Main.kt)
+Caused by: com.typesafe.config.ConfigException$Missing: merge of hardcoded value,compat-reference.conf @ jar:file:/home/runner/work/autosourcarr/autosourcarr/.build/autosourcarr-source-host.jar!/compat-reference.conf: 1: No configuration setting found for key 'server'
+	at com.typesafe.config.impl.SimpleConfig.findKeyOrNull(SimpleConfig.java:157)
+	at com.typesafe.config.impl.SimpleConfig.findKey(SimpleConfig.java:150)
+	at com.typesafe.config.impl.SimpleConfig.findOrNull(SimpleConfig.java:177)
+	at com.typesafe.config.impl.SimpleConfig.find(SimpleConfig.java:189)
+	at com.typesafe.config.impl.SimpleConfig.find(SimpleConfig.java:194)
+	at com.typesafe.config.impl.SimpleConfig.getString(SimpleConfig.java:251)
+	at xyz.nulldev.ts.config.LoggingKt.debugLogsEnabled(Logging.kt:139)
+	at xyz.nulldev.ts.config.ConfigManager.loadConfigs(ConfigManager.kt:84)
+	at xyz.nulldev.ts.config.ConfigManager.<init>(ConfigManager.kt:30)
+	at xyz.nulldev.ts.config.GlobalConfigManager.<init>(ConfigManager.kt:200)
+	at xyz.nulldev.ts.config.GlobalConfigManager.<clinit>(ConfigManager.kt)
+	... 3 more

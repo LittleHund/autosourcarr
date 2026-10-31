@@ -48,17 +48,4 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
 15 warnings
-
-FAILURE: Build failed with an exception.
-
-* What went wrong:
-Execution failed for task ':source-host:shadowJar' (registered by plugin class 'com.github.jengelman.gradle.plugins.shadow.ShadowJavaPlugin').
-> Cannot expand ZIP '/home/runner/.gradle/caches/modules-2/files-2.1/org.graalvm.js/js-community/25.3.4.1/5d1a621727968286375a9ae92b5660fd480ee9ec/js-community-25.3.4.1.pom'.
-
-* Try:
-> Run with --stacktrace option to get the stack trace.
-> Run with --info or --debug option to get more log output.
-> Run with --scan to get full insights from a Build Scan (powered by Develocity).
-> Get more help at https://help.gradle.org.
-
-BUILD FAILED in 1m 8s
+Built /home/runner/work/autosourcarr/autosourcarr/.build/autosourcarr-source-host.jar
