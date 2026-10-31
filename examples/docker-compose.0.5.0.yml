@@ -28,7 +28,7 @@ services:
       - ./data:/data
     environment:
       # Optional (see docs/settings.md, columns "Compose" and "Compose only"):
-      # TZ: Europe/Amsterdam
+      TZ: Europe/Amsterdam   # a time zone saved in the setup wizard wins over this
       # SOURCE_ENGINE_UID: "568"
       # SOURCE_ENGINE_GID: "568"
       # DATABASE_DIR: /database

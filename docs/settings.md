@@ -6,21 +6,21 @@ Settings are stored in `config.json` in the config folder and edited on the Sett
 
 ## Compose overrides
 
-Any setting can be overridden by setting an environment variable with the same name in Compose. An override wins over `config.json` and the Settings page shows the setting as overridden, so a change made there has no effect until the variable is removed. Keep Compose small: set only the variables marked *Compose* below, and do not use `env_file:` with the old `autosourcarr.env` after it has been converted.
+Any setting can be set by an environment variable with the same name in Compose. A Compose variable wins over the built-in default and over values in `config.json` that you never changed in the app; a value you saved on the Settings page or in the setup wizard wins over Compose (as wizard values did in 0.4.x), and the Settings page shows which settings Compose currently decides. Use the page's *Use default* to hand a setting back to Compose. Settings marked *Compose only* can only be set in Compose, because they name container folders or identities. Keep Compose small: set only the variables marked *Compose* or *Compose only*, and remove the old `env_file:` line once `autosourcarr.env` has been converted.
 
-Precedence, lowest first: built-in default, `config.json`, Compose environment variable.
+Precedence, lowest first: built-in default, `config.json`, Compose environment variable, value saved in the app.
 
 ## Runtime
 
 | Variable | Type | Default | Description | Compose | Wizard step |
 | --- | --- | --- | --- | --- | --- |
-| `APP_SERVICES_MODE` | choice (integrated, external) | `external` | integrated runs the bundled helper services inside this container; external keeps separately deployed helpers (0.4.x layouts). | Compose |  |
-| `DATABASE_DIR` | path | empty | Folder for the SQLite databases. Empty uses the data folder. Change it with Settings > Database storage so the files are copied first. | Compose |  |
-| `DATA_DIR` | path | `/data` | Folder inside the container for covers, caches and runtime data. Mount it as a persistent volume. | Compose |  |
-| `SETTINGS_CONFIG_DIR` | path | `/config` | Folder inside the container that holds config.json, config.key and setup state. Mount it as a persistent volume. | Compose |  |
-| `SOURCE_ENGINE_GID` | integer | `0` | Group ID the source engine runs as. 0 picks the group of the existing source folder. | Compose |  |
-| `SOURCE_ENGINE_MODE` | choice (integrated, external) | `integrated` | integrated runs sources inside this image; external uses a separate source host (rollback and development only). | Compose |  |
-| `SOURCE_ENGINE_UID` | integer | `0` | User ID the source engine runs as. 0 picks the owner of the existing source folder (TrueNAS often uses 568). | Compose |  |
+| `APP_SERVICES_MODE` | choice (integrated, external) | `external` | integrated runs the bundled helper services inside this container; external keeps separately deployed helpers (0.4.x layouts). | Compose only |  |
+| `DATABASE_DIR` | path | empty | Folder for the SQLite databases. Empty uses the data folder. Set it in Compose only, pointing at a mounted folder that already holds the databases; moving them from the app arrives with the new data layer (conversion phase 2). | Compose only |  |
+| `DATA_DIR` | path | `/data` | Folder inside the container for covers, caches and runtime data. Mount it as a persistent volume. | Compose only |  |
+| `SETTINGS_CONFIG_DIR` | path | `/config` | Folder inside the container that holds config.json, config.key and setup state. Mount it as a persistent volume. | Compose only |  |
+| `SOURCE_ENGINE_GID` | integer | `0` | Group ID the source engine runs as. 0 picks the group of the existing source folder. | Compose only |  |
+| `SOURCE_ENGINE_MODE` | choice (integrated, external) | `integrated` | integrated runs sources inside this image; external uses a separate source host (rollback and development only). | Compose only |  |
+| `SOURCE_ENGINE_UID` | integer | `0` | User ID the source engine runs as. 0 picks the owner of the existing source folder (TrueNAS often uses 568). | Compose only |  |
 | `TZ` | text | `Europe/Amsterdam` | Used for readable times and scheduled work. Example: Europe/Amsterdam. | Compose | library |
 
 ## Security

@@ -82,7 +82,7 @@
    * @typedef {Object} SettingsOverview
    * @property {string} revision
    * @property {boolean} config_file_exists
-   * @property {Array<{name: string, items: Array<{key: string, label: string, description: string, group: string, type: string, value: (string|null), secret: boolean, is_set: boolean, default: (string|null), compose_variable: string, compose_recommended: boolean, overridden_by_environment: boolean, wizard_step: (string|null), advanced: boolean, minimum: (number|null), maximum: (number|null), choices: Array<{value: string, label: string}>}>}>} groups
+   * @property {Array<{name: string, items: Array<{key: string, label: string, description: string, group: string, type: string, value: (string|null), secret: boolean, is_set: boolean, default: (string|null), compose_variable: string, compose_recommended: boolean, overridden_by_environment: boolean, wizard_step: (string|null), advanced: boolean, minimum: (number|null), maximum: (number|null), choices: Array<{value: string, label: string}>, editable: boolean, saved_in_app: boolean, problem: (string|null)}>}>} groups
    */
 
   /**
@@ -103,7 +103,7 @@
 
   /**
    * @typedef {Object} SettingsSchemaResponse
-   * @property {Array<{key: string, group: string, label: string, description: string, type: string, allowed_values: Array<string>, choices: Array<{value: string, label: string}>, default: (string|null), secret: boolean, compose_variable: string, compose_recommended: boolean, wizard_step: (string|null), advanced: boolean, minimum: (number|null), maximum: (number|null), allow_empty: boolean}>} settings
+   * @property {Array<{key: string, group: string, label: string, description: string, type: string, allowed_values: Array<string>, choices: Array<{value: string, label: string}>, default: (string|null), secret: boolean, compose_variable: string, compose_recommended: boolean, wizard_step: (string|null), advanced: boolean, minimum: (number|null), maximum: (number|null), allow_empty: boolean, editable: boolean}>} settings
    */
 
   /**
@@ -215,6 +215,13 @@
        * @returns {Promise<DatabaseStorageView>}
        */
       getDatabaseStorage(options) { return call('GET', '/api/v1/storage/database', undefined, options); },
+      /**
+       * Status page: version, databases, catalogue counts, active errors and dependency checks.
+       * GET /api/v1/health
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getHealth(options) { return call('GET', '/api/v1/health', undefined, options); },
       /**
        * Timing samples per work phase (no URLs, titles or keys).
        * GET /api/v1/diagnostics/metrics
