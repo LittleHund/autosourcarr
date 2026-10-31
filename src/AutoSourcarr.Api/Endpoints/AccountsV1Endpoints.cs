@@ -29,6 +29,7 @@ internal static class AccountsV1Endpoints
                 {
                     ["method"] = method,
                     ["setup_required"] = access.Accounts.SetupRequired && method != "external",
+                    ["setup_code_required"] = access.Accounts.SetupCodeRequired,
                     ["signed_in"] = caller.Role != Role.None,
                     ["user"] = caller.Name, ["role"] = Roles.Name(caller.Role)
                 }, json.JsonObject);
@@ -44,7 +45,7 @@ internal static class AccountsV1Endpoints
                 if (services.Settings().AuthMethod == "external")
                     return Problem(409, "With external sign-in the owner is the account named in AUTH_OWNER_EXTERNAL_USER.");
                 Account owner;
-                try { owner = access.Accounts.CreateOwner(Text(body["username"]), Text(body["password"])); }
+                try { owner = access.Accounts.CreateOwner(Text(body["username"]), Text(body["password"]), Text(body["setup_code"])); }
                 catch (AccountException error) { return Problem(error.Message.Contains("already", StringComparison.Ordinal) ? 409 : 400, error.Message); }
                 access.Log.Record("owner-created", owner.Name, AccessControlMiddleware.Address(context));
                 AccessControlMiddleware.IssueCookie(context, access.Accounts.IssueSession(owner.Id));
@@ -78,12 +79,17 @@ internal static class AccountsV1Endpoints
         auth.MapPost("/logout", (Func<HttpContext, IResult>)(context =>
             {
                 var caller = AccessControlMiddleware.CallerOf(context);
-                if (services.Access is { } access && caller.Role != Role.None) access.Log.Record("logout", caller.Name, AccessControlMiddleware.Address(context));
+                if (services.Access is { } access && caller.Role != Role.None)
+                {
+                    // Sessions are signed tokens: signing out ends every session of the account (a copied cookie stops working).
+                    if (caller.Via == "session" && caller.KeyId is not null) access.Accounts.EndSessions(caller.KeyId);
+                    access.Log.Record("logout", caller.Name, AccessControlMiddleware.Address(context));
+                }
                 AccessControlMiddleware.ClearCookie(context);
                 return Results.Json(new JsonObject { ["signed_in"] = false }, json.JsonObject);
             }))
             .WithName("logout")
-            .WithSummary("Sign out of this browser.")
+            .WithSummary("Sign out. Ends every session of the account, on all devices.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
         auth.MapGet("/me", (Func<HttpContext, IResult>)(context =>
@@ -101,8 +107,18 @@ internal static class AccountsV1Endpoints
                 var caller = AccessControlMiddleware.CallerOf(context);
                 if (caller.Via is not ("session" or "basic") || caller.KeyId is null) return Problem(409, "Only accounts with a password can change it here.");
                 var body = await Body(context).ConfigureAwait(false);
+                var address = AccessControlMiddleware.Address(context);
+                var wait = access.Throttle.Before(address, caller.Name);
+                if (wait is null) return Problem(429, "Too many attempts; wait 15 minutes.");
+                if (wait > TimeSpan.Zero) await Task.Delay(wait.Value, context.RequestAborted).ConfigureAwait(false);
                 try { access.Accounts.ChangePassword(caller.KeyId, Text(body["current"]), Text(body["password"])); }
-                catch (AccountException error) { return Problem(400, error.Message); }
+                catch (AccountException error)
+                {
+                    access.Log.Record("login-failed", caller.Name, address, "password change");
+                    access.Throttle.Failed();
+                    return Problem(400, error.Message);
+                }
+                access.Throttle.Succeeded(address, caller.Name);
                 access.Log.Record("password-changed", caller.Name, AccessControlMiddleware.Address(context));
                 AccessControlMiddleware.IssueCookie(context, access.Accounts.IssueSession(caller.KeyId));
                 return Results.Json(new JsonObject { ["changed"] = true }, json.JsonObject);
@@ -168,6 +184,7 @@ internal static class AccountsV1Endpoints
                 if (services.Access is not { } access) return Unavailable();
                 if (AccessControlMiddleware.CallerOf(context).Role != Role.Owner) return Problem(403, "Only the owner can regenerate the admin token.");
                 var token = access.Accounts.RegenerateAdminToken();
+                access.RegisterSecret?.Invoke(token);
                 access.Log.Record("admin-token-regenerated", AccessControlMiddleware.CallerOf(context).Name, AccessControlMiddleware.Address(context));
                 return Results.Json(new JsonObject { ["admin_token"] = token }, json.JsonObject);
             }))

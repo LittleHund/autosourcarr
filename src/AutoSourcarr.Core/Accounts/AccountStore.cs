@@ -112,6 +112,26 @@ public sealed class AccountStore
 
     public string AutomaticAdminToken { get { lock (_gate) return Text(_data, "admin_token"); } }
 
+    /// <summary>Increases with every change (callers drop cached sign-ins when it moves).</summary>
+    public long Version { get { lock (_gate) return _version; } }
+    private long _version;
+
+    /// <summary>After a server-side owner reset, setup needs this one-time code from the server log.</summary>
+    public bool SetupCodeRequired { get { lock (_gate) return Text(_data, "setup_code").Length > 0; } }
+
+    /// <summary>AUTH_RESET_OWNER was applied for the current run of the variable (applied once, not on every start).</summary>
+    public bool ResetApplied { get { lock (_gate) return _data["reset_applied"]?.GetValue<bool>() == true; } }
+
+    public void ClearResetMarker()
+    {
+        lock (_gate)
+        {
+            if (!ResetApplied) return;
+            _data["reset_applied"] = false;
+            Save();
+        }
+    }
+
     public string RegenerateAdminToken()
     {
         lock (_gate)
@@ -125,14 +145,20 @@ public sealed class AccountStore
     public IReadOnlyList<Account> Accounts() { lock (_gate) return Users().Select(ToAccount).ToArray(); }
 
     /// <summary>First boot: the owner (AUTH-2). Refused once an owner with a password or external binding exists.</summary>
-    public Account CreateOwner(string name, string password)
+    public Account CreateOwner(string name, string password, string? setupCode = null)
     {
         name = CleanName(name);
         if (PasswordHashing.Problem(password) is { } problem) throw new AccountException(problem);
         lock (_gate)
         {
             if (!SetupRequired) throw new AccountException("The owner account already exists.");
+            var code = Text(_data, "setup_code");
+            if (code.Length > 0 && !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(setupCode?.Trim() ?? ""), Encoding.UTF8.GetBytes(code)))
+                throw new AccountException("Enter the setup code from the server log (written when the owner sign-in was reset).");
             var owner = Users().FirstOrDefault(user => Roles.Parse(Text(user, "role")) == Role.Owner);
+            if (Users().Any(user => !ReferenceEquals(user, owner) && string.Equals(Text(user, "name"), name, StringComparison.OrdinalIgnoreCase)))
+                throw new AccountException("Another account already uses this name.");
+            _data["setup_code"] = "";
             if (owner is null)
             {
                 owner = NewUser(name, Role.Owner, "local");
@@ -162,16 +188,20 @@ public sealed class AccountStore
     }
 
     /// <summary>AUTH-10: the owner keeps their account and all data; only the password goes, so setup asks for a new one.</summary>
-    public bool ResetOwnerLogin()
+    /// <returns>The one-time setup code (for the server log), or null when there is no owner.</returns>
+    public string? ResetOwnerLogin()
     {
         lock (_gate)
         {
             var owner = Users().FirstOrDefault(user => Roles.Parse(Text(user, "role")) == Role.Owner);
-            if (owner is null) return false;
+            if (owner is null) return null;
             owner["password_hash"] = ""; owner["source"] = "local";
             owner["session_epoch"] = Epoch(owner) + 1;
+            var code = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(6));
+            _data["setup_code"] = code;
+            _data["reset_applied"] = true;
             Save();
-            return true;
+            return code;
         }
     }
 
@@ -339,6 +369,7 @@ public sealed class AccountStore
 
     private void Save()
     {
+        _version++;
         var bytes = Encoding.UTF8.GetBytes(_data.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         _documents.Locked(FileName, document => { document.Write(bytes); return 0; });
     }

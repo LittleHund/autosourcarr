@@ -338,10 +338,14 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         var accounts = new AutoSourcarr.Core.Accounts.AccountStore(startup.ConfigurationRoot);
         var log = new AutoSourcarr.Core.Accounts.SecurityLog(owner._dataDirectory!);
         owner.Privacy.Register(new Dictionary<string, string?> { ["automatic_admin_token"] = accounts.AutomaticAdminToken });
-        if (settings.AuthResetOwner && accounts.ResetOwnerLogin())
+        // Applied once per use of the variable (not on every restart while it stays set); the one-time setup code
+        // goes to the server log only, so a visitor cannot claim the owner account while it has no password.
+        if (!settings.AuthResetOwner) accounts.ClearResetMarker();
+        else if (!accounts.ResetApplied && accounts.ResetOwnerLogin() is { } code)
         {
-            log.Record("owner-reset", "server", "", "AUTH_RESET_OWNER: the owner's password was cleared; set a new one on the login page and remove the variable.");
-            owner.Logs.Record("Accounts", "Owner sign-in reset by AUTH_RESET_OWNER. Set a new password on the login page, then remove AUTH_RESET_OWNER.");
+            log.Record("owner-reset", "server", "", "AUTH_RESET_OWNER: the owner's password was cleared.");
+            Console.WriteLine("AutoSourcarr: owner sign-in reset by AUTH_RESET_OWNER. Open the login page and enter setup code " + code
+                + " with a new password, then remove AUTH_RESET_OWNER.");
         }
         if (settings.AuthMethod == "external" && settings.AuthOwnerExternalUser.Trim().Length > 0 && accounts.SetupRequired)
         {
@@ -351,6 +355,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         return new AutoSourcarr.Api.Security.AccessControlServices
         {
             Accounts = accounts, Log = log, Settings = () => owner.Settings,
+            RegisterSecret = secret => owner.Privacy.Register(new Dictionary<string, string?> { ["automatic_admin_token"] = secret }),
             Burst = message => owner.Errors.Record("Security", message, "failed-login-burst", severity: "warning")
         };
     }

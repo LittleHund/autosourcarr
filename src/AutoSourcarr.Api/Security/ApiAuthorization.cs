@@ -50,7 +50,8 @@ public sealed class AdminAuthorizationFilter(Func<AutoSourcarrSettings> settings
             return ValueTask.FromResult<object?>(Results.Json(new { detail = "Not found" }, statusCode: 404));
         // With accounts (the app), the access check already decided who is calling: admin reach is required here.
         if (context.HttpContext.Items.TryGetValue(AccessControlMiddleware.CallerItem, out var value) && value is AutoSourcarr.Core.Accounts.Caller caller)
-            return caller.AdminReach ? next(context)
+            return AccessPolicy.Allows(caller, AccessPolicy.Required(context.HttpContext.Request.Method, context.HttpContext.Request.Path.Value ?? ""))
+                && (caller.AdminReach || AccessPolicy.Required(context.HttpContext.Request.Method, context.HttpContext.Request.Path.Value ?? "") != AccessLevel.Admin) ? next(context)
                 : ValueTask.FromResult<object?>(Results.Json(new { detail = "Administrator rights needed" }, statusCode: caller.Role == AutoSourcarr.Core.Accounts.Role.None ? 401 : 403));
         return ApiAuthorization.AdminAllowed(context.HttpContext.Request, settings()) ? next(context)
             : ValueTask.FromResult<object?>(Results.Json(new { detail = "Invalid admin token" }, statusCode: 401));
