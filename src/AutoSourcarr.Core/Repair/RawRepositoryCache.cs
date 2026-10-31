@@ -57,7 +57,7 @@ public sealed class RawRepositoryCache : IRawRepositorySource, IAsyncDisposable
         { var sha = SourceOrigin.Optional(saved, "revision"); try { return RawCodeRules.Commit(sha); } catch (InvalidDataException) { } }
         var raw = await FetchAsync(plan.ResolveUrl, 512 * 1024, TimeSpan.FromSeconds(30), token, plan.Host == "github.com" ? "application/vnd.github.sha" : null).ConfigureAwait(false);
         var text = StrictUtf8.GetString(raw).Trim();
-        if (!Regex.IsMatch(text, "\\A[0-9a-f]{40}\\z", RegexOptions.CultureInvariant))
+        if (!KnownPatterns.Hex40().IsMatch(text))
         {
             var body = Parse(raw); text = SourceOrigin.Optional(body, plan.Host == "github.com" ? "sha" : "id");
         }
@@ -89,7 +89,7 @@ public sealed class RawRepositoryCache : IRawRepositorySource, IAsyncDisposable
         var rows = JsonNode.Parse(bytes, documentOptions: new JsonDocumentOptions { MaxDepth = 32 }) as JsonArray;
         if (rows is null || rows.Count > 8) throw new InvalidDataException("Original repository module history is unavailable");
         var candidates = new List<string>();
-        void Add(JsonNode? value) { if (value is JsonValue scalar && scalar.TryGetValue<string>(out var sha) && Regex.IsMatch(sha, "\\A[0-9a-f]{40}\\z", RegexOptions.CultureInvariant) && !candidates.Contains(sha, StringComparer.Ordinal)) candidates.Add(sha); }
+        void Add(JsonNode? value) { if (value is JsonValue scalar && scalar.TryGetValue<string>(out var sha) && KnownPatterns.Hex40().IsMatch(sha) && !candidates.Contains(sha, StringComparer.Ordinal)) candidates.Add(sha); }
         foreach (var row in rows.OfType<JsonObject>())
         {
             Add(row["sha"]);
@@ -113,7 +113,7 @@ public sealed class RawRepositoryCache : IRawRepositorySource, IAsyncDisposable
     private void Prune(string root, string keep)
     {
         var commits = Path.Combine(root, "commits"); PrivateDocumentStore.ValidateDirectory(commits);
-        var references = Directory.EnumerateFiles(commits, "*.json").Where(path => Regex.IsMatch(Path.GetFileNameWithoutExtension(path), "\\A[0-9a-f]{40}\\z", RegexOptions.CultureInvariant)).Take(4097).ToArray();
+        var references = Directory.EnumerateFiles(commits, "*.json").Where(path => KnownPatterns.Hex40().IsMatch(Path.GetFileNameWithoutExtension(path))).Take(4097).ToArray();
         if (references.Length > 4096) throw new InvalidDataException("Repository cache metadata exceeds its listing limit");
         var ordered = references.OrderByDescending(File.GetLastWriteTimeUtc).ThenBy(path => path, StringComparer.Ordinal).ToArray();
         var retained = new HashSet<string>(StringComparer.Ordinal) { keep }; foreach (var path in ordered) { if (retained.Count >= 3) break; retained.Add(Path.GetFileNameWithoutExtension(path)); }
@@ -122,7 +122,7 @@ public sealed class RawRepositoryCache : IRawRepositorySource, IAsyncDisposable
         { var value = ReadJson(path); if (retained.Contains(Path.GetFileNameWithoutExtension(path))) { if (value is not null) protectedHashes.Add(RawCodeRules.Hash(SourceOrigin.Optional(value, "archive_sha256"))); } else Remove(path, commits); }
         var archives = Path.Combine(root, "archives"); PrivateDocumentStore.ValidateDirectory(archives);
         foreach (var path in Directory.EnumerateFiles(archives, "*.zip"))
-            if (Regex.IsMatch(Path.GetFileNameWithoutExtension(path), "\\A[0-9a-f]{64}\\z", RegexOptions.CultureInvariant) && !protectedHashes.Contains(Path.GetFileNameWithoutExtension(path))) Remove(path, archives);
+            if (KnownPatterns.Hex64().IsMatch(Path.GetFileNameWithoutExtension(path)) && !protectedHashes.Contains(Path.GetFileNameWithoutExtension(path))) Remove(path, archives);
     }
     private static void Remove(string path, string parent)
     {

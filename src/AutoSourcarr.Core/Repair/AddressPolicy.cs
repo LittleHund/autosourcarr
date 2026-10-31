@@ -32,7 +32,7 @@ public sealed class AddressPolicy(JsonObject job, Func<IEnumerable<JsonObject>, 
         }
         if (official && pairs.Count != 0)
         {
-            if (!Regex.IsMatch(WebsiteEvidence.Text(job, "source_revision"), @"\A[0-9a-f]{40}\z", RegexOptions.CultureInvariant)) throw new AddressBlocked("Changed official addresses require the pinned source revision");
+            if (!KnownPatterns.Hex40().IsMatch(WebsiteEvidence.Text(job, "source_revision"))) throw new AddressBlocked("Changed official addresses require the pinned source revision");
             var observations = await probe(pairs.Select(pair => pair.Source), cancellationToken).ConfigureAwait(false);
             job["website_checks"] = new JsonArray(WebsiteEvidence.Rows(job, "website_checks").Concat(observations.OfType<JsonObject>()).TakeLast(16).Select(value => value.DeepClone()).ToArray());
             foreach (var (source, old, current) in pairs)

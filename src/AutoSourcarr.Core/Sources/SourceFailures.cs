@@ -64,7 +64,7 @@ public static class SourceFailures
     }
     private static string SummaryText(string text, string name, string kind, int? status)
     {
-        name = Regex.Replace(string.IsNullOrEmpty(name) ? "Source" : name, @"\s+", " ").Trim();
+        name = KnownPatterns.Whitespace().Replace(string.IsNullOrEmpty(name) ? "Source" : name, " ").Trim();
         return kind switch
         {
             "deferred" => $"{name} search deferred by local capacity or a shared search time limit; retry is available.",
@@ -78,7 +78,7 @@ public static class SourceFailures
     }
     private static string ShortError(string text)
     {
-        text = Regex.Replace(string.IsNullOrEmpty(text) ? "Source request failed" : text, @"\s+", " ").Trim();
+        text = KnownPatterns.Whitespace().Replace(string.IsNullOrEmpty(text) ? "Source request failed" : text, " ").Trim();
         text = StackTrace().Split(text, 2)[0];
         return text[..Math.Min(280, text.Length)].TrimEnd();
     }

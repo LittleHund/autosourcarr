@@ -39,7 +39,7 @@ public sealed class RepairDiagnosticCache(SupportPrivacy privacy, Action<string,
         {
             var active = source["active"];
             var safe = new JsonObject { ["captured_at"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
-                ["active"] = active is null && source.ContainsKey("active") ? null : D.Text(active) is { } id && Regex.IsMatch(id, "\\A[0-9a-f]{32}\\z", RegexOptions.CultureInvariant) ? JsonValue.Create(id) : JsonValue.Create("unknown"),
+                ["active"] = active is null && source.ContainsKey("active") ? null : D.Text(active) is { } id && KnownPatterns.Hex32().IsMatch(id) ? JsonValue.Create(id) : JsonValue.Create("unknown"),
                 ["jobs_omitted_from_response"] = Math.Max(0, many.Count - 50), ["isolation"] = RepairEvidence.Isolation(source["isolation"], privacy) };
             lock (_gate) _status = safe;
         }

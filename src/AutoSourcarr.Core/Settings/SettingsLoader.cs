@@ -16,10 +16,14 @@ public static class SettingsLoader
         IReadOnlyDictionary<string, string?>? dotenv = null,
         IReadOnlyDictionary<string, string?>? environment = null,
         IReadOnlyDictionary<string, string?>? managedOverrides = null,
-        bool bundledImage = false)
+        bool bundledImage = false,
+        IReadOnlyDictionary<string, string?>? configuration = null)
     {
+        // Precedence, lowest first: .env in the working directory, config.json,
+        // container environment (Compose overrides), then wizard-managed values.
         var values = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         Overlay(values, dotenv);
+        Overlay(values, configuration);
         Overlay(values, environment);
         Overlay(values, managedOverrides);
 

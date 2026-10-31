@@ -46,7 +46,7 @@ public static class DiagnosticGroups
         if (source.Length == 0) source = UnicodeCaseFold.Fold(D.Text(context, "source_name").Trim());
         var key = D.Text(item, "key");
         if (source.Length == 0 && key.StartsWith("import-source:", StringComparison.Ordinal)) source = key["import-source:".Length..];
-        var message = Regex.Replace(D.Text(item, "message", "Unknown error"), @"\s+", " ").Trim();
+        var message = KnownPatterns.Whitespace().Replace(D.Text(item, "message", "Unknown error"), " ").Trim();
         message = Regex.Replace(message, @"\s*\(error [a-f0-9]{12}\)", "", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (source.Length > 0) message = Regex.Split(message, @"\s+at\s+(?:[\w$]+\.)+[\w$<>]+\(", RegexOptions.CultureInvariant).First();
         message = Regex.Replace(message, @"then retry in \d+ seconds", "then retry after cooldown", RegexOptions.CultureInvariant);

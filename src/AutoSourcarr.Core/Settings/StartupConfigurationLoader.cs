@@ -9,7 +9,8 @@ public static class StartupConfigurationLoader
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
     public static StartupConfigurationSnapshot Load(string workingDirectory,
-        IReadOnlyDictionary<string, string?> environment, bool bundledImage = false)
+        IReadOnlyDictionary<string, string?> environment, bool bundledImage = false,
+        bool convertLegacyEnvironment = false, DateTimeOffset? now = null)
     {
         var directory = Path.GetFullPath(workingDirectory);
         // Capture the caller-supplied environment once. Tests and reusable loading
@@ -31,22 +32,30 @@ public static class StartupConfigurationLoader
         var configuredRoot = roots.TryGetValue("SETTINGS_CONFIG_DIR", out var root) ? root! : "/config";
         var configurationRoot = Path.GetFullPath(configuredRoot.Length == 0 ? "." : configuredRoot, directory);
         var managed = new CanonicalConfiguration(configurationRoot).StartupOverrides();
-        var settings = SettingsLoader.Load(dotenv, inherited, managed, bundledImage);
-        return new(settings, configurationRoot);
+        // Only the final host converts; the unprivileged resolver and tests stay read-only.
+        var conversion = convertLegacyEnvironment
+            ? EnvConversion.EnsureConverted(configurationRoot, now ?? DateTimeOffset.UtcNow)
+            : null;
+        var configuration = new ConfigStore(configurationRoot).Load();
+        var settings = SettingsLoader.Load(dotenv, inherited, managed, bundledImage, configuration.Settings);
+        return new(settings, configurationRoot, conversion);
     }
 }
 
 public sealed class StartupConfigurationSnapshot
 {
-    internal StartupConfigurationSnapshot(AutoSourcarrSettings settings, string configurationRoot)
+    internal StartupConfigurationSnapshot(AutoSourcarrSettings settings, string configurationRoot, ConversionReport? conversion = null)
     {
         Settings = settings;
         ConfigurationRoot = configurationRoot;
+        Conversion = conversion;
         SourceRequest = SourceStartupRequest.FromSettings(settings);
     }
 
     public AutoSourcarrSettings Settings { get; }
     public string ConfigurationRoot { get; }
+    /// <summary>Set when this start converted autosourcarr.env to config.json.</summary>
+    public ConversionReport? Conversion { get; }
     public SourceStartupRequest SourceRequest { get; }
     public override string ToString() => "AutoSourcarr startup configuration (values redacted)";
 }

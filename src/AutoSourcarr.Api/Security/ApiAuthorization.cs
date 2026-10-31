@@ -10,6 +10,8 @@ public static class ApiAuthorization
 {
     public const string ReaderPrefix = "/api/reader/v1";
     public const string InternalPrefix = "/api/v1";
+    /// <summary>HttpContext.Items key set when a request arrived through the reader alias.</summary>
+    public const string ReaderRequestItem = "AutoSourcarr.ReaderRequest";
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     public static bool IsReaderPath(string path) => path == ReaderPrefix || path.StartsWith(ReaderPrefix + "/", StringComparison.Ordinal);
     public static bool AdminAllowed(HttpRequest request, AutoSourcarrSettings settings)
@@ -41,8 +43,14 @@ public static class ApiAuthorization
 public sealed class AdminAuthorizationFilter(Func<AutoSourcarrSettings> settings) : IEndpointFilter
 {
     public ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
-        => ApiAuthorization.AdminAllowed(context.HttpContext.Request, settings()) ? next(context)
+    {
+        // The reader alias (/api/reader/v1, bypassed by Authelia) maps onto /api/v1. Admin endpoints
+        // under /api/v1 must never answer through it, even when no admin token is configured.
+        if (context.HttpContext.Items.ContainsKey(ApiAuthorization.ReaderRequestItem))
+            return ValueTask.FromResult<object?>(Results.Json(new { detail = "Not found" }, statusCode: 404));
+        return ApiAuthorization.AdminAllowed(context.HttpContext.Request, settings()) ? next(context)
             : ValueTask.FromResult<object?>(Results.Json(new { detail = "Invalid admin token" }, statusCode: 401));
+    }
 }
 
 public sealed class ReaderAuthorizationMiddleware(RequestDelegate next, Func<AutoSourcarrSettings> settings)
@@ -66,7 +74,8 @@ public sealed class ReaderAuthorizationMiddleware(RequestDelegate next, Func<Aut
         }
         var original = context.Request.Path;
         context.Request.Path = ApiAuthorization.InternalPrefix + path[ApiAuthorization.ReaderPrefix.Length..];
+        context.Items[ApiAuthorization.ReaderRequestItem] = true;
         try { await next(context).ConfigureAwait(false); }
-        finally { context.Request.Path = original; }
+        finally { context.Request.Path = original; context.Items.Remove(ApiAuthorization.ReaderRequestItem); }
     }
 }

@@ -3,6 +3,7 @@ using AutoSourcarr.Tests;
 if (args.Length == 3 && args[0] == "--private-document-probe") return PrivateDocumentTests.Probe(args[1], args[2]);
 if (args.Length == 2 && args[0] == "--instance-lock-probe") return ApplicationRuntimeTests.LockProbe(args[1]);
 if (args.Length == 2 && args[0] == "--raster-scratch-probe") return RasterScratchTests.Probe(args[1]);
+if (args.Length == 2 && args[0] == "--write-openapi") return ApiV1Tests.WriteOpenApi(args[1]);
 if (args.Length == 2 && args[0] == "--raster-scratch-reject-probe") return RasterScratchTests.RejectProbe(args[1]);
 
 var filters = new List<string>();
@@ -78,6 +79,8 @@ SourceRuntimeContractTests.Register(suite);
 EngineCompatibilityApiTests.Register(suite);
 RepairArtifactFileTests.Register(suite);
 StartupIdentityTests.Register(suite);
+ConfigStoreTests.Register(suite);
+ApiV1Tests.Register(suite);
 StartupConfigurationTests.Register(suite);
 StartupIdentityOracleTests.Register(suite);
 SourceRepositoryApiTests.Register(suite);

@@ -12,6 +12,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
     <None Update="Fixtures/**" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../config/autosourcarr.env.example" Link="Fixtures/env/autosourcarr.env.example" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../config/source-host.env.example" Link="Fixtures/env/source-host.env.example" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../native/source-owner.c" Link="NativeInputs/source-owner.c" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../native/source-owner.h" Link="NativeInputs/source-owner.h" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../native/source-observation.c" Link="NativeInputs/source-observation.c" CopyToOutputDirectory="PreserveNewest" />

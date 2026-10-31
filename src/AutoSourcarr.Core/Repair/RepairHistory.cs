@@ -309,8 +309,8 @@ public sealed class RepairHistory(IPrivateDocumentStore files, Func<double>? clo
         if (package.Length > 200 || !Regex.IsMatch(package, "\\A[A-Za-z_$][A-Za-z0-9_$]*(?:\\.[A-Za-z_$][A-Za-z0-9_$]*){2,}\\z", RegexOptions.CultureInvariant)) throw Conflict("Invalid source package identity");
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(package))) + ".json";
     }
-    private static void JobId(string job) { if (!Regex.IsMatch(job, "\\A[0-9a-f]{32}\\z", RegexOptions.CultureInvariant)) throw Conflict("Invalid repair job identity"); }
-    private static void Hash(string? value, bool optional = false) { if (optional && value is null) return; if (value is null || !Regex.IsMatch(value, "\\A[0-9a-f]{64}\\z", RegexOptions.CultureInvariant)) throw Conflict("Invalid repair fingerprint"); }
+    private static void JobId(string job) { if (!KnownPatterns.Hex32().IsMatch(job)) throw Conflict("Invalid repair job identity"); }
+    private static void Hash(string? value, bool optional = false) { if (optional && value is null) return; if (value is null || !KnownPatterns.Hex64().IsMatch(value)) throw Conflict("Invalid repair fingerprint"); }
     private static void HashNode(JsonNode? value, bool optional = false) { if (optional && value is null) return; Hash(TextOrNull(value)); }
     private static bool Matches(JsonNode? value, string pattern) => TextOrNull(value) is { } text && Regex.IsMatch(text, "\\A(?:" + pattern + ")\\z", RegexOptions.CultureInvariant);
     private static bool Truth(JsonNode? value) => value is JsonArray array ? array.Count > 0 : TextOrNull(value) is { Length: > 0 };

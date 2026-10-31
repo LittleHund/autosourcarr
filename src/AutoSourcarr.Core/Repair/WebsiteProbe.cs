@@ -117,7 +117,7 @@ public sealed class WebsiteProbe : IWebsiteObservationClient, IDisposable
             var value = WebsiteEvidence.Text(source, "baseUrl"); if (value.Length == 0) continue; string key;
             try { key = WebsiteAddress.PublicUrl(value); } catch (Exception error) when (error is InvalidDataException or IOException or ArgumentException) { continue; }
             if (!grouped.ContainsKey(key) && grouped.Count >= WebsiteObservationLimits.MaximumSites) continue;
-            var id = WebsiteEvidence.SourceId(source); if (!Regex.IsMatch(id, @"\A-?[0-9]{1,20}\z", RegexOptions.CultureInvariant)) continue;
+            var id = WebsiteEvidence.SourceId(source); if (!KnownPatterns.SourceId().IsMatch(id)) continue;
             if (!grouped.TryGetValue(key, out var ids)) grouped.Add(key, ids = []); ids.Add(id);
         }
         var result = new JsonArray();

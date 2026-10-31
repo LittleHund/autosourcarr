@@ -43,6 +43,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private SuwayomiClient? _main;
     private SourceEngineCapabilityContract? _mainCapabilities;
     private PhysicalFileProvider? _static;
+    private ApiV1Services? _apiV1;
     private Task? _writer, _sourceWatch, _close;
     private bool _configured;
 
@@ -92,6 +93,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(startup); ArgumentNullException.ThrowIfNull(environment);
         var owner = new ApplicationRuntime(startup.Settings);
+        owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion);
         try
         {
             owner.Privacy.Register(environment);
@@ -175,6 +177,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             endpoints.MapErrors(Errors, Io, () => Settings);
             endpoints.MapEngineCompatibility(_source!.CapabilityService, _mainCapabilities, () => Settings, _admin);
             Catalogue.MapEndpoints(endpoints, Io, () => Settings, _admin);
+            endpoints.MapApiV1(_apiV1!);
         });
     }
 

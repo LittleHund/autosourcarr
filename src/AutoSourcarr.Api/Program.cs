@@ -29,7 +29,11 @@ internal static class Program
             AutoSourcarr.Core.Settings.StartupConfigurationSnapshot startup;
             await using (var startupIo = new AutoSourcarr.Core.Concurrency.BoundedWorkScheduler(1, 0))
                 startup = await startupIo.RunAsync(() => StartupConfigurationLoader.Load(Environment.CurrentDirectory, environment,
-                    bundledImage: true), processSignals.Token).ConfigureAwait(false);
+                    bundledImage: true, convertLegacyEnvironment: true), processSignals.Token).ConfigureAwait(false);
+            if (startup.Conversion is { } converted)
+                Console.WriteLine($"Converted autosourcarr.env to config.json: {converted.SettingKeys.Count} settings, "
+                    + $"{converted.SourceHostKeys.Count} source-host values, {converted.ExtraKeys.Count} other values, "
+                    + $"{converted.EncryptedKeys.Count} encrypted. Originals kept in {converted.BackupDirectory}.");
             ApplyTimeZone(startup.Settings, environment);
             await using var runtime = await ApplicationRuntime.CreateNativeAsync(startup, environment, processSignals.Token).ConfigureAwait(false);
             var host = new HostBuilder().UseConsoleLifetime()

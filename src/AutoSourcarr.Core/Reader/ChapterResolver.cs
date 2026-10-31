@@ -22,7 +22,7 @@ public static class ChapterResolver
 
     public static string DisplayName(double number, string name)
     {
-        var raw = Regex.Replace(name.Trim(), @"\s+", " ");
+        var raw = KnownPatterns.Whitespace().Replace(name.Trim(), " ");
         if (number < 0) return raw.Length > 0 ? raw : "Chapter";
         var text = number.ToString("0.######", CultureInfo.InvariantCulture);
         var cleaned = Regex.Replace(raw, @"^\s*[\[(]?\s*(?:s(?:eason)?\s*[-_.:]?\s*\d{1,3}|season\s+\d{1,3})\s*[\])]?[\s:.-]*", "", Options);

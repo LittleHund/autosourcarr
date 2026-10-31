@@ -432,7 +432,7 @@ public sealed class SupportLogStore : IAsyncDisposable
                 try
                 {
                     if (JsonNode.Parse(line) is not JsonObject row || row["id"] is not JsonValue idValue || !idValue.TryGetValue<string>(out var id)
-                        || !Regex.IsMatch(id, "\\A[0-9a-f]{12}\\z", RegexOptions.CultureInvariant)) continue;
+                        || !KnownPatterns.Hex12().IsMatch(id)) continue;
                     var selected = new JsonObject();
                     foreach (var key in new[] { "id", "time", "app_version", "instance_id", "source", "message" })
                         if (row[key] is JsonValue value && value.TryGetValue<string>(out var text)) selected[key] = text;
