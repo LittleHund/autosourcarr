@@ -16,17 +16,17 @@ def test_discover_settings_use_live_inventory_ids_without_source_family_screen()
 (async()=>{
  sourceGroups.splice(0);sourceExtensionState.extensions=[installed()];const focus=document.activeElement;
  const opening=openExtensionSourcePreferences(installed().pkgName);
- assert.equal(requests.length,1);assert.equal(requests[0].url,'/api/admin/sources/9223372036854775806/preferences');
+ assert.equal(requests.length,1);assert.equal(requests[0].url,'/api/v1/sources/9223372036854775806/preferences');
  assert.deepEqual(ids.sourcePreferencesVariant.children.map(n=>n.value),['9223372036854775806','-9223372036854775806']);
  pending.shift().resolve(snapshot([pref(0,'text','English')]));await opening;
  ids.sourcePreferencesVariant.value='-9223372036854775806';const language=ids.sourcePreferencesVariant.onchange({target:ids.sourcePreferencesVariant});
- assert.equal(requests[1].url,'/api/admin/sources/-9223372036854775806/preferences');
+ assert.equal(requests[1].url,'/api/v1/sources/-9223372036854775806/preferences');
  pending.shift().resolve(snapshot([pref(0,'text','Dutch')],'nl1'));await language;
  inputFor(0).value='Dutch draft';inputFor(0).oninput();closeSourcePreferences();assert.equal(document.activeElement,focus);
  const reopening=openExtensionSourcePreferences(installed().pkgName);pending.shift().resolve(snapshot([pref(0,'text','English')]));await reopening;
  ids.sourcePreferencesVariant.value='-9223372036854775806';const again=ids.sourcePreferencesVariant.onchange({target:ids.sourcePreferencesVariant});
  pending.shift().resolve(snapshot([pref(0,'text','Dutch refreshed')],'nl2'));await again;assert.equal(inputFor(0).value,'Dutch draft');
- const saving=formSubmit();assert.equal(requests.at(-1).url,'/api/admin/sources/-9223372036854775806/preferences');
+ const saving=formSubmit();assert.equal(requests.at(-1).url,'/api/v1/sources/-9223372036854775806/preferences');
  assert.deepEqual(JSON.parse(requests.at(-1).opts.body),{index:0,key:'key0',type:'text',value:'Dutch draft',revision:'nl2'});
  pending.shift().resolve(snapshot([pref(0,'text','Dutch draft')],'nl3'));await saving;
  assert.equal(ids.sourcePreferencesSave.disabled,true);
@@ -38,9 +38,9 @@ def test_installed_orphan_resolves_package_inventory_on_demand_and_no_settings_i
     node(DOM + DISCOVER + SOURCE + r'''
 (async()=>{
  sourceGroups.splice(0);const opening=openExtensionSourcePreferences('original.archived');
- assert.equal(ids.sourcePreferencesModal.hidden,false);assert.equal(requests.length,1);assert.equal(requests[0].url,'/api/admin/source-extensions');
+ assert.equal(ids.sourcePreferencesModal.hidden,false);assert.equal(requests.length,1);assert.equal(requests[0].url,'/api/v1/source-extensions');
  pending.shift().resolve({extensions:[installed('original.archived',{name:'Archived source'})]});await tick();
- assert.equal(requests[1].url,'/api/admin/sources/9223372036854775806/preferences');
+ assert.equal(requests[1].url,'/api/v1/sources/9223372036854775806/preferences');
  pending.shift().resolve({...snapshot([]),configurable:false});await opening;
  assert.equal(ids.sourcePreferencesTitle.textContent,'Archived source settings');
  assert.equal(ids.sourcePreferencesFields.children[0].textContent,'This extension does not expose source settings.');
@@ -86,7 +86,7 @@ const jsq=s=>String(s),esc=s=>String(s),extensionLangLabel=String;
  const card=sourceExtensionCard(x);assert(card.includes('Source settings'));assert(card.includes('Uninstall'));
  const action=card.match(/onclick="(openExtensionSourcePreferences\('[^']+'\))"/)[1];
  const opening=eval(action);pending.shift().resolve(snapshot([]));await opening;
- assert.equal(requests[0].url,'/api/admin/sources/9223372036854775806/preferences');
+ assert.equal(requests[0].url,'/api/v1/sources/9223372036854775806/preferences');
  const updating=sourceExtensionCard({...x,hasUpdate:true});assert(updating.includes('Source settings'));assert(updating.includes('Update'));
  const available=sourceExtensionCard({...x,isInstalled:false});assert(!available.includes('Source settings'));assert(available.includes('Install'));
  const nonconfigurable=sourceExtensionCard({...x,source:{nodes:[{id:'3',isConfigurable:false}]}});assert(nonconfigurable.includes('No source settings'));assert(!nonconfigurable.includes('openExtensionSourcePreferences'));
