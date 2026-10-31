@@ -44,7 +44,6 @@ public sealed class SourceInventoryServices
 /// </summary>
 internal static class SourceInventoryV1Endpoints
 {
-    internal const string RepairLater = "Repair runs arrive with the repair runner (phase 6e)";
     private static readonly Regex OriginalPackage = new(@"\Aeu\.kanade\.tachiyomi\.extension\.[a-z0-9]+\.[a-z0-9_]+\z", RegexOptions.CultureInvariant);
     private static readonly Regex ReviewedVersion = new(@"\A[0-9][A-Za-z0-9.+_-]{0,99}\z", RegexOptions.CultureInvariant);
 
@@ -144,11 +143,14 @@ internal static class SourceInventoryV1Endpoints
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 
-        group.MapPost("/source-orphans/{pkgName}/repair", (Func<HttpContext, IResult>)(_ =>
-                services.SourceInventory is null ? Unavailable() : Problem(409, RepairLater)))
+        // The first repair kind is the domain migration (phase 6e); this route keeps its old address and forwards
+        // with 307 so the method and body are kept.
+        group.MapPost("/source-orphans/{pkgName}/repair", (Func<string, IResult>)(pkgName =>
+                services.SourceRepair is null ? Unavailable()
+                    : Results.Redirect("/api/v1/source-repairs/" + Uri.EscapeDataString(pkgName) + "/domain", permanent: false, preserveMethod: true)))
             .WithName("repairSourceOrphan")
-            .WithSummary("Build and check an orphan with the repair runner (phase 6e; answers 409 until then).")
-            .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
+            .WithSummary("Repair an installed orphan by moving it to its new web address (forwards to /api/v1/source-repairs/{pkgName}/domain).")
+            .Produces(StatusCodes.Status307TemporaryRedirect);
 
         // ------------------------------------------------------------ source maintenance (inventory part)
 
@@ -162,14 +164,15 @@ internal static class SourceInventoryV1Endpoints
                 {
                     ["configured"] = configured, ["reachable"] = false, ["jobs"] = new JsonArray(),
                     ["mode"] = settings.AppServicesMode, ["storage_error"] = "",
-                    ["service"] = new JsonObject { ["state"] = "unavailable", ["message"] = RepairLater + "." },
+                    ["service"] = services.SourceRepair is null
+                        ? new JsonObject { ["state"] = "unavailable", ["message"] = "Source repair is not available in this mode." }
+                        : new JsonObject { ["state"] = "ready", ["kinds"] = new JsonArray("domain"), ["message"] = "Domain-move repairs run in the app; code rebuilds need the repair runner." },
                     ["operation"] = inventory.Maintenance.PublicOperation(), ["watch"] = inventory.Maintenance.Watch()
                 };
-                if (configured) result["message"] = RepairLater + ".";
                 return Answer(result);
             }))
             .WithName("getSourceMaintenance")
-            .WithSummary("Source repair status: worker configuration, the daily check switch and the last repair promotion. Repair runs arrive in phase 6e.")
+            .WithSummary("Source repair status: worker configuration, the daily check switch and the last repair promotion and which repair kinds can run.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapPut("/source-maintenance/watch", (Func<HttpContext, Task<IResult>>)(context => Guard(async () =>
