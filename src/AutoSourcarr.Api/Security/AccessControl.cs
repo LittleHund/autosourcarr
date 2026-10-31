@@ -153,7 +153,7 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
         if (bearer.StartsWith("bearer ", StringComparison.OrdinalIgnoreCase)) token = token.Length > 0 ? token : bearer[7..].Trim();
         var apiKey = request.Headers["X-Api-Key"].ToString().Trim();
         var readerKey = request.Headers["X-AutoSourcarr-Api-Key"].ToString().Trim();
-        if (readerKey.Length > 0 && Same(readerKey, settings.AutosourcarrReaderApiToken.Trim())) return new Caller(Role.Reader, "reader token", "reader-token");
+        // The strongest credential wins: admin token and keys before the reader token.
         foreach (var candidate in new[] { token.Trim(), apiKey, readerKey })
         {
             if (candidate.Length == 0) continue;
@@ -168,6 +168,7 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
                 };
         }
         // Proxy identity headers count only from a trusted proxy: anyone else could send them.
+        if (readerKey.Length > 0 && Same(readerKey, settings.AutosourcarrReaderApiToken.Trim())) return new Caller(Role.Reader, "reader token", "reader-token");
         if (settings.AuthMethod == "external") return trusted ? External(request, settings) : Caller.Anonymous;
         if (settings.AuthMethod == "basic" && bearer.StartsWith("basic ", StringComparison.OrdinalIgnoreCase))
             return await BasicAsync(context, bearer[6..].Trim()).ConfigureAwait(false);
