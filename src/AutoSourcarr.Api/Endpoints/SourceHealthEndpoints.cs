@@ -12,9 +12,10 @@ namespace AutoSourcarr.Api.Endpoints;
 
 public static class SourceHealthEndpoints
 {
-    public static RouteGroupBuilder MapSourceHealth(this IEndpointRouteBuilder endpoints, SourceHealthCoordinator health, Func<AutoSourcarrSettings> settings, SemaphoreSlim adminLock)
+    public static RouteGroupBuilder MapSourceHealth(this IEndpointRouteBuilder endpoints, SourceHealthCoordinator health, Func<AutoSourcarrSettings> settings, SemaphoreSlim adminLock,
+        string prefix = "/api/admin/source-health")
     {
-        var group = endpoints.MapGroup("/api/admin/source-health").AddEndpointFilter(new AdminAuthorizationFilter(settings));
+        var group = endpoints.MapGroup(prefix).AddEndpointFilter(new AdminAuthorizationFilter(settings));
         group.MapGet("", (Func<HttpContext, Task<IResult>>)(async context => Results.Json(await health.SnapshotAsync(context.RequestAborted).ConfigureAwait(false))));
         group.MapPut("/daily", (Func<HttpContext, Task<IResult>>)(async context =>
         {

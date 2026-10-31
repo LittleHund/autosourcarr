@@ -45,7 +45,7 @@
     clearTimeout(timer);const own=generation,request={controller:new AbortController(),promise:null};read=request;
     request.promise=(async()=>{
       try{
-        const snapshot=await api('/api/admin/source-health',{signal:request.controller.signal,suppressClientError:true,timeoutMs:12000});
+        const snapshot=await api('/api/v1/source-health',{signal:request.controller.signal,suppressClientError:true,timeoutMs:12000});
         if(read===request&&own===generation&&visible()&&!busy){data=snapshot;render();}
       }catch(error){if(read===request&&own===generation&&visible())status('Unable to refresh source health: '+error.message+' · last recorded results retained');}
       finally{if(read===request){read=null;if(visible())timer=setTimeout(load,10000);}}
@@ -54,7 +54,7 @@
   async function mutate(path,body){
     if(busy)return;busy=true;mutationError='';invalidate();controls();status('Updating source checks…');
     try{
-      await api('/api/admin/source-health/'+path,{method:path==='daily'?'PUT':'POST',body:JSON.stringify(body),timeoutMs:15000,noMutationRefresh:true});
+      await api('/api/v1/source-health/'+path,{method:path==='daily'?'PUT':'POST',body:JSON.stringify(body),timeoutMs:15000,noMutationRefresh:true});
       if(path==='check')toast('Source check queued. Follow its progress or cancel it in Tasks.');
       loadTasks().catch(()=>{});
     }catch(error){mutationError=error.message;status(mutationError);}

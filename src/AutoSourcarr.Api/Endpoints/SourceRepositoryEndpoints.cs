@@ -15,11 +15,12 @@ namespace AutoSourcarr.Api.Endpoints;
 public static class SourceRepositoryEndpoints
 {
     public static RouteGroupBuilder MapSourceRepositories(this IEndpointRouteBuilder endpoints,
-        SourceRepositoryStore repositories, SourceRepositoryPreview previews, BoundedWorkScheduler io, Func<AutoSourcarrSettings> settings)
+        SourceRepositoryStore repositories, SourceRepositoryPreview previews, BoundedWorkScheduler io, Func<AutoSourcarrSettings> settings,
+        string prefix = "/api/admin/source-repositories")
     {
         ArgumentNullException.ThrowIfNull(repositories); ArgumentNullException.ThrowIfNull(previews);
         ArgumentNullException.ThrowIfNull(io); ArgumentNullException.ThrowIfNull(settings);
-        var group = endpoints.MapGroup("/api/admin/source-repositories").AddEndpointFilter(new AdminAuthorizationFilter(settings));
+        var group = endpoints.MapGroup(prefix).AddEndpointFilter(new AdminAuthorizationFilter(settings));
         group.MapGet("", (Func<HttpContext, Task<IResult>>)(context => ExecuteAsync(context, async () =>
         {
             var snapshot = await io.RunAsync(repositories.Snapshot, context.RequestAborted).ConfigureAwait(false);
