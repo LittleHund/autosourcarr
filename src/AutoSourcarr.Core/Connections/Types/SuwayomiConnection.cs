@@ -50,7 +50,7 @@ public sealed class SuwayomiGraphQlHttp : IDisposable
         if (answer["errors"] is JsonArray { Count: > 0 } errors)
         {
             var message = string.Join("; ", errors.OfType<JsonObject>().Select(error => JsonRead.Text(error["message"])).Where(text => text.Length > 0).Take(3));
-            throw new ConnectionHttpException("Suwayomi GraphQL error: " + (message.Length > 0 ? message : "unknown") + ".", null);
+            throw new ConnectionHttpException("Suwayomi GraphQL error: " + (message.Length > 0 ? message : "unknown") + ".");
         }
         return answer["data"] as JsonObject ?? throw new ConnectionHttpException("Suwayomi answered without a GraphQL data object.");
     }
