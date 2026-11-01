@@ -111,10 +111,10 @@ public static class SuwayomiLibraryTests
         suite.Add("main library: saved display snapshot is restored per main address and canonicalised", () =>
         {
             using var setup = new Setup();
-            setup.Preferences.Set(SuwayomiLibrary.DisplaySnapshotKey, JsonNode.Parse($$$"""
-                {"origin":"{{{MainUrl}}}","observed_at":"2026-10-31T00:00:00Z",
+            setup.Preferences.Set(SuwayomiLibrary.DisplaySnapshotKey, JsonNode.Parse("""
+                {"origin":"MAIN_URL","observed_at":"2026-10-31T00:00:00Z",
                  "payload":{"entry_ids":[17,99],"stats_by_entry":{"17":{"entry_id":17,"chapter_count":4,"downloaded_chapter_count":2},"99":{"downloaded_chapter_count":7}}}}
-                """));
+                """.Replace("MAIN_URL", MainUrl, StringComparison.Ordinal)));
             setup.Library.RestoreDisplaySnapshotAsync().GetAwaiter().GetResult();
             var payload = setup.Library.CachedSubbedPayload();
             Check.True(payload["saved_snapshot"]!.GetValue<bool>());
