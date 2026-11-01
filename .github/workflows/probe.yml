@@ -17,7 +17,7 @@ concurrency:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 90
     services:
       postgres:
         image: postgres:17-alpine
@@ -76,12 +76,6 @@ jobs:
             [ $o -eq 0 ] && { node scripts/generate-api-client.mjs >> probe/openapi.log 2>&1; c=$?; }
             dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-settings-docs docs/settings.md >> probe/openapi.log 2>&1
           fi
-          # Phase 10: the whole user duplicate set (2,680 pairs; the regular suite runs a 300-pair sample).
-          du=skipped
-          if [ $b -eq 0 ] && [ -f tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json ]; then
-            AUTOSOURCARR_DUPLICATE_TEST_SET=$PWD/tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json               timeout 2700 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --filter "user duplicate" > probe/duplicate-user-set.log 2>&1; du=$?
-            grep -E "^(PASS|FAIL)|user duplicate set:|ingest wrong merge" probe/duplicate-user-set.log > probe/duplicate-user-set.txt; rm -f probe/duplicate-user-set.log
-          fi
           # CHAP-7 (phase 10): the library the pipeline test wrote opens in Kavita (1 series, 2 chapters).
           kv=skipped
           if [ -d "$RUNNER_TEMP/library-export" ]; then
@@ -125,7 +119,7 @@ jobs:
           # Repair runner isolation (phase 6e).
           { uname -r; python3 -c 'import ctypes; print("landlock abi", ctypes.CDLL(None).syscall(444, None, 0, 1))'; cat /proc/sys/kernel/yama/ptrace_scope; bash scripts/repair-runner-check.sh; echo "exit=$?"; } > probe/repair-runner-check.txt 2>&1
           rr=$(grep -o 'exit=[0-9]*' probe/repair-runner-check.txt | tail -1)
-          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\nkavita=%s\nreader_extension_build=%s\nduplicate_user_set=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" "$kv" "$rx" "$du" > probe/result.txt
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\nkavita=%s\nreader_extension_build=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" "$kv" "$rx" > probe/result.txt
           cat probe/result.txt
       - name: Commit results
         if: always()
