@@ -8,7 +8,7 @@ using ProtoManga = AutoSourcarr.Core.Imports.Backup.Generated.BackupManga;
 namespace AutoSourcarr.Core.Imports.Backup;
 
 /// <summary>A backup that is not a readable Mihon/Tachiyomi library backup (the message is shown to the person).</summary>
-public sealed class BackupDecodeException(string message, Exception? inner = null) : InvalidDataException(message, inner);
+public sealed class BackupDecodeException(string message, Exception? inner = null) : IOException(message, inner);
 
 /// <summary>One library manga of a backup, in the shape 0.4.x kept in import_items.raw_json.</summary>
 public sealed record BackupMangaItem
