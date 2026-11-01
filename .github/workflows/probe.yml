@@ -99,6 +99,8 @@ jobs:
               fi
             fi
           fi
+          # Mihon backup-format watch (phase 9, PIPE-9).
+          GITHUB_TOKEN=${{ github.token }} python3 scripts/mihon-backup-watch.py > probe/mihon-backup-watch.txt 2>&1; echo "exit=$?" >> probe/mihon-backup-watch.txt
           # Repair runner isolation (phase 6e).
           { uname -r; python3 -c 'import ctypes; print("landlock abi", ctypes.CDLL(None).syscall(444, None, 0, 1))'; cat /proc/sys/kernel/yama/ptrace_scope; bash scripts/repair-runner-check.sh; echo "exit=$?"; } > probe/repair-runner-check.txt 2>&1
           rr=$(grep -o 'exit=[0-9]*' probe/repair-runner-check.txt | tail -1)
