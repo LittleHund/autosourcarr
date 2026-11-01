@@ -669,6 +669,11 @@
       "description": "How long a failing source pauses, in seconds.",
       "compose": "allowed"
     },
+    "SOURCE_MIN_INTERVAL_MS": {
+      "group": "Performance & resilience",
+      "description": "Least time between two requests the source host sends to the same website, in milliseconds. Keeps traffic paced so sites do not rate-limit or block you; 0 turns pacing off. Applies after the source host restarts.",
+      "compose": "allowed"
+    },
     "BACKGROUND_IDLE_SECONDS": {
       "group": "Performance & resilience",
       "description": "Quiet time after your last action before background work resumes, in seconds.",

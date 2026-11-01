@@ -28,6 +28,12 @@ object HostConfig {
     val flareSolverrSessionTtl = MutableStateFlow(env("FLARESOLVERR_SESSION_TTL", "15").toInt())
     val flareSolverrAsResponseFallback = MutableStateFlow(env("FLARESOLVERR_RESPONSE_FALLBACK", "false").toBoolean())
 
+    /**
+     * SRC-9 paced traffic: least milliseconds between two requests to the same website host (SOURCE_MIN_INTERVAL_MS,
+     * default 250; 0 turns pacing off). Read by [HostPacingInterceptor] in every source client.
+     */
+    val sourceMinIntervalMs: Long = env("SOURCE_MIN_INTERVAL_MS", "250").toLongOrNull()?.coerceIn(0L, 60_000L) ?: 250L
+
     /** The embedded Chromium for extension WebViews and Cloudflare (downloaded on first start, about 150 MB). */
     val webViewEnabled: Boolean = env("WEBVIEW_ENABLED", "true").toBoolean()
 

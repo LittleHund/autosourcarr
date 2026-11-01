@@ -28,7 +28,7 @@
       button.addEventListener('click',async()=>{
         button.disabled=true;status.textContent='Preparing host policy download…';
         try{
-          const result=await api('/api/admin/source-maintenance/host-setup',{suppressClientError:true,responseType:'blob'});
+          const result=await api('/api/v1/source-maintenance/host-setup',{suppressClientError:true,responseType:'blob'});
           const url=URL.createObjectURL(result),link=document.createElement('a');
           link.href=url;link.download='autosourcarr-repair-host-setup.zip';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
           status.textContent='Open README.md in the download. Apply its host steps, Save/Redeploy, then check repair tools again.';

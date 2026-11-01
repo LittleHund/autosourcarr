@@ -22,21 +22,42 @@ public interface IRawReconstructionCommands
 /// <summary>The retained Web UI wire routes. Reconstruction requires a real isolation-qualified command owner.</summary>
 public static class SourceRawEndpoints
 {
+    /// <param name="prefix">Where the seven routes live; /api/v1 maps them inside its typed group instead (see <see cref="MapRoutes"/>).</param>
     public static RouteGroupBuilder MapSourceRaws(this IEndpointRouteBuilder endpoints, SourceRawService raws, IRawInstalledSources installed,
-        IRawReconstructionCommands reconstruction, Func<AutoSourcarrSettings> settings, SemaphoreSlim adminLock, BoundedWorkScheduler io, RepairHistory? history = null)
+        IRawReconstructionCommands reconstruction, Func<AutoSourcarrSettings> settings, SemaphoreSlim adminLock, BoundedWorkScheduler io, RepairHistory? history = null,
+        string prefix = "/api/admin/source-maintenance/raws")
     {
         var api = new Handler(raws, installed, reconstruction, adminLock, io, history);
-        var group = endpoints.MapGroup("/api/admin/source-maintenance/raws").AddEndpointFilter(new AdminAuthorizationFilter(settings));
-        group.MapGet("/{package}", (Func<HttpContext, Task<IResult>>)api.StatusAsync);
-        group.MapPost("/{package}/project", (Func<HttpContext, Task<IResult>>)api.ProjectAsync).WithMetadata(ApiJson.BoundedUploadMetadata);
-        group.MapPost("/{package}/request-input", (Func<HttpContext, Task<IResult>>)api.RequestInputAsync);
-        group.MapGet("/{package}/code", (Func<HttpContext, Task<IResult>>)api.CodeAsync);
-        group.MapPost("/{package}/origin", (Func<HttpContext, Task<IResult>>)api.OriginAsync);
-        group.MapPost("/{package}/discover", (Func<HttpContext, Task<IResult>>)api.DiscoverAsync);
-        group.MapPost("/{package}/unavailable", (Func<HttpContext, Task<IResult>>)api.UnavailableAsync);
+        var group = endpoints.MapGroup(prefix).AddEndpointFilter(new AdminAuthorizationFilter(settings));
+        MapRoutes(group, "", () => api, wrap: null);
         return group;
     }
-    private sealed class Handler(SourceRawService raws, IRawInstalledSources installed, IRawReconstructionCommands reconstruction, SemaphoreSlim admin, BoundedWorkScheduler io, RepairHistory? history)
+
+    /// <summary>
+    /// The seven raw-code routes under <paramref name="path"/> of <paramref name="group"/>. <paramref name="handler"/> answers null when
+    /// source-code storage is not wired (the caller's <paramref name="wrap"/> then answers 503); <paramref name="wrap"/> also turns the
+    /// handlers' ApiProblem into the caller's problem shape. Returns the route builders in order: status, project, request-input,
+    /// code, origin, discover, unavailable.
+    /// </summary>
+    internal static RouteHandlerBuilder[] MapRoutes(RouteGroupBuilder group, string path, Func<Handler?> handler,
+        Func<HttpContext, Func<Handler, Task<IResult>>, Task<IResult>>? wrap)
+    {
+        Func<HttpContext, Func<Handler, Task<IResult>>, Task<IResult>> run = wrap
+            ?? ((context, action) => action(handler() ?? throw new ApiProblem(503, "Source-code storage is not available in this host")));
+        Func<HttpContext, Task<IResult>> Route(Func<Handler, HttpContext, Task<IResult>> action) => context => run(context, api => action(api, context));
+        return
+        [
+            group.MapGet(path + "/{package}", Route((api, context) => api.StatusAsync(context))),
+            group.MapPost(path + "/{package}/project", Route((api, context) => api.ProjectAsync(context))).WithMetadata(ApiJson.BoundedUploadMetadata),
+            group.MapPost(path + "/{package}/request-input", Route((api, context) => api.RequestInputAsync(context))),
+            group.MapGet(path + "/{package}/code", Route((api, context) => api.CodeAsync(context))),
+            group.MapPost(path + "/{package}/origin", Route((api, context) => api.OriginAsync(context))),
+            group.MapPost(path + "/{package}/discover", Route((api, context) => api.DiscoverAsync(context))),
+            group.MapPost(path + "/{package}/unavailable", Route((api, context) => api.UnavailableAsync(context))),
+        ];
+    }
+
+    internal sealed class Handler(SourceRawService raws, IRawInstalledSources installed, IRawReconstructionCommands reconstruction, SemaphoreSlim admin, BoundedWorkScheduler io, RepairHistory? history)
     {
         public async Task<IResult> StatusAsync(HttpContext context)
         {

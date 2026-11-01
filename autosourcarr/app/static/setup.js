@@ -5,11 +5,13 @@
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const steps=[['welcome','Your AutoSourcarr','A guided review, one subject at a time.'],['library','Connect your library','Connect to the main Suwayomi for this instance.'],['sources','Sources and access','Choose where extensions come from and how access challenges are handled.'],['matching','Matching and discovery','Choose what runs automatically. Uncertain matches still need review.'],['readers','Reader extensions','Use different addresses for readers inside Docker and outside your network.'],['performance','Speed and capacity','Start with the current limits. Larger limits can overload websites and make requests slower.'],['tools','Translation and tools','Use the included tools or connect an existing translation server.'],['repair','Repair and AI','Choose a provider and connect its account here. API credentials are saved when you finish.'],['access','Access and identity','Keep account credentials separate from reader access.'],['links','Your other apps','Optional browser shortcuts. Each application keeps its own login.'],['review','Review and finish','Only changed values will replace their saved settings.']];
   let snapshot=null,draft={},step=0,required=false,busy=false,completed=false,resolveFirst=null,previousFocus=null,transaction=null,opening=false;
+  // REP-6: automatic orphan repair is the source maintenance watch switch, not a config.json setting; null hides the question.
+  let autoRepair=null,autoRepairSaved=null,autoRepairAsked=false;
   // Setup talks to /api/v1/setup through the generated client; api() keeps auth, timeouts and errors.
   const setupApi=()=>AutoSourcarrApi.createClient({request:(path,options)=>api(path,{timeoutMs:2500,...options,cache:'no-store',noMutationRefresh:true,suppressClientError:true})});
   let cleared=new Set(),accountGeneration=0,accountRevision=0,accountRead=0,accountTimer=null,loginOwned=false,loginOpened=null,accountError='',closing=false;
   let readerGeneration=0,readerChecking=false,readerProblem=false,readerResult=null,readerResultSaved=false;
-  const repair=(path,options={})=>api('/api/admin/source-maintenance'+path,{timeoutMs:45000,...options,cache:'no-store',noMutationRefresh:true,suppressClientError:true});
+  const repair=(path,options={})=>api('/api/v1/source-maintenance'+path,{timeoutMs:45000,...options,cache:'no-store',noMutationRefresh:true,suppressClientError:true});
   const rememberComplete=()=>{try{sessionStorage.setItem('autosourcarr.setup.complete','1');}catch(_){} };
   const requestId=()=>globalThis.crypto?.randomUUID?.()||'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});
   const clone=value=>JSON.parse(JSON.stringify(value));
@@ -119,6 +121,7 @@
     else if(key==='review'){
       const changed=changes();
       content+=`<div class="setupNotice"><strong>${Object.keys(changed).length} settings changed</strong><ul>${snapshot.fields.filter(f=>f.key in changed).map(f=>`<li><strong>${escape(f.label)}</strong>: ${f.kind==='secret'?(cleared.has(f.key)?'saved credential will be removed':'replacement credential supplied'):escape(Array.isArray(changed[f.key])?changed[f.key].join(', '):typeof changed[f.key]==='boolean'?(changed[f.key]?'On':'Off'):changed[f.key]||'Disabled / empty')}</li>`).join('')||'<li>Keep current settings and complete the guide.</li>'}</ul></div><details><summary>Cleanup after setup</summary><p>A short scan removes recognizable obsolete app-generated reports and bytecode. It keeps databases, source profiles, downloads, signing keys, repair backups and unknown files. Host folders outside the container’s mounts cannot be scanned.</p></details><p>Reader address or key changes require a new extension build and reinstall from Status. Existing connections continue with their old settings until restart.</p>${'ADMIN_TOKEN' in changed?'<p class="setupNotice">Keep a copy of the new admin token before finishing. After restart, use it when the app asks you to authenticate.</p>':''}`;
+      if(autoRepair!==null&&autoRepair!==autoRepairSaved)content+=`<p class="setupNotice">Automatic repair of moved sources will be turned ${autoRepair?'on':'off'}.</p>`;
       content+=readerPanel();
     }else{
       const fields=snapshot.fields.filter(f=>f.step===key&&(key!=='repair'||(draft.REPAIR_AI_PROVIDER!=='chatgpt'&&(f.key!=='REPAIR_AI_PROTOCOL'||draft.REPAIR_AI_PROVIDER==='custom')&&(f.key!=='REPAIR_AI_WORKSPACE_ID'||draft.REPAIR_AI_PROVIDER==='claude'||draft.REPAIR_AI_PROVIDER==='custom'&&draft.REPAIR_AI_PROTOCOL==='anthropic'))||['REPAIR_AI_PROVIDER','REPAIR_AI_BROWSER_URL'].includes(f.key)));
@@ -131,6 +134,9 @@
       if(key==='sources')content+=link('https://keiyoushi.github.io/docs/guides/getting-started','Keiyoushi setup guide');
       if(key==='matching')content+=link('https://comicvine.gamespot.com/api/','Comic Vine account and API key');
       if(key==='tools')content+=link('https://libretranslate.com','LibreTranslate')+'<p class="muted">FlareSolverr, the reader builder and repair tools are included in the integrated image. Their internal addresses and tokens are managed automatically.</p>';
+      // Asked only when the Repair step is first drawn; the step is drawn again once the answer is in.
+      if(key==='repair'&&!autoRepairAsked){autoRepairAsked=true;const shown=step;api('/api/v1/source-maintenance',{timeoutMs:2500,cache:'no-store',noMutationRefresh:true,suppressClientError:true}).then(maintenance=>{if(autoRepairSaved!==null||maintenance?.service?.state!=='ready'||!snapshot)return;autoRepairSaved=!!maintenance.watch?.enabled;autoRepair=autoRepairSaved;if(step===shown&&!$('#setupModal').hidden)render();}).catch(()=>{});}
+      if(key==='repair'&&autoRepair!==null)content+=`<div class="setupField setupToggle"><label for="setupAutoRepair">Repair moved sources automatically</label><input id="setupAutoRepair" type="checkbox" aria-describedby="setupAutoRepair-description" ${autoRepair?'checked':''}><p class="muted" id="setupAutoRepair-description">Once a day, installed sources that fail their check and whose website now redirects to a new address are moved to it and checked again; a repair that does not pass is rolled back. At most five sources a day, each at most once a week. Change it later in Sources → Repair.</p></div>`;
       if(key==='repair'){
         if(draft.REPAIR_AI_PROVIDER==='chatgpt') content+=accountPanel()+link('https://developers.openai.com/codex/auth/','Account sign-in help');
         else {
@@ -157,6 +163,7 @@
       });
     });
     $('#setupReaderCheck')?.addEventListener('click',()=>checkReaderDraft());
+    $('#setupAutoRepair')?.addEventListener('change',event=>{if(!busy&&!closing&&!completed)autoRepair=event.target.checked;});
     updateReaderBuildStatus();
     if(key==='review'&&rendered===readerGeneration)checkReaderDraft();
     $('#setup-REPAIR_AI_PROVIDER')?.addEventListener('change',()=>{
@@ -183,7 +190,7 @@
     if(closing||busy)return false;closing=true;accountGeneration++;clearTimeout(accountTimer);invalidateReaderPreflight();
     if(loginOwned){const owned=loginOwned;loginOwned=false;try{await repair('/control/cancel-login',{method:'POST',body:JSON.stringify({operation_id:owned})});}catch(_){toast('Sign-in cancellation could not be confirmed. Check Source repairs before starting another login.');}}
     $('#setupModal').hidden=true;syncModalScrollLock();$('#setupBody').innerHTML='';error('');draft={};snapshot=null;transaction=null;completed=false;
-    cleared.clear();closing=false;try{sessionStorage.removeItem('autosourcarr.setup.accounts');}catch(_){}
+    cleared.clear();autoRepair=autoRepairSaved=null;closing=false;try{sessionStorage.removeItem('autosourcarr.setup.accounts');}catch(_){}
     if(resolveFirst){resolveFirst();resolveFirst=null;}previousFocus?.focus();return true;
   }
   function cancel(){
@@ -198,6 +205,7 @@
     opening=true;
     try{
       const data=await setupApi().getSetup();
+      autoRepair=autoRepairSaved=null;autoRepairAsked=false;
       let resume=false;try{resume=sessionStorage.getItem('autosourcarr.setup.accounts')==='1';}catch(_){}
       if(first&&data.completed&&!resume){rememberComplete();return;}
       snapshot=data;required=first&&!data.completed;draft=Object.fromEntries(data.fields.map(f=>[f.key,clone(f.value)]));
@@ -215,6 +223,11 @@
     invalidateReaderPreflight();busy=true;$('#setupNext').disabled=true;$('#setupBack').disabled=true;$('#setupCancel').disabled=true;
     try{
       const result=await setupApi().finishSetup({revision:snapshot.revision,transaction,changes:changes()},{timeoutMs:15000});
+      if(autoRepair!==null&&autoRepair!==autoRepairSaved){
+        const enabled=autoRepair;
+        try{await api('/api/v1/source-maintenance/watch',{method:'PUT',body:JSON.stringify({enabled}),timeoutMs:15000,noMutationRefresh:true,suppressClientError:true});autoRepairSaved=enabled;}
+        catch(e){toast('Automatic repair of moved sources could not be turned '+(enabled?'on':'off')+': '+e.message+' Change it in Sources → Repair.');}
+      }
       const links=Object.fromEntries(snapshot.fields.filter(f=>f.key.endsWith('_BROWSER_URL')).map(f=>[f.key,draft[f.key]]));
       completed=true;required=false;draft={};snapshot=null;rememberComplete();$('#setupReload').hidden=true;
       if(typeof settingsState!=='undefined'){settingsState.data=null;settingsState.dirty=false;settingsState.editRevision++;}

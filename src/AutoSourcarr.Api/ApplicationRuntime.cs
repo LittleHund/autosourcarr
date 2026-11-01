@@ -49,6 +49,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Sources.Configuration.SourceConfigurationStore? _sourceConfiguration;
     private AutoSourcarr.Core.Sources.Controls.SourcePreferenceService? _sourcePreferences;
     private Task? _healthMonitor;
+    private AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher? _autoRepair;
+    private Task? _autoRepairLoop;
     private readonly CancellationTokenSource _healthStop = new();
     internal AutoSourcarr.Api.Security.AccessControlServices? Access => _access;
     private CatalogueRuntime? _catalogue;
@@ -130,6 +132,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         foreach (var key in new[] { "JAVA_TOOL_OPTIONS", "BIND_IP", "BIND_PORT", "AUTH_MODE", "BASIC_AUTH_ENABLED", "WEB_UI_ENABLED",
             "INITIAL_OPEN_IN_BROWSER_ENABLED", "AUTOSOURCARR_SOURCE_UA_REVISION", "AUTOSOURCARR_SOURCE_UA_STATUS" })
             result.Remove(key);
+        result["SOURCE_MIN_INTERVAL_MS"] = Math.Clamp(settings.SourceMinIntervalMs, 0, 60_000).ToString(System.Globalization.CultureInfo.InvariantCulture);
         return result;
     }
 
@@ -212,8 +215,25 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._repositories = new(new CanonicalConfiguration(startup.ConfigurationRoot));
             owner._publicFetcher = new();
             owner._repositoryPreview = new(owner._publicFetcher);
-            owner._health = new SourceHealthCoordinator(new SourceHealthStore(owner.Database, owner.Privacy), owner._source.Client, owner.Io, owner.Lanes,
-                owner.Tasks, new NoRepairObservations(), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy);
+            var maintenanceRoot = Path.Combine(owner._dataDirectory!, "source-maintenance");
+            var healthStore = new SourceHealthStore(owner.Database, owner.Privacy);
+            var domainRepair = new AutoSourcarr.Core.Repair.Migration.DomainRepair(maintenanceRoot, owner._source.Client, owner._admin, owner._publicFetcher);
+            var orphans = new AutoSourcarr.Core.Sources.Inventory.SourceOrphans(maintenanceRoot, owner._source.Client, owner._publicFetcher!,
+                SourceInventoryServices.BundledSeed, scrub: owner.Privacy.Text);
+            var maintenance = new AutoSourcarr.Core.Sources.Inventory.SourceMaintenanceState(maintenanceRoot, startup.ConfigurationRoot);
+            owner._health = new SourceHealthCoordinator(healthStore, owner._source.Client, owner.Io, owner.Lanes,
+                owner.Tasks, new NoRepairObservations(), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
+                onWorking: package => domainRepair.QueueKeepLastWorking(package, error => owner.Errors.Record("Source repair",
+                    "Keeping the last working jar of " + package + " failed: " + error.Message, "source-last-working|" + error.GetType().Name)));
+            if (useHost)
+            {
+                owner._autoRepair = AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher.Create(maintenanceRoot, maintenance, healthStore, orphans, domainRepair,
+                    owner._publicFetcher, ready: () => owner._source.Cached().Ready,
+                    record: summary => owner.Logs.Record("Source repair", "Automatic repair pass: " + (summary["message"]?.GetValue<string>() ?? "")));
+                var watcher = owner._autoRepair;
+                owner._autoRepairLoop = Task.Run(() => watcher.RunAsync(error => owner.Errors.Record("Source repair", error.Message,
+                    "source-auto-repair|" + error.GetType().Name), owner._healthStop.Token));
+            }
             owner._healthMonitor = Task.Run(() => owner._health.RunMonitorAsync(error => owner.Errors.Record("Source health", error.Message, "source-health-monitor"),
                 owner._healthStop.Token));
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
@@ -226,17 +246,19 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 Tasks = owner.Tasks, Jobs = owner.Jobs, Events = owner.Events, Errors = owner.Errors, Access = owner._access,
                 SourceInventory = new SourceInventoryServices
                 {
-                    Orphans = new AutoSourcarr.Core.Sources.Inventory.SourceOrphans(Path.Combine(owner._dataDirectory!, "source-maintenance"),
-                        owner._source.Client, owner._publicFetcher!, SourceInventoryServices.BundledSeed, scrub: owner.Privacy.Text),
-                    Maintenance = new AutoSourcarr.Core.Sources.Inventory.SourceMaintenanceState(Path.Combine(owner._dataDirectory!, "source-maintenance"), startup.ConfigurationRoot),
+                    Orphans = orphans, Maintenance = maintenance, AutoRepair = owner._autoRepair,
                     Client = owner._source.Client, AdminLock = owner._admin,
                     RecordError = error => owner.Errors.Record("Source orphans", error.Message, "source-orphans|" + error.GetType().Name)
                 },
                 SourceRepair = new SourceRepairServices
                 {
-                    Domain = new AutoSourcarr.Core.Repair.Migration.DomainRepair(Path.Combine(owner._dataDirectory!, "source-maintenance"),
-                        owner._source.Client, owner._admin, owner._publicFetcher),
+                    Domain = domainRepair,
                     RecordError = error => owner.Errors.Record("Source repair", error.Message, "source-repair|" + error.GetType().Name)
+                },
+                Repair = new RepairV1Services
+                {
+                    MaintenanceRoot = maintenanceRoot,
+                    ReadInstalledJar = (package, token) => owner._source.Client.ReadExtensionJarAsync(package, token),
                 },
                 Sources = new SourceServices
                 {
@@ -502,6 +524,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         await Attempt("Source health monitor stop", () => _healthStop.CancelAsync()).ConfigureAwait(false);
         if (_healthMonitor is not null)
             await Attempt("Source health monitor", async () => { try { await _healthMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
+        if (_autoRepairLoop is not null)
+            await Attempt("Automatic source repair", async () => { try { await _autoRepairLoop.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
         if (_health is not null) await Attempt("Source health", () => _health.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_sourcePreferences is not null) await Attempt("Source preferences", () => _sourcePreferences.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_publicFetcher is not null) await Attempt("Public fetcher", () => _publicFetcher.DisposeAsync().AsTask()).ConfigureAwait(false);

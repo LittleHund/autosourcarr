@@ -9,6 +9,9 @@
   const aiVisible=()=>document.getElementById('sources')?.classList.contains('active')&&panel.classList.contains('active')&&!document.hidden;
   const workspaceVisible=()=>byId('tasks')?.classList.contains('active')&&byId('tasksRepairsPanel')?.classList.contains('active')&&!document.hidden;
   const visible=()=>aiVisible()||workspaceVisible();
+  // Repairs run inside this instance; the retired external worker made configured/reachable the readiness signal.
+  const inApp=data=>data?.mode==='integrated'&&data.service?.state==='ready'&&!data.configured;
+  const ready=data=>inApp(data)||!!data.configured&&data.reachable!==false;
   async function load(){
     if(loading||!visible())return;
     loading=true;clearTimeout(timer);const own=++generation,setupOwn=setupRevision,accountAtStart=controlPaintRevision;
@@ -17,19 +20,19 @@
       if(own!==generation||setupOwn!==setupRevision)return;
       const status=byId('sourceRepairStatus');
       storageError=data.storage_error||'';
-      byId('repairAIStatus').textContent=!data.configured||data.reachable===false?readinessMessage(data):
+      byId('repairAIStatus').textContent=inApp(data)?data.service.message||'Domain-move repairs run in this instance.':!ready(data)?readinessMessage(data):
         `${data.ai_provider?.provider&&data.ai_provider.provider!=='chatgpt'?data.ai_provider.provider+' · '+data.ai_provider.model:data.auth_saved?'Saved Codex login found':'Sign in through AI setup and account'}`;
-      status.textContent=storageError||(!data.configured||data.reachable===false?readinessMessage(data):`${data.ai_provider?.provider&&data.ai_provider.provider!=='chatgpt'?data.ai_provider.provider+' · '+data.ai_provider.model:data.auth_saved?'Saved Codex login found':'Sign in through Setup and account'} · Repair process reachable`);
-      byId('sourceRepairFormSection').hidden=!data.configured||data.reachable===false;
-      if(!data.configured||data.reachable===false)byId('repairSetupPanel').open=true;
-      byId('sourceRepairWatch').checked=!!data.watch?.enabled;byId('sourceRepairWatch').disabled=!data.configured||data.reachable===false;
+      status.textContent=storageError||(inApp(data)?data.service.message||'Domain-move repairs run in this instance.':!ready(data)?readinessMessage(data):`${data.ai_provider?.provider&&data.ai_provider.provider!=='chatgpt'?data.ai_provider.provider+' · '+data.ai_provider.model:data.auth_saved?'Saved Codex login found':'Sign in through Setup and account'} · Repair process reachable`);
+      byId('sourceRepairFormSection').hidden=!ready(data);
+      if(!ready(data))byId('repairSetupPanel').open=true;
+      byId('sourceRepairWatch').checked=!!data.watch?.enabled;byId('sourceRepairWatch').disabled=!(data.configured&&data.reachable!==false||data.service?.state==='ready');
       await loadSetup(data,accountAtStart);
       byId('rollbackSourceRepair').hidden=data.operation?.state!=='installed'||!!data.operation?.raw_first;
-      byId('sourceRepairWatchStatus').textContent=data.watch?.message||'At most one new source per day and one attempt per source each week. New validated repairs install automatically; uncertain website moves wait for review.';
+      byId('sourceRepairWatchStatus').textContent=data.watch?.message||'At most five sources a day, each at most once a week. A repair that fails its content check is rolled back.';
       knownIsolation=knownIsolation||data.isolation;
       byId('sourceRepairForm').querySelector('button[type=submit]').disabled=repairSubmitting||repairBlocked()||!!storageError;
       if(!storageError&&repairBlocked())status.textContent=knownIsolation.message+' Expand Source repair readiness below.';
-      if(workspaceVisible()&&data.configured&&data.reachable!==false&&!installedLoaded){
+      if(workspaceVisible()&&ready(data)&&!installedLoaded){
         const inventory=await api('/api/v1/source-maintenance/installed',{timeoutMs:25000,suppressClientError:true});
         const select=byId('sourceRepairPackage'),previous=select.value;select.replaceChildren();
         for(const row of inventory.items||[]){const option=document.createElement('option');option.value=row.pkgName;if(option.dataset)option.dataset.originalVersion=String(row.versionName||'');option.textContent=`${row.name} · ${row.versionName}${row.isObsolete?' · missing from catalog':''}`;select.append(option);}
@@ -44,7 +47,7 @@
   let controlBusy=false,controlRequest=false,setupRevision=0,controlOperation=null,loginAttempt=null,loginOpened=null,controlError='';
   let controlTimer=null,controlRead=null,controlPaintRevision=0,controlMutation=0,controlActionType='';
   const controlTarget=()=>byId(controlActionType==='prepare'?'repairToolStatus':'repairControlStatus');
-  const secretApi=(path,options={})=>api('/api/admin/source-maintenance'+path,{suppressClientError:true,timeoutMs:25000,...options});
+  const secretApi=(path,options={})=>api('/api/v1/source-maintenance'+path,{suppressClientError:true,timeoutMs:25000,...options});
   function clearCode(){byId('repairDeviceLogin').hidden=true;byId('repairDeviceCode').textContent='';byId('repairDeviceExpiry').textContent='';}
   function invalidateControlRead(){clearTimeout(controlTimer);controlRead?.controller.abort();controlRead=null;}
   function scheduleControl(delay=2000){clearTimeout(controlTimer);if(visible()&&!controlRequest)controlTimer=setTimeout(loadControl,delay);}
@@ -118,10 +121,10 @@
   async function loadSetup(data,accountAtStart){
     if(controlRequest)return;
     aiProvider=data.ai_provider?.provider||'chatgpt';
-    if(data.configured&&data.reachable!==false&&data.web_control){
+    if(ready(data)&&(data.web_control||inApp(data))){
       await loadControl();
     }else if(accountAtStart===controlPaintRevision){
-      unavailableControls(data.configured&&data.reachable!==false?'The running repair process needs this release’s bundled tools. Rebuild and restart this AutoSourcarr image.':readinessMessage(data));
+      unavailableControls(ready(data)?'The running repair process needs this release’s bundled tools. Rebuild and restart this AutoSourcarr image.':readinessMessage(data));
     }
   }
   async function accountAction(action){
@@ -205,7 +208,7 @@
     event.preventDefault();if(repairSubmitting||repairBlocked()||storageError)return;
     const submit=event.target.querySelector('button[type=submit]');repairSubmitting=true;submit.disabled=true;
     try{
-      const job=await api('/api/admin/source-maintenance/jobs',{method:'POST',timeoutMs:45000,body:JSON.stringify({pkg_name:byId('sourceRepairPackage').value,module:byId('sourceRepairModule').value.trim(),revision:byId('sourceRepairRevision').value.trim(),issue:byId('sourceRepairIssue').value.trim()})});
+      const job=await api('/api/v1/source-maintenance/jobs',{method:'POST',timeoutMs:45000,body:JSON.stringify({pkg_name:byId('sourceRepairPackage').value,module:byId('sourceRepairModule').value.trim(),revision:byId('sourceRepairRevision').value.trim(),issue:byId('sourceRepairIssue').value.trim()})});
       await window.openSourceRepairTask(job.id);
     }catch(e){toast(e.message);}finally{repairSubmitting=false;submit.disabled=repairBlocked()||!!storageError;}
   });

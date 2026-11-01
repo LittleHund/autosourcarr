@@ -33,6 +33,8 @@ AutoSourcarr.Tests.Api.AccessControlTests.Register(suite);
 AutoSourcarr.Tests.Repair.ApkInspectionTests.Register(suite);
 AutoSourcarr.Tests.Repair.DomainMigrationTests.Register(suite);
 AutoSourcarr.Tests.EgressProxyTests.Register(suite);
+AutoSourcarr.Tests.Repair.AutoRepairWatcherTests.Register(suite);
+AutoSourcarr.Tests.Api.RepairV1EndpointsTests.Register(suite);
 AutoSourcarr.Tests.ExtensionIndexTests.Register(suite);
 AutoSourcarr.Tests.SourceOrphanTests.Register(suite);
 SchemaStampTests.Register(suite);

@@ -3,7 +3,8 @@
   const panel=document.getElementById('tasks');if(!panel)return;
   const byId=id=>document.getElementById(id);
   const visible=()=>panel.classList.contains('active')&&byId('tasksRepairsPanel')?.classList.contains('active')&&!document.hidden;
-  const valid=id=>/^[0-9a-f]{32}$/.test(String(id||''));
+  // Repair job ids are task ids (12 hex) since repairs run in the app; retained 0.4.x ids have 32.
+  const valid=id=>/^[0-9a-f]{12}(?:[0-9a-f]{20})?$/.test(String(id||''));
   let generation=0,openGeneration=0,read=null,mutation=false;
   function select(section,internal=false){
     const value=section==='repairs'?'repairs':'general';if(!internal)++openGeneration;
@@ -23,7 +24,7 @@
     details.scrollIntoView?.({block:'nearest'});
     const current=()=>own===generation&&details.open&&visible();
     try{
-      const data=await api('/api/admin/source-maintenance/jobs/'+id,{signal:controller.signal,suppressClientError:true});
+      const data=await api('/api/v1/source-maintenance/jobs/'+id,{signal:controller.signal,suppressClientError:true});
       if(current())evidence.textContent=JSON.stringify(data,null,2);
     }catch(error){if(current())evidence.textContent='Unable to load repair evidence: '+error.message;}
     finally{if(read===controller)read=null;}
@@ -48,7 +49,7 @@
     try{
       if(verb==='inputs'||verb==='code'||verb==='original-code'){
         const code=verb!=='inputs';
-        const blob=await api('/api/admin/source-maintenance/jobs/'+id+'/'+(code?'code?candidate='+String(verb==='code'):'inputs'),{responseType:'blob',cache:'no-store',timeoutMs:60000,suppressClientError:true});
+        const blob=await api('/api/v1/source-maintenance/jobs/'+id+'/'+(code?'code?candidate='+String(verb==='code'):'inputs'),{responseType:'blob',cache:'no-store',timeoutMs:60000,suppressClientError:true});
         if(!blob||blob.type!=='application/zip'||!blob.size||blob.size>32*1024*1024)throw new Error('No valid source input ZIP was returned. Refresh Tasks and retry.');
         downloadBlob(blob,'AutoSourcarr-'+(code?'source-code':'repair-inputs')+'-'+id+'.zip');
         toast(code?'Downloaded retained source code.':'Downloaded the saved APK/JAR inputs. Account, cookies and library files are excluded.');return;
@@ -58,7 +59,7 @@
         if(verb==='retry'){feedback=prompt('What still fails? A public title or error helps the next attempt. Omit passwords, tokens and cookies.','');if(feedback===null)return;}
         const revision=Number(button.dataset.repairRevision),hash=button.dataset.repairHash;
         if(!Number.isSafeInteger(revision)||!/^[0-9a-f]{64}$/.test(hash||''))throw new Error('Refresh this installed repair before acting.');
-        await api('/api/admin/source-maintenance/jobs/'+id+'/feedback',{method:'POST',body:JSON.stringify({action:verb,revision,installed_sha256:hash,feedback}),timeoutMs:45000,noMutationRefresh:true});
+        await api('/api/v1/source-maintenance/jobs/'+id+'/feedback',{method:'POST',body:JSON.stringify({action:verb,revision,installed_sha256:hash,feedback}),timeoutMs:45000,noMutationRefresh:true});
         toast(verb==='fixed'?'Marked as the last working version. Revert remains available until a later fix starts.':verb==='revert'?'Revert queued; restoring prior code, binary and working confirmation.':'Remaining failure recorded; a new bounded repair was requested.');
         await loadTasks();return;
       }
@@ -66,7 +67,7 @@
       if(verb==='install'){
         let message='Install this validated source? The source engine restarts briefly. Any existing installed version is retained for recovery.';
         if(Number(button.dataset?.repairAddressCount)>0){
-          const job=await api('/api/admin/source-maintenance/jobs/'+id,{suppressClientError:true});
+          const job=await api('/api/v1/source-maintenance/jobs/'+id,{suppressClientError:true});
           if(job.id!==id||job.state!=='ready'||!Array.isArray(job.address_migrations)||!job.address_migrations.length||!/^[0-9a-f]{64}$/.test(job.candidate_sha256||''))throw new Error('Address review changed; refresh this repair before installing.');
           const pairs=[...new Set(job.address_migrations.map(row=>new URL(row.previous_url).origin+' → '+new URL(row.new_url).origin))];
           if(pairs.length>8)throw new Error('Too many website address changes for one review; review this package separately.');
@@ -77,7 +78,7 @@
         if(!confirm(message))return;
       }
       if(verb==='discard'&&!confirm('Discard the validated repair for '+(pkg||'this source')+'? Its candidate, conversation and test evidence are retained. Start a new repair if you reconsider.'))return;
-      await api('/api/admin/source-maintenance/jobs/'+id+'/'+verb,{method:'POST',...(review?{body:JSON.stringify(review)}:{}),timeoutMs:25000,noMutationRefresh:true});
+      await api('/api/v1/source-maintenance/jobs/'+id+'/'+verb,{method:'POST',...(review?{body:JSON.stringify(review)}:{}),timeoutMs:25000,noMutationRefresh:true});
       toast(verb==='cancel'?'Repair cancellation requested; waiting for cleanup.':verb==='install'?'Validated repair installation queued.':'Validated repair discarded.');
       await loadTasks();
     }catch(error){toast(error.message);}
@@ -123,6 +124,8 @@
     },
     metadata(task){
       if(task.kind==='source-raw-input')return 'Installed source '+(task.source_version||'')+' · original raw code required';
+      // In-app repair jobs (domain move, rollback, automatic repair) carry their kind, package and report outcome.
+      if(task.repair_kind)return [{domain:'Website move repair',rollback:'Restore kept working jar',auto:'Automatic website move repair'}[task.repair_kind]||'Source repair',task.package||'',task.repair_outcome||''].filter(Boolean).join(' · ');
       const when=stamp=>stamp?new Date(stamp*1000).toLocaleString():'';
       return [!task.repair_version||task.repair_version==='unknown'?'Retained repair · version not recorded':'Started in AutoSourcarr '+task.repair_version,
               task.repair_installed_at?'Installed '+when(task.repair_installed_at):'',task.repair_working_at?'Last confirmed working '+when(task.repair_working_at):'',

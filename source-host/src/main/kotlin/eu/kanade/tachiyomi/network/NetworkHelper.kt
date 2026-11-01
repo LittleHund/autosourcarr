@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.onEach
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import autosourcarr.host.HostPacingInterceptor
 import autosourcarr.host.SourceRegistry
 import java.net.CookieHandler
 import java.net.CookieManager
@@ -108,6 +109,10 @@ class NetworkHelper(
                 }
             builder.addNetworkInterceptor(httpLoggingInterceptor)
             // }
+
+            // AutoSourcarr SRC-9: per-host minimum interval between source requests (SOURCE_MIN_INTERVAL_MS).
+            // A network interceptor, so cache hits do not wait; extension clients built with newBuilder() keep it.
+            builder.addNetworkInterceptor(HostPacingInterceptor())
 
             builder.addInterceptor(
                 CloudflareInterceptor(setUserAgent = { userAgent.value = it }),

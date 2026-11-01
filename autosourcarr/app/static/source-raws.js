@@ -3,7 +3,7 @@
   const panel=document.getElementById('sourceRawInput');if(!panel)return;
   const get=id=>document.getElementById(id),status=get('sourceRawStatus');
   let selected=null,jobId=null,generation=0,busy=false,read=null;
-  const path=pkg=>'/api/admin/source-maintenance/raws/'+encodeURIComponent(pkg);
+  const path=pkg=>'/api/v1/source-maintenance/raws/'+encodeURIComponent(pkg);
   const buttons=['provideSourceRawProject','fetchSourceRawProject','sourceRawsUnavailable','replaceSourceRawProject','downloadSourceRawProject','discoverSourceRawProject'];
   function paint(row){
     selected=row;status.textContent=row.package+' · '+row.version+' · '+row.state+' · '+row.message+(row.visibility?' · '+row.visibility+' code':'');

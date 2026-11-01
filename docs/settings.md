@@ -198,6 +198,7 @@ Precedence, lowest first: built-in default, `config.json`, Compose environment v
 | `HTTP_TRANSPORT_RETRIES` | integer | `1` | How often a request is retried after a connection error (not after an HTTP error). |  |  |
 | `SOURCE_COOLDOWN_SECONDS` | number | `120` | How long a failing source pauses, in seconds. |  |  |
 | `SOURCE_FAILURE_THRESHOLD` | integer | `3` | Failures in a row after which a source pauses. |  |  |
+| `SOURCE_MIN_INTERVAL_MS` | integer | `250` | Least time between two requests the source host sends to the same website, in milliseconds. Keeps traffic paced so sites do not rate-limit or block you; 0 turns pacing off. Applies after the source host restarts. |  |  |
 | `SOURCE_REQUEST_TIMEOUT` | number | `45` | Maximum upstream request time. Raising this cannot repair an unavailable website. |  | performance |
 | `SQLITE_BUSY_TIMEOUT_MS` | integer | `3000` | How long a database write waits for a lock before failing, in milliseconds. |  |  |
 | `SQLITE_CACHE_MB` | integer | `64` | Memory SQLite may use as page cache, in MB. |  |  |

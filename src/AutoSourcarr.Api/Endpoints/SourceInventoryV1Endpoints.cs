@@ -19,6 +19,8 @@ public sealed class SourceInventoryServices
     public required SourceOrphans Orphans { get; init; }
     /// <summary>The daily-check switch and the last repair promotion (source_maintenance.py inventory part).</summary>
     public required SourceMaintenanceState Maintenance { get; init; }
+    /// <summary>Daily automatic repair of moved sources (REP-6); null when the source host does not run here.</summary>
+    public AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher? AutoRepair { get; init; }
     public required SuwayomiClient Client { get; init; }
     public required SemaphoreSlim AdminLock { get; init; }
     /// <summary>Original APK evidence for repairs; null answers 409 until the installed-source reader is wired.</summary>
@@ -180,15 +182,34 @@ internal static class SourceInventoryV1Endpoints
                 if (services.SourceInventory is not { } inventory) return Unavailable();
                 var body = await ApiJson.ReadObjectAsync(context.Request).ConfigureAwait(false);
                 if (body["enabled"] is not JsonValue value || !value.TryGetValue<bool>(out var enabled)) return Problem(400, "Expected enabled boolean");
-                if (enabled && !WorkerConfigured()) return Problem(409, "Configure the worker first");
-                return Answer(inventory.Maintenance.SetWatch(enabled));
+                if (enabled && !WorkerConfigured() && services.SourceRepair is null) return Problem(409, "Automatic source repair is not available in this mode.");
+                var saved = inventory.Maintenance.SetWatch(enabled);
+                if (enabled) inventory.AutoRepair?.Trigger();
+                return Answer(saved);
             })))
             .Accepts<JsonObject>("application/json")
             .WithName("setSourceMaintenanceWatch")
-            .WithSummary("Turn the daily maintained-source check on or off (requires a configured repair worker to turn on).")
+            .WithSummary("Turn automatic repair of moved sources on or off (domain repairs need no worker).")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
+
+        group.MapPost("/source-maintenance/auto-repair/run", (Func<IResult>)(() =>
+            {
+                if (services.SourceInventory?.AutoRepair is not { } watcher) return Unavailable();
+                watcher.Trigger();
+                return Answer(new JsonObject { ["queued"] = true }, 202);
+            }))
+            .WithName("runSourceAutoRepair")
+            .WithSummary("Start an automatic repair pass of moved sources now (REP-6).")
+            .Produces<JsonObject>(StatusCodes.Status202Accepted);
+
+        group.MapGet("/source-maintenance/auto-repair", (Func<IResult>)(() =>
+                services.SourceInventory?.AutoRepair is { } watcher
+                    ? Answer(new JsonObject { ["running"] = watcher.Running, ["state"] = watcher.State() }) : Unavailable()))
+            .WithName("getSourceAutoRepair")
+            .WithSummary("Last automatic repair pass and the attempts per package.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapGet("/source-maintenance/installed", (Func<HttpContext, Task<IResult>>)(context => Guard(async () =>
             {
@@ -203,18 +224,38 @@ internal static class SourceInventoryV1Endpoints
             .WithSummary("Installed source extensions with their package, version, repository and source identities.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
-        group.MapPost("/source-maintenance/rollback", (Func<HttpContext, IResult>)(_ =>
+        group.MapPost("/source-maintenance/rollback", (Func<HttpContext, Task<IResult>>)(context => Guard(async () =>
             {
                 if (services.SourceInventory is not { } inventory) return Unavailable();
                 if (!Integrated()) return Problem(409, "Integrated engine required");
-                var operation = inventory.Maintenance.Operation();
-                if (operation.ContainsKey("history_plan")) return Problem(409, "Use this installed repair’s Revert button in Tasks → Repairs");
-                if (operation["state"] is not JsonValue state || !state.TryGetValue<string>(out var name) || name != "installed")
-                    return Problem(409, "There is no installed repair to roll back");
-                return Problem(409, "Restoring the previous source package arrives with the repair runner (phase 6e). The installed repair and its backup are unchanged.");
-            }))
+                var body = context.Request.ContentLength is null or 0 && !context.Request.Headers.ContainsKey("Transfer-Encoding")
+                    ? new JsonObject() : await ApiJson.ReadObjectAsync(context.Request).ConfigureAwait(false);
+                string package;
+                if (body["pkg_name"] is not null)
+                {
+                    package = body["pkg_name"] is JsonValue named && named.TryGetValue<string>(out var text) ? text.Trim() : "";
+                    if (!AutoSourcarr.Core.Repair.Migration.DomainRepair.IsPackageName(package)) return Problem(400, "pkg_name must be a plain extension package name");
+                }
+                else
+                {
+                    // 0.4.x sent no body: the last installed repair record names the package.
+                    var operation = inventory.Maintenance.Operation();
+                    if (operation.ContainsKey("history_plan")) return Problem(409, "Use this installed repair’s Revert button in Tasks → Repairs");
+                    if (operation["state"] is not JsonValue state || !state.TryGetValue<string>(out var name) || name != "installed")
+                        return Problem(409, "There is no installed repair to roll back; name the package (pkg_name)");
+                    package = (operation["extension"] as JsonObject)?["pkgName"]?.ToString() ?? operation["pkg_name"]?.ToString() ?? "";
+                    if (!AutoSourcarr.Core.Repair.Migration.DomainRepair.IsPackageName(package))
+                        return Problem(409, "The last repair record names no package; name the package (pkg_name)");
+                }
+                var handle = RepairV1Endpoints.QueueRollback(services, package, "manual");
+                return Answer(new JsonObject { ["queued"] = true, ["task_id"] = handle.Id, ["merged"] = handle.Merged, ["package"] = package }, 202);
+            })))
+            .Accepts<JsonObject>(true, "application/json")
             .WithName("rollbackSourceRepair")
-            .WithSummary("Restore the package installed before the last repair (arrives with the repair runner; answers 409 until then).")
+            .WithSummary("Install the working jar kept before the last repair of a package again, as a job (body pkg_name; without a body, the package of the last installed repair record).")
+            .Produces<JsonObject>(StatusCodes.Status202Accepted)
+            .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 
         group.MapPost("/source-maintenance/original-apk/{pkgName}", (Func<HttpContext, Task<IResult>>)(context => Guard(async () =>
@@ -230,7 +271,7 @@ internal static class SourceInventoryV1Endpoints
                 var data = await ApiJson.ReadUploadAsync(context.Request, SourceOrphans.MaximumPackage, "Original APK exceeds 32 MiB",
                     "The original APK upload did not finish in time; choose the file again").ConfigureAwait(false);
                 if (inventory.Baselines is not { } baselines)
-                    return Problem(409, "Original APK evidence needs the installed-source reader, which arrives with the repair runner (phase 6e). Nothing was saved.");
+                    return Problem(409, "Original APK evidence needs the installed-source reader (SourceBaselineStore), which this host does not run. Nothing was saved.");
                 await inventory.AdminLock.WaitAsync(context.RequestAborted).ConfigureAwait(false);
                 try
                 {
