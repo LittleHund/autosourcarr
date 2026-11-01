@@ -141,7 +141,9 @@ public sealed class EgressProxy : IAsyncDisposable
                 await CloseGracefullyAsync(client, lifetime.Token).ConfigureAwait(false);
             }
         }
-        catch (Exception error) when (error is IOException or SocketException or OperationCanceledException or ObjectDisposedException or InvalidDataException) { }
+        // InvalidOperationException: the peer is already gone when the half-close starts (no stream on a closed socket).
+        catch (Exception error) when (error is IOException or SocketException or OperationCanceledException or ObjectDisposedException or InvalidDataException
+            or InvalidOperationException) { }
         finally { _slots.Release(); }
     }
 
@@ -149,6 +151,7 @@ public sealed class EgressProxy : IAsyncDisposable
     /// before the client reads it: half-close, then drain briefly.</summary>
     private static async Task CloseGracefullyAsync(TcpClient client, CancellationToken token)
     {
+        if (!client.Connected) return;
         client.Client.Shutdown(SocketShutdown.Send);
         using var drain = CancellationTokenSource.CreateLinkedTokenSource(token);
         drain.CancelAfter(TimeSpan.FromSeconds(2));
