@@ -1,7 +1,7 @@
-sha=57059a084007f293d7074877bdfa0bdf570ff0e0
+sha=b4ff785c3e5a44fc42e3f417bbddef01008d737b
 restore=0
 build=0
-test=1
+test=0
 openapi=0
 client=0
 source_host_build=0
@@ -10,4 +10,3 @@ source_host_csharp=0
 repair_runner=exit=0
 kavita=0
 reader_extension_build=1
-duplicate_user_set=124

@@ -1,22 +1,65 @@
 ::warning::UNSIGNED-FOR-RELEASE: AUTOSOURCARR_EXT_KEYSTORE_B64 is not set; the reader extension is signed with a throwaway debug key.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build.gradle.kts:26:22: Unresolved reference 'security'.
-e: file:///home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build.gradle.kts:27:25: Cannot infer type for type parameter 'V'. Specify it explicitly.
 
 FAILURE: Build failed with an exception.
 
-* Where:
-Build file '/home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build.gradle.kts' line: 26
-
 * What went wrong:
-Script compilation errors:
-
-  Line 26:     val bytes = java.security.MessageDigest.getInstance("MD5").digest("${slotName(slot).lowercase()}/all/1".toByteArray())
-                                ^ Unresolved reference 'security'.
-
-  Line 27:     return (0..7).map { bytes[it].toLong() and 0xff }.reduce { acc, value -> (acc shl 8) or value } and Long.MAX_VALUE
-                                   ^ Cannot infer type for type parameter 'V'. Specify it explicitly.
-
-2 errors
+Execution failed for task ':src:all:autosourcarr:spotlessKotlinCheck' (registered by plugin 'kei.plugins.spotless').
+> The following files had format violations:
+      build.gradle.kts
+          @@ -10,9 +10,9 @@
+           val·versionParts·=·autosourcarrVersion.split(".").map·{·it.toIntOrNull()·?:·0·}
+           val·autosourcarrVersionCode·=·(
+           ····versionParts.getOrElse(0)·{·0·}·*·1_000_000·+
+          -····versionParts.getOrElse(1)·{·0·}·*·1_000·+
+          -····versionParts.getOrElse(2)·{·0·}
+          -).coerceAtLeast(9)
+          +········versionParts.getOrElse(1)·{·0·}·*·1_000·+
+          +········versionParts.getOrElse(2)·{·0·}
+          +····).coerceAtLeast(9)
+           
+           //·READ-1:·one·prebuilt·extension·with·several·server·slots,·like·the·Komga·extension.·Each·slot·is·its·own
+           //·source·with·its·own·address·and·device·key·in·the·reader's·source·settings.·Mihon·builds·an·extension's
+      src/eu/kanade/tachiyomi/extension/all/autosourcarr/AutoSourcarr.kt
+          @@ -32,7 +32,10 @@
+           ·*·The·legacy·per-instance·builder·(build-in-container.sh)·may·still·bake·slot·1's·defaults·into·BuildAuth.kt.
+           ·*/
+           @Source
+          -abstract·class·AutoSourcarr·:·HttpSource(),·ConfigurableSource,·UnmeteredSource·{
+          +abstract·class·AutoSourcarr·:
+          +····HttpSource(),
+          +····ConfigurableSource,
+          +····UnmeteredSource·{
+           
+           ····override·val·supportsLatest·=·true
+           
+          @@ -57,8 +60,7 @@
+           
+           ····private·fun·origin():·HttpUrl?·=·baseUrl.toHttpUrlOrNull()
+           
+          -····private·fun·sameOrigin(target:·HttpUrl,·origin:·HttpUrl?):·Boolean·=
+          -········origin·!=·null·&&·target.scheme·==·origin.scheme·&&·target.host·==·origin.host·&&·target.port·==·origin.port
+          +····private·fun·sameOrigin(target:·HttpUrl,·origin:·HttpUrl?):·Boolean·=·origin·!=·null·&&·target.scheme·==·origin.scheme·&&·target.host·==·origin.host·&&·target.port·==·origin.port
+           
+           ····override·val·client:·OkHttpClient·=·network.client.newBuilder()
+           ········//·The·slot's·device·key·is·added·per·request·(never·through·the·cached·headers)·and·only·for·its·own
+          @@ -84,9 +86,13 @@
+           ············val·target·=·request.url
+           ············val·sameOrigin·=·origin·!=·null·&&·target.scheme·==·origin.scheme·&&
+           ················target.host·==·origin.host·&&·target.port·==·origin.port
+          -············val·scoped·=·if·(sameOrigin)·request·else·request.newBuilder()
+          -················.removeHeader("X-AutoSourcarr-API-Key")
+          -················.build()
+          +············val·scoped·=·if·(sameOrigin)·{
+          +················request
+          +············}·else·{
+          +················request.newBuilder()
+          +····················.removeHeader("X-AutoSourcarr-API-Key")
+          +····················.build()
+      ... (61 more lines that didn't fit)
+  Violations also present in:
+      src/eu/kanade/tachiyomi/extension/all/autosourcarr/Filters.kt
+      src/eu/kanade/tachiyomi/extension/all/autosourcarr/MiniJson.kt
+  Run './gradlew spotlessApply' to fix all violations.
 
 * Try:
 > Run with --stacktrace option to get the stack trace.
@@ -24,4 +67,4 @@ Script compilation errors:
 > Run with --scan to get full insights from a Build Scan (powered by Develocity).
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 1m 5s
+BUILD FAILED in 1m 53s
