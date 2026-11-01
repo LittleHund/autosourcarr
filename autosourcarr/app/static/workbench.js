@@ -509,12 +509,24 @@ function initializeWorkbench(){
 
 function safeSourceWebviewUrl(value){try{const u=new URL(String(value||''));return ['http:','https:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch(_){return '';}}
 async function openSourceWebview(url='',sourceId=''){
-  let target=safeSourceWebviewUrl(url);
+  const target=safeSourceWebviewUrl(url);
   // Open synchronously with the user's click so popup blockers do not discard
-  // the authenticated result. The token stays in the API header/HttpOnly cookie.
+  // the authenticated result. The admin token stays in the API header; the page gets a one-time ticket
+  // in the fragment (never sent to a server) for its WebSocket.
   const view=window.open('about:blank','_blank');if(!view){toast('Allow a new tab to open the source WebView.');return;}view.opener=null;
-  try{if(!target&&sourceId){const data=await api('/api/v1/source-settings',{noMutationRefresh:true,timeoutMs:5000});const base=(data.items||[]).find(x=>String(x.source_id)===String(sourceId))?.base_url;try{target=safeSourceWebviewUrl(new URL(url||base,base).href);}catch(_){target=safeSourceWebviewUrl(base);}}
-  const result=await api('/api/admin/source-webview/session',{method:'POST',noMutationRefresh:true,timeoutMs:6000});if(result.url!=='/api/admin/source-webview')throw new Error('Invalid WebView address');view.location.href=result.url+(target?'#'+encodeURIComponent(target):'');}
+  try{
+    const body={};if(target)body.url=target;if(sourceId)body.source_id=String(sourceId);
+    let result;
+    try{result=await api('/api/v1/source-webview/session',{method:'POST',body:JSON.stringify(body),noMutationRefresh:true,timeoutMs:35000});}
+    catch(e){
+      // An entry's page can live on another host than the source's base address: open the source's own site instead.
+      if(!(body.url&&body.source_id&&/not on this source/i.test(String(e.message||''))))throw e;
+      result=await api('/api/v1/source-webview/session',{method:'POST',body:JSON.stringify({source_id:body.source_id}),noMutationRefresh:true,timeoutMs:35000});
+    }
+    if(result.page!=='/static/source-webview.html'||!/^[0-9a-f]{8,64}$/.test(String(result.session_id||'')))throw new Error('Invalid WebView answer');
+    const fragment=new URLSearchParams({session:result.session_id,ticket:result.ticket,url:result.url||''});
+    view.location.href=result.page+'#'+fragment.toString();
+  }
   catch(e){view.close();toast('Unable to open source WebView: '+e.message);}
 }
 function openSourceFamilyWebview(index){const group=sourceGroups[index];if(group)openSourceWebview(group.base_url);}

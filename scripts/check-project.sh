@@ -129,6 +129,7 @@ if command -v node >/dev/null 2>&1; then
   node autosourcarr/tests/ui_reimagined_tools.js
   node --check autosourcarr/app/static/app.js
   node --check autosourcarr/app/static/navigation-state.js
+  node --check autosourcarr/app/static/connections.js
   node --check autosourcarr/app/static/internal-services.js
   node --check autosourcarr/app/static/workbench.js
   node --check autosourcarr/app/static/mixed-entries.js

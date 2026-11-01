@@ -161,6 +161,8 @@ public sealed class ApiV1Services
     public RepairV1Services? Repair { get; init; }
     /// <summary>The main-library (Subbed) route (phase 6); null answers 503.</summary>
     public LibraryV1Services? Library { get; init; }
+    /// <summary>The Connections menu: external services, their tests and last results (phase 7); null answers 503.</summary>
+    public ConnectionsV1Services? Connections { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -528,6 +530,7 @@ public static class ApiV1Endpoints
         SourceRepairV1Endpoints.Map(group, services, json, services.SourceRepair);
         RepairV1Endpoints.Map(group, services, json);
         LibraryV1Endpoints.Map(group, services, json);
+        ConnectionsV1Endpoints.Map(group, services, json);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

@@ -26,7 +26,10 @@ public enum AccessLevel { Public, Guest, Admin, Owner }
 public static class AccessPolicy
 {
     private static readonly string[] PublicPaths =
-        ["/login", "/api/v1/live", "/api/v1/auth/status", "/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/logout", "/favicon.ico"];
+        ["/login", "/api/v1/live", "/api/v1/auth/status", "/api/v1/auth/login", "/api/v1/auth/setup", "/api/v1/auth/logout", "/favicon.ico",
+            // The WebView WebSocket: a browser cannot send the admin token there; its one-time ticket from the
+            // admin-only POST /api/v1/source-webview/session is checked by the route (SourceWebViewEndpoints).
+            "/api/v1/source-webview/socket"];
     private static readonly string[] GuestReadPrefixes =
     [
         "/api/v1/sources", "/api/v1/browse/", "/api/v1/search", "/api/v1/entries/", "/api/v1/chapters/", "/api/v1/pages/",

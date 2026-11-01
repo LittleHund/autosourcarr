@@ -128,6 +128,7 @@ class HostApi(
             }
             method == "POST" && parts == listOf("browser", "clear-data") -> {
                 Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>().cookieStore.removeAll()
+                ExternalSolvers.clear()
                 runCatching { if (WebViewEngine.ready()) org.cef.network.CefCookieManager.getGlobalManager()?.deleteCookies("", "") }
                 reply(exchange, 200, browserJson())
             }
@@ -218,6 +219,92 @@ class HostApi(
                 })
             }
             method == "POST" && parts == listOf("import-ids") -> importIds(exchange)
+            // Phase 7: the Cloudflare handlers (built-in WebView first, then the configured solvers) and the
+            // interactive WebView ("Open in WebView", image CAPTCHAs).
+            method == "GET" && parts == listOf("challenges", "solvers") -> reply(exchange, 200, solversJson())
+            method == "GET" && parts == listOf("browser", "cookies") -> {
+                val url = InteractiveWebView.checkedUrl(query["url"] ?: throw IllegalArgumentException("Send url"))
+                val network = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
+                // Names and expiry only: cookie values never leave the host.
+                reply(exchange, 200, buildJsonObject {
+                    put("url", url.toString())
+                    put("cookies", JsonArray(network.cookieStore.get(url).map { cookie ->
+                        buildJsonObject {
+                            put("name", cookie.name)
+                            put("domain", cookie.domain)
+                            put("expires_at", if (cookie.persistent) cookie.expiresAt else null)
+                        }
+                    }))
+                })
+            }
+            parts.size >= 2 && parts[0] == "webview" && parts[1] == "sessions" -> webViewSession(exchange, method, parts.drop(2))
+            else -> throw HttpError(404, "Unknown path")
+        }
+    }
+
+    private fun solversJson(): JsonObject =
+        buildJsonObject {
+            put("builtin", buildJsonObject {
+                put("name", "WebView")
+                put("enabled", HostConfig.webViewEnabled && HostConfig.builtinSolverEnabled)
+                put("state", WebViewEngine.state)
+                put("ready", HostConfig.builtinSolverEnabled && WebViewEngine.ready())
+            })
+            put("external", JsonArray(ExternalSolvers.configured().map { solver ->
+                buildJsonObject {
+                    put("url", solver.display)
+                    put("timeout_ms", solver.timeoutMs)
+                    put("origin", solver.origin)
+                }
+            }))
+            put("cached", JsonArray(ExternalSolvers.cached().map { (host, clearance) ->
+                buildJsonObject {
+                    put("host", host)
+                    put("solver", clearance.solver)
+                    put("expires_at", clearance.expiresAt)
+                }
+            }))
+            put("interactive_sessions", InteractiveWebView.count())
+        }
+
+    /**
+     * POST /v1/webview/sessions {url?, width?, height?} opens a session (an empty page without url); GET .../{id} describes it; GET .../{id}/stream
+     * is the frame and event stream (see [InteractiveWebView]); POST .../{id}/input sends one input event;
+     * DELETE .../{id} closes it (cookies are copied into the jar first).
+     */
+    private fun webViewSession(
+        exchange: HttpExchange,
+        method: String,
+        rest: List<String>,
+    ) {
+        when {
+            method == "POST" && rest.isEmpty() -> {
+                val body = body(exchange)
+                val url = body["url"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let { InteractiveWebView.checkedUrl(it) }
+                val session =
+                    InteractiveWebView.open(
+                        url,
+                        body["width"]?.jsonPrimitive?.intOrNull ?: 1280,
+                        body["height"]?.jsonPrimitive?.intOrNull ?: 800,
+                    )
+                reply(exchange, 200, session.describe())
+            }
+            method == "GET" && rest.size == 1 -> reply(exchange, 200, InteractiveWebView.get(rest[0]).describe())
+            method == "GET" && rest.size == 2 && rest[1] == "stream" -> {
+                val session = InteractiveWebView.get(rest[0])
+                exchange.responseHeaders.set("Content-Type", "application/octet-stream")
+                exchange.responseHeaders.set("Cache-Control", "no-store")
+                exchange.sendResponseHeaders(200, 0) // chunked: each flush sends what was written
+                session.stream(exchange.responseBody)
+            }
+            method == "POST" && rest.size == 2 && rest[1] == "input" -> {
+                InteractiveWebView.get(rest[0]).input(body(exchange))
+                reply(exchange, 200, buildJsonObject { put("ok", true) })
+            }
+            method == "DELETE" && rest.size == 1 -> {
+                InteractiveWebView.close(rest[0], "Closed by AutoSourcarr")
+                reply(exchange, 200, buildJsonObject { put("ok", true) })
+            }
             else -> throw HttpError(404, "Unknown path")
         }
     }

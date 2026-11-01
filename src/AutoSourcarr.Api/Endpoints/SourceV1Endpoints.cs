@@ -19,6 +19,8 @@ public sealed class SourceServices
     /// <summary>SRC-2: where an inspected APK waits (10 minutes) for its confirmation (&lt;data&gt;/source-upload-previews);
     /// null uses a folder in the system temp directory.</summary>
     public string? UploadStagingRoot { get; init; }
+    /// <summary>SRC-2: optional MalwareBazaar client (an enabled connection); null when none.</summary>
+    public Func<AutoSourcarr.Core.Connections.Types.MalwareBazaarClient?>? HashLookup { get; init; }
 }
 
 /// <summary>
@@ -309,12 +311,21 @@ internal static class SourceV1Endpoints
                 try { expires = ApkUploadSlots.Store(ApkUploadSlots.Root(sources), report.Sha256, data, filename); }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException)
                 { return Problem(503, "The APK could not be kept for confirmation: " + error.Message); }
+                var warnings = Strings(report.Warnings);
+                JsonObject? hashLookup;
+                using (var bazaar = sources.HashLookup?.Invoke())
+                {
+                    var (lookup, warning) = await AutoSourcarr.Core.Connections.Types.MalwareBazaarPreview.CheckAsync(bazaar, report.Sha256,
+                        AutoSourcarr.Core.Connections.Types.MalwareBazaarPreview.DefaultBound, context.RequestAborted).ConfigureAwait(false);
+                    hashLookup = lookup;
+                    if (warning is not null) warnings.Add(warning);
+                }
                 return Results.Json(new JsonObject
                 {
-                    ["preview"] = true, ["confirm_required"] = true, ["installed"] = false,
+                    ["preview"] = true, ["hash_lookup"] = hashLookup, ["confirm_required"] = true, ["installed"] = false,
                     ["package"] = report.Package, ["class_name"] = report.ClassName, ["library_version"] = report.LibraryVersion,
                     ["sha256"] = report.Sha256, ["bytes"] = report.Bytes,
-                    ["permissions"] = Strings(report.Permissions), ["domains"] = Strings(report.Domains), ["warnings"] = Strings(report.Warnings),
+                    ["permissions"] = Strings(report.Permissions), ["domains"] = Strings(report.Domains), ["warnings"] = warnings,
                     ["expires_at"] = expires.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
                     ["message"] = "Checked, not installed. Review the permissions, web addresses and warnings, then confirm within 10 minutes."
                 }, json.JsonObject);

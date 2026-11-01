@@ -52,7 +52,7 @@
     result.mixed={offset:Math.floor(integer(raw.mixed?.offset,0,5000000)/50)*50,selected:id(raw.mixed?.selected)};
     result.manualSubtab=choice(raw.manualSubtab,['matches','titles','separate','chapters','duplicates','tags'],'matches');
     result.sourceSubtab=choice(raw.sourceSubtab,['installed','manage','repositories','maintenance','health'],'installed');
-    result.settingsSubtab=choice(raw.settingsSubtab,['customization','configuration','browser','services','security'],'customization');
+    result.settingsSubtab=choice(raw.settingsSubtab,['customization','configuration','browser','services','connections','security'],'customization');
     result.taskLane=choice(raw.taskLane,['all','manual','automatic'],'all');
     result.libraryScope=choice(raw.libraryScope,['all','unmatched','missing','missing_downloads','source_gaps','verification','monitored','catalog'],'all');
     return result;

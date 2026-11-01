@@ -27,6 +27,8 @@ public static class ApiPipeline
         if (access is not null) app.UseMiddleware<AutoSourcarr.Api.Security.AccessControlMiddleware>(access);
         app.UseMiddleware<CatalogAdmissionMiddleware>(admission);
         app.UseMiddleware<InteractiveRequestMiddleware>(lanes, tasks, privacy, resolveErrorPrefix);
+        // Phase 7: the interactive WebView (SourceWebViewEndpoints) is the only WebSocket; its route checks Origin and ticket.
+        app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
         return app.UseRouting();
     }
 }
