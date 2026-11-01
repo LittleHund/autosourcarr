@@ -4,23 +4,23 @@ landlock abi 8
 kernel 7.0.0-1017-azure
 landlock abi 8
 PASS compiles with -O2 -Wall -Werror (production and test builds)
-INFO stand-in proxy on 127.0.0.1:48191
-PASS runner starts, prints its isolation proof and propagates exit 0 (AUTOSOURCARR_RUNNER_V1 09dd5bda5946c58ce681f43135849fca {"pid":7292,"uid":1001,"ppid":7291,"pdeathsig":9,"landlock":8,"nnp":1,"seccomp":2,"netgate":1,"proxy":48191,"scoped":3})
+INFO stand-in proxy on 127.0.0.1:44639
+PASS runner starts, prints its isolation proof and propagates exit 0 (AUTOSOURCARR_RUNNER_V1 61b136dbce0137c5a7d878a1162bbf2a {"pid":6613,"uid":1001,"ppid":6612,"pdeathsig":9,"landlock":8,"nnp":1,"seccomp":2,"netgate":1,"proxy":44639,"scoped":3})
 PASS a. cannot read /config/autosourcarr-runner-check/secret (/usr/bin/cat: /config/autosourcarr-runner-check/secret: Permission denied)
-PASS b. cannot read $HOME/.ssh-like file (/usr/bin/cat: /home/runner/.autosourcarr-runner-check.acHh1S/.ssh/id_check: Permission denied)
+PASS b. cannot read $HOME/.ssh-like file (/usr/bin/cat: /home/runner/.autosourcarr-runner-check.Htinek/.ssh/id_check: Permission denied)
 PASS b. cannot read the data directory outside its job
 PASS b. the private job directory is writable as HOME
 INFO control: direct https://example.com (172.66.147.243) works outside the runner
 PASS c. curl --noproxy '*' https://example.com fails (curl: (6) Could not resolve host: example.com)
 PASS c. direct connect to 172.66.147.243:443 is refused by the connect gate, even with DNS bypassed
-PASS c. same-port decoy on 127.0.0.2:48191 is unreachable (address check, not just Landlock's port rule)
+PASS c. same-port decoy on 127.0.0.2:44639 is unreachable (address check, not just Landlock's port rule)
 PASS d. https://example.org through the proxy is refused with 403
 PASS e. https://example.com through the proxy succeeds
 PASS h. a JVM (/usr/lib/jvm/temurin-21-jdk-amd64/bin/java) fetches through the proxy, cannot connect directly, cannot read /config/autosourcarr-runner-check/secret
 PASS f. forced Landlock ABI 5 exits 78 (no isolation fallback)
 PASS f. the production build ignores AUTOSOURCARR_TEST_FORCE_ABI
-PASS i. cannot signal a same-uid process outside the sandbox (Landlock scope + seccomp gate: repair-runner: refused signal to pid 7476 outside the repair run)
-PASS i. cannot signal a same-uid process outside the sandbox (seccomp gate alone: repair-runner: refused signal to pid 7476 outside the repair run)
+PASS i. cannot signal a same-uid process outside the sandbox (Landlock scope + seccomp gate: repair-runner: refused signal to pid 6794 outside the repair run)
+PASS i. cannot signal a same-uid process outside the sandbox (seccomp gate alone: repair-runner: refused signal to pid 6794 outside the repair run)
 PASS i. the seccomp gate itself refused the signal (logged)
 PASS j. the program can fork and signal its own children (started 50 failed 0 killed 50)
 PASS j. RLIMIT_NPROC bounds a fork loop (test budget 24: started 23 failed 177 killed 23)
