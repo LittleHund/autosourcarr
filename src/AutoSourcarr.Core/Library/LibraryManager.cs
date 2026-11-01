@@ -147,6 +147,7 @@ public sealed class LibraryManager : IAsyncDisposable
     /// </summary>
     public async Task<JsonObject> ObserveAsync(long entryId, bool refresh = false, CancellationToken cancellationToken = default)
     {
+        using var metric = Diagnostics.RuntimeMetrics.Shared.Phase("observation");
         entryId = Canonical(entryId);
         var key = entryId.ToString(CultureInfo.InvariantCulture);
         _store.Due.Attempted(LibraryStore.DueKind, key, Configuration());

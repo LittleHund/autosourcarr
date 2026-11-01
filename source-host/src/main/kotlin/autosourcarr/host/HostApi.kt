@@ -93,6 +93,13 @@ class HostApi(
         } catch (error: SourceBackoff.BackedOff) {
             reply(exchange, 503, problem(error.message ?: "Source paused", "SourceBackedOff"))
         } catch (error: Throwable) {
+            val deferred = LocalPacingDeferred.of(error)
+            if (deferred != null) {
+                // Local pacing, not a source answer: the client's deferral contract (503 + SourceBackedOff), no outage.
+                exchange.responseHeaders.set("Retry-After", deferred.retryAfterSeconds.toString())
+                reply(exchange, 503, problem(deferred.message ?: "Request deferred by local pacing", "SourceBackedOff"))
+                return
+            }
             logger.warn(error) { "Request ${exchange.requestMethod} ${exchange.requestURI.rawPath} failed" }
             // A source error (site down, changed layout, Cloudflare) is the source's answer, not a host failure.
             reply(exchange, 502, problem(error.message ?: error.javaClass.simpleName, error.javaClass.simpleName))

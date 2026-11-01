@@ -40,9 +40,11 @@ public sealed class MagickPageRasterDecoder : IPageRasterDecoder
     public PageRaster Decode(byte[] image, int maximumSide)
     {
         ArgumentNullException.ThrowIfNull(image);
+        using var metric = Diagnostics.RuntimeMetrics.Shared.Phase("quality_decode", image.LongLength);
         int width, height;
         // Validates the format and limits and activates the restricted native policy before pixels are read.
         using (var raster = RasterImages.Open(image)) { width = raster.Width; height = raster.Height; }
+        using var decoded = Diagnostics.RuntimeMetrics.Shared.DecodedPixels((long)width * height);
         try
         {
             using var pixels = new MagickImage(image, new MagickReadSettings { FrameIndex = 0, FrameCount = 1, SyncImageWithExifProfile = false });

@@ -238,6 +238,7 @@ public sealed partial class SuwayomiClient : IDisposable, IAsyncDisposable, ISou
         JsonObject? knownContext, CancellationToken cancellationToken)
     {
         session.ThrowIfRetired();
+        using var metric = Diagnostics.RuntimeMetrics.Shared.Phase("source");
         var attention = description is null ? null : Attention;
         var context = knownContext;
         var budget = SourceWorkContext.CurrentBudget;

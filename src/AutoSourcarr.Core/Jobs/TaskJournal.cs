@@ -92,7 +92,13 @@ public sealed class TaskJournal(SqliteDatabase database, TaskRegistry registry, 
         }
         finally { _flush.Release(); }
     }
-    private int Write(IReadOnlyList<TaskRecord> records) => database.Write(DatabaseFile.Catalog, session =>
+    private int Write(IReadOnlyList<TaskRecord> records)
+    {
+        using var metric = Diagnostics.RuntimeMetrics.Shared.Phase("journal");
+        return WriteCore(records);
+    }
+
+    private int WriteCore(IReadOnlyList<TaskRecord> records) => database.Write(DatabaseFile.Catalog, session =>
     {
         var ids = JsonSerializer.Serialize(records.Select(row => row.Id));
         session.Execute("DELETE FROM general_task_history WHERE id NOT IN(SELECT value FROM json_each($ids))", ("$ids", ids));

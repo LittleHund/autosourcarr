@@ -36,16 +36,16 @@ public sealed class SourceRawRoutes
     public required SemaphoreSlim AdminLock { get; init; }
     public required BoundedWorkScheduler Io { get; init; }
     public RepairHistory? History { get; init; }
-    /// <summary>Reconstruction of a source whose code is unavailable needs an AI provider; until Connections it refuses.</summary>
+    /// <summary>Reconstruction of a source whose code is unavailable needs an AI provider; not available in this version (planned for 0.6.0), so it refuses.</summary>
     public IRawReconstructionCommands Reconstruction { get; init; } = NoRawReconstruction.Instance;
 }
 
-/// <summary>There is no external repair worker and no AI provider yet: reconstruction answers 409 with the reason.</summary>
+/// <summary>There is no external repair worker and AI-assisted repair is planned for 0.6.0: reconstruction answers 409 with the reason.</summary>
 public sealed class NoRawReconstruction : IRawReconstructionCommands
 {
     public static NoRawReconstruction Instance { get; } = new();
     public Task EnsureReadyAsync(CancellationToken cancellationToken) =>
-        throw new ApiProblem(409, "Rebuilding a source without its code needs an AI provider, which is not configured (it arrives with Connections). Provide the source code or its repository instead.");
+        throw new ApiProblem(409, "Rebuilding a source without its code needs an AI provider. Code rebuilds by an AI provider are not available in this version (planned for 0.6.0). Provide the source code or its repository instead.");
     public Task<JsonObject> ReconstructAsync(RawInstalledSource installed, long rawRevision, string? previousJobId, CancellationToken cancellationToken) =>
         throw new ApiProblem(409, "Rebuilding a source without its code is not available in this host.");
 }
@@ -73,7 +73,7 @@ internal static class RepairV1Endpoints
     private static readonly HashSet<string> AccountActions = ["login", "login-status", "logout", "cancel-login", "retry-cleanup"];
 
     private const string Retired = "Repair runs inside this AutoSourcarr instance. External repair workers and their Compose/SSH setup were removed; refresh the page.";
-    private const string NoProvider = "No AI provider is configured. AI-assisted repair arrives with Connections; domain-move repairs run in the app without AI.";
+    private const string NoProvider = "No AI provider is configured. AI-assisted repair is not available in this version (planned for 0.6.0); domain-move repairs run in the app without AI.";
 
     internal static void Map(RouteGroupBuilder group, ApiV1Services services, ApiJsonContext json)
     {
@@ -149,7 +149,7 @@ internal static class RepairV1Endpoints
                 });
             }))
             .WithName("getRepairControl")
-            .WithSummary("In-app repair state: domain repair availability, whether a repair is running, AI provider (not configured until Connections) and the runner check.")
+            .WithSummary("In-app repair state: domain repair availability, whether a repair is running, AI provider (not available in this version; planned for 0.6.0) and the runner check.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapGet("/source-maintenance/provider", (Func<HttpContext, IResult>)(context =>
@@ -161,7 +161,7 @@ internal static class RepairV1Endpoints
                 });
             }))
             .WithName("getRepairProvider")
-            .WithSummary("The repair AI provider; answers state not-configured until AI providers arrive with Connections.")
+            .WithSummary("The repair AI provider; answers state not-configured: AI providers for repair are not available in this version (planned for 0.6.0).")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapPost("/source-maintenance/provider/test", (Func<HttpContext, IResult>)(_ => Problem(409, NoProvider)))
@@ -185,7 +185,7 @@ internal static class RepairV1Endpoints
                 return Problem(404, "Unknown repair action");
             })))
             .WithName("runRepairControl")
-            .WithSummary("Repair control actions: check (or prepare) runs the repair runner self-check; account actions answer 409 until an AI provider is configured.")
+            .WithSummary("Repair control actions: check (or prepare) runs the repair runner self-check; account actions answer 409 because AI-assisted repair is not available in this version (planned for 0.6.0).")
             .Produces<JsonObject>(StatusCodes.Status202Accepted)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
@@ -219,7 +219,7 @@ internal static class RepairV1Endpoints
             .WithSummary("Look up the source's repository in the configured indexes (body: revision); runs in the background.")
             .Produces<JsonObject>(StatusCodes.Status202Accepted).Produces<ProblemResponse>(StatusCodes.Status400BadRequest).Produces<ProblemResponse>(StatusCodes.Status409Conflict);
         raw[6].Accepts<JsonObject>("application/json").WithName("reconstructSourceRaw")
-            .WithSummary("The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider; 409 until Connections.")
+            .WithSummary("The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider: code rebuilds by an AI provider are not available in this version (planned for 0.6.0), so this answers 409.")
             .Produces<JsonObject>(StatusCodes.Status202Accepted).Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 
         // ------------------------------------------------------------ repair jobs (domain repairs on the job queue)

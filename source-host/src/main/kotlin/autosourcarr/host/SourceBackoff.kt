@@ -9,7 +9,8 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Per-source back-off: after [threshold] failed calls in a row a source is paused for 30 min, then 2 h, 6 h and
  * 12 h on each further failed round. One successful call ends the pause ladder. Wrong requests
- * (IllegalArgumentException) and missing items do not count; network errors, HTTP errors and parse failures do.
+ * (IllegalArgumentException), missing items and local pacing deferrals ([LocalPacingDeferred], also when wrapped) do not
+ * count; network errors, HTTP errors and parse failures do.
  */
 class SourceBackoff(
     private val threshold: Int = 3,
@@ -52,6 +53,8 @@ class SourceBackoff(
         } catch (error: NoSuchElementException) {
             throw error
         } catch (error: Throwable) {
+            // A local capacity deferral says nothing about the source.
+            if (LocalPacingDeferred.of(error) != null) throw error
             synchronized(state) {
                 state.failures++
                 state.lastError = (error.message ?: error.javaClass.simpleName).take(300)

@@ -102,6 +102,27 @@ internal static class MaintenanceV1Endpoints
 
         foreach (var (path, full, name) in new[] { ("reset-database", false, "resetDatabase"), ("full-reset", true, "fullResetDatabase") })
         {
+            // Hard rule 1: a database reset is previewed too. The preview counts the saved manual decisions (a full reset
+            // forgets them; a normal reset restores them and drops those whose work does not come back) and its token is
+            // their content revision, so a reset never runs over decisions changed after the preview the user saw.
+            group.MapGet("/maintenance/" + path, (Func<HttpContext, IResult>)(context =>
+                {
+                    context.Response.Headers.CacheControl = "no-store";
+                    if (maintenance is null) return Unavailable();
+                    if (!OwnerOrAdmin(context)) return Forbidden();
+                    return Guard(() =>
+                    {
+                        var preview = maintenance.Manual.PreviewReset(ManualResetScope.All);
+                        preview["scope"] = full ? "full-reset" : "reset-database";
+                        preview["manual_decisions"] = full ? "forgotten" : "restored; those whose work does not come back are dropped and counted";
+                        return Answer(preview);
+                    });
+                }))
+                .WithName("preview" + char.ToUpperInvariant(name[0]) + name[1..])
+                .WithSummary("Preview of " + (full ? "a full reset" : "a database reset") + ": the saved manual decisions per kind and the preview_token the confirmation must send back.")
+                .Produces<JsonObject>(StatusCodes.Status200OK)
+                .Produces<ProblemResponse>(StatusCodes.Status403Forbidden);
+
             group.MapPost("/maintenance/" + path, (Func<HttpContext, Task<IResult>>)(async context =>
                 {
                     if (maintenance is null) return Unavailable();
@@ -109,7 +130,13 @@ internal static class MaintenanceV1Endpoints
                     JsonObject body;
                     try { body = await Body(context).ConfigureAwait(false); }
                     catch (ApiProblem error) { return Problem(error.StatusCode, error.Message); }
-                    if (!BodyFlag(body, "confirm")) return Problem(400, "Confirm the reset: send {\"confirm\": true}.");
+                    var token = BodyText(body, "preview_token");
+                    if (!BodyFlag(body, "confirm") || token.Length == 0)
+                        return Problem(400, "Confirm the reset: send {\"confirm\": true, \"preview_token\": \"...\"} from its preview.");
+                    string current;
+                    try { current = maintenance.Manual.PreviewReset(ManualResetScope.All)["preview_token"]?.GetValue<string>() ?? ""; }
+                    catch (ManualDecisionUnavailableException error) { return Problem(503, error.Message); }
+                    if (current != token) return Problem(409, "The saved decisions changed since the preview; open the preview again before resetting.");
                     if (services.Jobs is not { } jobs) return Problem(503, "The job queue is not available in this host; nothing was reset.");
                     var actor = Actor(context); var catalogue = maintenance.Maintenance;
                     JobHandle handle;
@@ -117,8 +144,16 @@ internal static class MaintenanceV1Endpoints
                     {
                         handle = jobs.Enqueue(full ? FullResetJob : DatabaseResetJob, "", async job =>
                         {
-                            var result = await catalogue.ResetAsync(full, actor, message => job.Report(message: message), CancellationToken.None).ConfigureAwait(false);
-                            job.Result((full ? "Full reset done" : "Database reset done") + ": " + result.ToJsonString());
+                            // 0.4.x stop_background_tasks: queued work is cancelled and running work drained first; the queue
+                            // resumes afterwards (the reset's own rebuild jobs start then).
+                            job.Report(message: "Stopping background work");
+                            await jobs.StopBackgroundAsync(full ? "Full reset" : "Database reset", keep: job.Id).ConfigureAwait(false);
+                            try
+                            {
+                                var result = await catalogue.ResetAsync(full, actor, message => job.Report(message: message), CancellationToken.None).ConfigureAwait(false);
+                                job.Result((full ? "Full reset done" : "Database reset done") + ": " + result.ToJsonString());
+                            }
+                            finally { jobs.ResumeBackground(); }
                         }, origin: "manual", title: full ? "Full reset" : "Reset database");
                     }
                     catch (Exception error) when (error is ObjectDisposedException or ArgumentException)
@@ -128,11 +163,12 @@ internal static class MaintenanceV1Endpoints
                 .Accepts<JsonObject>("application/json")
                 .WithName(name)
                 .WithSummary(full
-                    ? "Full reset as an exclusive job (body {confirm: true}): clears the catalogue and every decision, keeps configuration and main-library subscriptions."
-                    : "Database reset as an exclusive job (body {confirm: true}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.")
+                    ? "Full reset as an exclusive job (body {confirm: true, preview_token}): clears the catalogue and every decision, keeps configuration and main-library subscriptions."
+                    : "Database reset as an exclusive job (body {confirm: true, preview_token}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.")
                 .Produces<JsonObject>(StatusCodes.Status202Accepted)
                 .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
-                .Produces<ProblemResponse>(StatusCodes.Status403Forbidden);
+                .Produces<ProblemResponse>(StatusCodes.Status403Forbidden)
+                .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
         }
 
         group.MapPost("/maintenance/reset-covers", (Func<HttpContext, Task<IResult>>)(async context =>

@@ -36,6 +36,7 @@ public static class LibraryProjection
     public static JsonObject Page(SqliteDatabase database, LibraryQuery query, IReadOnlyList<long> members, IReadOnlyCollection<long> duplicates,
         JsonObject subscription, DisplayMetadata? display = null)
     {
+        using var metric = Diagnostics.RuntimeMetrics.Shared.Phase("projection");
         ArgumentNullException.ThrowIfNull(database);
         ArgumentNullException.ThrowIfNull(query);
         if (!Sorts.Contains(query.Sort)) throw new LibraryConflictException("Unknown library sort");

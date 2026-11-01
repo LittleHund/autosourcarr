@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -240,6 +241,32 @@ public static class SourceOrphanTests
             Check.Equal(5, installed["items"]!.AsArray().Count);
             Check.Equal(HttpStatusCode.Conflict, client.PostAsync("/api/v1/source-maintenance/rollback", null).GetAwaiter().GetResult().StatusCode);
         });
+
+        suite.Add("source orphans: hard rule 8 an archived APK with native code is refused and nothing is installed", () =>
+        {
+            using var temp = new Sandbox();
+            using var host = new FakeHost(Inventory());
+            var package = Prefix + "omega";
+            var manifest = "<manifest xmlns:android=\"" + SourceManifest.AndroidNamespace + "\" package=\"" + package + "\" android:versionName=\"1.4.1\">"
+                + "<uses-permission android:name=\"android.permission.INTERNET\"/><application><meta-data android:name=\"tachiyomi.extension.class\" android:value=\".Omega\"/></application></manifest>";
+            var dex = Encoding.Latin1.GetBytes("dex\n035\0padding https://omega.example/api x" + new string('a', 200));
+            var apk = Zip(("AndroidManifest.xml", Encoding.UTF8.GetBytes(manifest)), ("classes.dex", dex), ("lib/arm64-v8a/libevil.so", new byte[300]));
+            var url = SourceOrphans.Raw + Older + "/apk/tachiyomi-en.omega-v1.4.1.apk";
+            var orphans = new SourceOrphans(temp.Path, host.Client, new ArchiveFetcher(url, apk), () => Seed());
+            orphans.BeginInstall(package);
+            var admin = new SemaphoreSlim(1, 1);
+            var result = Await(orphans.InstallAsync(package, admin));
+            Check.Equal("failed", result["state"]!.GetValue<string>());
+            var message = result["message"]!.GetValue<string>();
+            Check.True(message.Contains("native code", StringComparison.Ordinal) && message.Contains("not installed", StringComparison.Ordinal), message);
+            Check.True(result["inspection"] is null, "A refused archive carries no inspection result.");
+            Check.True(host.Paths.Count > 0 && host.Paths.All(path => path == "/v1/extensions"), "Only the extension list was read: " + string.Join(',', host.Paths));
+            Check.True(!Directory.Exists(Path.Combine(temp.Path, "archives")), "A refused archive is not kept.");
+            var record = orphans.Records()[package]!;
+            Check.Equal("available", record["state"]!.GetValue<string>());
+            Check.True(record["download_sha256"] is null && record["installed_at"] is null, "The record keeps its original provenance.");
+            Check.Equal(1, admin.CurrentCount);
+        });
     }
 
     // ------------------------------------------------------------------ fixtures
@@ -299,6 +326,7 @@ public static class SourceOrphanTests
         {
             var handler = new Handler((request, _) =>
             {
+                lock (Paths) Paths.Add(request.RequestUri!.AbsolutePath);
                 if (request.RequestUri!.AbsolutePath != "/v1/extensions") throw new InvalidOperationException(request.RequestUri.AbsolutePath);
                 var body = new JsonObject { ["extensions"] = new JsonArray(rows.Select(row => (JsonNode?)row.DeepClone()).ToArray()) };
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json") });
@@ -306,6 +334,8 @@ public static class SourceOrphanTests
             Client = SuwayomiClient.ForSourceHost(new AutoSourcarrSettings { SourceEngineMode = "integrated" }, "http://127.0.0.1:4567", "token", handler: handler);
         }
         public SuwayomiClient Client { get; }
+        /// <summary>Every source host path asked for, in order.</summary>
+        public List<string> Paths { get; } = [];
         public SourceOrphans Orphans(string root, Func<byte[]?> seed) => new(root, Client, new HistoryFetcher(), seed);
         public void Dispose() => Client.Dispose();
     }
@@ -336,6 +366,32 @@ public static class SourceOrphanTests
             ["apk"] = "tachiyomi-en." + name + "-v1.4.2.apk",
             ["sources"] = new JsonArray(new JsonObject { ["id"] = "-5", ["name"] = name, ["lang"] = "en", ["baseUrl"] = "https://" + name + ".example" })
         }.ToJsonString();
+    }
+
+    /// <summary>Today's head commit for the current-catalog check, and one archived APK; everything else as <see cref="HistoryFetcher"/>.</summary>
+    private sealed class ArchiveFetcher(string url, byte[] archive) : IPublicSourceFetcher
+    {
+        private readonly HistoryFetcher _history = new();
+        public Task<PublicSourceResponse> FetchAsync(PublicSourceRequest request, CancellationToken cancellationToken = default)
+        {
+            var requested = request.Url.OriginalString;
+            if (requested.StartsWith(SourceOrphans.Api + "commits", StringComparison.Ordinal))
+                return Task.FromResult(new PublicSourceResponse(Encoding.UTF8.GetBytes("[{\"sha\":\"" + Head + "\"}]"), request.Url));
+            if (requested == url) return Task.FromResult(new PublicSourceResponse(archive, request.Url));
+            return _history.FetchAsync(request, cancellationToken);
+        }
+    }
+
+    private static byte[] Zip(params (string Name, byte[] Contents)[] entries)
+    {
+        using var output = new MemoryStream();
+        using (var archive = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true))
+            foreach (var (name, contents) in entries)
+            {
+                var entry = archive.CreateEntry(name, CompressionLevel.Optimal);
+                using var stream = entry.Open(); stream.Write(contents);
+            }
+        return output.ToArray();
     }
 
     private sealed class Handler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
