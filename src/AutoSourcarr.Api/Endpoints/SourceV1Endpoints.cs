@@ -16,6 +16,99 @@ public sealed class SourceServices
     public required SuwayomiClient Client { get; init; }
     public required SourcePreferenceService Preferences { get; init; }
     public required SemaphoreSlim AdminLock { get; init; }
+    /// <summary>SRC-2: where an inspected APK waits (10 minutes) for its confirmation (&lt;data&gt;/source-upload-previews);
+    /// null uses a folder in the system temp directory.</summary>
+    public string? UploadStagingRoot { get; init; }
+}
+
+/// <summary>
+/// SRC-2 two-step APK install: the upload is inspected and its bytes wait in a per-SHA-256 slot
+/// (&lt;root&gt;/&lt;sha256&gt;.apk plus &lt;sha256&gt;.json with the file name and expiry) until the person confirms
+/// within <see cref="Lifetime"/>. Expired slots are removed whenever a slot is written or read.
+/// </summary>
+internal static class ApkUploadSlots
+{
+    public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(10);
+    private static readonly System.Text.RegularExpressions.Regex Digest = new(@"\A[0-9a-f]{64}\z", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+    private static readonly object Gate = new();
+
+    public static string Root(SourceServices sources) => Path.GetFullPath(sources.UploadStagingRoot ?? Path.Combine(Path.GetTempPath(), "autosourcarr-upload-previews"));
+
+    public static bool IsDigest(string? value) => value is not null && Digest.IsMatch(value);
+
+    /// <summary>Keeps the inspected bytes; answers the expiry.</summary>
+    public static DateTimeOffset Store(string root, string sha256, byte[] data, string filename)
+    {
+        var expires = DateTimeOffset.UtcNow + Lifetime;
+        lock (Gate)
+        {
+            Prune(root);
+            AutoSourcarr.Core.Settings.ConfigFiles.WriteAtomic(Path.Combine(root, sha256 + ".apk"), data);
+            var record = new JsonObject { ["filename"] = filename, ["expires_at"] = expires.ToString("O", System.Globalization.CultureInfo.InvariantCulture) };
+            AutoSourcarr.Core.Settings.ConfigFiles.WriteAtomic(Path.Combine(root, sha256 + ".json"), System.Text.Encoding.UTF8.GetBytes(record.ToJsonString()));
+        }
+        return expires;
+    }
+
+    /// <summary>Takes a waiting upload out of its slot (the slot is removed); null when unknown, expired or changed.</summary>
+    public static (byte[] Data, string Filename)? Take(string root, string sha256)
+    {
+        lock (Gate)
+        {
+            Prune(root);
+            var apk = new FileInfo(Path.Combine(root, sha256 + ".apk"));
+            var meta = new FileInfo(Path.Combine(root, sha256 + ".json"));
+            try
+            {
+                if (!apk.Exists || !meta.Exists || apk.LinkTarget is not null || meta.LinkTarget is not null
+                    || apk.Length > AutoSourcarr.Core.Repair.ApkInspection.MaximumBytes || meta.Length > 64 * 1024) return null;
+                var record = JsonNode.Parse(File.ReadAllBytes(meta.FullName)) as JsonObject;
+                var data = File.ReadAllBytes(apk.FullName);
+                if (Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(data)) != sha256) return null;
+                var filename = record?["filename"] is JsonValue name && name.TryGetValue<string>(out var text) ? text : sha256 + ".apk";
+                return (data, filename);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { return null; }
+            finally { Remove(root, sha256); }
+        }
+    }
+
+    private static void Prune(string root)
+    {
+        if (!Directory.Exists(root)) return;
+        var now = DateTimeOffset.UtcNow;
+        foreach (var path in Directory.EnumerateFiles(root, "*.json"))
+        {
+            var sha = Path.GetFileNameWithoutExtension(path);
+            if (!IsDigest(sha)) continue;
+            DateTimeOffset? expires = null;
+            try
+            {
+                if (new FileInfo(path).Length <= 64 * 1024 && JsonNode.Parse(File.ReadAllBytes(path)) is JsonObject record
+                    && record["expires_at"] is JsonValue value && value.TryGetValue<string>(out var text)
+                    && DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var parsed))
+                    expires = parsed;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { }
+            if (expires is null || expires.Value <= now) Remove(root, sha);
+        }
+        // An .apk without its record is a leftover of an interrupted write.
+        foreach (var path in Directory.EnumerateFiles(root, "*.apk"))
+            if (IsDigest(Path.GetFileNameWithoutExtension(path)) && !File.Exists(Path.ChangeExtension(path, ".json"))) TryDelete(path);
+    }
+
+    private static void Remove(string root, string sha256)
+    {
+        TryDelete(Path.Combine(root, sha256 + ".apk"));
+        TryDelete(Path.Combine(root, sha256 + ".json"));
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { File.Delete(path); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
 }
 
 /// <summary>
@@ -190,6 +283,9 @@ internal static class SourceV1Endpoints
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest);
 
+        static JsonArray Strings(IEnumerable<string> items) => new(items.Select(item => (JsonNode)JsonValue.Create(item)!).ToArray());
+
+        // SRC-2 step 1: inspect and keep for confirmation; nothing is installed.
         group.MapPost("/source-extensions/upload", (Func<HttpContext, Task<IResult>>)(async context =>
             {
                 if (services.Sources is not { } sources) return Unavailable();
@@ -209,11 +305,44 @@ internal static class SourceV1Endpoints
                 AutoSourcarr.Core.Repair.ApkReport report;
                 try { report = AutoSourcarr.Core.Repair.ApkInspection.Inspect(data, filename); }
                 catch (InvalidDataException error) { return Problem(400, error.Message); }
+                DateTimeOffset expires;
+                try { expires = ApkUploadSlots.Store(ApkUploadSlots.Root(sources), report.Sha256, data, filename); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                { return Problem(503, "The APK could not be kept for confirmation: " + error.Message); }
+                return Results.Json(new JsonObject
+                {
+                    ["preview"] = true, ["confirm_required"] = true, ["installed"] = false,
+                    ["package"] = report.Package, ["class_name"] = report.ClassName, ["library_version"] = report.LibraryVersion,
+                    ["sha256"] = report.Sha256, ["bytes"] = report.Bytes,
+                    ["permissions"] = Strings(report.Permissions), ["domains"] = Strings(report.Domains), ["warnings"] = Strings(report.Warnings),
+                    ["expires_at"] = expires.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+                    ["message"] = "Checked, not installed. Review the permissions, web addresses and warnings, then confirm within 10 minutes."
+                }, json.JsonObject);
+            }))
+            .WithName("uploadSourceExtension")
+            .WithSummary("Check a source APK (archive structure, manifest and entry point, no native code) and list its permissions, web addresses and warnings; nothing is installed. The file waits 10 minutes for POST /source-extensions/upload/confirm with its sha256.")
+            .Produces<JsonObject>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemResponse>(StatusCodes.Status413PayloadTooLarge)
+            .Produces<ProblemResponse>(StatusCodes.Status415UnsupportedMediaType);
+
+        // SRC-2 step 2: install the inspected file the person confirmed.
+        group.MapPost("/source-extensions/upload/confirm", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                if (services.Sources is not { } sources) return Unavailable();
+                var body = await ApiJson.ReadObjectAsync(context.Request, 4096).ConfigureAwait(false);
+                var sha = body["sha256"] is JsonValue value && value.TryGetValue<string>(out var text) ? text.Trim().ToLowerInvariant() : "";
+                if (!ApkUploadSlots.IsDigest(sha)) return Problem(400, "sha256 of a checked upload is required.");
+                if (ApkUploadSlots.Take(ApkUploadSlots.Root(sources), sha) is not { } waiting)
+                    return Problem(404, "This upload is unknown or older than 10 minutes. Drop the APK again.");
+                AutoSourcarr.Core.Repair.ApkReport report;
+                try { report = AutoSourcarr.Core.Repair.ApkInspection.Inspect(waiting.Data, waiting.Filename); }
+                catch (InvalidDataException error) { return Problem(400, error.Message); }
                 await sources.AdminLock.WaitAsync(context.RequestAborted).ConfigureAwait(false);
                 try
                 {
                     // Never the person's filename: the package name decides which installed jar it replaces.
-                    await sources.Client.InstallExtensionFileAsync(report.Package + ".apk", data, true, context.RequestAborted).ConfigureAwait(false);
+                    await sources.Client.InstallExtensionFileAsync(report.Package + ".apk", waiting.Data, true, context.RequestAborted).ConfigureAwait(false);
                     var installed = await sources.Client.ExtensionsAsync(false, context.RequestAborted).ConfigureAwait(false);
                     var extension = (installed["extensions"] as JsonArray ?? []).OfType<JsonObject>()
                         .FirstOrDefault(row => SourceConfigurationJson.Text(row["pkgName"]) == report.Package && SourceConfigurationJson.Flag(row["isInstalled"]));
@@ -221,11 +350,9 @@ internal static class SourceV1Endpoints
                     _ = SyncAsync(sources);
                     return Results.Json(new JsonObject
                     {
-                        ["extension"] = extension.DeepClone(), ["sha256"] = report.Sha256, ["source_sync_pending"] = true,
+                        ["extension"] = extension.DeepClone(), ["sha256"] = report.Sha256, ["source_sync_pending"] = true, ["installed"] = true,
                         ["library_version"] = report.LibraryVersion,
-                        ["permissions"] = new JsonArray(report.Permissions.Select(item => (JsonNode)JsonValue.Create(item)!).ToArray()),
-                        ["domains"] = new JsonArray(report.Domains.Select(item => (JsonNode)JsonValue.Create(item)!).ToArray()),
-                        ["warnings"] = new JsonArray(report.Warnings.Select(item => (JsonNode)JsonValue.Create(item)!).ToArray()),
+                        ["permissions"] = Strings(report.Permissions), ["domains"] = Strings(report.Domains), ["warnings"] = Strings(report.Warnings),
                         ["message"] = "Source APK installed. Website access and chapter retrieval have not been checked."
                     }, json.JsonObject);
                 }
@@ -233,10 +360,13 @@ internal static class SourceV1Endpoints
                 catch (SuwayomiException error) { return Problem(502, error.Message); }
                 finally { sources.AdminLock.Release(); }
             }))
-            .WithName("uploadSourceExtension")
-            .WithSummary("Install a source APK by drag and drop after the checks: archive structure, manifest and entry point, no native code; lists permissions and web addresses.")
+            .Accepts<JsonObject>("application/json")
+            .WithName("confirmSourceExtensionUpload")
+            .WithSummary("Install a source APK checked by POST /source-extensions/upload (body: sha256) within 10 minutes of its check.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
-            .Produces<ProblemResponse>(StatusCodes.Status400BadRequest);
+            .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
+            .Produces<ProblemResponse>(StatusCodes.Status502BadGateway);
 
         group.MapPost("/source-extensions/update-all", (Func<HttpContext, Task<IResult>>)(async context =>
             {

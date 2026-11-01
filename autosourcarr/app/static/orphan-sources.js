@@ -17,7 +17,7 @@
     state.busy=true;++state.generation;pending();
     try{
       const result=await api(`/api/v1/source-orphans/${encodeURIComponent(pkg)}/${verb}`,{method:'POST',timeoutMs:verb==='repair'?45000:20000,noMutationRefresh:true});
-      toast(result.message||(verb==='install'?'Archived installation queued':'Repair preparation queued. Follow progress in Tasks.'));
+      toast(result.message||(verb==='install'?'Archived installation queued':'Repair queued. Follow progress in Tasks → Repairs.'));
       if(verb==='repair')window.openSourceRepairTask?.();
       await load();
     }catch(error){toast('Unable to '+(verb==='install'?'install archived source':'start repair')+': '+error.message);}
@@ -46,12 +46,12 @@
       actions.append(button('Uninstall',el=>window.manageSourceExtension(row.pkgName,'uninstall',el)));
     }
     if(!row.installed&&row.archive_available!==false&&(row.can_install||row.archive_url)){const install=button('Install archived version',()=>mutate(row.pkgName,'install'),'primaryAction');install.dataset.orphanMutation='install';install.dataset.orphanBlocked=String(!row.can_install);install.title=row.can_install?'':'Source engine inventory must be available before installation.';actions.append(install);}
-    if(row.can_repair&&state.data.worker_configured){
-      const repair=button(row.installed?'Check and repair':'Build and check archive',()=>mutate(row.pkgName,'repair'),'primaryAction');repair.dataset.orphanMutation='repair';actions.append(repair);
-      if(!row.installed){const explanation=document.createElement('p');explanation.className='muted';explanation.textContent='Rebuilds the original source code, tests its content and waits for you to install it.';actions.append(explanation);}
-    }else if(!state.data.worker_configured){
-      const setup=document.createElement('p');setup.className='muted';setup.textContent='Repair worker is not configured.';actions.append(setup,button('Repair setup',()=>setSourceSubtab('maintenance')));
-    }
+    // Repairs run in the app (domain move: new address, content check, automatic restore) on installed sources only.
+    const repairReady=state.data.repair_available??state.data.worker_configured;
+    const note=text=>{const p=document.createElement('p');p.className='muted';p.textContent=text;actions.append(p);};
+    if(!repairReady)note('Source repair is not available in this mode (it needs the integrated source engine).');
+    else if(!row.installed)note('Install this source first; repairs run on installed sources.');
+    else if(row.can_repair){const repair=button('Check and repair',()=>mutate(row.pkgName,'repair'),'primaryAction');repair.dataset.orphanMutation='repair';repair.title='Finds the new web address, checks real content and restores the last working version when the check fails.';actions.append(repair);}
     if(row.repair_job_id||row.state==='repair-queued'||row.state==='repaired')actions.append(button('View repair evidence',()=>window.openSourceRepairTask?.(row.repair_job_id)));
     el.append(body,actions);return el;
   }
@@ -62,7 +62,7 @@
     const inventoryMessage=data.inventory_refreshing?'Checking installed sources…':data.inventory_known===false?'Source engine inventory is unavailable. Cached installation status is shown; refresh when the engine is ready.':'';
     const status=[inventoryMessage,refresh.message||'Collect repository history to find removed sources.',updated&&`Last checked ${updated}`,refresh.coverage_days&&`History window: ${refresh.coverage_days} days`,data.operation?.message,data.notice].filter(Boolean).join(' · ');
     byId('sourceOrphanStatus').textContent=status;
-    byId('sourceInstalledOrphanStatus').textContent=[inventoryMessage,data.operation?.message,data.worker_configured?'Repairs are validated in isolation and wait for your installation.':'Repair worker setup is needed before automatic repair can run.',data.notice].filter(Boolean).join(' · ');
+    byId('sourceInstalledOrphanStatus').textContent=[inventoryMessage,data.operation?.message,(data.repair_available??data.worker_configured)?'Check and repair moves a source to its new web address, checks real content and restores the last working version when the check fails.':'Source repair is not available in this mode.',data.notice].filter(Boolean).join(' · ');
     const orphanCount=byId('sourceOrphanCount'),installedCount=byId('sourceInstalledOrphanCount');
     if(orphanCount)orphanCount.textContent=String((data.items||[]).filter(row=>!row.installed).length);
     if(installedCount)installedCount.textContent=String((data.items||[]).filter(row=>row.installed).length);

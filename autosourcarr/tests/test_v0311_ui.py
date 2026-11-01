@@ -82,13 +82,26 @@ def test_preference_sequential_revision_partial_failure_and_reopen_during_save()
 def test_apk_drop_serializes_files_continues_after_failure_and_preserves_results():
     node(DOM+SOURCE+r'''
 (async()=>{
+ const reviews=[];window.confirm=text=>{reviews.push(text);return true;};
+ const report=(sha,extra={})=>({preview:true,sha256:sha,package:'eu.kanade.tachiyomi.extension.en.example',permissions:['android.permission.CAMERA'],domains:['example.org'],warnings:['Unusual permission'],...extra});
  const files=[{name:'one.apk',size:100},{name:'not-a-source.zip',size:100},{name:'empty.apk',size:0},{name:'huge.apk',size:32*1024*1024+1},{name:'two APK.apk',size:100}];
- let prevented=false;ids.sourceApkDropZone.listeners.drop({preventDefault(){prevented=true},dataTransfer:{files}});assert(prevented);assert.equal(requests.length,1);assert.equal(requests[0].opts.body,files[0]);assert.equal(requests[0].opts.headers['Content-Type'],'application/vnd.android.package-archive');
+ let prevented=false;ids.sourceApkDropZone.listeners.drop({preventDefault(){prevented=true},dataTransfer:{files}});assert(prevented);assert.equal(requests.length,1);assert.equal(requests[0].url,'/api/v1/source-extensions/upload');assert.equal(requests[0].opts.body,files[0]);assert.equal(requests[0].opts.headers['Content-Type'],'application/vnd.android.package-archive');
  assert.equal(ids.sourceApkResults.children.filter(n=>n.dataset.state==='failed').length,3);
+ // A rejected check installs nothing and the queue continues.
  pending.shift().reject(Error('Engine rejected package'));await tick();assert.equal(requests.length,2);assert.equal(requests[1].opts.headers['X-Filename'],'two%20APK.apk');
  const third={name:'third.apk',size:200};ids.sourceApkFiles.files=[third];ids.sourceApkFiles.onchange();assert.equal(requests.length,2,'Files selected during install wait their turn');
- pending.shift().resolve({message:'Installed'});await tick();assert.equal(requests.length,3);pending.shift().resolve({message:'Installed'});await tick();
- assert.equal(refreshes,1);assert.equal(ids.sourceApkResults.children.length,6);assert(ids.sourceApkResults.children[0].textContent.includes('Engine rejected'));assert.equal(ids.sourceApkClear.disabled,false);ids.sourceApkClear.click();assert.equal(ids.sourceApkResults.children.length,0);
+ // The check answers the report; the person reviews it, then only the confirmation installs.
+ pending.shift().resolve(report('a'.repeat(64)));await tick();
+ assert.equal(reviews.length,1);for(const text of ['android.permission.CAMERA','example.org','Unusual permission'])assert(reviews[0].includes(text),text);
+ assert.equal(requests.length,3);assert.equal(requests[2].url,'/api/v1/source-extensions/upload/confirm');assert.deepEqual(JSON.parse(requests[2].opts.body),{sha256:'a'.repeat(64)});
+ pending.shift().resolve({message:'Installed'});await tick();
+ // Declining the review installs nothing.
+ window.confirm=()=>false;
+ assert.equal(requests.length,4);pending.shift().resolve(report('b'.repeat(64)));await tick();
+ assert.equal(requests.length,4,'A declined review sends no confirmation');
+ assert.equal(refreshes,1);assert.equal(ids.sourceApkResults.children.length,6);assert(ids.sourceApkResults.children[0].textContent.includes('Engine rejected'));
+ assert.equal(ids.sourceApkResults.children[4].dataset.state,'installed');assert.equal(ids.sourceApkResults.children[5].dataset.state,'cancelled');
+ assert.equal(ids.sourceApkClear.disabled,false);ids.sourceApkClear.click();assert.equal(ids.sourceApkResults.children.length,0);
 })().catch(e=>{console.error(e);process.exitCode=1});
 ''')
 
@@ -106,8 +119,11 @@ const fetch=async(url,opts)=>{sent=opts;return {ok:true,status:200,headers:{get:
 def test_apk_timeout_requests_inventory_check_without_retrying_install():
     node(DOM+SOURCE+r'''
 (async()=>{
+ window.confirm=()=>true;
  ids.sourceApkFiles.files=[{name:'uncertain.apk',size:1000}];ids.sourceApkFiles.onchange();assert.equal(requests[0].opts.timeoutMs,240000);
+ pending.shift().resolve({preview:true,sha256:'c'.repeat(64),permissions:[],domains:[],warnings:[]});await tick();
+ assert.equal(requests.length,2);assert.equal(requests[1].opts.timeoutMs,240000);
  const error=Error('Request timed out');error.name='TimeoutError';pending.shift().reject(error);await tick();
- assert.equal(requests.length,1,'An uncertain installation is not automatically submitted again');assert.equal(refreshes,1);assert.equal(ids.sourceApkResults.children[0].dataset.state,'unconfirmed');assert(ids.sourceApkResults.children[0].textContent.includes('before retrying'));
+ assert.equal(requests.length,2,'An uncertain installation is not automatically submitted again');assert.equal(refreshes,1);assert.equal(ids.sourceApkResults.children[0].dataset.state,'unconfirmed');assert(ids.sourceApkResults.children[0].textContent.includes('before retrying'));
 })().catch(e=>{console.error(e);process.exitCode=1});
 ''')

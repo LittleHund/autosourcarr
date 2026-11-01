@@ -470,10 +470,9 @@
 <label>Original APK for repair (optional) <input id="sourceRepairOriginalApk" type="file" accept=".apk,application/vnd.android.package-archive"/></label>
 <label><input id="sourceRepairOriginalConfirmed" type="checkbox"/> I confirm this is the APK used to install the selected source version.</label>
 <div><button id="attachSourceRepairOriginalApk" type="button">Attach original APK</button><p class="muted">Attach the APK used for this installed version. Your installed source and settings stay in place. Start a new repair after attaching it.</p><p id="sourceRepairOriginalStatus" role="status" aria-live="polite"></p></div>
-<label>Original project module <input id="sourceRepairModule" placeholder="src/en/mangafire (or . for a standalone project)"/></label>
-<label>Source commit (optional) <input id="sourceRepairRevision" pattern="[0-9a-f]{40}" placeholder="Full commit hash; leave empty for current maintained code"/></label>
-<label>What stopped working? <textarea id="sourceRepairIssue" required minlength="10" maxlength="6000" rows="3" placeholder="Describe the failure and a public example title. Do not include tokens, cookies or private data."></textarea></label>
-<p class="muted">The original ecosystem code is retained before repair. If it is missing, provide the project or choose Unavailable to reconstruct the installed binary. One repair runs at a time; code and your description use the selected AI provider’s allowance. Validated repairs install automatically; uncertain website moves wait for review. Installed is separate from your Fixed confirmation.</p>
+<label>New web address (optional) <input id="sourceRepairNewHost" autocomplete="off" spellcheck="false" maxlength="2048" placeholder="new-site.example (leave empty to look it up)"/></label>
+<p id="sourceRepairNewHostStatus" class="muted" role="status" aria-live="polite">Only the site name is used; a pasted link is trimmed to it. An https:// link also moves the source to https.</p>
+<p class="muted">The original ecosystem code is retained before repair. If it is missing, provide the project or choose Unavailable to reconstruct the installed binary. One repair runs at a time; code uses the selected AI provider’s allowance. Validated repairs install automatically; uncertain website moves wait for review. Installed is separate from your Fixed confirmation.</p>
 <button type="submit" class="primaryAction">Back up and check source</button>
 <button id="openSelectedSourceRaw" type="button">View / provide original source code</button>
 </form></details>

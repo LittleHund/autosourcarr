@@ -55,7 +55,7 @@ public static class SourceOrphanTests
             using var host = new FakeHost(Inventory());
             var orphans = host.Orphans(temp.Path, () => Seed());
             Await(orphans.RefreshInventoryAsync());
-            var snapshot = orphans.Snapshot(workerConfigured: false, configured: [Store]);
+            var snapshot = orphans.Snapshot(repairAvailable: false, configured: [Store]);
             Check.Equal(true, snapshot["inventory_known"]!.GetValue<bool>());
             var groups = snapshot["groups"]!.AsArray();
             Check.Equal(2, groups.Count);
@@ -84,7 +84,15 @@ public static class SourceOrphanTests
             Check.Equal("available", omega["state"]!.GetValue<string>());
             Check.Equal(true, omega["can_install"]!.GetValue<bool>());
             Check.Equal(false, omega["can_repair"]!.GetValue<bool>());
-            Check.Equal(true, Item(orphans.Snapshot(workerConfigured: true, configured: [Store]), "omega")["can_repair"]!.GetValue<bool>());
+            Check.Equal(false, alpha["can_repair"]!.GetValue<bool>());
+            Check.Equal(false, snapshot["repair_available"]!.GetValue<bool>());
+            // With the in-app domain repair, installed orphans can be repaired; a not-installed one needs installing first.
+            var available = orphans.Snapshot(repairAvailable: true, configured: [Store]);
+            Check.Equal(true, available["worker_configured"]!.GetValue<bool>());
+            Check.Equal(true, available["repair_available"]!.GetValue<bool>());
+            Check.Equal(true, Item(available, "alpha")["can_repair"]!.GetValue<bool>());
+            Check.Equal(true, Item(available, "delta")["can_repair"]!.GetValue<bool>());
+            Check.Equal(false, Item(available, "omega")["can_repair"]!.GetValue<bool>());
 
             // The repair record of the last promotion marks its installed orphan as repaired.
             var repaired = orphans.Snapshot(false, [Store], new JsonObject { ["state"] = "installed", ["extension"] = new JsonObject { ["pkgName"] = Prefix + "alpha" } });
@@ -141,6 +149,31 @@ public static class SourceOrphanTests
             Await(again.RefreshInventoryAsync());
             Check.True(!Names(again.Snapshot(false, [Store])["items"]).Contains("theta"), "An unmarked source leaves the orphan groups.");
             Check.Equal(true, again.Annotate([Extension("theta", installed: true, store: "https://gone.example/index.min.json")], [Store])[0]["can_mark_orphan"]!.GetValue<bool>());
+        });
+
+        suite.Add("source orphans: SRC-8 a newer version in a configured repository is an official replacement", () =>
+        {
+            JsonObject Row(string name, bool hasUpdate, string? store = Store, bool obsolete = false, bool listed = true, bool installed = true)
+            {
+                var row = Extension(name, installed, store, obsolete, listed);
+                row["hasUpdate"] = hasUpdate;
+                return row;
+            }
+            var rows = new List<JsonObject>
+            {
+                Row("updated", hasUpdate: true), Row("same", hasUpdate: false), Row("elsewhere", hasUpdate: true, store: "https://gone.example/index.min.json"),
+                Row("obsolete", hasUpdate: true, obsolete: true), Row("local", hasUpdate: true, store: "", listed: false),
+                Row("available", hasUpdate: true, installed: false),
+            };
+            var found = SourceOrphans.MaintainedVersion(rows, Prefix + "updated", [Store]);
+            Check.True(found is not null && found.Contains(Store, StringComparison.Ordinal) && found.Contains("1.4.1", StringComparison.Ordinal), "newer listed version found: " + found);
+            Check.True(SourceOrphans.MaintainedVersion(rows, Prefix + "same", [Store]) is null, "the same broken version is no replacement");
+            Check.True(SourceOrphans.MaintainedVersion(rows, Prefix + "elsewhere", [Store]) is null, "a repository that is no longer configured does not count");
+            Check.True(SourceOrphans.MaintainedVersion(rows, Prefix + "elsewhere", null) is not null, "unknown configuration counts as configured");
+            Check.True(SourceOrphans.MaintainedVersion(rows, Prefix + "obsolete", [Store]) is null, "an obsolete listing is not maintained");
+            Check.True(SourceOrphans.MaintainedVersion(rows, Prefix + "local", [Store]) is null, "a local-only package has no repository version");
+            Check.True(SourceOrphans.MaintainedVersion(rows, Prefix + "available", [Store]) is null, "a package that is not installed has nothing to repair");
+            Check.True(SourceOrphans.MaintainedVersion(rows, Prefix + "missing", [Store]) is null, "unknown package");
         });
 
         suite.Add("source orphans: discovery records packages that left the original catalog", () =>

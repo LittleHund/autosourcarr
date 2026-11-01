@@ -137,17 +137,17 @@ public static class EgressProxyTests
 
         suite.Add("isolated runner proof: exact evidence parses; weakened or foreign evidence is refused", () =>
         {
-            const string Body = "{\"pid\":42,\"uid\":568,\"ppid\":7,\"pdeathsig\":9,\"landlock\":4,\"nnp\":1,\"seccomp\":2,\"netgate\":1,\"proxy\":40000,\"scoped\":0}";
+            const string Body = "{\"pid\":42,\"uid\":568,\"ppid\":7,\"pdeathsig\":9,\"landlock\":6,\"nnp\":1,\"seccomp\":2,\"netgate\":1,\"proxy\":40000,\"scoped\":3}";
             var proof = IsolatedRunner.ParseProof("AUTOSOURCARR_RUNNER_V1 " + Job + " " + Body, 42, 568, 7, Job, 40000);
-            Check.True(proof is { LandlockAbi: 4, ProxyPort: 40000, Scoped: false }, "valid proof rejected");
-            var scoped = Body.Replace("\"landlock\":4", "\"landlock\":6", StringComparison.Ordinal).Replace("\"scoped\":0", "\"scoped\":3", StringComparison.Ordinal);
-            Check.True(IsolatedRunner.ParseProof("AUTOSOURCARR_RUNNER_V1 " + Job + " " + scoped, 42, 568, 7, Job, 40000) is { Scoped: true }, "scoped proof rejected");
+            Check.True(proof is { LandlockAbi: 6, ProxyPort: 40000, Scoped: true }, "valid proof rejected");
+            // Landlock ABI 6 (signal scoping) is required: ABI 4/5 proofs and unscoped proofs are refused.
             foreach (var body in new[]
             {
-                Body.Replace("\"landlock\":4", "\"landlock\":3", StringComparison.Ordinal), Body.Replace("\"netgate\":1", "\"netgate\":0", StringComparison.Ordinal),
+                Body.Replace("\"landlock\":6", "\"landlock\":5", StringComparison.Ordinal), Body.Replace("\"landlock\":6", "\"landlock\":4", StringComparison.Ordinal),
+                Body.Replace("\"scoped\":3", "\"scoped\":0", StringComparison.Ordinal), Body.Replace("\"netgate\":1", "\"netgate\":0", StringComparison.Ordinal),
                 Body.Replace("\"seccomp\":2", "\"seccomp\":0", StringComparison.Ordinal), Body.Replace("\"proxy\":40000", "\"proxy\":40001", StringComparison.Ordinal),
                 Body.Replace("\"uid\":568", "\"uid\":0", StringComparison.Ordinal), Body.Replace("\"ppid\":7", "\"ppid\":8", StringComparison.Ordinal),
-                Body.Replace("\"landlock\":4", "\"landlock\":6", StringComparison.Ordinal), Body[..^1] + ",\"extra\":1}", Body[..^1] + ",\"pid\":42}", "[]"
+                Body[..^1] + ",\"extra\":1}", Body[..^1] + ",\"pid\":42}", "[]"
             })
                 Check.True(IsolatedRunner.ParseProof("AUTOSOURCARR_RUNNER_V1 " + Job + " " + body, 42, 568, 7, Job, 40000) is null, body);
             Check.True(IsolatedRunner.ParseProof("AUTOSOURCARR_RUNNER_V1 " + new string('f', 32) + " " + Body, 42, 568, 7, Job, 40000) is null, "foreign job accepted");

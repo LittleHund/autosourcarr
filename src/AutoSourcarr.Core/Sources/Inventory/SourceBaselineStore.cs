@@ -17,7 +17,7 @@ public sealed class RetainedApkEvidence
 }
 
 /// <summary>Retains original binary evidence per instance. Does not convert, load, install or infer source identity.</summary>
-public sealed class SourceBaselineStore(EngineInstalledSources installed, string maintenanceRoot, BoundedWorkScheduler io, TimeProvider? clock = null) : IAsyncDisposable
+public sealed class SourceBaselineStore(IInstalledSourceCaptures installed, string maintenanceRoot, BoundedWorkScheduler io, TimeProvider? clock = null) : IAsyncDisposable
 {
     private readonly string _root = Path.GetFullPath(maintenanceRoot);
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;

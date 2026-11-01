@@ -215,6 +215,27 @@ public sealed class SourceOrphans
         return row;
     }
 
+    /// <summary>
+    /// SRC-8 "official replacement before repair": why a configured repository now offers a maintained version of an
+    /// installed package, or null. Uses the same listing rule as <see cref="Annotate"/> (an apkUrl, not obsolete, from a
+    /// configured repository index; unknown configuration counts as configured) and needs a newer version there
+    /// (hasUpdate): a repository that lists the very version that broke offers nothing to replace it with, so the
+    /// repair may go ahead. A package that is not installed has nothing to repair and answers null.
+    /// </summary>
+    public static string? MaintainedVersion(IEnumerable<JsonObject> rows, string package, IReadOnlyCollection<string>? configured)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        foreach (var row in rows)
+        {
+            if (Text(row["pkgName"]) != package || !Truthy(row["isInstalled"])) continue;
+            var store = Text(row["storeIndexUrl"]);
+            var listed = Truthy(row["apkUrl"]) && !Truthy(row["isObsolete"]) && store.Length > 0 && (configured is null || configured.Contains(store));
+            if (!listed || !IsTrue(row["hasUpdate"])) continue;
+            return "a newer version than the installed " + (Truthy(row["versionName"]) ? Str(row["versionName"]) : "one") + " is listed by " + store;
+        }
+        return null;
+    }
+
     /// <summary>A full inventory read (installed and available extensions) becomes the cached list.</summary>
     public void AcceptInventory(IEnumerable<JsonObject> rows)
     {
@@ -268,8 +289,11 @@ public sealed class SourceOrphans
     /// <summary>
     /// The orphan page: every orphan once in items (sorted by name), and SRC-3's two headers in groups, Installed and
     /// Not installed, each with its own orphan list. Starts a background inventory read when the cache is older than 20 s.
+    /// <paramref name="repairAvailable"/> is whether the in-app domain repair runs here: then every installed orphan can
+    /// be repaired (can_repair); a not-installed one must be installed first. worker_configured keeps its name for the
+    /// UI and carries the same truth (the in-app repair is the worker), repair_available says it plainly.
     /// </summary>
-    public JsonObject Snapshot(bool workerConfigured, IReadOnlyCollection<string>? configured, JsonObject? maintenanceOperation = null)
+    public JsonObject Snapshot(bool repairAvailable, IReadOnlyCollection<string>? configured, JsonObject? maintenanceOperation = null)
     {
         lock (_gate)
         {
@@ -319,7 +343,7 @@ public sealed class SourceOrphans
                 item["installed"] = isInstalled;
                 item["state"] = state;
                 item["can_install"] = Truthy(row["archive_url"]) && row["archive_available"]?.GetValueKind() != JsonValueKind.False && !isInstalled && _inventoryKnown;
-                item["can_repair"] = workerConfigured && Pkg.IsMatch(package) && (isInstalled || Truthy(row["sources"]));
+                item["can_repair"] = repairAvailable && isInstalled && AutoSourcarr.Core.Repair.Migration.DomainRepair.IsPackageName(package);
                 item["message"] = message;
                 items.Add(item);
             }
@@ -336,7 +360,7 @@ public sealed class SourceOrphans
                     ["hasUpdate"] = item.ContainsKey("hasUpdate") ? item["hasUpdate"]?.DeepClone() : false,
                     ["isObsolete"] = item.ContainsKey("isObsolete") ? item["isObsolete"]?.DeepClone() : false,
                     ["installed"] = true, ["state"] = "installed-unverified", ["origin"] = "Installed package; archive provenance not yet located",
-                    ["can_install"] = false, ["can_repair"] = workerConfigured && Pkg.IsMatch(package),
+                    ["can_install"] = false, ["can_repair"] = repairAvailable && AutoSourcarr.Core.Repair.Migration.DomainRepair.IsPackageName(package),
                     ["message"] = manual ? "Manually added source; no repository download is recorded."
                         : "Missing from the configured catalog. Refresh archives to locate the original history."
                 });
@@ -351,7 +375,8 @@ public sealed class SourceOrphans
             {
                 ["items"] = new JsonArray(items.Select(entry => (JsonNode?)entry).ToArray()),
                 ["groups"] = new JsonArray(Group("installed", "Installed", true), Group("not-installed", "Not installed", false)),
-                ["refresh"] = _refresh.DeepClone(), ["operation"] = _operation.DeepClone(), ["worker_configured"] = workerConfigured,
+                ["refresh"] = _refresh.DeepClone(), ["operation"] = _operation.DeepClone(), ["worker_configured"] = repairAvailable,
+                ["repair_available"] = repairAvailable,
                 ["inventory_known"] = _inventoryKnown, ["inventory_refreshing"] = _inventoryTask is { IsCompleted: false }, ["notice"] = Notice
             };
         }

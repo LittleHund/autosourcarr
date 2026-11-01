@@ -21,13 +21,13 @@ public static class SourceRepositoryEndpoints
         ArgumentNullException.ThrowIfNull(repositories); ArgumentNullException.ThrowIfNull(previews);
         ArgumentNullException.ThrowIfNull(io); ArgumentNullException.ThrowIfNull(settings);
         var group = endpoints.MapGroup(prefix).AddEndpointFilter(new AdminAuthorizationFilter(settings));
-        group.MapGet("", (Func<HttpContext, Task<IResult>>)(context => ExecuteAsync(context, async () =>
+        var list = group.MapGet("", (Func<HttpContext, Task<IResult>>)(context => ExecuteAsync(context, async () =>
         {
             var snapshot = await io.RunAsync(repositories.Snapshot, context.RequestAborted).ConfigureAwait(false);
             snapshot["can_restart"] = settings().SourceEngineMode == "integrated";
             return snapshot;
         })));
-        group.MapPost("/preview", (Func<HttpContext, Task<IResult>>)(context => ExecuteAsync(context, async () =>
+        var preview = group.MapPost("/preview", (Func<HttpContext, Task<IResult>>)(context => ExecuteAsync(context, async () =>
         {
             var request = await ApiJson.ReadObjectAsync(context.Request, 64 * 1024).ConfigureAwait(false);
             // Useful validation messages originate only in our own URL rules;
@@ -40,8 +40,33 @@ public static class SourceRepositoryEndpoints
             // They are not configuration errors and must not enter global logs.
             catch (Exception) { throw new ApiProblem(400, "Repository preview could not be completed. Check the HTTPS manifest URL and retry."); }
         })));
-        group.MapPost("", (Func<HttpContext, Task<IResult>>)(context => ChangeAsync(context, repositories, io, remove: false)));
-        group.MapDelete("", (Func<HttpContext, Task<IResult>>)(context => ChangeAsync(context, repositories, io, remove: true)));
+        var add = group.MapPost("", (Func<HttpContext, Task<IResult>>)(context => ChangeAsync(context, repositories, io, remove: false)));
+        var delete = group.MapDelete("", (Func<HttpContext, Task<IResult>>)(context => ChangeAsync(context, repositories, io, remove: true)));
+        // Phase 6: under /api/v1 the routes join the documented API (the /api/admin wires stay undocumented and unnamed).
+        if (prefix.StartsWith("/api/v1/", StringComparison.Ordinal))
+        {
+            list.WithMetadata(ApiContractMetadata.Instance).WithName("getSourceRepositories")
+                .WithSummary("The configured extension repositories (SRC-1) with the revision a change must name.")
+                .Produces<JsonObject>(StatusCodes.Status200OK)
+                .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
+            preview.WithMetadata(ApiContractMetadata.Instance).Accepts<JsonObject>("application/json").WithName("previewSourceRepository")
+                .WithSummary("Read a repository index (body: url) without adding it: its name and extensions.")
+                .Produces<JsonObject>(StatusCodes.Status200OK)
+                .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ProblemResponse>(StatusCodes.Status422UnprocessableEntity);
+            add.WithMetadata(ApiContractMetadata.Instance).Accepts<JsonObject>("application/json").WithName("addSourceRepository")
+                .WithSummary("Add a repository (body: url, revision).")
+                .Produces<JsonObject>(StatusCodes.Status200OK)
+                .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ProblemResponse>(StatusCodes.Status409Conflict)
+                .Produces<ProblemResponse>(StatusCodes.Status422UnprocessableEntity);
+            delete.WithMetadata(ApiContractMetadata.Instance).Accepts<JsonObject>("application/json").WithName("removeSourceRepository")
+                .WithSummary("Remove a repository (body: url, revision).")
+                .Produces<JsonObject>(StatusCodes.Status200OK)
+                .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ProblemResponse>(StatusCodes.Status409Conflict)
+                .Produces<ProblemResponse>(StatusCodes.Status422UnprocessableEntity);
+        }
         return group;
     }
 

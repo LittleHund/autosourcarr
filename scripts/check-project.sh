@@ -98,6 +98,7 @@ if command -v node >/dev/null 2>&1; then
   node autosourcarr/tests/ui_v0338_account_resources.js
   node autosourcarr/tests/ui_v0338_api_recovery.js
   node autosourcarr/tests/ui_v0339_original_apk.js
+  node autosourcarr/tests/ui_repair_new_host.js
   node autosourcarr/tests/ui_v045_entry_webview.js
   node --check autosourcarr/app/static/repair-tasks.js
   node autosourcarr/tests/ui_v0340_repair_tasks.js

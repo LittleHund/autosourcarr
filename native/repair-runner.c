@@ -27,8 +27,9 @@
 #include <unistd.h>
 
 /*
- * Process repair runner: Landlock (ABI >= 4, network rules required), no_new_privs, empty
- * capabilities, seccomp and a connect() gate.
+ * Process repair runner: Landlock (ABI >= 6: TCP port rules plus signal and abstract-socket
+ * scoping, all required), no_new_privs, empty capabilities, seccomp, a connect() gate and a
+ * signal gate.
  *
  *   repair-runner <job-dir> <proxy-port> -- <program> [args...]
  *
@@ -40,6 +41,14 @@
  * (pidfd_getfd). The program's argument memory is only read to choose allow or deny; it never
  * decides where the socket goes, so rewriting it after the check cannot redirect the connection.
  * Landlock still limits both processes to the proxy port as the second layer.
+ *
+ * Signals: the program runs as the app's uid, so without scoping it could kill the app.
+ * Landlock's signal scope (ABI 6) is the in-kernel rule and is required. Seccomp is a second,
+ * independent layer: kill/tgkill/rt_(tg)sigqueueinfo aimed at the program itself or at its own
+ * process group are allowed in BPF; every other target goes to the supervisor, which lets the
+ * call continue only when the target is in the run's process group (setsid/setpgid are denied,
+ * so only the run's own processes can be in it) and answers EPERM otherwise.
+ * pidfd_send_signal is refused with ENOSYS (callers fall back to kill).
  */
 
 /* Stable Landlock layout; no dependency on newer host UAPI headers. */
@@ -68,6 +77,7 @@ struct as_port { uint64_t access; uint64_t port; };
 #define AS_NET_BIND 1ULL
 #define AS_NET_CONNECT 2ULL
 #define AS_SCOPE_ALL 3ULL
+#define AS_MIN_ABI 6
 #define AS_RX (AS_READ | AS_DIR | AS_EXEC)
 #define AS_RO (AS_READ | AS_DIR)
 #define AS_JOB (AS_EXEC | AS_WRITE | AS_READ | AS_DIR | AS_REMOVE_DIR | AS_REMOVE_FILE | AS_MAKE_DIR \
@@ -81,6 +91,7 @@ struct as_port { uint64_t access; uint64_t port; };
 
 static uint64_t handled_fs;
 static int landlock_abi;
+static uint64_t scoped_rights = AS_SCOPE_ALL;
 /* Collected before any domain: inside one, /etc itself is no longer listable. */
 static glob_t java_config;
 static int java_config_found;
@@ -209,10 +220,9 @@ static char *jdk_root(const char *program)
 static int build_ruleset(const char *job, const char *jdk, unsigned port, int supervisor)
 {
     struct as_ruleset policy = {
-        .fs = handled_fs, .net = AS_NET_BIND | AS_NET_CONNECT,
-        .scoped = landlock_abi >= 6 ? AS_SCOPE_ALL : 0
+        .fs = handled_fs, .net = AS_NET_BIND | AS_NET_CONNECT, .scoped = scoped_rights
     };
-    int ruleset = (int)syscall(AS_LL_CREATE, &policy, landlock_abi >= 6 ? sizeof policy : 2 * sizeof(uint64_t), 0);
+    int ruleset = (int)syscall(AS_LL_CREATE, &policy, sizeof policy, 0);
     if (ruleset < 0)
         fail("Cannot create repair restriction domain");
     const char *executable[] = { "/usr", "/lib", "/lib64", "/bin", "/etc/alternatives", "/opt/java", NULL };
@@ -257,6 +267,15 @@ static void enter_domain(int ruleset)
     BPF_JUMP(BPF_JMP | BPF_JSET | BPF_K, (mask), 0, 1), \
     AS_ERR(code), \
     AS_RET(SECCOMP_RET_ALLOW)
+/* Signal syscalls: allow when arg0 is one of three fixed targets, else ask the supervisor. */
+#define AS_SIGNAL(nr, first, second, third) \
+    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (nr), 0, 6), \
+    BPF_STMT(BPF_LD | BPF_W | BPF_ABS, AS_ARG(0)), \
+    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (first), 3, 0), \
+    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (second), 2, 0), \
+    BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, (third), 1, 0), \
+    AS_RET(SECCOMP_RET_USER_NOTIF), \
+    AS_RET(SECCOMP_RET_ALLOW)
 #define AS_HEADER \
     BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, arch)), \
     BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, AUDIT_ARCH_X86_64, 1, 0), \
@@ -284,8 +303,10 @@ static void install_filter(const struct sock_filter *instructions, size_t count,
         *listener = (int)result;
 }
 
-static int restrict_program(void)
+static int restrict_program(pid_t self, pid_t group)
 {
+    /* The kernel reads these pid_t arguments as 32-bit values, as the filter compares them. */
+    const uint32_t me = (uint32_t)self, my_group = (uint32_t)-group;
 #if !defined(__x86_64__)
 #error Repair runner currently requires Linux x86_64.
 #endif
@@ -318,6 +339,13 @@ static int restrict_program(void)
         AS_DENY_FLAGS(__NR_seccomp, 1, SECCOMP_FILTER_FLAG_NEW_LISTENER, EPERM),
         /* The whole run stays in the runner's process group, so a group kill reaches it. */
         AS_DENY(__NR_setsid), AS_DENY(__NR_setpgid),
+        /* Signals reach only this run (see the file comment); kill(0) is the own group. */
+        AS_SIGNAL(__NR_kill, 0, me, my_group),
+        AS_SIGNAL(__NR_tgkill, me, me, me),
+        AS_SIGNAL(__NR_tkill, me, me, me),
+        AS_SIGNAL(__NR_rt_sigqueueinfo, me, me, me),
+        AS_SIGNAL(__NR_rt_tgsigqueueinfo, me, me, me),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_pidfd_send_signal, 0, 1), AS_ERR(ENOSYS),
         AS_DENY(__NR_process_vm_readv), AS_DENY(__NR_pidfd_getfd), AS_DENY(__NR_pidfd_open),
         AS_COMMON_DENY,
         AS_RET(SECCOMP_RET_ALLOW)
@@ -486,6 +514,59 @@ static int decide_connect(int listener, const struct seccomp_notif *request, uns
     return result;
 }
 
+/* Process group of a task (thread ids work too), or -1 when it is gone or unreadable. */
+static pid_t task_group(pid_t task)
+{
+    char path[64], buffer[1024];
+    snprintf(path, sizeof path, "/proc/%d/stat", (int)task);
+    int fd = open(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0)
+        return -1;
+    ssize_t length = read(fd, buffer, sizeof buffer - 1);
+    close(fd);
+    if (length <= 0)
+        return -1;
+    buffer[length] = '\0';
+    /* "pid (comm) state ppid pgrp ...": comm may contain anything, so parse after the last ')'. */
+    char *after = strrchr(buffer, ')');
+    int ppid = 0, group = 0;
+    char state = 0;
+    if (!after || sscanf(after + 1, " %c %d %d", &state, &ppid, &group) != 3 || group <= 0)
+        return -1;
+    return (pid_t)group;
+}
+
+static unsigned signal_refusals_logged;
+
+/* 0: let the caller's own syscall continue; otherwise the errno to answer. Landlock's signal
+   scope still applies to the continued call, which also covers a target exiting and its pid
+   being reused between this check and the continue. */
+static int decide_signal(const struct seccomp_notif *request, pid_t group)
+{
+    int target = (int)(uint32_t)request->data.args[0];
+    int process_directed = request->data.nr == __NR_kill || request->data.nr == __NR_rt_sigqueueinfo;
+    if (target == -group && process_directed)
+        return 0;
+    if (target <= 0)
+        return process_directed ? EPERM : EINVAL;
+    pid_t owner = task_group(target);
+    if (owner == group)
+        return 0;
+    if (owner < 0)
+        return ESRCH;
+    if (signal_refusals_logged < 32) {
+        ++signal_refusals_logged;
+        fprintf(stderr, "repair-runner: refused signal to pid %d outside the repair run\n", target);
+    }
+    return EPERM;
+}
+
+static int is_signal_call(int nr)
+{
+    return nr == __NR_kill || nr == __NR_tgkill || nr == __NR_tkill || nr == __NR_rt_sigqueueinfo
+        || nr == __NR_rt_tgsigqueueinfo;
+}
+
 static int exit_status(int status)
 {
     if (WIFEXITED(status))
@@ -510,8 +591,16 @@ static int supervise(pid_t child, int pidfd, int listener, unsigned port)
             memset(&request, 0, sizeof request);
             if (ioctl(listener, SECCOMP_IOCTL_NOTIF_RECV, &request) == 0) {
                 struct seccomp_notif_resp response = { .id = request.id };
-                int error = request.data.nr == __NR_connect ? decide_connect(listener, &request, port) : EPERM;
-                response.error = error ? -error : 0;
+                if (is_signal_call(request.data.nr)) {
+                    int error = decide_signal(&request, getpid());
+                    if (error)
+                        response.error = -error;
+                    else
+                        response.flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+                } else {
+                    int error = request.data.nr == __NR_connect ? decide_connect(listener, &request, port) : EPERM;
+                    response.error = error ? -error : 0;
+                }
                 /* ENOENT: the caller was interrupted or killed; nothing to answer. */
                 if (ioctl(listener, SECCOMP_IOCTL_NOTIF_SEND, &response) != 0 && errno != ENOENT)
                     fprintf(stderr, "repair-runner: connect gate response failed: %s\n", strerror(errno));
@@ -532,13 +621,67 @@ static int supervise(pid_t child, int pidfd, int listener, unsigned port)
     }
 }
 
+/* Tasks (threads included) whose real uid is uid, as far as this pid namespace shows them. */
+static rlim_t user_tasks(uid_t uid)
+{
+    glob_t found;
+    rlim_t total = 0;
+    if (glob("/proc/[0-9]*/status", GLOB_NOSORT, NULL, &found) != 0)
+        return 0;
+    for (size_t i = 0; i < found.gl_pathc; ++i) {
+        char buffer[4096];
+        int fd = open(found.gl_pathv[i], O_RDONLY | O_CLOEXEC);
+        if (fd < 0)
+            continue;
+        ssize_t length = read(fd, buffer, sizeof buffer - 1);
+        close(fd);
+        if (length <= 0)
+            continue;
+        buffer[length] = '\0';
+        char *uid_line = strstr(buffer, "\nUid:"), *threads = strstr(buffer, "\nThreads:");
+        if (uid_line && threads && strtoul(uid_line + 5, NULL, 10) == uid)
+            total += strtoul(threads + 9, NULL, 10);
+    }
+    globfree(&found);
+    return total;
+}
+
+/*
+ * RLIMIT_NPROC is checked at fork/clone against ALL tasks (threads included) of the real uid,
+ * not just this run's, so the ceiling must sit above what the app uid already uses. On TrueNAS
+ * every app container shares uid 568 and this pid namespace sees only our own container, so the
+ * visible count can be far too low: the ceiling is therefore max(8192, visible + 1024). That
+ * bounds a fork bomb to a few thousand tasks instead of the kernel-wide pid/threads maximum while
+ * leaving a busy shared uid room to work. A pids cgroup would be exact but needs a delegated,
+ * writable cgroup, which an unprivileged app container does not have.
+ */
+#define AS_NPROC_FLOOR 8192
+#define AS_NPROC_BUDGET 1024
+/*
+ * Address space: HotSpot caps its heap reservation at half of RLIMIT_AS and needs ~1 GiB more
+ * for compressed class space plus code cache and thread stacks. 8 GiB was verified with OpenJDK
+ * 21 at -XX:MaxRAM=64g and 32 CPUs (3-4 GiB heap); 4 GiB failed there with "unable to create
+ * native thread".
+ */
+#define AS_ADDRESS_SPACE (8ULL << 30)
+
 int main(int argc, char **argv)
 {
     int forced_abi = 0;
+    rlim_t nproc_floor = AS_NPROC_FLOOR, nproc_budget = AS_NPROC_BUDGET;
 #ifdef AUTOSOURCARR_TEST
     const char *forced = getenv("AUTOSOURCARR_TEST_FORCE_ABI");
     if (forced)
         forced_abi = atoi(forced);
+    /* Lets the check prove the seccomp signal gate on its own, without Landlock's scope. */
+    if (getenv("AUTOSOURCARR_TEST_NO_SIGNAL_SCOPE"))
+        scoped_rights = 0;
+    /* A small task budget so the check can prove the ceiling without thousands of processes. */
+    const char *budget = getenv("AUTOSOURCARR_TEST_NPROC_BUDGET");
+    if (budget && atoi(budget) > 0) {
+        nproc_floor = 0;
+        nproc_budget = (rlim_t)atoi(budget);
+    }
 #endif
     if (argc < 5 || strcmp(argv[3], "--") != 0)
         refuse("usage: repair-runner <job-dir> <proxy-port> -- <program> [args...]");
@@ -584,9 +727,9 @@ int main(int argc, char **argv)
     landlock_abi = (int)syscall(AS_LL_CREATE, NULL, 0, 1);
     if (forced_abi > 0 && forced_abi < landlock_abi)
         landlock_abi = forced_abi;
-    if (landlock_abi < 4)
-        refuse("Landlock ABI 4 (TCP network rules) is required; no isolation fallback is enabled");
-    handled_fs = landlock_abi >= 5 ? (1ULL << 16) - 1 : (1ULL << 15) - 1;
+    if (landlock_abi < AS_MIN_ABI)
+        refuse("Landlock ABI 6 (TCP network rules plus signal and abstract-socket scoping) is required; no isolation fallback is enabled");
+    handled_fs = (1ULL << 16) - 1;
 
     char port_text[8], proxy[48], java_options[PATH_MAX * 2 + 512];
     snprintf(port_text, sizeof port_text, "%u", port);
@@ -609,10 +752,12 @@ int main(int argc, char **argv)
         fail("Cannot enter the repair workspace");
 
     java_config_found = glob("/etc/java*", 0, NULL, &java_config) == 0;
+    rlim_t tasks = user_tasks(getuid()) + nproc_budget;
     enter_domain(build_ruleset(job, jdk, port, 1));
     if (syscall(__NR_close_range, 3U, ~0U, 0) != 0)
         fail("Cannot close unrelated inherited file descriptors");
-    lower_limit(RLIMIT_AS, 16ULL << 30);
+    lower_limit(RLIMIT_AS, AS_ADDRESS_SPACE);
+    lower_limit(RLIMIT_NPROC, tasks > nproc_floor ? tasks : nproc_floor);
     lower_limit(RLIMIT_NOFILE, 4096);
     lower_limit(RLIMIT_FSIZE, 4ULL << 30);
     lower_limit(RLIMIT_CORE, 0);
@@ -628,7 +773,7 @@ int main(int argc, char **argv)
         close(channel[0]);
         arm_parent(supervisor);
         enter_domain(build_ruleset(job, jdk, port, 0));
-        int listener = restrict_program();
+        int listener = restrict_program(getpid(), supervisor);
         send_fd(channel[1], listener);
         close(listener);
         char ready = 0;
@@ -658,7 +803,7 @@ int main(int argc, char **argv)
         refuse("Repair parent changed during setup");
     }
     fprintf(stderr, "AUTOSOURCARR_RUNNER_V1 %s {\"pid\":%ld,\"uid\":%ld,\"ppid\":%ld,\"pdeathsig\":%d,\"landlock\":%d,\"nnp\":1,\"seccomp\":2,\"netgate\":1,\"proxy\":%u,\"scoped\":%d}\n",
-        leaf + 1, (long)getpid(), (long)geteuid(), (long)parent_pid, SIGKILL, landlock_abi, port, landlock_abi >= 6 ? 3 : 0);
+        leaf + 1, (long)getpid(), (long)geteuid(), (long)parent_pid, SIGKILL, landlock_abi, port, (int)scoped_rights);
     fflush(stderr);
     char go = 'G';
     if (write(channel[0], &go, 1) != 1) {
