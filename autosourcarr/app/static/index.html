@@ -363,6 +363,11 @@
 </div>
 </div>
 <div class="apkDownloadPanel"><div><strong>Android extension</strong><p id="apkDownloadStatus" role="status">Checking the current APK…</p><p class="muted" hidden="" id="apkBuildHelp">Choose Build reader extensions. Uses this instance’s saved reader settings and existing signing key.</p></div><button class="primaryAction" disabled="" id="downloadApk" type="button">Download current APK</button></div><div class="toolbar wrap"><button id="buildReaderExtensions" type="button" disabled>Build reader extensions</button><button id="configureReaderBuild" type="button">Review reader settings</button><button id="cancelReaderBuild" type="button" hidden>Cancel build</button><button id="downloadJar" type="button" disabled>Download current JAR</button><span id="readerBuildStatus" role="status"></span></div><div id="readerBuildPreflight" aria-live="polite"><p class="muted">Open Status to check reader build readiness.</p></div><div class="attentionGrid" id="statusAttention"></div>
+<details class="statusPanel readerSetupPanel" id="readerSetupPanel"><summary><strong>Reader setup</strong> <span class="muted">Add this server to Mihon by QR code or link, one server slot per server</span></summary>
+<p class="muted" id="readerSetupStatus" role="status">Open to load the reader setup.</p>
+<div class="toolbar wrap"><label>Server slot<select id="readerSetupSlot"></select></label><label>Reader key<input id="readerSetupKey" type="password" autocomplete="off" maxlength="512" placeholder="Paste a reader device key from Keys"/></label><button id="readerSetupRefresh" type="button">Refresh</button></div>
+<div class="readerSetupCodes" id="readerSetupCodes"></div>
+</details>
 <div class="statusPrimaryGrid">
 <div class="statusPanel">
 <div class="statusPanelHeader"><h3>Connections</h3><span class="muted">Can AutoSourcarr reach everything it needs?</span></div>
@@ -710,6 +715,7 @@ proxy_set_header Remote-Groups $groups;</code></pre><p class="muted">These are t
 <script src="/static/reimagined-controls.js?v=0.4.5"></script>
 <script src="/static/reimagined.js?v=0.4.5"></script>
 <script src="/static/accounts.js?v=0.4.5"></script>
+<script src="/static/vendor/qrcode-generator-1.4.4.js?v=0.4.5"></script><script src="/static/reader-setup.js?v=0.4.5"></script>
 <script src="/static/connections.js?v=0.4.5"></script>
 <script src="/static/filter-summary.js?v=0.4.5"></script>
 </body></html>

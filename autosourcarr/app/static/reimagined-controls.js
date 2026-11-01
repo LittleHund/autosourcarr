@@ -1,7 +1,7 @@
 /* Reviewed controls share the instance dialog's write owner and revision checks. */
 (() => {
   'use strict';
-  const request=(path,method,body)=>api('/api/admin/'+path,{method,body:JSON.stringify(body),suppressClientError:true});
+  const request=(path,method,body)=>api('/api/v1/'+path,{method,body:JSON.stringify(body),suppressClientError:true});
   // Phase 8E: the policy simulator lives under /api/v1 (not yet in the generated client).
   const requestV1=(path,method,body)=>api('/api/v1/'+path,body===undefined?{method,suppressClientError:true}:{method,body:JSON.stringify(body),suppressClientError:true});
   const date=value=>value?new Date(value).toLocaleString():'Not recorded';
@@ -17,7 +17,7 @@
     const upgradeOwner=document.createElement('section');(ctx.servingBody||owner).append(upgradeOwner);
     // Phase 9: one write path for metadata overrides, /api/v1/entries/{id}/metadata[/field] (MetadataChooser).
     const metadata=await api('/api/v1/entries/'+id+'/metadata',{signal,suppressClientError:true});
-    const upgrades=await api('/api/admin/serving-upgrades/'+id,{signal,suppressClientError:true});
+    const upgrades=await api('/api/v1/serving-upgrades/'+id,{signal,suppressClientError:true});
     if(!owner.isConnected||signal.aborted)return;
     renderMetadata(metadata);renderUpgrades(upgrades);
     function renderMetadata(saved){
@@ -84,7 +84,7 @@
         if(!owner.isConnected)return;clear();chooser.replaceChildren();chooser.innerHTML=select('Chapter',result.items.map(r=>[r.id,r.display_name||r.chapter_key]),'chapter')+'<div data-candidates></div>';
         const load=async()=>{
           clear();const chapter=Number(get(chooser,'chapter').value),target=chooser.querySelector('[data-candidates]');target.replaceChildren();if(!chapter)return;
-          const detail=await api('/api/admin/chapters/'+chapter,{signal,suppressClientError:true});if(!owner.isConnected||Number(get(chooser,'chapter').value)!==chapter)return;
+          const detail=await api('/api/v1/chapters/'+chapter,{signal,suppressClientError:true});if(!owner.isConnected||Number(get(chooser,'chapter').value)!==chapter)return;
           target.innerHTML=select('Candidate',detail.candidates.map(r=>[r.id,(r.source_name||r.source_id)+' · quality '+(r.quality_score??'not sampled')]),'candidate');get(target,'candidate').onchange=clear;
           target.append(action('Sample selected candidate quality',()=>request('candidates/'+Number(get(target,'candidate').value)+'/quality','POST',{sample_count:5}),{after:result=>{
             status(result.complete?'Complete quality sample: '+result.quality_score:'Quality attempt incomplete; previous score retained. '+(result.reason||''));clear();
@@ -122,7 +122,7 @@
   }
   async function statusView(ctx){
     const {body,action,signal,status}=ctx,host=document.createElement('section');body.append(host);
-    async function render(){const data=await api('/api/admin/research-improvements/status',{signal,suppressClientError:true});if(!host.isConnected)return;
+    async function render(){const data=await api('/api/v1/research-improvements/status',{signal,suppressClientError:true});if(!host.isConnected)return;
       host.innerHTML='<h3>Observation freshness</h3><p class="muted">Viewing these saved clocks and metrics makes no source requests.</p><div class="riToolActions" data-actions></div><p>'+Number(data.pending_feed_pages)+' durable feed pages pending.</p><div class="riTableScroll"><table><thead><tr><th>Work / phase</th><th>Last complete</th><th>Next due</th><th>Outcome / wait</th></tr></thead><tbody>'+data.due.map(r=>`<tr><td>${esc(r.kind)} / ${esc(r.work_key)}</td><td>${esc(date(r.last_complete))}</td><td>${esc(date(r.next_due))}</td><td>${esc(r.outcome)} · ${esc(r.reason)}</td></tr>`).join('')+'</tbody></table></div><h3>Measured phases</h3><div class="riTableScroll"><table><thead><tr><th>Phase</th><th>Count</th><th>p50 ms</th><th>p95 ms</th></tr></thead><tbody>'+data.metrics.phases.map(r=>`<tr><td>${esc(r.phase)}</td><td>${r.count}</td><td>${r.p50_ms??'—'}</td><td>${r.p95_ms??'—'}</td></tr>`).join('')+'</tbody></table></div><p class="muted">'+esc(data.metrics.limits.memory_measure)+'. Last 128 samples per phase; process restart clears metrics.</p><p>Active decoders: '+data.metrics.decode.active+' · Peak: '+data.metrics.decode.peak_active+' · Peak owned input bytes: '+data.metrics.decode.peak_encoded_bytes+'</p><h3>Quality attempts</h3><ul>'+data.quality_attempts.map(r=>`<li>Candidate ${r.candidate_id} · ${esc(r.outcome)} · ${esc(date(r.attempted_at))} · ${r.unobserved_pages} unobserved · ${esc(r.reason)}</li>`).join('')+'</ul><h3>Engine compatibility</h3><p>Current baseline '+esc(data.engine.baseline)+' · Candidate '+esc(data.engine.target)+'</p><p class="muted">Native qualification pending. Promotion requires a build, populated upgrade, restart and rollback test. Current serving uses authoritative polling.</p><div data-engine-actions class="riToolActions"></div><pre data-engine-result></pre>';
       host.querySelector('[data-actions]').append(action('Refresh saved status',async()=>render()));host.querySelector('[data-engine-result]').textContent=JSON.stringify(data.engine.last_check,null,2);
       for(const engine of ['source','main'])host.querySelector('[data-engine-actions]').append(action('Check '+engine+' engine API',()=>apiV1({timeoutMs:30000}).checkEngineCompatibility(engine),{after:result=>{if(host.isConnected)host.querySelector('[data-engine-result]').textContent=JSON.stringify(result,null,2);status('API capability check saved. Native upgrade qualification remains separate.');}}));

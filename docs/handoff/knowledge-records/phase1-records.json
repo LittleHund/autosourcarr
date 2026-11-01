@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-1",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 1: host and settings (branch conversion, 3e63ee3)",
+   "body": "{\"commit\": \"3e63ee3\", \"archive\": \"autosourcarr-0.5.0-phase-1.zip\", \"archive_sha256\": \"ac322f38af5eb4e0f0110c11ef9afb237624df5aefa955b96598e5ecf22700e7\", \"built\": [\"config.json + config.key (AES-256-GCM, key name as associated data), atomic owner-only writes, refusals for newer/damaged/plaintext-secret files\", \"one-time autosourcarr.env/source-host.env conversion: env files kept, byte-identical backup, verification, persisted report and a notice in Settings\", \"SettingsSchema (SET-7): Definitions + setup-fields.json + settings-schema.json; generates docs/settings.md, settings page groups, validation, change list\", \"SettingsEditor: the only writer of config.json; 0.4.x wizard rules and combination checks; transaction id; revision; managed_keys\", \"/api/v1: settings GET/PUT, schema, conversion, update-notice, setup (GET, finish, reader-preflight, restart), config, storage/database, status/stats, health, diagnostics/metrics, openapi.json\", \"generated UI client (scripts/generate-api-client.mjs) with CI drift check; setup wizard and Settings page use it\", \"UpdateNotices (ARC-7), ReaderConfigCheck, CatalogueStatusStats, RuntimeMetrics, KnownPatterns [GeneratedRegex], NuGet lock files + locked restore\"], \"precedence\": \"built-in default < config.json < Compose variable < value saved in the app (managed_keys); Compose-only: SETTINGS_CONFIG_DIR, DATA_DIR, DATABASE_DIR, APP_SERVICES_MODE, SOURCE_ENGINE_MODE/UID/GID\", \"requirements\": {\"ARC-5\": \"done (examples/docker-compose.0.5.0.yml, docs/settings.md)\", \"ARC-6\": \"done\", \"ARC-7\": \"done\", \"SET-5\": \"partial: location via Compose; move in phase 2\", \"SET-7\": \"done\", \"CON-5\": \"done (Connections menu itself is phase 7)\"}}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 1)",
+   "source_ref": "autosourcarr-0.5.0-phase-1.zip",
+   "applies_to": "AutoSourcarr C# conversion, phase 1",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261031-PHASE-1",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 1: GitHub Actions run 41221012992 green on Linux",
+   "body": "{\"run\": 41221012992, \"commit\": \"3e63ee3\", \"dotnet\": \"918 C# tests, OpenAPI/client drift check, settings reference drift check, locked restore\", \"python\": \"pytest vs baseline + check-project (43 node UI suites)\", \"failed_run_fixed\": \"41220631702: check-project grepped old /api/admin storage and settings URLs\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 1)",
+   "source_ref": "GitHub Actions run 41221012992",
+   "applies_to": "Branch conversion at 3e63ee3; Linux CI only",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261031-SETTINGS-PRECEDENCE",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "Values saved in the app win over Compose variables; Compose decides the rest",
+   "body": "{\"why\": \"after conversion a leftover env_file would otherwise undo every Settings change (0.4.x protected wizard values the same way)\", \"reset\": \"Use default on the Settings page removes the saved value and hands the setting back to Compose\", \"compose_only\": \"folders and identities can only be set in Compose so a wrong value cannot stop the app from starting\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 1)",
+   "source_ref": "src/AutoSourcarr.Core/Settings/StartupConfigurationLoader.cs",
+   "applies_to": "Settings precedence",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261031-PHASE1-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Independent audit of phases 0 and 1 found gaps; fixed before closing phase 1",
+   "body": "{\"fixed\": [\"wizard repositories now written to source-host.env while it exists\", \"leftover env_file no longer overrides app-saved settings\", \"startup prints the settings key when a saved value is invalid\", \"conversion leaves a persistent notice\", \"TZ no longer shows as overridden (environment snapshot before the app sets TZ)\", \"DATABASE_DIR and other folder/identity settings are Compose-only\", \"Settings page can reset to default and remove a secret\", \"conversion test has hand-written expectations\", \"/api/v1/health added; dependency checks report checked=false\", \"all config.json secrets registered for redaction\"]}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 1)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion phase 1",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261031-PHASE1-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 1 items moved to later phases",
+   "body": "{\"phase 2\": \"database move (copy, verify, switch) for SET-5\", \"phase 4\": \"Host project as entry point (today it is the unprivileged native startup resolver); source engine health check\", \"phase 6\": \"main-library status (cached_library_status, main_download_size_status)\", \"phase 7\": \"main Suwayomi and translation health checks\", \"phase 12\": \"old-file cleanup after setup (SET-3)\", \"phases 3-10\": \"RuntimeMetrics call sites\", \"note\": \"on the conversion branch the setup wizard and Settings page call /api/v1, which only the C# host serves\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 1)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

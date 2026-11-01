@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-7",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 7: connections (branch conversion, 6acfff5)",
+   "body": "{\"commit\": \"6acfff5\", \"ci\": \"probe ce4ab0f: build, source host build/check, all source-host C# tests incl. interactive WebView and external solver fallback, repair runner; one unit test fixed after (import note wording); conversion CI pending at record time\", \"archive\": \"autosourcarr-0.5.0-phase-7.zip\", \"archive_sha256\": \"d19ebaea439c3ef60253bc752e6a0bedd483a57976ecf1e7b0a4179108ba9a7f\", \"built\": [\"Connections menu + config.json connections with encrypted secrets\", \"FlareSolverr/Byparr connections, cookies-only host fallback with per-domain cache\", \"interactive Open in WebView (frames + input, ticketed WebSocket)\", \"AniList/MangaUpdates/MangaDex clients with rate limits\", \"Komf client\", \"MalwareBazaar hash lookup in the APK preview\", \"Suwayomi connection, change feed, one-time import plan\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 7)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261101-PHASE-7",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 7 Done when verified in CI",
+   "body": "{\"stub_tests\": \"every connection type passes Test against a stub and fails on 401/5xx/wrong body\", \"real_host\": \"interactive webview streams frames, takes a click and navigation, cookie lands in the host jar; external solver fallback uses only the stub solver's cookies/UA and caches per domain\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 7)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261101-WEBVIEW-STREAM",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "Interactive WebView: host framed HTTP stream + app WebSocket relay",
+   "body": "{\"why\": \"the source host has no WebSocket server library (JDK HttpServer); the app owns the browser WebSocket\", \"auth\": \"admin-only session POST returns a one-time ticket (60 s, hashed), socket checks Origin\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 7)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261101-PHASE7-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Phase 7 fresh-agent audit: 17 findings, 15 fixed",
+   "body": "{\"fixed\": [\"secret exfiltration via changed address\", \"late-applying solver/feed changes (host recycle, feed restart, notices)\", \"Suwayomi import routes\", \"damaged connections skipped\", \"Settings FlareSolverr switches\", \"WebView cookie scope and reach\", \"one Suwayomi source\", \"rollback note\", \"health from connection test\", \"feed back-off\", \"limiter clock\", \"CAPTCHA WebView action\", \"leaks\", \"keyed clients no redirects\"], \"limitations\": [\"public-suffix check for solver cookies\", \"metadata clients used only by Test until phase 8\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 7)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261101-PHASE7-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 7 items carried to later phases",
+   "body": "{\"phase_8\": \"create catalogue entries from the stored Suwayomi import plan; use metadata clients in matching\", \"phase_10\": \"translation client and its health\", \"phase_16\": \"AI provider and Postgres connections, SRC-9 AI benchmark\", \"notes\": \"MAIN_SUWAYOMI_URL changes need an app restart for the feed; DNS rebinding not covered by the WebView address checks; config.json with connections is not readable by 0.4.x (rollback note)\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 7)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.4.5",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Main 0.4.5: Suwayomi host port removed, Open in WebView on entries",
+   "body": "{\"base\": \"0.4.4\", \"changes\": [\"Suwayomi host port no longer published (ARC-11, review #2)\", \"Open in WebView on entries\"], \"deploy\": \"waiting for the user (approval gate)\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 0 audit)",
+   "source_ref": "autosourcarr-v0.4.5.zip",
+   "applies_to": "Main 0.4.5 source archive",
+   "confidence": "high"
+  },
+  {
+   "id": "RELEASE-0.5.0-PHASE-0",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 0 baseline (branch conversion, d5cbb20)",
+   "body": "{\"commit\": \"d5cbb20\", \"archive\": \"autosourcarr-0.5.0-phase-0.zip\", \"archive_sha256\": \"22cbc2495b9f696e98acf3313d9d4a3cc4b06ff5a48045a8164f39e6b4d996b6\", \"stages\": [\"1 Python 0.4.5 + PC tree\", \"2 Kotlin path extension/module/src/autosourcarr\", \"3 feature folders (Core/Api/Host) + docs/port-map.md\", \"4 docs/version-check-2026-10-31.md\", \"5 CI workflow conversion.yml, scripts/ci-pytest.sh with 27-failure baseline, export script, 0.4.4 fixes in C# (cross-site write guard, schema stamp, tag_reviews.right_id index, BoundedLruCache guard)\"], \"requirements\": {\"ARC-10\": \"in progress (conversion)\", \"ARC-11\": \"done in 0.4.5\", \"AUTH-5\": \"CrossSiteWritePolicy for /api/admin/ and /api/v1/ writes\", \"PIPE-6\": \"green C# runner + Python suite against recorded baseline\"}, \"real_data_export\": \"conversion-export/ (decisions.json 13 non-empty decision tables, sample-1000.json, counts.json, schema.sql) made 2026-10-31 from catalog.sqlite, read-only; no settings/cookie/cache tables; kept on the PC only, never pushed\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 0 audit)",
+   "source_ref": "autosourcarr-0.5.0-phase-0.zip",
+   "applies_to": "AutoSourcarr C# conversion, phase 0",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261031-PHASE-0",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 0: GitHub Actions run 41207659716 green on Linux",
+   "body": "{\"run\": 41207659716, \"commit\": \"d5cbb20\", \"jobs\": {\"dotnet\": \"Release build warnings-as-errors + full C# test runner, Postgres 17 service\", \"python\": \"pytest vs 27 recorded failures + check-project\"}, \"earlier_failed_runs\": 5, \"fixes\": [\"SchemaRevisionException base\", \"Core.Text -> Core.Unicode\", \"read-session Execute refusal reverted (phase 2 item)\", \"Linux IOException for non-regular private documents\", \"flaky websocket test retried once\"]}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 0 audit)",
+   "source_ref": "GitHub Actions run 41207659716",
+   "applies_to": "Branch conversion at d5cbb20; Linux CI only, not Windows or NAS",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261031-TEST-RUNNER",
+   "kind": "limitation",
+   "state": "open",
+   "title": "C# tests use the custom TestSuite runner, not xUnit as the plan says",
+   "body": "{\"plan\": \"Phase 0 (5): CI with build, xUnit, Postgres service; port map: Python tests replaced by xUnit fixtures\", \"actual\": \"tests/AutoSourcarr.Tests is the stage-26 custom runner (TestSuite.Add/Check) with GitHub annotations\", \"decision_needed\": \"keep the runner or move to xUnit; the user decides\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 0 audit)",
+   "source_ref": "tests/AutoSourcarr.Tests/TestSuite.cs",
+   "applies_to": "C# test project",
+   "confidence": "medium"
+  },
+  {
+   "id": "FINDING-20261031-PHASE-RITUAL",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Phase-end ZIP and knowledge records were skipped for phase 0, made afterwards",
+   "body": "{\"found_by\": \"user question 31 Oct 17:01\", \"fixed\": \"phase-0 ZIP, release/verification records and real-data export made 31 Oct; rule added to checkpoint: per-phase checklist from plan text, requirement IDs, port-map rows, UI pages and phase-end steps\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 0 audit)",
+   "source_ref": "claude/checkpoint.md",
+   "applies_to": "Conversion working method",
+   "confidence": "high"
+  }
+ ]
+}

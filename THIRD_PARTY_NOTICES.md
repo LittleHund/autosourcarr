@@ -16,6 +16,12 @@ NuGet versions and package content hashes are recorded in each project's
 | Google.Protobuf 3.29.3 | Copyright 2008 Google Inc.; BSD-3-Clause (Grpc.Tools 2.69.0 runs protoc at build time only and is not redistributed) | [Protocol Buffers repository](https://github.com/protocolbuffers/protobuf) |
 | Magick.NET-Q8-AnyCPU and Magick.NET.Core 15.0.0 | Copyright 2013–2026 Dirk Lemstra; Apache-2.0; ImageMagick Studio LLC and incorporated libraries retain their own licenses | [Pinned package source](https://github.com/dlemstra/Magick.NET/tree/79bb8700d7fe3a564f62926ab299fc2520cb2269) |
 
+The web UI bundles qrcode-generator 1.4.4 (Copyright 2009 Kazuhiko Arase; MIT;
+[upstream](https://github.com/kazuhikoarase/qrcode-generator)) unmodified as
+`autosourcarr/app/static/vendor/qrcode-generator-1.4.4.js`; its license is next to it
+in `qrcode-generator-1.4.4.LICENSE.txt`. The reader setup page uses it to draw QR codes
+in the browser (no CDN).
+
 Unidecode.NET's publisher separately attributes its character tables to Python
 Unidecode and the original Perl Text::Unidecode, and states that the tables are
 distributed under the Perl license. Preserve that attribution with the package:

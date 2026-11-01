@@ -764,6 +764,22 @@ public sealed partial class ImportRuns
             var (metadataId, metadataReason) = AutoResolveCandidate(item, englishTitle, candidateIds: exactCandidates);
             if (metadataId is { } found) return (new ImportResolution(found, found, metadataReason.Length > 0 ? metadataReason : "external metadata identity match"), false);
         }
+        // Exact decoded thumbnail pixels only break a tie among candidates that already pass the same non-image gate:
+        // they never bypass an edition, colour or creator conflict (0.4.5 _import_auto_resolve_candidate_async).
+        // Hard rule 2: only candidates whose title alone reaches the floor (or that share a provider identity) take part, so
+        // a summary-based pass never becomes an automatic import through the cover.
+        if (ExactThumbnails is { } thumbnails)
+        {
+            var floor = Options().Floor;
+            var eligible = RankedCandidates(item, limit: 16, englishTitle: englishTitle).Select(pair => pair.EntryId).Concat(exactCandidates).Distinct()
+                .Where(id => !IsRejected(item, id) && CandidateEvidence(item, id, englishTitle) is { Eligible: true } evidence
+                    && (evidence.TitleScore >= floor || evidence.SharedIdentities.Count > 0)).ToList();
+            if (eligible.Count > 1)
+            {
+                var matches = await thumbnails(item, Bundle(item), eligible, cancellationToken).ConfigureAwait(false);
+                if (matches.Count == 1) return (new ImportResolution(matches[0], matches[0], "exact decoded thumbnail pixels"), false);
+            }
+        }
         if (sourceId.Length == 0)
             return (new ImportResolution(null, null, "no corresponding AutoSourcarr entry found; expected source " + expected + " is not enabled"), false);
         var (referenceId, exactReference, referenceReason, deferred) = await SourceReferenceAsync(item, cancellationToken).ConfigureAwait(false);

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using AutoSourcarr.Core.Reader;
+using AutoSourcarr.Core.Catalogue.Chapters;
 using AutoSourcarr.Core.Persistence;
 
 namespace AutoSourcarr.Core.Reader;
@@ -47,7 +47,7 @@ public sealed class ReaderRepository
                 Decorate(active, context); Rank(active, context, stored.Integer("id")); var chosen = active[0]; var row = Json(stored);
                 row["candidate_count"] = active.Count; row["upload_date"] = active.Max(item => ReaderValue.Integer(item, "upload_date"));
                 row["url"] = stored.Integer("id").ToString(CultureInfo.InvariantCulture);
-                row["display_name"] = ChapterResolver.DisplayName(stored.Number("chapter_number", -1), ReaderValue.Text(chosen, "name"));
+                row["display_name"] = ChapterNumbering.DisplayName(stored.Number("chapter_number", -1), ReaderValue.Text(chosen, "name"));
                 row["serving_candidate_id"] = ReaderValue.Integer(chosen, "id"); row["serving_source_id"] = ReaderValue.Text(chosen, "source_id");
                 row["serving_source_name"] = ReaderValue.Text(chosen, "source_name"); row["serving_source_entry_id"] = ReaderValue.Integer(chosen, "source_entry_id", entryId);
                 row["serving_source_entry_title"] = ReaderValue.Text(chosen, "source_entry_title"); row["serving_official"] = ReaderValue.Flag(chosen, "official"); result.Add(row);
@@ -177,9 +177,15 @@ public sealed class ReaderRepository
             UNION ALL SELECT source_id,source_manga_id,source_title,entry_id FROM source_variants WHERE entry_id=$id AND active=1
             """, ("$id", canonical)).GroupBy(row => (row.Text("source_id"), row.Integer("source_manga_id"))).ToDictionary(group => group.Key, group => group.Last());
         var profile = _profiles.Context(canonical);
+        var groups = sources.Where(row => row.TryGetValue("group_id", out var group) && group is not null).ToDictionary(row => row.Text("source_id"), row => row.Integer("group_id"), StringComparer.Ordinal);
+        // CHAP-3: chapters per source for this title, read only when a group has to choose its serving member.
+        var counts = new Lazy<IReadOnlyDictionary<string, long>>(() => _database.Read(DatabaseFile.Origins, origins => origins.Query("""
+            SELECT cc.source_id,COUNT(DISTINCT cc.virtual_chapter_id) chapters FROM chapter_candidates cc
+            JOIN virtual_chapters vc ON vc.id=cc.virtual_chapter_id WHERE vc.entry_id=$id AND cc.active=1 GROUP BY cc.source_id
+            """, ("$id", canonical)).ToDictionary(row => row.Text("source_id"), row => row.Integer("chapters"), StringComparer.Ordinal)));
         return new ReaderContext(canonical, sources.Where(row => row.Flag("enabled_language") && row.Flag("enabled_chapters")).Select(row => row.Text("source_id")).ToHashSet(StringComparer.Ordinal),
             sources.ToDictionary(row => row.Text("source_id"), row => row.Integer("priority"), StringComparer.Ordinal),
-            sources.Where(row => ChapterResolver.ProbablyOfficialSource(row.Text("name"), row.Text("base_url"))).Select(row => row.Text("source_id")).ToHashSet(StringComparer.Ordinal), labels, profile.Profile, profile.Languages);
+            sources.Where(row => ChapterResolver.ProbablyOfficialSource(row.Text("name"), row.Text("base_url"))).Select(row => row.Text("source_id")).ToHashSet(StringComparer.Ordinal), labels, profile.Profile, profile.Languages, groups, counts);
     });
 
     private static bool Admitted(JsonObject candidate, ReaderContext context) => context.Enabled.Contains(ReaderValue.Text(candidate, "source_id"))
@@ -241,6 +247,7 @@ public sealed class ReaderRepository
         // LINQ ordering is stable, matching Python list.sort on tied scores/names.
         var sorted = rows.OrderByDescending(row => ReaderValue.Number(row, "resolver_score")).ThenBy(row => ReaderValue.Text(row, "source_name"), AutoSourcarr.Core.Unicode.UnicodeCodePointComparer.Instance).ToArray();
         rows.Clear(); rows.AddRange(sorted);
+        if (applyProfile && context.Groups.Count > 0) ServingGroups.Apply(rows, context.Groups, context.Counts.Value);
         if (!applyProfile || rows.Count < 2) return;
         var preferred = _database.Read(DatabaseFile.Catalog, session =>
         {
@@ -286,7 +293,8 @@ public sealed class ReaderRepository
     private static JsonObject Json(DatabaseRow row) => JsonSerializer.SerializeToNode(row.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal))!.AsObject();
     private static JsonArray Array(IEnumerable<JsonObject> rows) => new(rows.Select(row => (JsonNode)row).ToArray());
     private sealed record ReaderContext(long EntryId, HashSet<string> Enabled, Dictionary<string, long> Priorities, HashSet<string> Official,
-        Dictionary<(string, long), DatabaseRow> Labels, ServingProfile Profile, IReadOnlyDictionary<string, string> Languages);
+        Dictionary<(string, long), DatabaseRow> Labels, ServingProfile Profile, IReadOnlyDictionary<string, string> Languages,
+        IReadOnlyDictionary<string, long> Groups, Lazy<IReadOnlyDictionary<string, long>> Counts);
 }
 
 public sealed record ReaderPageSnapshot(long EntryId, IReadOnlyList<JsonObject> Candidates, IReadOnlyDictionary<long, IReadOnlyList<JsonObject>> Cached);

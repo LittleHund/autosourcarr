@@ -75,7 +75,7 @@ def test_details_render_before_chapters_and_failed_chapter_retry_is_local():
     node(DETAIL_DOM + helpers + renderer + r'''
 (async()=>{
  await renderInlineEntry('matrix',1,null,{generation:1});
- assert.deepEqual(calls,['/api/admin/entries/1'],'Opening details must not wait for source chapter retrieval');
+ assert.deepEqual(calls,['/api/v1/catalogue/entries/1'],'Opening details must not wait for source chapter retrieval');
  const order=[...root.innerHTML.matchAll(/data-detail-section="([^"]+)"/g)].map(m=>m[1]);
  assert.deepEqual(order,['titles','tags','metadata','matches','chapters','history']);
  assert(root.innerHTML.includes('First gallery'),'Linked source remains visible before source-filter inventory loads');

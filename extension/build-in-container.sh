@@ -368,6 +368,8 @@ package eu.kanade.tachiyomi.extension.all.autosourcarr
 // continues to use the ordinary Docker-internal API without an external credential.
 internal const val AUTOSOURCARR_API_PREFIX = "$api_prefix"
 internal const val AUTOSOURCARR_READER_API_KEY = "$reader_key"
+// Server slot 1's default address; slots stay editable in the reader's source settings.
+internal const val AUTOSOURCARR_DEFAULT_BASE_URL = "${AUTH_DEFAULT_BASE_URL:-}"
 EOF
 }
 
@@ -449,6 +451,7 @@ run_release_build() {
 
 # First build the JVM-ready Suwayomi artifact against the internal service URL.
 # It talks directly over the Docker network and keeps the ordinary API prefix.
+AUTH_DEFAULT_BASE_URL="$INTERNAL_BASE_URL"
 write_auth_config "/api/v1" ""
 run_release_build 'Suwayomi release JAR' "$INTERNAL_BASE_URL" || exit 4
 JAR_ROOT="$TARGET/build/outputs/jar/release"
@@ -467,6 +470,7 @@ cp "$SOURCE_JAR" "$TEMP_JAR"
 # AutoSourcarr reader API prefix/key only into this artifact. clean is important: the
 # Gradle source configuration is evaluated per invocation and both variants otherwise
 # share the same output path/cache key.
+AUTH_DEFAULT_BASE_URL="$ANDROID_BASE_URL"
 write_auth_config "/api/reader/v1" "$READER_API_TOKEN"
 AUTOSOURCARR_EXTENSION_BASE_URL="$ANDROID_BASE_URL" ./gradlew --no-daemon --max-workers=2 --no-parallel '-Dorg.gradle.jvmargs=-Xmx1536m -XX:ActiveProcessorCount=2' src:all:autosourcarr:clean >/dev/null
 run_release_build 'Tachiyomi/Mihon release APK' "$ANDROID_BASE_URL" || exit 4

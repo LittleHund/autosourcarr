@@ -6,11 +6,15 @@ public static class RequestPolicy
 {
     private static readonly HashSet<string> Polls = ["/api/admin/imports", "/api/admin/matrix", "/api/admin/source-health", "/api/admin/source-maintenance", "/api/admin/source-maintenance/control", "/api/v1/source-maintenance",
         // Phase 9 moved the import list to /api/v1 (same polling as /api/admin/imports).
-        "/api/v1/imports"];
+        "/api/v1/imports",
+        // Phase 10 moved the library matrix to /api/v1 (same polling as /api/admin/matrix).
+        "/api/v1/matrix"];
     private static readonly HashSet<string> NonInteractive = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events", "/api/admin/duplicates", "/api/admin/duplicate-candidates", "/api/v1/duplicates", "/api/v1/duplicate-candidates", "/api/admin/entries/summaries", "/api/admin/matrix/chapter-stats",
         // The WebView WebSocket stays open up to 15 minutes: it must not hold the interactive lane or catalogue admission.
-        "/api/v1/source-webview/socket"];
-    private static readonly HashSet<string> NoMutationTask = ["/api/admin/entries/summaries", "/api/admin/duplicate-candidates", "/api/admin/matrix/chapter-stats", "/api/admin/duplicates/automatic",
+        "/api/v1/source-webview/socket",
+        // Phase 10: the catalogue summaries and chapter stats reads (POST bodies) are background reads like their /api/admin routes.
+        "/api/v1/catalogue/entries/summaries", "/api/v1/matrix/chapter-stats"];
+    private static readonly HashSet<string> NoMutationTask = ["/api/v1/catalogue/entries/summaries", "/api/v1/matrix/chapter-stats", "/api/admin/entries/summaries", "/api/admin/duplicate-candidates", "/api/admin/matrix/chapter-stats", "/api/admin/duplicates/automatic",
         "/api/admin/imports/clear-history", "/api/admin/imports/reset-rejections", "/api/admin/imports/reset-manual-autoresolve", "/api/admin/ui-preferences", "/api/admin/maintenance/refresh-metadata",
         "/api/admin/maintenance/discover-additional", "/api/admin/subbed/search-all", "/api/admin/subbed/repair-unmatched", "/api/admin/maintenance/full-reset", "/api/admin/maintenance/consolidate", "/api/admin/manual-actions"];
     private static readonly HashSet<string> ResetControls = ["/api/admin/maintenance/reset-database", "/api/admin/maintenance/full-reset", "/api/admin/maintenance/reset-all-manual-actions", "/api/admin/storage/database/move", "/api/v1/storage/database/move",
@@ -35,8 +39,11 @@ public static class RequestPolicy
             // Phase 8 moved the review workbench and policy simulator to /api/v1 (same admission as their /api/admin routes).
             "/api/v1/review-workbench/", "/api/v1/policy-simulator/",
             // Phase 7: connections live in config.json, not the catalogue; a test may wait up to 15 s on a remote service.
-            "/api/v1/connections")
-            || path.StartsWith("/api/admin/candidates/", StringComparison.Ordinal) && path.EndsWith("/quality", StringComparison.Ordinal)
+            "/api/v1/connections",
+            // Phase 10 moved library, downloads, serving profiles and upgrades to /api/v1 (same admission as their /api/admin routes).
+            "/api/v1/library/", "/api/v1/profiles/", "/api/v1/downloads", "/api/v1/serving-upgrades/")
+            || (path.StartsWith("/api/admin/candidates/", StringComparison.Ordinal) || path.StartsWith("/api/v1/candidates/", StringComparison.Ordinal))
+                && path.EndsWith("/quality", StringComparison.Ordinal)
             || (path.StartsWith("/api/admin/tasks/", StringComparison.Ordinal) || path.StartsWith("/api/v1/tasks/", StringComparison.Ordinal)) && path.EndsWith("/retry-safe", StringComparison.Ordinal));
         return !control && !(method is "GET" or "HEAD" && Monitoring.Contains(path));
     }

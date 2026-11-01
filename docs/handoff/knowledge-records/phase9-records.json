@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-9",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 9: imports, metadata, sharing (branch conversion, 1cc573b)",
+   "body": "{\"commit\": \"1cc573b\", \"ci\": \"probe 3d85867 green (1146 C# tests, source host); conversion CI pending at record time\", \"archive\": \"autosourcarr-0.5.0-phase-9.zip\", \"archive_sha256\": \"7d84b8550cccc47e2f7c03c3cdd23b9553e0e3c8f974810ffc648b812680b12b\", \"built\": [\"Mihon/Tachiyomi backup parser (hand-maintained .proto) + 9 version samples\", \"import runs: latest click wins, fallback search, crash recovery, merge-log recheck, Suwayomi plan import\", \"per-field official-first metadata with overrides\", \"provider identity in matching\", \"versioned sharing header + exact version mismatch + compatibility list\", \"feed/metadata/discovery jobs\", \"backup-format release watch\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 9)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261101-PHASE-9",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 9 Done when verified in CI",
+   "body": "{\"backups\": \"9 sample backups (tachiyomi-legacy, tachiyomi, mihon 0.16/0.17/0.19/0.20/0.21, next-format probe, fork) import end to end\", \"crash\": \"interrupted rows/runs recover; shutdown keeps runs resumable; no stuck rows\", \"watch\": \"mihon v0.21.3 checked: proto covers every field after adding BackupManga 10-12,15\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 9)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261101-SHARE-FORMAT-2",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "Share format 2: versioned header and compatibility list",
+   "body": "{\"header\": \"format_version, min_reader_version, min_reader_app_version, app_version, schema_version, created_at\", \"message\": \"Version mismatch: version X required\", \"imported_choices\": \"never override local Separate/manual decisions; an explicit admin review may split a manual match (0.4.5 behaviour)\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 9)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261101-PHASE9-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Phase 9 fresh-agent audit: 16 findings, all fixed",
+   "body": "{\"fixed\": [\"provider-id conflicts in automatic imports\", \"shutdown stranding runs\", \"decode memory\", \"unconfirmed import resets\", \"match race\", \"metadata UI\", \"backup release watch\", \"reopen dangling remembered matches\", \"version X source\", \"upload error handling\", \"duplicate run race\", \"canonical in-use check\", \"recheck as job\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 9)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261101-PHASE9-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 9 items carried to later phases",
+   "body": "{\"phase_10\": \"import exact-thumbnail tie-break, machine translation, gallery identity path, chapter refresh after discovery attach, identity fingerprints\", \"notes\": \"Mihon's next backup format is unpublished; the probe sample only shows unknown fields are tolerated; CatalogueDiscovery.SourceResult (source health) not wired\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 9)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

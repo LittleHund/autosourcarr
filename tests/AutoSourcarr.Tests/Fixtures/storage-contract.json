@@ -859,6 +859,162 @@
           "pk": 0
         }
       ],
+      "download_history": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "event",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "detail",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "created_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "download_queue": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "source_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "position",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'queued'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "tries",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "progress",
+          "type": "NUMERIC",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "error",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "chapter_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'{}'",
+          "pk": 0
+        },
+        {
+          "cid": 11,
+          "name": "queued_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 12,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
       "due_work": [
         {
           "cid": 0,
@@ -2091,6 +2247,148 @@
         {
           "cid": 2,
           "name": "observed_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "library_downloads": [
+        {
+          "cid": 0,
+          "name": "chapter_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "file",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "pages",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "bytes",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "candidate_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "source_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "downloaded_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "library_series": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "in_library",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "series_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "folder",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "folder_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "added_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "updated_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "library_state": [
+        {
+          "cid": 0,
+          "name": "key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "value",
           "type": "TEXT",
           "notnull": 1,
           "dflt_value": null,
@@ -4383,6 +4681,8 @@
       "deleted_source_records": [],
       "display_metadata": [],
       "display_metadata_history": [],
+      "download_history": [],
+      "download_queue": [],
       "due_work": [],
       "duplicate_review_history": [],
       "duplicate_reviews": [],
@@ -4514,6 +4814,9 @@
         }
       ],
       "library_complete_observations": [],
+      "library_downloads": [],
+      "library_series": [],
+      "library_state": [],
       "library_tracking": [],
       "manual_match_bindings": [
         {
@@ -5013,6 +5316,18 @@
         "tbl_name": "display_metadata_history"
       },
       {
+        "name": "idx_download_history_created",
+        "tbl_name": "download_history"
+      },
+      {
+        "name": "idx_download_queue_chapter",
+        "tbl_name": "download_queue"
+      },
+      {
+        "name": "idx_download_queue_source",
+        "tbl_name": "download_queue"
+      },
+      {
         "name": "idx_due_work_time",
         "tbl_name": "due_work"
       },
@@ -5079,6 +5394,14 @@
       {
         "name": "idx_import_runs_created",
         "tbl_name": "import_runs"
+      },
+      {
+        "name": "idx_library_downloads_entry",
+        "tbl_name": "library_downloads"
+      },
+      {
+        "name": "idx_library_series_folder",
+        "tbl_name": "library_series"
       },
       {
         "name": "idx_manual_bindings_entry_hint",
@@ -5305,6 +5628,10 @@
         "tbl_name": "import_runs"
       },
       {
+        "name": "sqlite_autoindex_library_state_1",
+        "tbl_name": "library_state"
+      },
+      {
         "name": "sqlite_autoindex_manual_match_bindings_1",
         "tbl_name": "manual_match_bindings"
       },
@@ -5431,6 +5758,8 @@
       "deleted_source_records": [],
       "display_metadata": [],
       "display_metadata_history": [],
+      "download_history": [],
+      "download_queue": [],
       "due_work": [],
       "duplicate_review_history": [],
       "duplicate_reviews": [],
@@ -5483,6 +5812,9 @@
       "import_match_rejections": [],
       "import_runs": [],
       "library_complete_observations": [],
+      "library_downloads": [],
+      "library_series": [],
+      "library_state": [],
       "library_tracking": [],
       "manual_match_bindings": [
         {

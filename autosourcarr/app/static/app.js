@@ -666,7 +666,7 @@ async function refreshSparseEntryMetadata(){
 async function refreshSparseEntryMetadataOnce(){
   const ids=sparseEntryIds();if(!ids.length)return;
   try{
-    const r=await api('/api/admin/entries/summaries',{method:'POST',body:JSON.stringify({ids}),timeoutMs:6000,suppressClientError:true,noMutationRefresh:true});
+    const r=await api('/api/v1/catalogue/entries/summaries',{method:'POST',body:JSON.stringify({ids}),timeoutMs:6000,suppressClientError:true,noMutationRefresh:true});
     // .some() stopped at the first changed entry, leaving the rest of this
     // successful response unapplied until many more HTTP polls had completed.
     let structuralChanged=false;
@@ -704,7 +704,7 @@ function scheduleDuplicateHeartbeat(delay=4500){
 }
 function scheduleMutationRefresh(url,method){
   const path=String(url||'').split('?')[0];if(String(method||'GET').toUpperCase()==='GET')return;
-  if(['/api/admin/entries/summaries','/api/v1/duplicate-candidates','/api/admin/matrix/chapter-stats'].includes(path))return;
+  if(['/api/v1/catalogue/entries/summaries','/api/v1/duplicate-candidates','/api/v1/matrix/chapter-stats'].includes(path))return;
   if(path!=='/api/admin/ui-preferences')catalogViewRevision++;
   if(path.includes('/entries/')||path.includes('/duplicates')||(path.includes('/manual-groups')||path.includes('/manual-actions'))||path.includes('/sources/'))scheduleDuplicateLiveRefresh();
   if(path.includes('/entries/')||path.includes('/imports/'))setTimeout(()=>refreshSparseEntryMetadata().catch(()=>{}),500);
@@ -1337,7 +1337,7 @@ function manualActionsMutationRoute(url,method){
   if(!['POST','PUT','PATCH','DELETE'].includes(verb))return false;
   if(verb==='POST'&&/^\/api\/(?:admin|v1)\/maintenance\/(reset-manual-groups|reset-manual-matches|reset-all-manual-actions|reset-database|full-reset)$/.test(path))return true;
   if(verb==='POST'&&path==='/api/v1/duplicates/review')return true;
-  if(verb==='POST'&&/^\/api\/admin\/candidates\/\d+\/(reject|restore)$/.test(path))return true;
+  if(verb==='POST'&&/^\/api\/(?:admin|v1)\/candidates\/\d+\/(reject|restore)$/.test(path))return true;
   if(verb==='POST'&&/^\/api\/(?:admin|v1)\/manual-groups\/[^/]+\/members$/.test(path))return true;
   if(verb==='DELETE'&&/^\/api\/(?:admin|v1)\/manual-groups\/[^/]+\/members\/[^/]+\/\d+$/.test(path))return true;
   // Import Match persists its source anchor before slow library reconciliation.
@@ -1398,7 +1398,7 @@ async function loadManualActions(){
 async function loadManualGroups(){return loadManualActions();}
 window.removeManualTitleAction=async(entryId,button)=>{if(!confirm('Remove the manual main title and manual alternate titles from this entry?'))return;if(button)button.disabled=true;try{await api(`/api/v1/entries/${Number(entryId)}/manual-titles`,{method:'DELETE'});toast('Manual titles removed');await Promise.allSettled([loadManualActions(),refreshBothMatrices()]);}catch(e){toast('Unable to remove manual titles: '+e.message);}finally{if(button)button.disabled=false;}};
 window.allowManualSeparateAction=async(entryId,sourceId,mangaId,button)=>{if(button)button.disabled=true;try{await api(`/api/v1/entries/${Number(entryId)}/separate-source/${encodeURIComponent(sourceId)}/${Number(mangaId)}`,{method:'DELETE'});toast('Separate-entry decision removed');await Promise.allSettled([loadManualActions(),refreshBothMatrices()]);}catch(e){toast('Unable to remove separate-entry decision: '+e.message);}finally{if(button)button.disabled=false;}};
-window.restoreManualRejectedChapter=async(candidateId,button)=>{if(button)button.disabled=true;try{await api(`/api/admin/candidates/${Number(candidateId)}/restore`,{method:'POST'});toast('Chapter candidate restored');await loadManualActions();}catch(e){toast('Unable to restore chapter: '+e.message);}finally{if(button)button.disabled=false;}};
+window.restoreManualRejectedChapter=async(candidateId,button)=>{if(button)button.disabled=true;try{await api(`/api/v1/candidates/${Number(candidateId)}/restore`,{method:'POST'});toast('Chapter candidate restored');await loadManualActions();}catch(e){toast('Unable to restore chapter: '+e.message);}finally{if(button)button.disabled=false;}};
 window.clearManualDuplicateDecision=async(left,right,button)=>{if(button)button.disabled=true;try{await api('/api/v1/duplicates/review',{method:'POST',body:JSON.stringify({left_entry_id:Number(left),right_entry_id:Number(right),decision:'clear'})});duplicateConfirmedReviews.delete([Math.min(left,right),Math.max(left,right)].join(':'));duplicateViewRevision++;toast('Duplicate decision cleared');await Promise.allSettled([loadManualActions(),loadDuplicates(null,{render:$('#duplicates')?.classList.contains('active'),quiet:true})]);}catch(e){toast('Unable to clear duplicate decision: '+e.message);}finally{if(button)button.disabled=false;}};
 
 window.searchManualGroupCandidates=async(groupId,button)=>{
@@ -2093,7 +2093,7 @@ function sourceExtensionCard(x){
   const name=x.name||x.pkgName||'Unknown extension',initials=String(name).split(/\s+/).filter(Boolean).slice(0,2).map(y=>y[0]).join('').toUpperCase();
   const rawIcon=String(x.iconUrl||'').trim(),iconSrc=rawIcon.startsWith('https://')?rawIcon:(rawIcon?`/api/v1/source-extension-icon/${encodeURIComponent(x.pkgName||'')}`:'');
   const icon=iconSrc?`<img class="sourceExtensionIcon" src="${esc(iconSrc)}" alt="" loading="lazy" onerror="this.remove()">`:'';
-  return `<article class="sourceExtensionCard ${x.hasUpdate?'updateAvailable':''} ${x.isObsolete?'obsolete':''}"><span class="sourceExtensionIconWrap"><span class="sourceExtensionIconFallback">${esc(initials)}</span>${icon}</span><div><div class="sourceExtensionTitle">${esc(name)}</div><div class="sourceExtensionMeta">${esc(extensionLangLabel(x.lang))} · ${esc(x.versionName||'unknown version')} · ${esc(store?.name||'extension store')}</div><div class="sourceExtensionFlags"><span class="sourceExtensionFlag">${x.isInstalled?'Installed':'Available'}</span>${x.hasUpdate?'<span class="sourceExtensionFlag">Update available</span>':''}${x.isObsolete?'<span class="sourceExtensionFlag">Obsolete</span>':''}${warning&&warning!=='SAFE'?`<span class="sourceExtensionFlag">${esc(warning)}</span>`:''}</div><div class="sourceExtensionMeta">${esc(x.pkgName||'')}</div></div><div class="sourceExtensionActions">${extensionSettingsButton(x)}${extensionOrphanButton(x)}${extensionActionButton(x)}</div></article>`;
+  return `<article class="sourceExtensionCard ${x.hasUpdate?'updateAvailable':''} ${x.isObsolete?'obsolete':''}"><span class="sourceExtensionIconWrap"><span class="sourceExtensionIconFallback">${esc(initials)}</span>${icon}</span><div><div class="sourceExtensionTitle">${esc(name)}</div><div class="sourceExtensionMeta">${esc(extensionLangLabel(x.lang))} · ${esc(x.versionName||'unknown version')} · ${esc(store?.name||'extension store')}</div><div class="sourceExtensionFlags"><span class="sourceExtensionFlag">${x.isInstalled?'Installed':'Available'}</span>${x.hasUpdate?'<span class="sourceExtensionFlag">Update available</span>':''}${x.isObsolete?'<span class="sourceExtensionFlag">Obsolete</span>':''}${warning&&warning!=='SAFE'?`<span class="sourceExtensionFlag">${esc(warning)}</span>`:''}</div><div class="sourceExtensionMeta">${esc(x.pkgName||'')}</div></div><div class="sourceExtensionActions">${extensionSettingsButton(x)}${extensionOrphanButton(x)}${window.readerExtensionDownloads?window.readerExtensionDownloads(x):''}${extensionActionButton(x)}</div></article>`;
 }
 function renderSourceExtensionGroup(listId,items,emptyText){const list=$(listId);if(!list)return;list.innerHTML=items.length?items.map(sourceExtensionCard).join(''):`<div class="emptyState muted">${esc(emptyText)}</div>`;}
 function renderSourceExtensions(){
@@ -2220,7 +2220,7 @@ function browseQueryUrl(page,forceLive=false){
   if(!connected&&($('#browseSource')?.value||$('#browseLanguage')?.value)){
     for(const id of browseSelectedSourceIds())params.append('sources',id);
   }
-  return '/api/admin/browse?'+params.toString();
+  return '/api/v1/catalogue/browse?'+params.toString();
 }
 function browseCardHtml(e){
   const id=Number(e.id);
@@ -2357,7 +2357,7 @@ window.openBrowseEntry=async(id,userEvent=null)=>{
   body.innerHTML='<div class="muted">Loading entry details…</div>';
   revealEntryInspector(backdrop);
   try{
-    const e=await api('/api/admin/entries/'+id,{signal:controller.signal,timeoutMs:15000});
+    const e=await api('/api/v1/catalogue/entries/'+id,{signal:controller.signal,timeoutMs:15000});
     if(generation!==browseInspectorGeneration||Number(browseState.selectedEntryId)!==Number(id))return;
     applyEntrySnapshotEverywhere(e,{render:false});noteEntryThumbnail(e);
     const matches=[...(e.matches||[]),...(e.source_variants||[])];
@@ -2389,8 +2389,8 @@ function identityResolutionDiagnostics(result){
 window.refreshBrowseIdentity=async(id,button)=>{
   if(button){button.disabled=true;button.textContent='Resolving…';}
   try{
-    const r=await api(`/api/admin/entries/${id}/identity/refresh?force=true`,{method:'POST',timeoutMs:120000});
-    const entry=r.entry||await api(`/api/admin/entries/${id}`,{timeoutMs:10000,suppressClientError:true});
+    const r=await api(`/api/v1/entries/${id}/identity/refresh?force=true`,{method:'POST',timeoutMs:120000});
+    const entry=r.entry||await api(`/api/v1/catalogue/entries/${id}`,{timeoutMs:10000,suppressClientError:true});
     applyEntrySnapshotEverywhere(entry,{render:false});
     const list=$('#browseInspectorBody')?.querySelector('[data-browse-identity-list]');
     if(list&&browseInspectorIsOpen()&&Number(browseState.selectedEntryId)===Number(id))list.innerHTML=metadataIdentityHtml(entry)+identityResolutionDiagnostics(r);
@@ -2403,7 +2403,7 @@ window.refreshBrowseEntryMetadata=async(id,button)=>{
   if(button){button.disabled=true;button.textContent='Queued…';}
   toast('Metadata refresh queued');
   try{
-    const r=await api(`/api/admin/entries/${id}/refresh-metadata?background=true`,{method:'POST',timeoutMs:8000});
+    const r=await api(`/api/v1/entries/${id}/refresh-metadata?background=true`,{method:'POST',timeoutMs:8000});
     scheduleEntrySnapshotSync(id,[1200,4000,9000],true);
     loadTasks().catch(()=>{});
     toast(r.already_running?'Metadata refresh is already running':'Metadata refresh is running in the background');
@@ -2421,7 +2421,7 @@ window.refreshBrowseEntryAll=async(id,button)=>{
   if(button){button.disabled=true;button.textContent='Queued…';}
   toast('Entry refresh queued');
   try{
-    const r=await api(`/api/admin/entries/${id}/refresh-all`,{method:'POST',timeoutMs:10000});
+    const r=await api(`/api/v1/entries/${id}/refresh-all`,{method:'POST',timeoutMs:10000});
     browseState.renderNonce=Date.now();
     scheduleEntrySnapshotSync(id,[1500,5000,12000],true);loadTasks().catch(()=>{});
     toast(r.already_running?'Entry refresh is already running':'Refreshing the complete entry in the background');
@@ -2550,7 +2550,7 @@ function sourceCoverageHtml(match,kind,entryId,sourceId){
 window.checkSourceChapters=async(entryId,sourceId,sourceMangaId,button)=>{
   if(button){button.disabled=true;button.textContent='Checking…';}
   try{
-    const r=await api(`/api/admin/entries/${entryId}/source-records/${encodeURIComponent(sourceId)}/${sourceMangaId}/check-chapters`,{method:'POST',timeoutMs:30000});
+    const r=await api(`/api/v1/entries/${entryId}/source-records/${encodeURIComponent(sourceId)}/${sourceMangaId}/check-chapters`,{method:'POST',timeoutMs:30000});
     const stats=r.stats||{};
     for(const d of [subbedData,matrixData]){
       if(!d)continue;
@@ -2767,7 +2767,7 @@ async function hydrateMatrixChapters(kind,data){
   const controller=new AbortController(),revision=catalogViewRevision;matrixStatsRequests[kind]=controller;
   updateMatrixCoverageLabel(kind,data);
   try{
-    const payload=await api('/api/admin/matrix/chapter-stats',{method:'POST',body:JSON.stringify({ids:(data.entries||[]).map(e=>Number(e.id))}),timeoutMs:15000,signal:controller.signal,noMutationRefresh:true});
+    const payload=await api('/api/v1/matrix/chapter-stats',{method:'POST',body:JSON.stringify({ids:(data.entries||[]).map(e=>Number(e.id))}),timeoutMs:15000,signal:controller.signal,noMutationRefresh:true});
     if(matrixDataset(kind)!==data||controller.signal.aborted)return;
     // A completed manual check/merge/reset is newer than this request's snapshot.
     if(catalogViewRevision!==revision){hydrateMatrixChapters(kind,data);return;}
@@ -2789,7 +2789,7 @@ function loadMatrixView(kind,{render=true}={}){
   const key=JSON.stringify([query,sourceId]),requests=matrixRequests[kind];
   const current=()=>String(c.search.value||'')===query&&String(c.source?.value||'')===sourceId;
   if(requests.has(key))return requests.get(key);
-  const url='/api/admin/matrix?'+(kind==='subbed'?'subbed=true&':'')+'search='+encodeURIComponent(query)+'&limit=500&include_chapter_stats=false'+(sourceId?'&source_id='+encodeURIComponent(sourceId):'');
+  const url='/api/v1/matrix?'+(kind==='subbed'?'subbed=true&':'')+'search='+encodeURIComponent(query)+'&limit=500&include_chapter_stats=false'+(sourceId?'&source_id='+encodeURIComponent(sourceId):'');
   const request=(async()=>{
     try{
       const data=await api(url,{timeoutMs:15000});
@@ -2953,7 +2953,7 @@ async function renderInlineEntry(kind,id,signal=null,options={}){
   if(options.showLoading!==false)target.innerHTML=`<button class="closeInline" onclick="closeInlineEntry('${kind}',event)">Back to results</button><div class="card">Loading entry…</div>`;
   if(options.scroll!==false&&!document.documentElement.dataset.ui)target.scrollIntoView({behavior:'smooth',block:'nearest'});
   const coverNonce=coverRenderNonce;
-  const e=await api('/api/admin/entries/'+id,{signal,timeoutMs:15000});
+  const e=await api('/api/v1/catalogue/entries/'+id,{signal,timeoutMs:15000});
   if(signal?.aborted||generation!==entryInspectorGeneration[kind]||Number(activeInspector[kind])!==Number(id))return;
   applyEntrySnapshotEverywhere(e,{render:false});noteEntryThumbnail(e);
 
@@ -2987,8 +2987,8 @@ async function refreshInlineEntryStable(kind,id){
 window.refreshIdentity=async(id,kind,button)=>{
   if(button){button.disabled=true;button.textContent='Resolving…';}
   try{
-    const r=await api(`/api/admin/entries/${id}/identity/refresh?force=true`,{method:'POST',timeoutMs:120000});
-    const entry=r.entry||await api(`/api/admin/entries/${id}`,{timeoutMs:10000,suppressClientError:true});
+    const r=await api(`/api/v1/entries/${id}/identity/refresh?force=true`,{method:'POST',timeoutMs:120000});
+    const entry=r.entry||await api(`/api/v1/catalogue/entries/${id}`,{timeoutMs:10000,suppressClientError:true});
     applyEntrySnapshotEverywhere(entry,{render:false});
     const root=matrixControls(kind).inspector;
     const list=root?.querySelector('[data-identity-list]');if(list&&Number(activeInspector[kind])===Number(id))list.innerHTML=metadataIdentityHtml(entry)+identityResolutionDiagnostics(r);
@@ -3001,18 +3001,18 @@ window.refreshEntry=async(id,kind,button=null)=>{
   if(button){button.disabled=true;button.textContent='Queued…';}
   toast('Entry refresh queued');
   try{
-    const r=await api(`/api/admin/entries/${id}/refresh-all`,{method:'POST',timeoutMs:10000});
+    const r=await api(`/api/v1/entries/${id}/refresh-all`,{method:'POST',timeoutMs:10000});
     renewCoverEpoch();
     scheduleEntrySnapshotSync(id,[1500,5000,12000],true);loadTasks().catch(()=>{});
     toast(r.already_running?'Entry refresh is already running':'Refreshing the complete entry in the background');
   }catch(e){toast('Refresh failed: '+e.message);}
   finally{if(button){button.disabled=false;button.textContent='Refresh';}}
 };
-window.refreshEntryCover=async(id,kind)=>{toast('Refreshing cover…');try{await api(`/api/admin/entries/${id}/refresh-covers`,{method:'POST',timeoutMs:15000});renewCoverEpoch();await refreshInlineEntryStable(kind,id);toast('Cover refresh queued');}catch(e){toast('Cover refresh failed: '+e.message);}};
+window.refreshEntryCover=async(id,kind)=>{toast('Refreshing cover…');try{await api(`/api/v1/entries/${id}/refresh-covers`,{method:'POST',timeoutMs:15000});renewCoverEpoch();await refreshInlineEntryStable(kind,id);toast('Cover refresh queued');}catch(e){toast('Cover refresh failed: '+e.message);}};
 window.discoverAdditional=async(id,kind)=>{
   toast('Source scan queued');
   try{
-    const r=await api(`/api/admin/entries/${id}/discover-additional?background=true`,{method:'POST',timeoutMs:8000});
+    const r=await api(`/api/v1/entries/${id}/discover-additional?background=true`,{method:'POST',timeoutMs:8000});
     scheduleEntrySnapshotSync(id,[1800,6000,14000],true);loadTasks().catch(()=>{});
     toast(r.already_running?'Source scan is already running':'Finding missing + extra source records in the background');
   }catch(e){toast('Source scan failed: '+e.message);}
@@ -3050,7 +3050,7 @@ window.loadHistory=async(id,kind)=>{
     &&Number(inspectorEntryId(kind))===Number(id)&&$('#historyBox-'+kind)===target;
   target.textContent='Loading history…';
   try{
-    const h=await api('/api/admin/entries/'+id+'/history');
+    const h=await api('/api/v1/entries/'+id+'/history');
     if(!current())return;
     target.textContent=h.history.length?h.history.map(x=>`${x.served_at}  ${x.chapter?.display_name||x.virtual_chapter_id}  ← ${x.source_name} (${x.reason})`).join('\n'):'No chapter has been served yet.';
   }catch(error){if(current())target.textContent='History could not be loaded: '+error.message;}
@@ -3061,13 +3061,13 @@ window.openChapter=async(chapterId,button,kind)=>{
   const request={};inspectorDetailRequests.set(target,request);
   inspectorRoot(kind).querySelectorAll('.chapterrow').forEach(x=>x.classList.remove('selected'));
   if(button)button.classList.add('selected');
-  const d=await api('/api/admin/chapters/'+chapterId);
+  const d=await api('/api/v1/chapters/'+chapterId);
   if(inspectorDetailRequests.get(target)!==request||generation!==inspectorGeneration(kind)
     ||inspectorEntryId(kind)!==entryId||$('#chapterDetail-'+kind)!==target)return;
   const served=d.served?.candidate_id,wouldServe=Number(d.would_serve_candidate_id||0);const candidateHtml=(d.candidates||[]).map(c=>`<div class="candidate ${wouldServe===Number(c.id)?'selectedCandidate':''}"><div><strong>${esc(c.source_name)}</strong>${c.official?' <span class="tag officialTag">OFFICIAL</span>':''}${wouldServe===Number(c.id)?' <span class="tag manual">WILL SERVE</span>':''}${served===c.id?' <span class="tag">LAST SERVED</span>':''}</div><div class="muted"><b>Entry:</b> ${esc(c.source_entry_title||'Unknown source entry')}<br>${esc(c.name)} · ${c.page_count||'?'} pages</div><div>Resolver ${fmtScore(c.resolver_score)} · Quality ${fmtScore(c.quality_score)}</div><div class="compactMatchActions"><button onclick="qualityCandidate(${c.id},${chapterId},'${kind}')">Analyze quality</button><button class="danger ghost" onclick="rejectChapterCandidate(${c.id},${chapterId},'${kind}')">Reject episode</button></div></div>`).join('')||'<span class="muted">No active candidates.</span>';const rejectedHtml=(d.rejected_candidates||[]).length?`<details class="rejectedCandidates"><summary>${d.rejected_candidates.length} rejected candidate${d.rejected_candidates.length===1?'':'s'}</summary><div class="candidategrid">${d.rejected_candidates.map(c=>`<div class="candidate rejectedCandidate"><div><strong>${esc(c.source_name)}</strong>${c.official?' <span class="tag officialTag">OFFICIAL</span>':''}</div><div class="muted"><b>Entry:</b> ${esc(c.source_entry_title||'Unknown source entry')}<br>${esc(c.name)}</div><button onclick="restoreChapterCandidate(${c.id},${chapterId},'${kind}')">Restore candidate</button></div>`).join('')}</div></details>`:'';target.innerHTML=`<div class="candidatebox"><h4>${esc(d.chapter.display_name)}</h4><div class="servingDecision">${wouldServe?`<strong>Serving decision:</strong> ${esc((d.candidates||[]).find(c=>Number(c.id)===wouldServe)?.source_name||'Unknown')} · ${esc((d.candidates||[]).find(c=>Number(c.id)===wouldServe)?.source_entry_title||'')}`:'<strong>No candidate can currently serve this chapter.</strong>'}</div><div class="candidategrid">${candidateHtml}</div>${rejectedHtml}</div>`;};
-window.qualityCandidate=async(candidateId,chapterId,kind)=>{toast('Sampling chapter images…');try{const r=await api('/api/admin/candidates/'+candidateId+'/quality',{method:'POST',body:JSON.stringify({sample_count:5})});toast(`Quality ${fmtScore(r.quality_score)} · ${r.median_width||'?'}×${r.median_height||'?'} · broken ${r.broken_pages||0}`);await openChapter(chapterId,null,kind);}catch(e){toast('Quality analysis failed: '+e.message);}};
-window.rejectChapterCandidate=async(candidateId,chapterId,kind)=>{if(!confirm('Reject this episode candidate? It will stay rejected after source refreshes and will not be served unless you restore it.'))return;try{await api(`/api/admin/candidates/${Number(candidateId)}/reject`,{method:'POST'});toast('Episode candidate rejected');await openChapter(chapterId,null,kind);if(activeInspector[kind]!=null)refreshInlineEntryStable(kind,activeInspector[kind]).catch(()=>{});}catch(e){toast('Unable to reject episode: '+e.message);}};
-window.restoreChapterCandidate=async(candidateId,chapterId,kind)=>{try{await api(`/api/admin/candidates/${Number(candidateId)}/restore`,{method:'POST'});toast('Episode candidate restored');await openChapter(chapterId,null,kind);if(activeInspector[kind]!=null)refreshInlineEntryStable(kind,activeInspector[kind]).catch(()=>{});}catch(e){toast('Unable to restore episode: '+e.message);}};
+window.qualityCandidate=async(candidateId,chapterId,kind)=>{toast('Sampling chapter images…');try{const r=await api('/api/v1/candidates/'+candidateId+'/quality',{method:'POST',body:JSON.stringify({sample_count:5})});toast(`Quality ${fmtScore(r.quality_score)} · ${r.median_width||'?'}×${r.median_height||'?'} · broken ${r.broken_pages||0}`);await openChapter(chapterId,null,kind);}catch(e){toast('Quality analysis failed: '+e.message);}};
+window.rejectChapterCandidate=async(candidateId,chapterId,kind)=>{if(!confirm('Reject this episode candidate? It will stay rejected after source refreshes and will not be served unless you restore it.'))return;try{await api(`/api/v1/candidates/${Number(candidateId)}/reject`,{method:'POST'});toast('Episode candidate rejected');await openChapter(chapterId,null,kind);if(activeInspector[kind]!=null)refreshInlineEntryStable(kind,activeInspector[kind]).catch(()=>{});}catch(e){toast('Unable to reject episode: '+e.message);}};
+window.restoreChapterCandidate=async(candidateId,chapterId,kind)=>{try{await api(`/api/v1/candidates/${Number(candidateId)}/restore`,{method:'POST'});toast('Episode candidate restored');await openChapter(chapterId,null,kind);if(activeInspector[kind]!=null)refreshInlineEntryStable(kind,activeInspector[kind]).catch(()=>{});}catch(e){toast('Unable to restore episode: '+e.message);}};
 window.clearMatch=async(id,sourceId,kind)=>{if(!confirm('Clear this source match? Existing served-history records are kept.'))return;try{
   toast('Clearing match…');
   const entry=await api(`/api/v1/entries/${id}/matches/${encodeURIComponent(sourceId)}`,{method:'DELETE',timeoutMs:8000});
@@ -3154,7 +3154,7 @@ async function syncEntrySnapshot(entryId,{refreshInspector=false}={}){
   const id=Number(entryId),revision=matchEntryMutationRevisions.get(id)||0,startedSequence=matchMutationSequence;
   if(matchEntryMutationPending.get(id))return null;
   try{
-    const entry=await api(`/api/admin/entries/${id}`,{timeoutMs:8000,suppressClientError:true});
+    const entry=await api(`/api/v1/catalogue/entries/${id}`,{timeoutMs:8000,suppressClientError:true});
     // A reconciliation read begun before a manual choice cannot undo its optimism.
     const canonicalId=Number(entry.canonical_id||entry.id||id);
     if(matchEntryMutationPending.get(id)||matchEntryMutationPending.get(canonicalId)||
@@ -3519,7 +3519,7 @@ window.openMatchBrowser=async(entryId,sourceId)=>{
   try{
     if(!sourceRows.length)await loadSources();
     if(!ownsOpening())return;
-    const entry=await api('/api/admin/entries/'+entryId,{timeoutMs:15000});
+    const entry=await api('/api/v1/catalogue/entries/'+entryId,{timeoutMs:15000});
     if(!ownsOpening())return;
     const enabled=populateMatchSourceSelector(sourceId);
     if(!enabled.length){throw new Error('No source/language is enabled for search. Enable one in Sources first.');}

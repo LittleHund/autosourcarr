@@ -23,6 +23,7 @@ internal static class CataloguePreferenceLineage
         c.Execute("UPDATE serving_upgrade_history SET entry_id=$p0 WHERE entry_id=$p1", P(target, duplicate));
         c.Execute("DELETE FROM due_work WHERE kind='library' AND work_key IN ($p0,$p1)", P(target.ToString(System.Globalization.CultureInfo.InvariantCulture), duplicate.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         c.Execute("DELETE FROM library_complete_observations WHERE entry_id IN ($p0,$p1)", P(target, duplicate));
+        ReparentLibrary(c, target, duplicate, stamp);
         var profile = c.Query("SELECT * FROM serving_profiles WHERE entry_id=$p0", P(duplicate)).FirstOrDefault(); var tracking = c.Query("SELECT * FROM library_tracking WHERE entry_id=$p0", P(duplicate)).FirstOrDefault();
         c.Execute("UPDATE entry_preference_history SET canonical_entry_id=$p0 WHERE canonical_entry_id=$p1", P(target, duplicate));
         if (profile is null && tracking is null) return;
@@ -41,6 +42,28 @@ internal static class CataloguePreferenceLineage
             c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(duplicate));
         }
     }
+    /// <summary>
+    /// Phase 10 CBZ library: membership, queued chapters, downloaded chapters and their history follow the surviving
+    /// entry. When both were in the library the surviving entry keeps its own series folder; the absorbed folder's
+    /// files stay where they are and are still known by their download rows.
+    /// </summary>
+    private static void ReparentLibrary(DatabaseSession c, long target, long duplicate, string stamp)
+    {
+        var absorbed = c.Query("SELECT in_library FROM library_series WHERE entry_id=$p0", P(duplicate)).FirstOrDefault();
+        if (absorbed is not null)
+        {
+            if (c.Scalar("SELECT 1 FROM library_series WHERE entry_id=$p0", P(target)) is null)
+                c.Execute("UPDATE library_series SET entry_id=$p0,updated_at=$p1 WHERE entry_id=$p2", P(target, stamp, duplicate));
+            else
+            {
+                if (absorbed.Flag("in_library")) c.Execute("UPDATE library_series SET in_library=1,updated_at=$p0 WHERE entry_id=$p1", P(stamp, target));
+                c.Execute("DELETE FROM library_series WHERE entry_id=$p0", P(duplicate));
+            }
+        }
+        foreach (var table in new[] { "download_queue", "library_downloads", "download_history" })
+            c.Execute("UPDATE " + table + " SET entry_id=$p0 WHERE entry_id=$p1", P(target, duplicate));
+    }
+
     private static void ReparentIdentityReviews(DatabaseSession c, long target, long duplicate, string stamp)
     {
         var rows = c.Query("SELECT * FROM portable_identity_reviews WHERE entry_id=$p0", P(duplicate));

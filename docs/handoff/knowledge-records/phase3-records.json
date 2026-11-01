@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-3",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 3: jobs and events (branch conversion, 7bbc672)",
+   "body": "{\"commit\": \"7bbc672\", \"ci\": \"run 41229924104 green\", \"archive\": \"autosourcarr-0.5.0-phase-3.zip\", \"archive_sha256\": \"a3d685aa6a10bc446bebbd5539163df2830904f97a9dcadf9136c75b05dbf4ed\", \"built\": [\"JobQueue: 3 workers, High/Normal/Low then oldest, identical queued or running jobs merged, needs-disk one at a time, exclusive alone and holding back new starts at the head, long-running outside worker slots, run limit + average + ETA per type, aging against starvation\", \"watchdog: no progress for the stall time = error at once, cancel, release after grace (never for exclusive jobs), retry with doubling back-off up to one hour; a cancel wins over a freeze\", \"StopBackgroundAsync / ResumeBackground for resets and restores\", \"EventStream: one stream with ids, Last-Event-ID resume, resync after a restart or gap, topic filter, bounded readers, coalesced task/error pulses\", \"GET /api/v1/events SSE with heartbeat and X-Accel-Buffering: no, verified through nginx 1.24 in CI\", \"/api/v1 tasks, tasks/clear-history, tasks/{id}/cancel, tasks/{id}/retry-safe, jobs, errors, errors/clear, diagnostics (download now wired)\", \"database move runs as an exclusive non-cancellable job (202 + task id)\", \"DueScheduler + CrawlPages port with 0.4.x timestamps\", \"TaskJournal started with the app (task history survives restarts)\", \"UI: tasks, errors, diagnostics, safe retry on the generated client; live updates via fetch-streamed SSE with the admin token\"], \"tests\": \"954 C# tests, Python suite with only the 27 baseline failures, check-project\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 3)",
+   "source_ref": "src/AutoSourcarr.Core/Jobs/JobQueue.cs",
+   "applies_to": "Conversion phase 3",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261031-PHASE-3",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 3 verified: load test without starvation, frozen jobs are errors, live updates through nginx",
+   "body": "{\"done_when\": {\"no type starved\": \"load test keeps the queue full of High work for seconds; all Low and Normal jobs finish (aging)\", \"frozen jobs become errors\": \"watchdog test records job-frozen:<type> at detection, retries with back-off; abandoned jobs release their slot\", \"live updates through nginx\": \"test starts nginx with default proxy buffering in front of Kestrel; a job event arrives in under 2 s\"}, \"probe\": \"954/954\", \"ci\": \"conversion 7bbc672 run 41229924104 success\", \"python\": \"scripts/ci-pytest.sh: no new failures\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 3)",
+   "source_ref": "tests/AutoSourcarr.Tests/Jobs/JobQueueTests.cs",
+   "applies_to": "Conversion phase 3",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261031-SSE-NOT-SIGNALR",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "Live UI uses one server-sent event stream read with fetch",
+   "body": "{\"what\": \"GET /api/v1/events (text/event-stream) instead of SignalR\", \"why\": [\"plan phase 3 names SSE with heartbeat and X-Accel-Buffering\", \"no extra client library\", \"fetch can send the X-Admin-Token header, EventSource cannot\"], \"events carry what changed, the page reloads that part\", \"resume\": \"Last-Event-ID; resync when the gap is gone or the server restarted\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 3)",
+   "source_ref": "src/AutoSourcarr.Api/Endpoints/ApiV1Endpoints.cs",
+   "applies_to": "UI-13 live updates",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261031-PHASE3-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Independent audit of phase 3 found 10 issues; all fixed or scoped",
+   "body": "{\"fixed\": [\"move job could be cancelled/abandoned while copying: now non-cancellable, exclusive jobs never abandoned, 12 h stall limit\", \"frozen job retried after a cancel: cancel now wins and is never retried\", \"new request merged into a dying job: not any more\", \"no resync after a server restart: ids above the newest now resync; the UI reloads tasks on every reconnect\", \"reconnect replay overflowed at 256: reader buffer sized to the replay\", \"events could be delivered out of order: delivered inside the lock\", \"one freeze counted twice: recorded once\", \"job keys (paths) in the diagnostics download: removed\", \"timing-sensitive tests: wider margins\"], \"scoped\": [\"stop/resume background work has no caller until resets (phase 8) and restores (phase 12) are ported\"], \"also\": \"first CI run failed on Python-suite UI harnesses; the suite now runs locally before every push\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 3)",
+   "source_ref": "src/AutoSourcarr.Core/Jobs/JobQueue.cs",
+   "applies_to": "Conversion phase 3",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261031-PHASE3-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 3 items carried into later phases",
+   "body": "{\"phases 6-10\": \"schedule_startup_dedup, schedule_startup_refresh, schedule_entry_refresh_job, schedule_catalog_additional_record_scan, schedule_catalogue_choice, schedule_status_aux_refresh become JobTypes when their work is ported\", \"phase 6\": \"repair task projection merged into /api/v1/tasks\", \"phase 8\": \"library-monitor safe replay; reset routes call StopBackgroundAsync/ResumeBackground\", \"phase 9\": \"import context in the diagnostics download\", \"phase 12\": \"restore calls StopBackgroundAsync\", \"settings\": \"worker count fixed at 3 (Sonarr); no setting yet\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 3)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

@@ -1,0 +1,70 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-6",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 6: sources and repair (branch conversion, 3cb753b)",
+   "body": "{\"commit\": \"3cb753b\", \"ci\": \"probe green (all C# tests, source host check, source-host C# tests, repair-runner check); conversion CI pending at record time\", \"archive\": \"autosourcarr-0.5.0-phase-6.zip\", \"archive_sha256\": \"73bda8c80a609bd63b6997778c1c0ca245d9d6f5313759257f7908a4eadbdaba\", \"built\": [\"generated index.pb parser, repositories/sources/health/extension routes on /api/v1\", \"APK preview then confirm install (native code refused, permissions and domains listed)\", \"orphans Installed/Not installed, archive install, mark/unmark\", \"domain-move repair: class-file constant-pool rewrite, structure check, host JAR install, content check, last-working keep and rollback\", \"native/repair-runner.c (Landlock ABI>=6, connect gate to the egress proxy, signal gate, rlimits) + EgressProxy (allowlist, no Via, honest UA)\", \"opt-in automatic repair (setup question, daily watcher, jobs in Tasks)\", \"per-host pacing in the source host (SOURCE_MIN_INTERVAL_MS)\", \"23 repair routes under /api/v1/source-maintenance, task projection\", \"main-library status (SuwayomiLibrary, cache-first health block, /api/v1/subbed)\", \"host-backed source-code storage (raws, original-APK evidence)\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 6)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261101-PHASE-6",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 6 Done when verified in CI",
+   "body": "{\"orphan_repair\": \"source host test: mangatown jar rewritten to www.mangatown.invalid fails the content check; DomainRepair back to www.mangatown.com -> repaired, content check passes (search, details, chapters, pages, image), rollback works\", \"runner\": \"repair-runner-check.sh on GitHub ubuntu-24.04 (Landlock ABI 8): cannot read /config secret or $HOME files, no direct connect (even by IP or same-port decoy), example.org refused by the proxy, example.com allowed, JVM through proxy only, no signal outside the run, forced ABI 5 exits 78, NPROC bound\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 6)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261101-DOMAIN-REPAIR",
+   "kind": "decision",
+   "state": "accepted",
+   "title": "First repair kind is a domain move done by rewriting compiled string constants",
+   "body": "{\"why\": \"no compiler or AI needed; keeps structure (REP-2); content check decides (REP-4)\", \"how\": \"Utf8 constants in .class files of the host JAR; APK input refused (dex string pools need re-sorting and re-signing)\", \"runner\": \"domain repairs run no new code paths beyond the extension itself, so they install through the source host; the Landlock runner is for code rebuilds\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 6)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261101-LANDLOCK-ABI6",
+   "kind": "decision",
+   "state": "accepted",
+   "title": "Repair runner requires Landlock ABI 6",
+   "body": "{\"why\": \"ABI 4/5 lack signal scoping; a sandboxed program could kill same-uid processes (verified by the audit)\", \"coverage\": \"TrueNAS 25.10 kernel 6.12 has ABI 6; GitHub runners ABI 8\", \"extra\": \"seccomp connect gate (port-only Landlock rules would allow other addresses on the proxy port) and signal gate\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 6)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261101-PHASE6-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Phase 6 fresh-agent audit: 19 findings, 17 fixed",
+   "body": "{\"fixed\": [\"lock files\", \"rollback on cancel\", \"admin lock only around host changes\", \"orphan Repair button\", \"auto repairs as jobs (REP-7)\", \"official replacement check (SRC-8)\", \"parking-domain guard\", \"APK preview before install (SRC-2)\", \"OpenAPI names\", \"admission list\", \"shutdown order\", \"watcher clamp\", \"ABI 6 + signal gate\", \"NPROC/AS limits\", \"pacing burst\", \"new-address field\", \"raws/original-APK wiring\"], \"limitations\": [\"SNI not checked inside CONNECT tunnels\", \"runner binary in the image with phase 13\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 6)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261101-PHASE6-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 6 items carried to later phases",
+   "body": "{\"phase_8\": \"SuwayomiLibrary reset seeds, subbed search-all, orphan alias repair (need CatalogueMaintenance/EntryIngest/SourceDiscovery)\", \"phase_7\": \"AI provider (repair provider/test answer not-configured), SRC-9 AI benchmark\", \"phase_10\": \"reader source handling of the __autosourcarr_entry_id__ token\", \"phase_13\": \"source host as a separate low-rights user; repair-runner binary in the image\", \"other\": \"AD0001 route-handler analyzer crash (intermittent in solution builds) kept as a warning in the Api project\", \"ui\": \"code rebuild repairs (non-domain) need the AI provider; until then only domain moves are automatic\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 6)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

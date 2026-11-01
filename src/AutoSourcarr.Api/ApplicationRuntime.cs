@@ -73,6 +73,11 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks? _catalogueReviews;
     private AutoSourcarr.Core.Catalogue.Metadata.MetadataIdentityResolver? _metadataIdentity;
     private AutoSourcarr.Core.Catalogue.Metadata.MetadataProviderSet? _metadataProviders;
+    /// <summary>Phase 10: the CBZ library (download lanes, monitoring loop), metadata enrichment and the translation client (disposed at shutdown).</summary>
+    private AutoSourcarr.Core.Library.LibraryManager? _libraryManager;
+    private AutoSourcarr.Core.Catalogue.Metadata.Hydration.MetadataEnrichment? _metadataEnrichment;
+    private AutoSourcarr.Core.Translation.TranslationClient? _translator;
+    private AutoSourcarr.Core.Translation.TranslationHealthCheck? _translationHealth;
     private string? _dataDirectory;
     private SuwayomiClient? _main;
     private SourceEngineCapabilityContract? _mainCapabilities;
@@ -335,6 +340,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             var identities = new AutoSourcarr.Core.Catalogue.Sharing.PortableIdentityResolver(owner.Database);
             var catalogueReviews = new AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks(sharingExchange, owner.Tasks, owner.Lanes, owner.Io);
             owner._catalogueReviews = catalogueReviews;
+            var readerExtension = OpenReaderExtension(owner, environment);
+            var libraryManager = owner._libraryManager!;
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings,
                     duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }),
@@ -365,6 +372,13 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     AdminLock = owner._admin, Io = owner.Io,
                 },
                 Metadata = matching.Metadata, Discovery = matching.Discovery, Imports = matching.Imports,
+                Chapters = matching.Reading.Chapters, Serving = matching.Reading.Serving, LibraryDownloads = matching.Reading.LibraryDownloads,
+                CatalogueViews = matching.Reading.CatalogueViews, Tags = matching.Reading.Tags, ReaderExtension = readerExtension,
+                // An interrupted library monitoring pass re-runs its read-only observation (0.4.x library-monitor safe replay).
+                SafeRetries = new Dictionary<string, Func<TaskRecord, CancellationToken, Task<JsonObject>>>(StringComparer.Ordinal)
+                {
+                    ["library-monitor"] = libraryManager.SafeReplayAsync,
+                },
                 Connections = new ConnectionsV1Services
                 {
                     Store = owner._connections,
@@ -660,7 +674,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     /// <summary>
     /// /api/v1/health for the Status page (port of main.py health). Databases, counts and errors are real; the
     /// source engine is checked (phase 4); main Suwayomi reports its last connection test and the change feed (phase 7);
-    /// the translation check returns with the translation client (phase 10).
+    /// translation reports the translation client's last check (phase 10; refreshed in the background).
     /// </summary>
     internal async Task<JsonObject> HealthAsync(CancellationToken cancellationToken)
     {
@@ -684,7 +698,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             ["instance_id"] = Identity.InstanceId,
             ["source_host"] = source,
             ["main_suwayomi"] = MainSuwayomiHealth(settings),
-            ["translation"] = NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "10"),
+            ["translation"] = _translationHealth?.Snapshot(_healthStop.Token)
+                ?? NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "10"),
             ["library"] = LibraryStatus(),
             ["stats"] = stats,
             ["errors"] = new JsonObject
@@ -830,7 +845,10 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             await Attempt("Source health monitor", async () => { try { await _healthMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
         if (_autoRepairLoop is not null)
             await Attempt("Automatic source repair", async () => { try { await _autoRepairLoop.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
+        // The library manager stops its monitoring loop and download lanes before the job queue it enqueues on closes.
+        if (_libraryManager is not null) await Attempt("Library downloads", () => _libraryManager.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Job queue", () => Jobs.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_metadataEnrichment is not null) await Attempt("Metadata enrichment", () => _metadataEnrichment.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_raws is not null) await Attempt("Source code archive", () => _raws.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_baselines is not null) await Attempt("Source baselines", () => _baselines.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_rawInstalled is not null) await Attempt("Installed source observations", () => _rawInstalled.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -867,6 +885,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         await Attempt("Health physical I/O", () => _healthIo.DisposeAsync().AsTask()).ConfigureAwait(false);
         _integrationHttp?.Dispose();
         try { _metadataProviders?.Dispose(); } catch (Exception error) { errors.Add(error); }
+        try { _translator?.Dispose(); } catch (Exception error) { errors.Add(error); }
         await Attempt("Log writer cancellation", () => _logStop.CancelAsync()).ConfigureAwait(false);
         if (_writer is not null) await Attempt("Log writer", () => _writer).ConfigureAwait(false);
         if (_logs is not null) await Attempt("Diagnostic store", () => _logs.DisposeAsync().AsTask()).ConfigureAwait(false);

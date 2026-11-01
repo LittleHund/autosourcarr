@@ -17,7 +17,8 @@ SOURCE = ROOT / 'extension/module/src/autosourcarr/AutoSourcarr.kt'
 
 def test_preparation_handler_is_registered_before_http_source_response_parsing():
     source = SOURCE.read_text()
-    assert '.addInterceptor(ReaderPreparingInterceptor({ baseUrl }, AUTOSOURCARR_API_PREFIX))' in source
+    # Phase 10 (READ-1): each server slot has its own address and API prefix.
+    assert '.addInterceptor(ReaderPreparingInterceptor({ baseUrl }, { apiPrefix }))' in source
     assert '.addNetworkInterceptor { chain ->' in source
     assert 'removeHeader("X-AutoSourcarr-API-Key")' in source
 

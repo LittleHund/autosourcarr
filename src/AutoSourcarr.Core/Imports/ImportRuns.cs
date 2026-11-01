@@ -73,6 +73,11 @@ public sealed partial class ImportRuns
     public IImportMetadataSearch? Metadata { get; init; }
     /// <summary>Identity-link writer for accepted metadata; null = metadata stays evidence only.</summary>
     public IImportIdentitySink? Identities { get; init; }
+    /// <summary>
+    /// Phase 10: the candidates (of those passed) whose covers decode to the backup row's exact cover pixels (item,
+    /// metadata bundle, candidate ids); null = no thumbnail tie-break. Off when EXACT_THUMBNAIL_MATCHING is off.
+    /// </summary>
+    public Func<JsonObject, JsonObject?, IReadOnlyList<long>, CancellationToken, Task<IReadOnlyList<long>>>? ExactThumbnails { get; init; }
     /// <summary>The job queue (Tasks); null = work runs on the thread pool (tests).</summary>
     public JobQueue? Jobs { get; init; }
     public Func<ImportOptions> Options { get; init; } = () => new ImportOptions();

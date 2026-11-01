@@ -38,7 +38,8 @@ public static class AccessPolicy
     ];
 
     /// <summary>Entry reads that are matching work, not catalogue reads: the manual source search queries every source (phase 8).</summary>
-    private static readonly string[] AdminEntryReads = ["/manual-search"];
+    // The entry history (phase 10) is the matching decision log of one entry.
+    private static readonly string[] AdminEntryReads = ["/manual-search", "/history"];
 
     /// <summary>Routing ignores case and a trailing slash, so the policy compares the same canonical form.</summary>
     public static string Canonical(string path)
@@ -51,6 +52,9 @@ public static class AccessPolicy
     {
         path = Canonical(path);
         if (PublicPaths.Contains(path) || path.StartsWith("/static/", StringComparison.Ordinal)) return AccessLevel.Public;
+        // READ-1: Mihon adds the reader extension repository by URL without headers, so its files are public reads.
+        // It is not the reader API: /api/reader/v1 keeps its key check (ReaderAuthorizationMiddleware).
+        if (method is "GET" or "HEAD" && path.StartsWith("/api/reader/repo/", StringComparison.Ordinal)) return AccessLevel.Public;
         if (path == "/api/v1/auth/me" || path == "/api/v1/auth/password") return AccessLevel.Guest;
         if (path.StartsWith("/api/v1/accounts", StringComparison.Ordinal) || path == "/api/v1/keys/admin-token/regenerate") return AccessLevel.Owner;
         if (!path.StartsWith("/api/", StringComparison.Ordinal)) return AccessLevel.Guest;

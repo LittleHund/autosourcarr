@@ -15,9 +15,9 @@ public static class DataLayerTests
             using var temp = new Sandbox();
             using var database = new SqliteDatabase(new AutoSourcarrSettings { DataDir = temp.Path });
             new SchemaMigrator(database).Initialize();
-            Check.Equal("2026103101,2026103102,2026110180,2026110184", Versions(database, DatabaseFile.Catalog));
+            Check.Equal("2026103101,2026103102,2026110180,2026110184,2026110192", Versions(database, DatabaseFile.Catalog));
             Check.Equal("2026103111", Versions(database, DatabaseFile.Origins));
-            Check.Equal(2026110184L, SchemaMigrator.LatestMigration(DatabaseFile.Catalog));
+            Check.Equal(2026110192L, SchemaMigrator.LatestMigration(DatabaseFile.Catalog));
             Check.Equal(2026103111L, SchemaMigrator.LatestMigration(DatabaseFile.Origins));
             foreach (var file in new[] { DatabaseFile.Catalog, DatabaseFile.Origins })
             {
@@ -28,7 +28,7 @@ public static class DataLayerTests
             var schema = Schema(database, DatabaseFile.Catalog) + Schema(database, DatabaseFile.Origins);
             new SchemaMigrator(database).Initialize();
             Check.Equal(schema, Schema(database, DatabaseFile.Catalog) + Schema(database, DatabaseFile.Origins));
-            Check.Equal("2026103101,2026103102,2026110180,2026110184", Versions(database, DatabaseFile.Catalog));
+            Check.Equal("2026103101,2026103102,2026110180,2026110184,2026110192", Versions(database, DatabaseFile.Catalog));
         });
 
         foreach (var version in new[] { "0.3.27", "0.4.4" })
@@ -64,7 +64,7 @@ public static class DataLayerTests
                 }
                 Check.Equal("Alpha,Beta", string.Join(',', database.Read(DatabaseFile.Catalog, c => c.QueryAs<string>("SELECT preferred_title FROM entries ORDER BY id"))));
                 Check.Equal(0L, Scalar(database, DatabaseFile.Catalog, "SELECT COUNT(*) FROM entry_preferred_titles WHERE normalized IS NULL"));
-                Check.Equal("2026103101,2026103102,2026110180,2026110184", Versions(database, DatabaseFile.Catalog));
+                Check.Equal("2026103101,2026103102,2026110180,2026110184,2026110192", Versions(database, DatabaseFile.Catalog));
             });
 
         suite.Add("data layer: read sessions cannot write; a Write nested in a Read may; Dapper maps typed rows and pages", () =>

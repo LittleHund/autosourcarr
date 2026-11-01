@@ -24,17 +24,17 @@
     }
     async function load(id){
       if(writing)return;remember();snapshot=null;selected=String(id);const own=++generation;read?.abort();read=new AbortController();form.textContent='Loading gallery rules…';status('Reading saved gallery choices…');
-      try{const result=await api('/api/admin/gallery-policies/'+encodeURIComponent(selected),{signal:read.signal,suppressClientError:true});if(alive()&&own===generation){snapshot=result;render();status('Each source language has its own gallery choices. Unsaved drafts stay in this dialog.');}}
+      try{const result=await api('/api/v1/gallery-policies/'+encodeURIComponent(selected),{signal:read.signal,suppressClientError:true});if(alive()&&own===generation){snapshot=result;render();status('Each source language has its own gallery choices. Unsaved drafts stay in this dialog.');}}
       catch(error){if(alive()&&own===generation){form.textContent='Gallery rules unavailable: '+error.message;status('Refresh saved state to try again.');}}
     }
     async function save(button){
       if(writing||!snapshot)return;remember();const current=snapshot,own=generation,policy=drafts.get(selected)||value();writing=true;picker.disabled=true;form.inert=true;
-      try{await write(button,()=>api('/api/admin/gallery-policies/'+encodeURIComponent(selected),{method:'PUT',body:JSON.stringify({revision:current.revision,policy}),noMutationRefresh:true}),result=>{
+      try{await write(button,()=>api('/api/v1/gallery-policies/'+encodeURIComponent(selected),{method:'PUT',body:JSON.stringify({revision:current.revision,policy}),noMutationRefresh:true}),result=>{
         if(alive()&&own===generation){snapshot=result;drafts.delete(selected);render();status(result.task?.queued?'Gallery rules saved. Their cached layout update is queued in Tasks.':result.task?.already_running?'Gallery rules saved. A layout task is already running; the newest rules remain pending until applied.':'Gallery rules saved. '+(result.task?.error||'Use Apply saved rules again to update cached groups.'));}
       });}finally{writing=false;picker.disabled=false;form.inert=false;if(alive()&&document.activeElement===document.body)form.querySelector('[type=submit]')?.focus({preventScroll:true});}
     }
     picker.onchange=()=>load(picker.value);get('[data-reload]').onclick=()=>load(picker.value);
-    get('[data-apply]').onclick=async event=>{if(!snapshot||writing)return;const id=selected,own=generation;writing=true;picker.disabled=true;form.inert=true;try{await write(event.currentTarget,()=>api('/api/admin/gallery-policies/'+encodeURIComponent(id)+'/apply',{method:'POST',body:'{}',noMutationRefresh:true}),result=>{if(alive()&&own===generation)status(result.queued?'Saved gallery layout queued in Tasks.':result.already_running?'A gallery layout task is already running.':result.error||'Layout not queued.');});}finally{writing=false;picker.disabled=false;form.inert=false;}};
+    get('[data-apply]').onclick=async event=>{if(!snapshot||writing)return;const id=selected,own=generation;writing=true;picker.disabled=true;form.inert=true;try{await write(event.currentTarget,()=>api('/api/v1/gallery-policies/'+encodeURIComponent(id)+'/apply',{method:'POST',body:'{}',noMutationRefresh:true}),result=>{if(alive()&&own===generation)status(result.queued?'Saved gallery layout queued in Tasks.':result.already_running?'A gallery layout task is already running.':result.error||'Layout not queued.');});}finally{writing=false;picker.disabled=false;form.inert=false;}};
     get('[data-tasks]').onclick=()=>{if(writing)return;close();window.openTasksSection?.('general');};
     if(picker.value)await load(picker.value);else status('No source languages are available. Refresh Sources first.');
   }

@@ -143,4 +143,16 @@ AutoSourcarr.Tests.Catalogue.Metadata.MetadataChooserTests.Register(suite);
 AutoSourcarr.Tests.Catalogue.Metadata.MetadataIdentityTests.Register(suite);
 AutoSourcarr.Tests.Sources.Discovery.CatalogueDiscoveryTests.Register(suite);
 AutoSourcarr.Tests.Matching.Phase9WiringTests.Register(suite);
+// Phase 10 "Chapters and reader".
+AutoSourcarr.Tests.Catalogue.Chapters.ChapterNumberingTests.Register(suite);
+AutoSourcarr.Tests.Catalogue.Serving.ServingTests.Register(suite);
+AutoSourcarr.Tests.Catalogue.Browse.ReaderBrowseTests.Register(suite);
+AutoSourcarr.Tests.Library.LibraryDownloadsTests.Register(suite);
+AutoSourcarr.Tests.Imaging.ThumbnailFingerprintTests.Register(suite);
+AutoSourcarr.Tests.Translation.TranslationTests.Register(suite);
+AutoSourcarr.Tests.Catalogue.Tags.TagCatalogueTests.Register(suite);
+AutoSourcarr.Tests.Catalogue.Hydration.HydrationTests.Register(suite);
+AutoSourcarr.Tests.ReaderExtension.ReaderExtensionTests.Register(suite);
+AutoSourcarr.Tests.ReaderExtension.ReaderExtensionSourceHostTests.Register(suite);
+AutoSourcarr.Tests.Matching.Phase10WiringTests.Register(suite);
 return suite.Run(filters);

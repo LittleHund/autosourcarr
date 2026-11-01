@@ -71,8 +71,8 @@ function harness({setup=true,tools=false}={}){
     if(url==='/api/v1/setup'&&options.method!=='POST'){request.settled=true;return Promise.resolve(clone(h.data));}
     if(url.endsWith('/source-maintenance/provider')){request.settled=true;return Promise.resolve({provider:'chatgpt'});}
     if(url.endsWith('/source-maintenance/control')){request.settled=true;return Promise.resolve({busy:false});}
-    if(url==='/api/admin/extension-jar'){request.settled=true;return Promise.resolve({available:true,version:'27'});}
-    if(url.includes('/extension-jar/download')){request.settled=true;return Promise.resolve(h.jarBlob||{type:'application/java-archive',size:4});}
+    if(url==='/api/v1/reader-extension/setup'){request.settled=true;return Promise.resolve({extension:{available:true,version_name:'27',jar:'/api/reader/repo/jar/autosourcarr-27.jar'}});}
+    if(url.startsWith('/api/reader/repo/jar/')){request.settled=true;return Promise.resolve(h.jarBlob||{type:'application/java-archive',size:4});}
     if(url.endsWith('/setup/finish')&&!h.finishDeferred){request.settled=true;return h.finishResult instanceof Error?Promise.reject(h.finishResult):Promise.resolve(clone(h.finishResult));}
     return new Promise((resolve,reject)=>{request.resolve=value=>{request.settled=true;resolve(clone(value));};request.reject=error=>{request.settled=true;reject(error);};});
   }};

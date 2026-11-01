@@ -96,6 +96,9 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("database_dir")]
     public string? DatabaseDir { get; init; } = null;
 
+    [System.Text.Json.Serialization.JsonPropertyName("library_dir")]
+    public string? LibraryDir { get; init; } = null;
+
     [System.Text.Json.Serialization.JsonPropertyName("max_source_concurrency")]
     public int MaxSourceConcurrency { get; init; } = 6;
 
@@ -513,6 +516,7 @@ public sealed partial record AutoSourcarrSettings
         new("MAIN_SUWAYOMI_DOWNLOADS_PATH", nameof(MainSuwayomiDownloadsPath), SettingKind.Text, false, []),
         new("DATA_DIR", nameof(DataDir), SettingKind.Path, false, []),
         new("DATABASE_DIR", nameof(DatabaseDir), SettingKind.NullablePath, false, []),
+        new("LIBRARY_DIR", nameof(LibraryDir), SettingKind.NullablePath, false, []),
         new("MAX_SOURCE_CONCURRENCY", nameof(MaxSourceConcurrency), SettingKind.Integer, false, []),
         new("SOURCE_HOST_WORK_CONCURRENCY", nameof(SourceHostWorkConcurrency), SettingKind.Integer, false, []),
         new("BACKGROUND_SOURCE_CONCURRENCY", nameof(BackgroundSourceConcurrency), SettingKind.Integer, false, []),

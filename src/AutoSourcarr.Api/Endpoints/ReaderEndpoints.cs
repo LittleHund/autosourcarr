@@ -18,13 +18,16 @@ public static class ReaderEndpoints
     private static readonly string[] Reads = ["GET", "HEAD"];
 
     /// <summary>Concrete SQLite/page routes. Requires the existing reader authorization middleware before routing.</summary>
-    public static RouteGroupBuilder MapReaderServing(this IEndpointRouteBuilder endpoints, ReaderRepository repository, ReaderPageService pages, BoundedWorkScheduler io)
+    /// <param name="chaptersRead">READ-3: called after a chapter list was served from stored data (queues a refresh of old records).</param>
+    public static RouteGroupBuilder MapReaderServing(this IEndpointRouteBuilder endpoints, ReaderRepository repository, ReaderPageService pages, BoundedWorkScheduler io,
+        Action<long>? chaptersRead = null)
     {
         var group = endpoints.MapGroup("/api/v1");
         group.MapMethods("/entries/{entry_id}/chapters", Reads, (Func<HttpContext, Task<IResult>>)(async context =>
         {
             var id = Identity(context, "entry_id");
             var chapters = await io.RunAsync(() => repository.ListChapters(id), context.RequestAborted).ConfigureAwait(false);
+            chaptersRead?.Invoke(id);
             return Json(new() { ["items"] = new JsonArray(chapters.Select(row => (JsonNode)row).ToArray()) });
         }));
         group.MapMethods("/chapters/{chapter_id}", Reads, (Func<HttpContext, Task<IResult>>)(async context =>

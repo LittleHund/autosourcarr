@@ -117,6 +117,24 @@ public static class DuplicateTestSet
 {
     public const string EnvironmentVariable = "AUTOSOURCARR_DUPLICATE_TEST_SET";
     public static string SyntheticPath => ConfigurationTests.Fixture(Path.Combine("matching", "duplicate-pairs.synthetic.json"));
+    /// <summary>The user's own decisions as pairs (phase 10: committed temporarily, removed before cutover).</summary>
+    public static string UserPath => ConfigurationTests.Fixture(Path.Combine("matching", "duplicate-pairs.user.json"));
+
+    /// <summary>
+    /// Writes a deterministic subset of a pair file to <paramref name="target"/>: every different-work pair, then evenly
+    /// spaced same-work pairs up to <paramref name="maximum"/> pairs in all. Answers <paramref name="target"/>.
+    /// </summary>
+    public static string Sample(string path, int maximum, string target)
+    {
+        var pairs = (JsonNode.Parse(File.ReadAllText(path))?["pairs"] as JsonArray) ?? throw new InvalidDataException("The pair file needs a \"pairs\" array");
+        var different = pairs.Where(pair => pair?["same"] is not JsonValue same || !same.TryGetValue<bool>(out var flag) || !flag).ToList();
+        var alike = pairs.Except(different).ToList();
+        var room = Math.Max(0, maximum - different.Count);
+        var step = room == 0 ? 0 : Math.Max(1, alike.Count / room);
+        var chosen = different.Concat(step == 0 ? [] : alike.Where((_, index) => index % step == 0).Take(room)).Select(pair => pair!.DeepClone()).ToArray();
+        File.WriteAllText(target, new JsonObject { ["pairs"] = new JsonArray(chosen) }.ToJsonString());
+        return target;
+    }
 
     public sealed record Result(int Pairs, int SamePairs, int Merged, int MergedSame, IReadOnlyList<string> WrongMerges, IReadOnlyList<string> Missed)
     {

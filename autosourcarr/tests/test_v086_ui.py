@@ -106,9 +106,9 @@ def test_read_only_post_lookups_never_trigger_mutation_refreshes():
     node('''const assert=require('assert');let calls=0,catalogViewRevision=0;
       const scheduleDuplicateLiveRefresh=()=>calls++;const setTimeout=()=>calls++;
     '''+code+'''
-      scheduleMutationRefresh('/api/admin/entries/summaries','POST');
+      scheduleMutationRefresh('/api/v1/catalogue/entries/summaries','POST');
       scheduleMutationRefresh('/api/v1/duplicate-candidates','POST');assert.equal(calls,0);
-      scheduleMutationRefresh('/api/admin/matrix/chapter-stats','POST');assert.equal(calls,0);assert.equal(catalogViewRevision,0);
+      scheduleMutationRefresh('/api/v1/matrix/chapter-stats','POST');assert.equal(calls,0);assert.equal(catalogViewRevision,0);
       scheduleMutationRefresh('/api/v1/duplicates/review','POST');assert.equal(calls,1);
       assert.equal(catalogViewRevision,1);
     ''')

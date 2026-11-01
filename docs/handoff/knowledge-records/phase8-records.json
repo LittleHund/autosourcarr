@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-8",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 8: matching (branch conversion, 26ef573)",
+   "body": "{\"commit\": \"26ef573\", \"ci\": \"probe 2c2fade green: build, 1113 C# tests, source host; conversion CI pending at record time\", \"archive\": \"autosourcarr-0.5.0-phase-8.zip\", \"archive_sha256\": \"0d630b3df5dc066017cfa566e60e0711d53b88868b418196ef2d525697830d98\", \"built\": [\"MatchScorer: missing-word penalty, identity (creators/year/cover), edition separation, 0.94 floor\", \"profiles ready-made/simple/advanced, official-first ranking\", \"EntryIngest, titles, source discovery\", \"ManualDecisions + resets with preview token\", \"decision_log with actor\", \"duplicate review/automatic merge, synthetic test set\", \"mixed entries scaled check, edition profiles, tag synonyms\", \"review workbench, decision preview, policy simulator\", \"catalogue maintenance and resets keeping decisions\", \"45 matching routes on /api/v1, UI moved\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 8)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261101-PHASE-8",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 8 Done when verified in CI (synthetic set) and migration test",
+   "body": "{\"test_set\": \"67-pair synthetic set: 0 wrong merges via production gate and ingest\", \"migration\": \"0.4.4 catalogue keeps every manual decision through migrations 2026110180/2026110184 and a normal reset\", \"private_set\": \"2,680 pairs from the user's exported decisions built (data folder conversion-export/duplicate-pairs.private.json); not run in CI: uploading it (encrypted + secret) was refused by the session's data-exfiltration guard; needs the user to add it\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 8)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  },
+  {
+   "id": "DECISION-20261101-DECISION-LOG",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "One decision_log table for every matching decision with actor",
+   "body": "{\"why\": \"existing history tables have fixed shapes and no actor\", \"undo\": \"review workbench undo computed from before/after; apply and undo all-or-nothing\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 8)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261101-PHASE8-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Phase 8 fresh-agent audit: 13 findings, 12 fixed",
+   "body": "{\"fixed\": [\"reviewed mixed entries auto-split\", \"workbench merge unprotected\", \"merge not atomic with log/rollback\", \"MAT-2 on ingest\", \"workbench partial apply/undo\", \"profiles/ranking/synonyms unused\", \"manual titles dropped on merge\", \"reset clearing decisions\", \"stale findings\", \"rejection reset race\", \"script keys on destructive routes\"], \"open\": [\"split paths not atomic with their log\"]}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 8)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261101-PHASE8-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 8 items carried to later phases",
+   "body": "{\"phase_9\": \"refresh-feeds, refresh-metadata, discover-additional routes; subbed search-all; Suwayomi plan \\u2192 entries via imports\", \"user\": \"run the private duplicate set: add it to CI as an encrypted fixture + secret, or install dotnet locally\", \"notes\": \"IPageImageSource (page colour sampling) not implemented yet \\u2192 page evidence skipped; split paths not atomic with the decision log\"}",
+   "origin": "Claude cloud session 2026-11-01 (conversion phase 8)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

@@ -26,13 +26,25 @@ public static class DuplicateTests
             Check.True(result.Ingest is { } ingest && ingest.Pairs == result.Pairs, "the ingest path is evaluated over the same pairs");
             Check.True(result.Ingest!.WrongMerges.Count == 0, "Ingest wrong merges: " + string.Join("; ", result.Ingest!.WrongMerges));
         });
+        // The user's own decisions (2,680 pairs; committed until cutover). The whole set takes longer than the CI job, so
+        // the regular suite runs every different-work pair (the only ones that can merge wrongly) plus an even sample of
+        // the same-work pairs, 300 in all; the CI probe runs the whole set through the environment variable.
+        // Pairs labelled same came from historical automatic merges, so recall is reported, never asserted.
         var privateSet = Environment.GetEnvironmentVariable(DuplicateTestSet.EnvironmentVariable);
-        if (!string.IsNullOrWhiteSpace(privateSet) && File.Exists(privateSet))
-            suite.Add("duplicates: private duplicate test set scores no wrong merges", () =>
+        var whole = !string.IsNullOrWhiteSpace(privateSet) && File.Exists(privateSet);
+        if (whole || File.Exists(DuplicateTestSet.UserPath))
+            suite.Add("duplicates: user duplicate test set scores no wrong merges on the automatic sweep (ingest is reported)", () =>
             {
-                var result = DuplicateTestSet.Evaluate(privateSet);
-                Console.WriteLine(DuplicateTestSet.Report(result));
+                using var sample = new Sandbox();
+                var path = whole ? privateSet! : DuplicateTestSet.Sample(DuplicateTestSet.UserPath, 300, Path.Combine(sample.Path, "pairs.json"));
+                var result = DuplicateTestSet.Evaluate(path);
+                Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                    $"user duplicate set: pairs {result.Pairs} · wrong merges {result.WrongMerges.Count} · recall {result.Recall:P1} · ingest wrong merges {result.Ingest?.WrongMerges.Count} · ingest recall {result.Ingest?.Recall:P1}"));
                 Check.True(result.WrongMerges.Count == 0, "Wrong merges: " + result.WrongMerges.Count.ToString(CultureInfo.InvariantCulture));
+                // Open finding (2026-11-01, waiting on the owner): match-on-ingest attaches 15 of the 66 different-work pairs.
+                // They have identical titles and no creators/year/edition in this file, so nothing blocks a title-only
+                // attach; the sweep needs more evidence. Reported here, not asserted, until the owner decides on the ingest gate.
+                foreach (var wrong in result.Ingest?.WrongMerges ?? []) Console.WriteLine("ingest wrong merge " + wrong);
             });
 
         suite.Add("duplicates: stand-in gate blocks editions, adaptations, sequels and other creators", () =>

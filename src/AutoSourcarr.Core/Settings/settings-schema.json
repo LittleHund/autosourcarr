@@ -127,6 +127,11 @@
       "description": "Folder for the SQLite databases. Empty uses the data folder. Set it in Compose only, pointing at a mounted folder that already holds the databases; moving them from the app arrives with the new data layer (conversion phase 2).",
       "compose": "only"
     },
+    "LIBRARY_DIR": {
+      "group": "Runtime",
+      "description": "Folder for AutoSourcarr's own CBZ library when it runs without a main Suwayomi (Series/Chapter.cbz with cover.jpg, details.json and ComicInfo.xml, readable by Mihon local source, Kavita and Komga). Empty uses library inside the data folder. Mount it as a volume to share it with a reader server.",
+      "compose": "only"
+    },
     "MAX_SOURCE_CONCURRENCY": {
       "group": "Matching",
       "compose": "allowed"

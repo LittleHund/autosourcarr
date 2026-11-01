@@ -187,7 +187,7 @@
     if(!query){showSearchResults((subbedData?.entries||[]).slice(0,8),'Your loaded titles');return;}
     const controller=new AbortController();searchRequest=controller;byId('riCommandStatus').textContent='Searching saved titles…';
     const portable=query.startsWith('asc1:');
-    const url=portable?'/api/v1/portable-identities/resolve':'/api/admin/entries?search='+encodeURIComponent(query)+'&limit=12';
+    const url=portable?'/api/v1/portable-identities/resolve':'/api/v1/catalogue/entries?search='+encodeURIComponent(query)+'&limit=12';
     const options=portable?{method:'POST',body:JSON.stringify({reference:query}),noMutationRefresh:true}:{};
     try {const data=await api(url,{...options,signal:controller.signal,timeoutMs:8000,suppressClientError:true});if(generation===searchGeneration&&byId('riSearchDialog').open)showSearchResults(data.items||[],portable?(data.ambiguous?'This reference belongs to multiple saved entries. Review their editions before choosing.':data.items?.length?'Saved entry for this media ID':'This media ID has no saved association on this instance.'):'');}
     catch(error){if(generation===searchGeneration&&!controller.signal.aborted){showSearchResults([]);byId('riCommandStatus').textContent='Search unavailable: '+error.message;}}

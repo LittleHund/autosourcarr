@@ -38,7 +38,7 @@ const base=path=>Promise.resolve(path.includes('/suggestions')?{items:[{left:fir
   nodes.tagLeftForm.onsubmit(event());nodes.tagRightForm.onsubmit(event());await flush();
   nodes.tagLeftSelect.value='1';nodes.tagLeftSelect.onchange();nodes.tagRightSelect.value='2';nodes.tagRightSelect.onchange();
   assert.equal(nodes.tagSame.disabled,false);await nodes.tagSame.onclick();
-  let write=calls.find(c=>c.path==='/api/admin/tags/review');assert.deepEqual(JSON.parse(write.opts.body),{left_id:1,right_id:2,decision:'same'});
+  let write=calls.find(c=>c.path==='/api/v1/tags/review');assert.deepEqual(JSON.parse(write.opts.body),{left_id:1,right_id:2,decision:'same'});
   nodes.tagRightSelect.value='1';nodes.tagRightSelect.onchange();assert.equal(nodes.tagSame.disabled,true,'Cannot match a tag to itself');
   // A slow search cannot overwrite a newer picker result or revive a stale selected tag.
   const oldSearch=deferred();apiImpl=path=>path.includes('search=old')?oldSearch.promise:Promise.resolve({items:[second],total:1});

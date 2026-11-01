@@ -94,9 +94,11 @@
       if(own!==generation)return;
       render(data);
       if(byId('about')?.classList.contains('active')){
-        const jar=await api('/api/admin/extension-jar',{timeoutMs:5000,suppressClientError:true,noMutationRefresh:true});
+        // Phase 10: the prebuilt reader extension is served from AutoSourcarr's own repository (/api/reader/repo/).
+        const setup=await api('/api/v1/reader-extension/setup',{timeoutMs:5000,suppressClientError:true,noMutationRefresh:true});
         if(own!==generation)return;
-        byId('downloadJar').disabled=!jar.available;byId('downloadJar').dataset.version=jar.version;
+        const extension=setup.extension||{};
+        byId('downloadJar').disabled=!extension.jar;byId('downloadJar').dataset.version=extension.version_name||'';byId('downloadJar').dataset.path=extension.jar||'';
         loadApkDownload();
       }
     })();
@@ -116,7 +118,7 @@
     const button=byId('downloadJar');if(button.disabled)return;button.disabled=true;
     const version=button.dataset.version;
     try{
-      const blob=await api('/api/admin/extension-jar/download?version='+encodeURIComponent(version),{responseType:'blob',cache:'no-store',timeoutMs:60000,noMutationRefresh:true});
+      const blob=await api(button.dataset.path,{responseType:'blob',cache:'no-store',timeoutMs:60000,noMutationRefresh:true});
       if(blob.type!=='application/java-archive'||!blob.size)throw new Error('No valid JAR returned. Refresh Status and retry.');
       downloadBlob(blob,`AutoSourcarr-v${version}-Suwayomi.jar`);
     }catch(error){byId('readerBuildStatus').textContent=error.message;}

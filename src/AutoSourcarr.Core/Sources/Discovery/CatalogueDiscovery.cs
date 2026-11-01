@@ -72,6 +72,11 @@ public sealed class CatalogueDiscovery
     public Action<long, string, long>? RecordAttached { get; init; }
     /// <summary>_record_source_result: a source answered (null) or failed (the error), for source health.</summary>
     public Action<string, Exception?>? SourceResult { get; init; }
+    /// <summary>
+    /// MAT-20: machine-translated extra search names for the additional-record search (names, genre, source language);
+    /// they only widen the search, every candidate is still proved against the entry's trusted evidence. Null: none.
+    /// </summary>
+    public Func<IReadOnlyList<SearchName>, string, string, CancellationToken, Task<IReadOnlyList<SearchName>>>? TranslateNames { get; init; }
 
     // ---- feed crawl --------------------------------------------------------------------------------------------------
 
@@ -424,9 +429,9 @@ public sealed class CatalogueDiscovery
         var id = Read(session => CatalogueTitles.Canonical(session, entryId));
         if (!settings.AutoVariantDiscovery) return Empty(id, disabled: true);
         var sources = Read(session => session.Query("""
-            SELECT sm.source_id,COALESCE(NULLIF(sc.display_name,''),sc.name) name FROM source_matches sm JOIN source_config sc ON sc.source_id=sm.source_id
+            SELECT sm.source_id,COALESCE(NULLIF(sc.display_name,''),sc.name) name,sc.lang FROM source_matches sm JOIN source_config sc ON sc.source_id=sm.source_id
              WHERE sm.entry_id=$id AND sm.active=1 AND sc.available=1 AND sc.enabled_language=1 AND sc.enabled_search=1 ORDER BY sc.priority,sc.name
-            """, ("$id", id)).Select(row => (Id: row.Text("source_id"), Name: row.Text("name"))).ToArray());
+            """, ("$id", id)).Select(row => (Id: row.Text("source_id"), Name: row.Text("name"), Language: row.Text("lang"))).ToArray());
         if (sources.Length == 0) return Empty(id, disabled: false);
         var trusted = _ingest.TrustedAutomaticEntryEvidence(id);
         var names = SearchNames(id, settings);
@@ -434,7 +439,8 @@ public sealed class CatalogueDiscovery
         foreach (var source in sources)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var outcome = await SearchSourceAsync(id, source.Id, source.Name, names, trusted, variantOnly: true, settings, cancellationToken).ConfigureAwait(false);
+            var sourceNames = await TranslatedNamesAsync(id, names, source.Language, settings, cancellationToken).ConfigureAwait(false);
+            var outcome = await SearchSourceAsync(id, source.Id, source.Name, sourceNames, trusted, variantOnly: true, settings, cancellationToken).ConfigureAwait(false);
             if (outcome.Error is not null) errors.Add(outcome.Error); else checkedSources++;
             added += outcome.Added;
         }
@@ -511,6 +517,22 @@ public sealed class CatalogueDiscovery
     private IReadOnlyList<string> SearchNames(long entryId, AutoSourcarrSettings settings) =>
         _ingest.ExpandedSearchNames(entryId).Where(name => name.Kind != "transliteration" || name.Query.Length >= 3).Select(name => name.Query)
             .Take(Math.Clamp(settings.AutoVariantQueryLimit, 1, 6)).ToArray();
+
+    /// <summary>
+    /// 0.4.5 discover_additional_source_records: the entry's names plus the translated names for this source's language
+    /// (at most MANUAL_TRANSLATION_QUERY_LIMIT more). A failed translation only means no extra names.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> TranslatedNamesAsync(long entryId, IReadOnlyList<string> names, string sourceLanguage, AutoSourcarrSettings settings,
+        CancellationToken cancellationToken)
+    {
+        if (TranslateNames is not { } translate || settings.ManualTranslationQueryLimit <= 0) return names;
+        var genre = Read(session => session.Scalar("SELECT COALESCE(genre,'') FROM entries WHERE id=$id", ("$id", entryId)) as string ?? "");
+        var own = _ingest.ExpandedSearchNames(entryId);
+        var expanded = await translate(own, genre, sourceLanguage, cancellationToken).ConfigureAwait(false);
+        var extra = expanded.Where(name => name.Kind.StartsWith("translated", StringComparison.Ordinal)).Select(name => name.Query)
+            .Where(query => !names.Contains(query, StringComparer.Ordinal)).Take(settings.ManualTranslationQueryLimit);
+        return [.. names, .. extra];
+    }
 
     /// <summary>_save_source_discovery_outcome.</summary>
     private void SaveOutcome(long entryId, string sourceId, string state, string message, long? candidate) => Write(session =>
