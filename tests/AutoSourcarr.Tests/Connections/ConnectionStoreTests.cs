@@ -52,10 +52,11 @@ public static class ConnectionStoreTests
             Check.True(!view.Values.ToJsonString().Contains(Secret, StringComparison.Ordinal), "secret never listed");
             Check.Equal(Secret, store.Find(id)!.Value("api_key"));
 
-            // Marker and empty text keep the secret; other fields change; label and enabled switch.
-            var updated = store.Update(id, listed.Revision, "Solver", false, Values("""{"api_key":{"set":true},"url":"https://other.example/v1"}"""));
+            // Marker and empty text keep the secret; other fields change; label and enabled switch. A new path on the
+            // same server keeps it; another server does not (see the exfiltration test).
+            var updated = store.Update(id, listed.Revision, "Solver", false, Values("""{"api_key":{"set":true},"url":"http://solver:8191/v1"}"""));
             Check.Equal(Secret, store.Find(id)!.Value("api_key"));
-            Check.Equal("https://other.example/v1", store.Find(id)!.Value("url"));
+            Check.Equal("http://solver:8191/v1", store.Find(id)!.Value("url"));
             Check.Equal(false, updated.Connection!.Enabled);
             Check.Equal("Solver", updated.Connection!.Label);
             updated = store.Update(id, updated.Revision, null, null, Values("""{"api_key":""}"""));
@@ -228,6 +229,120 @@ public static class ConnectionStoreTests
             store.Delete(id, store.Revision());
             Check.True(store.LastTest(id) is null, "deleted connection forgets its test");
             Check.Throws<ConnectionNotFoundException>(() => store.TestAsync(id, CancellationToken.None).GetAwaiter().GetResult());
+        });
+
+        suite.Add("connections: a changed address drops kept secrets (update and test with id), never sending them to another server", () =>
+        {
+            using var temp = new Sandbox();
+            var seen = new List<string>();
+            HttpMessageHandler Factory() => new StubHandler(request =>
+            {
+                lock (seen) seen.Add(request.RequestUri!.Host + "|" + (request.Headers.TryGetValues("X-Api-Key", out var keys) ? string.Join("", keys) : ""));
+                return Json(HttpStatusCode.OK, """{"version":"1"}""");
+            });
+            var types = new ConnectionTypes([new FakeConnectionType("fake", true), new FakeConnectionType("optional", true, withUserFields: true)]);
+            var store = new ConnectionStore(temp.Path, types, handlerFactory: Factory);
+            var required = store.Add(store.Revision(), "fake", null, true, Values($$"""{"url":"http://solver:8191","api_key":"{{Secret}}"}"""));
+            var optional = store.Add(required.Revision, "optional", null, true, Values($$"""{"url":"http://solver:8191","api_key":"{{Secret}}","password":"pw-secret"}"""));
+            var requiredId = required.Connection!.Id;
+            var optionalId = optional.Connection!.Id;
+
+            // Test with id: another host, scheme or port never gets the saved secret.
+            foreach (var target in new[] { "http://attacker.example:8191", "https://solver:8191", "http://solver:9999" })
+            {
+                var refused = Check.Throws<SettingsValidationException>(() => store.TestValuesAsync("fake", Values($$"""{"url":"{{target}}","api_key":{"set":true}}"""), requiredId,
+                    CancellationToken.None).GetAwaiter().GetResult());
+                Check.True(refused.Message.Contains("address changed", StringComparison.Ordinal), refused.Message);
+                store.TestValuesAsync("optional", Values($$"""{"url":"{{target}}","api_key":"","password":{"set":true}}"""), optionalId, CancellationToken.None).GetAwaiter().GetResult();
+            }
+            Check.True(seen.Count == 3 && seen.All(entry => !entry.Contains(Secret, StringComparison.Ordinal)), "no saved secret sent: " + string.Join(",", seen));
+            // Re-sending the secret explicitly is allowed; the same server keeps it.
+            Check.True(store.TestValuesAsync("fake", Values("""{"url":"http://attacker.example:8191","api_key":"typed-again"}"""), requiredId, CancellationToken.None).GetAwaiter().GetResult().Ok, "explicit secret");
+            store.TestValuesAsync("fake", Values("""{"url":"http://SOLVER:8191/v1","api_key":{"set":true}}"""), requiredId, CancellationToken.None).GetAwaiter().GetResult();
+            Check.True(seen.Last() == "solver|" + Secret, "same server keeps the secret: " + seen.Last());
+
+            // Update: the same rule, and nothing is written when refused.
+            var revision = store.Revision();
+            Check.Throws<SettingsValidationException>(() => store.Update(requiredId, revision, null, null, Values("""{"url":"http://attacker.example:8191"}""")));
+            Check.Equal(revision, store.Revision());
+            store.Update(optionalId, revision, null, null, Values("""{"url":"http://attacker.example:8191"}"""));
+            Check.True(store.Find(optionalId)!.Value("api_key").Length == 0 && store.Find(optionalId)!.Value("password").Length == 0, "kept secrets dropped");
+            store.Update(requiredId, store.Revision(), null, null, Values("""{"url":"http://attacker.example:8191","api_key":"new-key"}"""));
+            Check.Equal("new-key", store.Find(requiredId)!.Value("api_key"));
+
+            // Settings-derived connections: a changed address does not reach the settings password either.
+            using var other = new Sandbox();
+            var tested = new List<string>();
+            var capture = new FakeConnectionType("suwayomi", false, withUserFields: true, test: (connection, _, _) =>
+            {
+                tested.Add(connection.Value("url") + "|" + connection.Value("password"));
+                return Task.FromResult(ConnectionTestResult.Pass("ok"));
+            });
+            var settings = new ConnectionStore(other.Path, new ConnectionTypes([capture]), handlerFactory: Factory,
+                settingValues: () => new Dictionary<string, string?> { ["MAIN_SUWAYOMI_URL"] = "http://suwayomi:4567", ["MAIN_SUWAYOMI_PASSWORD"] = "settings-pw" });
+            settings.TestValuesAsync("suwayomi", Values("""{"url":"http://attacker.example","password":{"set":true}}"""), "settings-suwayomi", CancellationToken.None).GetAwaiter().GetResult();
+            settings.TestValuesAsync("suwayomi", Values("""{"url":"http://suwayomi:4567/","password":{"set":true}}"""), "settings-suwayomi", CancellationToken.None).GetAwaiter().GetResult();
+            Check.Equal("http://attacker.example|,http://suwayomi:4567|settings-pw", string.Join(',', tested));
+        });
+
+        suite.Add("connections: changes raise Changed (not for a label only), damaged connections are skipped, settings FlareSolverr follows its switches", () =>
+        {
+            using var temp = new Sandbox();
+            var warnings = new List<string>();
+            var types = new ConnectionTypes([new FakeConnectionType("fake", true), new FakeConnectionType("flaresolverr", true, urlOnly: true),
+                new FakeConnectionType("suwayomi", false, withUserFields: true)]);
+            var live = new Dictionary<string, string?>(StringComparer.Ordinal) { ["FLARESOLVERR_URL"] = "http://flaresolverr:8191" };
+            var store = new ConnectionStore(temp.Path, types, settingValues: () => live, warn: warnings.Add);
+            var events = new List<ConnectionChangedEvent>();
+            store.Changed += events.Add;
+            var first = store.Add(store.Revision(), "fake", "one", true, Values("""{"url":"http://one","api_key":"k1"}"""));
+            Check.True(first.FirstSaved, "first saved connection");
+            var second = store.Add(first.Revision, "fake", "two", true, Values("""{"url":"http://two","api_key":"k2"}"""));
+            Check.True(!second.FirstSaved, "second is not first");
+            var labelled = store.Update(second.Connection!.Id, second.Revision, "renamed", null, null);
+            Check.True(!labelled.Effective, "label only");
+            var switched = store.Update(second.Connection!.Id, labelled.Revision, null, false, null);
+            Check.True(switched.Effective, "switch counts");
+            store.Delete(second.Connection!.Id, switched.Revision);
+            Check.Equal("added,added,changed,deleted", string.Join(',', events.Select(change => change.Kind)));
+            Check.True(events.All(change => change.Type == "fake"), "types reported");
+            Check.Equal(ConnectionStore.SolverChangeNotice, ConnectionStore.ChangeNotice("flaresolverr"));
+            Check.Equal(ConnectionStore.SolverChangeNotice, ConnectionStore.ChangeNotice("byparr"));
+            Check.Equal(ConnectionStore.SuwayomiChangeNotice, ConnectionStore.ChangeNotice("suwayomi"));
+            Check.True(ConnectionStore.ChangeNotice("fake") is null, "no notice for other types");
+
+            // A connection whose secret no longer decrypts is skipped (warned once); the others still work.
+            var healthy = store.Add(store.Revision(), "fake", "healthy", true, Values("""{"url":"http://three","api_key":"k3"}"""));
+            var document = JsonNode.Parse(File.ReadAllText(Path.Combine(temp.Path, ConfigStore.FileName)))!.AsObject();
+            document["connections"]!.AsArray().OfType<JsonObject>().Single(row => row["id"]!.GetValue<string>() == first.Connection!.Id)["id"] = "0123456789ab";
+            File.WriteAllText(Path.Combine(temp.Path, ConfigStore.FileName), document.ToJsonString());
+            Check.Equal(healthy.Connection!.Id, store.Enabled("fake").Single().Id);
+            Check.Equal(1, store.Enabled("fake").Count);
+            Check.Equal(1, warnings.Count(message => message.Contains("0123456789ab", StringComparison.Ordinal)));
+
+            store.Delete("0123456789ab", store.Revision()); // List would report the damage; Enabled only skips it
+
+            // Settings FlareSolverr: off unless FLARESOLVERR_ENABLED, and off when automatic challenges are off.
+            Check.Equal(0, store.Enabled("flaresolverr").Count);
+            Check.Equal(false, store.List().Connections.Single(item => item.Id == "settings-flaresolverr").Enabled);
+            live["FLARESOLVERR_ENABLED"] = "true";
+            Check.Equal("settings-flaresolverr", store.Enabled("flaresolverr").Single().Id);
+            live["SOURCE_AUTO_CHALLENGES"] = "false";
+            Check.Equal(0, store.Enabled("flaresolverr").Count);
+
+            // One main Suwayomi: with MAIN_SUWAYOMI_URL set, adding one here is refused and Settings' is the main one.
+            live["MAIN_SUWAYOMI_URL"] = "http://suwayomi:4567";
+            var refused = Check.Throws<SettingsConflictException>(() => store.Add(store.Revision(), "suwayomi", null, true, Values("""{"url":"http://other:4567"}""")));
+            Check.True(refused.Message.Contains("MAIN_SUWAYOMI_URL", StringComparison.Ordinal), refused.Message);
+            Check.Equal("settings-suwayomi", store.MainSuwayomi()!.Id);
+            live.Remove("MAIN_SUWAYOMI_URL");
+            var saved = store.Add(store.Revision(), "suwayomi", null, true, Values("""{"url":"http://other:4567"}"""));
+            Check.Equal(saved.Connection!.Id, store.MainSuwayomi()!.Id);
+            live["MAIN_SUWAYOMI_URL"] = "http://suwayomi:4567";
+            Check.Equal("settings-suwayomi", store.MainSuwayomi()!.Id); // the library's server wins over an older saved one
+            Check.Equal("suwayomi", store.TypeOf(saved.Connection!.Id));
+            Check.Equal("suwayomi", store.TypeOf("settings-suwayomi"));
+            Check.True(store.TypeOf("ffffffffffff") is null, "unknown id");
         });
 
         suite.Add("connections: the registry refuses duplicate and malformed types", () =>

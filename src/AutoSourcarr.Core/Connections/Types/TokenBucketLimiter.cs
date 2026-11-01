@@ -36,6 +36,8 @@ public sealed class TokenBucketLimiter
 
     public int Capacity { get; }
     public TimeSpan Period { get; }
+    /// <summary>The clock of this bucket (also used for the servers' reset times).</summary>
+    public TimeProvider Time => _time;
 
     /// <summary>Whole tokens free now.</summary>
     public int Available

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Api.Http;
 using AutoSourcarr.Core.Connections;
+using AutoSourcarr.Core.Connections.Types;
 using AutoSourcarr.Core.Settings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +15,15 @@ public sealed class ConnectionsV1Services
 {
     /// <summary>Saved connections in config.json, the registered types and the last test results.</summary>
     public required ConnectionStore Store { get; init; }
+
+    /// <summary>
+    /// Queues the one-time import (CON-3) of this main Suwayomi connection on the job queue (true: replace a stored plan)
+    /// and returns the task id. Null: the import is not available in this host (503).
+    /// </summary>
+    public Func<ConnectionConfig, bool, string>? StartImport { get; init; }
+
+    /// <summary>The stored import plan, or null when none was made yet. Null delegate: not available (503).</summary>
+    public Func<SuwayomiImportPlan?>? ImportPlan { get; init; }
 }
 
 /// <summary>
@@ -56,12 +66,12 @@ internal static class ConnectionsV1Endpoints
                 return Guarded(Problem, () =>
                 {
                     var change = connections.Store.Add(revision, type, label, enabled ?? true, values);
-                    return Answer(Change(change), 201);
+                    return Answer(Change(change, Notice(change.Connection?.Type, true, change.FirstSaved)), 201);
                 });
             }))
             .Accepts<JsonObject>("application/json")
             .WithName("addConnection")
-            .WithSummary("Add a connection: {revision, type, label?, enabled?, values}. Values are checked by field kind (URL, whole number, on/off, required); a type that allows one connection refuses a second.")
+            .WithSummary("Add a connection: {revision, type, label?, enabled?, values}. Values are checked by field kind (URL, whole number, on/off, required); a type that allows one connection refuses a second, and a Suwayomi connection is refused (409) while MAIN_SUWAYOMI_URL is set in Settings. The answer's notice says what happens next (solver: the source host restarts; Suwayomi: the change feed reconnects; the first saved connection: how to roll back to 0.4.x).")
             .Produces<JsonObject>(StatusCodes.Status201Created)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
@@ -76,11 +86,15 @@ internal static class ConnectionsV1Endpoints
                 if (!OptionalText(body, "label", out var label) || !OptionalBool(body, "enabled", out var enabled) || !OptionalObject(body, "values", out var values))
                     return Problem(400, "label must be text, enabled true or false and values an object.");
                 var id = Id(context);
-                return Guarded(Problem, () => Answer(Change(connections.Store.Update(id, revision, label, enabled, values))));
+                return Guarded(Problem, () =>
+                {
+                    var change = connections.Store.Update(id, revision, label, enabled, values);
+                    return Answer(Change(change, Notice(change.Connection?.Type, change.Effective, false)));
+                });
             }))
             .Accepts<JsonObject>("application/json")
             .WithName("updateConnection")
-            .WithSummary("Change a saved connection: {revision, label?, enabled?, values?}. Fields left out keep their value; a secret sent as {set:true} or empty text is kept; null clears a field.")
+            .WithSummary("Change a saved connection: {revision, label?, enabled?, values?}. Fields left out keep their value; a secret sent as {set:true} or empty text is kept unless an address now points at another server (then it must be entered again); null clears a field. The answer's notice says what happens next.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
@@ -92,7 +106,12 @@ internal static class ConnectionsV1Endpoints
                 var revision = context.Request.Query["revision"].ToString();
                 if (revision.Length == 0) return Problem(400, "Send the revision the change is based on (?revision=).");
                 var id = Id(context);
-                return Guarded(Problem, () => Answer(new JsonObject { ["revision"] = connections.Store.Delete(id, revision), ["deleted"] = id }));
+                return Guarded(Problem, () =>
+                {
+                    var type = connections.Store.TypeOf(id);
+                    var next = connections.Store.Delete(id, revision);
+                    return Answer(new JsonObject { ["revision"] = next, ["deleted"] = id, ["notice"] = Notice(type, true, false) });
+                });
             }))
             .WithName("deleteConnection")
             .WithSummary("Delete a saved connection (?revision= names the revision it is based on). Connections from Settings are cleared on the Settings page.")
@@ -114,7 +133,7 @@ internal static class ConnectionsV1Endpoints
             }))
             .Accepts<JsonObject>("application/json")
             .WithName("testConnectionValues")
-            .WithSummary("Test values that are not saved yet: {type, values, id?}. With id, the values are applied onto that connection first, so a kept secret is tested with its saved value. Nothing is saved.")
+            .WithSummary("Test values that are not saved yet: {type, values, id?}. With id, the values are applied onto that connection first, so a kept secret is tested with its saved value, unless an address now points at another server (then the secret must be sent again). Nothing is saved.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound);
@@ -133,6 +152,94 @@ internal static class ConnectionsV1Endpoints
             .WithSummary("Test a saved connection (or one from Settings) without changing anything on the remote side, within 15 seconds: ok, a short message and details such as the version. The result is kept as the connection's last test.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/connections/{connectionId}/import", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                if (services.Connections is not { } connections) return Unavailable();
+                if (connections.StartImport is not { } start) return Problem(503, "The Suwayomi import is not available in this host.");
+                var body = new JsonObject();
+                if (context.Request.ContentLength > 0 || context.Request.ContentType is { Length: > 0 })
+                {
+                    try { body = await ApiJson.ReadObjectAsync(context.Request, 1024).ConfigureAwait(false); }
+                    catch (ApiProblem error) { return Problem(error.StatusCode, error.Message); }
+                }
+                if (!OptionalBool(body, "force", out var force)) return Problem(400, "force must be true or false.");
+                var id = Id(context);
+                return Guarded(Problem, () =>
+                {
+                    if (MainSuwayomiFor(connections.Store, id, out var refusal) is not { } main) return refusal!;
+                    var taskId = start(main, force ?? false);
+                    return Answer(new JsonObject
+                    {
+                        ["task_id"] = taskId, ["status"] = "queued", ["note"] = SuwayomiImport.AwaitingMatchingNote,
+                    }, 202);
+                });
+            }))
+            .Accepts<JsonObject>("application/json")
+            .WithName("importSuwayomiLibrary")
+            .WithSummary("One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; catalogue entries are created when matching arrives (conversion phase 8). With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.")
+            .Produces<JsonObject>(StatusCodes.Status202Accepted)
+            .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
+            .Produces<ProblemResponse>(StatusCodes.Status409Conflict)
+            .Produces<ProblemResponse>(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/connections/{connectionId}/import", (Func<HttpContext, IResult>)(context =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                if (services.Connections is not { } connections) return Unavailable();
+                if (connections.ImportPlan is not { } read) return Problem(503, "The Suwayomi import is not available in this host.");
+                var id = Id(context);
+                return Guarded(Problem, () =>
+                {
+                    if (MainSuwayomiFor(connections.Store, id, out var refusal) is null) return refusal!;
+                    SuwayomiImportPlan? plan;
+                    try { plan = read(); }
+                    catch (Exception error) when (error is InvalidDataException or System.Text.Json.JsonException or IOException or UnauthorizedAccessException)
+                    { return Problem(409, "The saved import plan could not be read; import again with force."); }
+                    return Answer(new JsonObject
+                    {
+                        ["plan"] = plan is null ? null : new JsonObject
+                        {
+                            ["status"] = plan.Status, ["saved_at"] = plan.CreatedAt, ["server_url"] = plan.ServerUrl, ["counts"] = plan.Counts(),
+                        },
+                        ["note"] = SuwayomiImport.AwaitingMatchingNote,
+                    });
+                });
+            }))
+            .WithName("getSuwayomiImport")
+            .WithSummary("The stored one-time import plan of the main Suwayomi (Suwayomi connections only): status (awaiting-matching), saved_at, server_url and counts (total, sources, per source); plan is null before the first import.")
+            .Produces<JsonObject>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
+            .Produces<ProblemResponse>(StatusCodes.Status409Conflict)
+            .Produces<ProblemResponse>(StatusCodes.Status503ServiceUnavailable);
+
+        // The import reads the same server as the library: the main Suwayomi (Settings first, else the saved one).
+        ConnectionConfig? MainSuwayomiFor(ConnectionStore store, string id, out IResult? refusal)
+        {
+            refusal = null;
+            var connection = store.Find(id);
+            if (connection is null) { refusal = Problem(404, "No connection " + id + "."); return null; }
+            if (connection.Type != ConnectionStore.MainSuwayomiType)
+            { refusal = Problem(409, "Only a Suwayomi connection imports a library."); return null; }
+            if (store.MainSuwayomi() is not { } main || main.Id != connection.Id)
+            {
+                refusal = Problem(409, connection.Enabled
+                    ? "The library uses the Suwayomi from Settings (MAIN_SUWAYOMI_URL); import from that connection."
+                    : "This connection is switched off; switch it on to import from it.");
+                return null;
+            }
+            return main;
+        }
+    }
+
+    /// <summary>The CON-5 notice of a change: what restarts, and (first saved connection) how to roll back to 0.4.x.</summary>
+    internal static string? Notice(string? type, bool effective, bool firstSaved)
+    {
+        var parts = new List<string>();
+        if (effective && ConnectionStore.ChangeNotice(type) is { } notice) parts.Add(notice);
+        if (firstSaved) parts.Add(ConnectionStore.RollbackNotice);
+        return parts.Count == 0 ? null : string.Join(" ", parts);
     }
 
     internal static JsonObject Listing(ConnectionStore store)
@@ -186,9 +293,9 @@ internal static class ConnectionsV1Endpoints
         ["at"] = test.At.UtcDateTime.ToString("O", CultureInfo.InvariantCulture), ["ok"] = test.Ok, ["message"] = test.Message,
     };
 
-    private static JsonObject Change(ConnectionChange change) => new()
+    private static JsonObject Change(ConnectionChange change, string? notice) => new()
     {
-        ["revision"] = change.Revision, ["connection"] = change.Connection is null ? null : View(change.Connection),
+        ["revision"] = change.Revision, ["connection"] = change.Connection is null ? null : View(change.Connection), ["notice"] = notice,
     };
 
     private static JsonObject Result(ConnectionTestResult result, ConnectionTestRecord? last) => new()

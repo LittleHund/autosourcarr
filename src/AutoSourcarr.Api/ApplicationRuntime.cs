@@ -55,6 +55,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Connections.ConnectionStore? _connections;
     private System.Net.Http.SocketsHttpHandler? _integrationHttp;
     private AutoSourcarr.Core.Connections.Types.SuwayomiChangeFeed? _suwayomiFeed;
+    private readonly SemaphoreSlim _feedGate = new(1, 1);
+    private SourceHostProcess? _hostProcess;
+    private int _hostRestartVersion, _suwayomiTesting;
     private AutoSourcarr.Core.Sources.WebView.SourceWebViewBroker? _webView;
     private SourceWebViewServices? _webViewServices;
     private AutoSourcarr.Core.Sources.Inventory.HostRawInstalledSources? _rawInstalled;
@@ -191,17 +194,19 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 new AutoSourcarr.Core.Connections.ConnectionTypes([.. AutoSourcarr.Core.Connections.Types.SolverConnectionType.All,
                     .. AutoSourcarr.Core.Connections.Types.IntegrationConnectionTypes.All]),
                 owner._dataDirectory, registerSecrets: values => owner.Privacy.Register(values),
-                settingValues: () => owner._apiV1 is { } api ? api.Editor.Effective() : new Dictionary<string, string?>());
+                settingValues: () => owner._apiV1 is { } api ? api.Editor.Effective() : new Dictionary<string, string?>(),
+                warn: message => owner.Logs.Record("Connections", message));
+            // Keyed calls (MalwareBazaar Auth-Key, Suwayomi Basic) never follow a redirect: the key must not reach another host.
             owner._integrationHttp = new System.Net.Http.SocketsHttpHandler { UseProxy = false, ConnectTimeout = TimeSpan.FromSeconds(10),
-                PooledConnectionLifetime = TimeSpan.FromMinutes(5), AutomaticDecompression = System.Net.DecompressionMethods.All };
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5), AutomaticDecompression = System.Net.DecompressionMethods.All, AllowAutoRedirect = false };
             if (useHost)
             {
                 var (java, jar) = SourceHostProcess.Locate(environment);
                 // Built for every launch: a restarted host gets the saved browser identity and repositories.
                 var process = new SourceHostProcess(java, jar, Path.Combine(owner._dataDirectory!, "source-host"), 4567,
-                    () => SourceHostEnvironment(owner.Settings, launch, environment, owner._connections is { } store
-                        ? AutoSourcarr.Core.Connections.Types.SolverConnectionType.All.SelectMany(type => store.Enabled(type.Type)).ToList() : null),
+                    () => SourceHostEnvironment(owner.Settings, launch, environment, owner.EnabledSolvers()),
                     line => owner.Logs.Record("Source host", line));
+                owner._hostProcess = process;
                 owner._webView = new AutoSourcarr.Core.Sources.WebView.SourceWebViewBroker(() => process.Running
                     ? new AutoSourcarr.Core.Sources.WebView.SourceHostEndpoint(new Uri(process.BaseUrl), process.Token) : null);
                 owner.Privacy.Register(new Dictionary<string, string?> { ["source_host_token"] = process.Token });
@@ -335,7 +340,18 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     RecordError = error => owner.Errors.Record("Source repair", error.Message, "source-repair|" + error.GetType().Name)
                 },
                 Library = new LibraryV1Services { Library = owner._library },
-                Connections = new ConnectionsV1Services { Store = owner._connections },
+                Connections = new ConnectionsV1Services
+                {
+                    Store = owner._connections,
+                    // CON-3 one-time import: reads the main library (read-only) into a stored plan; entries follow with matching (phase 8).
+                    StartImport = (connection, force) => AutoSourcarr.Core.Connections.Types.SuwayomiImport.Enqueue(owner.Jobs, owner._dataDirectory!, async token =>
+                    {
+                        using var graph = new AutoSourcarr.Core.Connections.Types.SuwayomiGraphQlHttp(
+                            AutoSourcarr.Core.Connections.Types.SuwayomiEndpoint.FromConnection(connection), owner._integrationHttp!);
+                        return await AutoSourcarr.Core.Connections.Types.SuwayomiImport.ReadAsync(graph, DateTimeOffset.UtcNow, token).ConfigureAwait(false);
+                    }, force, origin: "manual").Id,
+                    ImportPlan = () => AutoSourcarr.Core.Connections.Types.SuwayomiImport.Load(owner._dataDirectory!),
+                },
                 Repair = new RepairV1Services
                 {
                     MaintenanceRoot = maintenanceRoot,
@@ -349,9 +365,17 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     // SRC-2: optional MalwareBazaar hash lookup from an enabled connection.
                     HashLookup = () =>
                     {
-                        if (owner._connections?.Enabled("malwarebazaar").FirstOrDefault() is not { } bazaar || owner._integrationHttp is null) return null;
-                        try { return AutoSourcarr.Core.Connections.Types.MalwareBazaarConnectionType.CreateClient(bazaar, owner._integrationHttp, TimeSpan.FromSeconds(5)); }
-                        catch (ArgumentException) { return null; }
+                        try
+                        {
+                            if (owner._connections?.Enabled("malwarebazaar").FirstOrDefault() is not { } bazaar || owner._integrationHttp is null) return null;
+                            return AutoSourcarr.Core.Connections.Types.MalwareBazaarConnectionType.CreateClient(bazaar, owner._integrationHttp, TimeSpan.FromSeconds(5));
+                        }
+                        catch (Exception error) when (error is ArgumentException or ConfigurationException or IOException)
+                        {
+                            // A damaged connection only skips the optional hash check; the upload preview goes on.
+                            owner.Logs.Record("Connections", "The MalwareBazaar hash check is skipped: " + error.Message);
+                            return null;
+                        }
                     }
                 },
                 SourceRuntime = new SourceRuntimeServices
@@ -371,17 +395,11 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                         startup.Settings.MainSuwayomiUsername, startup.Settings.MainSuwayomiPassword), owner.Privacy, "main");
             }
             // CON-3: Suwayomi change feed (subscriptions, library diff, polling fallback) keeps the main-library view current.
-            if (owner._connections.Enabled("suwayomi").FirstOrDefault() is { } mainConnection)
-            {
-                try
-                {
-                    owner._suwayomiFeed = new AutoSourcarr.Core.Connections.Types.SuwayomiChangeFeed(
-                        AutoSourcarr.Core.Connections.Types.SuwayomiEndpoint.FromConnection(mainConnection), owner._integrationHttp,
-                        owner.OnSuwayomiChange, error => owner.Logs.Record("Main library feed", error.Message));
-                    owner._suwayomiFeed.Start();
-                }
-                catch (ArgumentException error) { owner.Logs.Record("Main library feed", error.Message); }
-            }
+            // It reads the same server as the library (Settings' MAIN_SUWAYOMI_URL first); a damaged connection only skips it.
+            owner.StartSuwayomiFeed();
+            // CON-5: a solver change restarts the source host (its solver list is read at launch); a Suwayomi change
+            // reconnects the change feed.
+            owner._connections.Changed += owner.OnConnectionChanged;
             if (owner._webView is not null)
                 owner._webViewServices = new SourceWebViewServices
                 {
@@ -466,6 +484,84 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         }
     }
 
+    /// <summary>Enabled solver connections for the source host launch; a damaged store gives none instead of failing the launch.</summary>
+    private List<AutoSourcarr.Core.Connections.ConnectionConfig>? EnabledSolvers()
+    {
+        if (_connections is not { } store) return null;
+        try { return AutoSourcarr.Core.Connections.Types.SolverConnectionType.All.SelectMany(type => store.Enabled(type.Type)).ToList(); }
+        catch (Exception error) when (error is ConfigurationException or IOException or UnauthorizedAccessException)
+        {
+            Logs.Record("Connections", "The solver connections could not be read; the source host starts without them: " + error.Message);
+            return null;
+        }
+    }
+
+    private void StartSuwayomiFeed()
+    {
+        if (_connections is not { } store || _integrationHttp is not { } http) return;
+        try
+        {
+            if (store.MainSuwayomi() is not { } main) return;
+            var feed = new AutoSourcarr.Core.Connections.Types.SuwayomiChangeFeed(AutoSourcarr.Core.Connections.Types.SuwayomiEndpoint.FromConnection(main), http,
+                OnSuwayomiChange, error => Logs.Record("Main library feed", error.Message));
+            feed.Start();
+            _suwayomiFeed = feed;
+        }
+        catch (Exception error) when (error is ArgumentException or ConfigurationException or IOException or UnauthorizedAccessException)
+        { Logs.Record("Main library feed", "The Suwayomi change feed did not start: " + error.Message); }
+    }
+
+    private void OnConnectionChanged(AutoSourcarr.Core.Connections.ConnectionChangedEvent change)
+    {
+        if (AutoSourcarr.Core.Connections.Types.SolverConnectionType.IsSolver(change.Type)) ScheduleHostRestart();
+        else if (change.Type == AutoSourcarr.Core.Connections.ConnectionStore.MainSuwayomiType) _ = Task.Run(RestartSuwayomiFeedAsync);
+    }
+
+    /// <summary>
+    /// Restarts the source host so it reads the changed solver list: 5 s after the last change (several quick changes
+    /// restart once), and only while no administrator action holds the source lock (otherwise it waits another 5 s).
+    /// The host keeps its data folder and token; requests during the restart wait or fail like after a host crash.
+    /// </summary>
+    private void ScheduleHostRestart()
+    {
+        if (_hostProcess is not { } host) return;
+        var version = Interlocked.Increment(ref _hostRestartVersion);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (true)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), _healthStop.Token).ConfigureAwait(false);
+                    if (Volatile.Read(ref _hostRestartVersion) != version) return; // a later change restarts instead
+                    if (!await _admin.WaitAsync(0, _healthStop.Token).ConfigureAwait(false)) continue;
+                    try { host.Recycle("the solver connections changed."); }
+                    finally { _admin.Release(); }
+                    return;
+                }
+            }
+            catch (Exception error) when (error is OperationCanceledException or ObjectDisposedException) { }
+        });
+    }
+
+    private async Task RestartSuwayomiFeedAsync()
+    {
+        try
+        {
+            await _feedGate.WaitAsync(_healthStop.Token).ConfigureAwait(false);
+            try
+            {
+                if (Interlocked.Exchange(ref _suwayomiFeed, null) is { } old) await old.DisposeAsync().ConfigureAwait(false);
+                if (_healthStop.IsCancellationRequested) return;
+                StartSuwayomiFeed();
+                Logs.Record("Main library feed", _suwayomiFeed is null ? "The Suwayomi connection changed; no main Suwayomi is set, so the change feed stopped."
+                    : "The Suwayomi connection changed; the change feed reconnected.");
+            }
+            finally { _feedGate.Release(); }
+        }
+        catch (Exception error) when (error is OperationCanceledException or ObjectDisposedException) { }
+    }
+
     private void OnSuwayomiChange(AutoSourcarr.Core.Connections.Types.SuwayomiChange change)
     {
         switch (change)
@@ -500,9 +596,46 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     }
 
     /// <summary>
+    /// Main Suwayomi for the health page: the last Test of the main Suwayomi connection and the change feed mode. Never
+    /// waits on Suwayomi: a missing or older-than-5-minutes result starts one background test for a later health read.
+    /// </summary>
+    private JsonObject MainSuwayomiHealth(AutoSourcarrSettings settings)
+    {
+        AutoSourcarr.Core.Connections.ConnectionConfig? main = null;
+        try { main = _connections?.MainSuwayomi(); }
+        catch (Exception error) when (error is ConfigurationException or IOException or UnauthorizedAccessException) { _ = error; }
+        var feed = _suwayomiFeed?.Mode.ToString().ToLowerInvariant() ?? "off";
+        if (main is null || _connections is not { } store)
+            return new JsonObject
+            {
+                ["ok"] = null, ["checked"] = false, ["configured"] = !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl), ["url"] = settings.MainSuwayomiUrl,
+                ["feed"] = feed, ["warning"] = "No main Suwayomi is set (Settings: MAIN_SUWAYOMI_URL, or a Suwayomi connection).",
+            };
+        var last = store.LastTest(main.Id);
+        if ((last is null || DateTimeOffset.UtcNow - last.At > TimeSpan.FromMinutes(5)) && Interlocked.CompareExchange(ref _suwayomiTesting, 1, 0) == 0)
+        {
+            var id = main.Id;
+            _ = Task.Run(async () =>
+            {
+                try { await store.TestAsync(id, _healthStop.Token).ConfigureAwait(false); }
+                catch (Exception error) when (error is not OutOfMemoryException) { _ = error; } // the next health read tries again
+                finally { Volatile.Write(ref _suwayomiTesting, 0); }
+            });
+        }
+        return new JsonObject
+        {
+            ["ok"] = last?.Ok, ["checked"] = last is not null, ["configured"] = true, ["url"] = main.Value("url"),
+            ["connection_id"] = main.Id, ["feed"] = feed,
+            ["tested_at"] = last?.At.UtcDateTime.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+            ["message"] = last is null ? null : Privacy.Text(last.Message),
+            ["warning"] = last is null ? "Not tested yet; a background test has started." : last.Ok ? null : Privacy.Text(last.Message),
+        };
+    }
+
+    /// <summary>
     /// /api/v1/health for the Status page (port of main.py health). Databases, counts and errors are real; the
-    /// source engine is checked (phase 4); main Suwayomi and translation checks belong to phase 7, so they are reported
-    /// as not checked (checked=false) instead of guessing.
+    /// source engine is checked (phase 4); main Suwayomi reports its last connection test and the change feed (phase 7);
+    /// the translation check returns with the translation client (phase 10).
     /// </summary>
     internal async Task<JsonObject> HealthAsync(CancellationToken cancellationToken)
     {
@@ -525,8 +658,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             ["captured_at"] = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
             ["instance_id"] = Identity.InstanceId,
             ["source_host"] = source,
-            ["main_suwayomi"] = NotChecked(settings.MainSuwayomiUrl, !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl), "7"),
-            ["translation"] = NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "7"),
+            ["main_suwayomi"] = MainSuwayomiHealth(settings),
+            ["translation"] = NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "10"),
             ["library"] = LibraryStatus(),
             ["stats"] = stats,
             ["errors"] = new JsonObject
@@ -683,7 +816,12 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         if (_health is not null) await Attempt("Source health", () => _health.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_sourcePreferences is not null) await Attempt("Source preferences", () => _sourcePreferences.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_publicFetcher is not null) await Attempt("Public fetcher", () => _publicFetcher.DisposeAsync().AsTask()).ConfigureAwait(false);
-        if (_suwayomiFeed is not null) await Attempt("Main library feed", () => _suwayomiFeed.DisposeAsync().AsTask()).ConfigureAwait(false);
+        // The gate waits for a feed restart in progress, so none starts a new feed after this.
+        await Attempt("Main library feed", async () =>
+        {
+            await _feedGate.WaitAsync().ConfigureAwait(false);
+            if (Interlocked.Exchange(ref _suwayomiFeed, null) is { } feed) await feed.DisposeAsync().ConfigureAwait(false);
+        }).ConfigureAwait(false);
         if (_library is not null) await Attempt("Main library", () => _library.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_main is not null) await Attempt("Main transport", () => _main.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -710,7 +848,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             foreach (var root in _movedRoots)
                 try { root.Dispose(); } catch (Exception error) { errors.Add(error); }
         try { _roots?.Dispose(); } catch (Exception error) { errors.Add(error); }
-        _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose(); _healthStop.Dispose();
+        _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose(); _healthStop.Dispose(); _feedGate.Dispose();
         if (errors.Count > 0) throw new AggregateException("Application shutdown retained cleanup failures.", errors);
     }
 

@@ -307,8 +307,19 @@ public static class SolverConnectionTests
         Check.True(fake.Opened.IsEmpty, "nothing opened for a refused caller");
 
         foreach (var bad in new[] { "{\"url\":\"file:///etc/passwd\"}", "{\"url\":\"javascript:alert(1)\"}", "{\"url\":\"http://user:pw@www.source.example/\"}",
-            "{\"url\":42}", "{\"source_id\":\"42\",\"url\":\"https://elsewhere.example/\"}" })
+            "{\"url\":42}", "{\"source_id\":\"42\",\"url\":\"https://elsewhere.example/\"}",
+            // Item 10: link-local, cloud metadata and the source host's own loopback port are never opened.
+            "{\"url\":\"http://169.254.169.254/latest/meta-data/\"}", "{\"url\":\"http://[fe80::1]/\"}", "{\"url\":\"http://metadata.google.internal/\"}",
+            "{\"url\":\"http://[::ffff:169.254.169.254]/\"}", "{\"url\":\"" + fake.Address.TrimEnd('/') + "/v1/health\"}" })
             Check.Equal(HttpStatusCode.BadRequest, (await app.OpenAsync(bad)).Status);
+        var reach = (await app.OpenAsync("{\"url\":\"http://169.254.169.254/\"}")).Body;
+        Check.True(reach["detail"]!.GetValue<string>().Contains("link-local", StringComparison.Ordinal), reach.ToJsonString());
+        // Navigate input gets the same checks; LAN and other loopback ports stay allowed for administrators.
+        Check.True(SourceWebViewBroker.CheckInput(new JsonObject { ["type"] = "navigate", ["url"] = "http://169.254.169.254/" }) is null, "link-local navigate refused");
+        Check.True(SourceWebViewBroker.CheckInput(new JsonObject { ["type"] = "navigate", ["url"] = "http://127.0.0.1:4567/v1/health" }) is null, "host port refused");
+        Check.True(SourceWebViewBroker.CheckInput(new JsonObject { ["type"] = "navigate", ["url"] = "http://localhost:9000/" }, new Uri("http://127.0.0.1:9000")) is null, "host port of the running host refused");
+        Check.True(SourceWebViewBroker.CheckInput(new JsonObject { ["type"] = "navigate", ["url"] = "http://192.168.1.10:8080/" }) is not null, "LAN allowed");
+        Check.True(SourceWebViewBroker.CheckInput(new JsonObject { ["type"] = "navigate", ["url"] = "http://127.0.0.1:8080/" }) is not null, "other loopback ports allowed");
         Check.Equal(HttpStatusCode.NotFound, (await app.OpenAsync("{\"source_id\":\"7\"}")).Status);
         Check.True(fake.Opened.IsEmpty, "nothing opened for refused addresses");
 

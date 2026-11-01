@@ -29,6 +29,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private int _restarts;
     private string _lastError = "", _startupError = "";
     private bool _healthy;
+    private bool _recycling;
 
     public SourceHostProcess(string java, string jar, string dataDirectory, int port, IReadOnlyDictionary<string, string> environment, Action<string> log)
         : this(java, jar, dataDirectory, port, () => environment, log) { }
@@ -83,6 +84,29 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     public void StartWatching()
     {
         lock (_gate) if (!_stop.IsCancellationRequested) _watch ??= Task.Run(WatchAsync);
+    }
+
+    /// <summary>
+    /// Stops the running host so the watch loop starts it again at once with a freshly built environment (for example
+    /// after the solver connections changed). Not counted as a crash: no back-off and no restart count. False when no
+    /// host is running (the next start reads the new environment anyway).
+    /// </summary>
+    public bool Recycle(string reason)
+    {
+        Process? process;
+        int id;
+        lock (_gate)
+        {
+            if (_stop.IsCancellationRequested || _process is not { HasExited: false } running) return false;
+            _recycling = true;
+            process = running;
+            id = running.Id;
+        }
+        _log("Restarting the source host: " + reason);
+        try { process.Kill(entireProcessTree: true); }
+        catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception) { _ = error; } // exited meanwhile
+        KillGroup(id);
+        return true;
     }
 
     public async Task<bool> HealthyAsync(CancellationToken cancellationToken)
@@ -211,11 +235,23 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             catch (OperationCanceledException) { return; }
             if (_stop.IsCancellationRequested) return;
             KillGroup(process.Id);
+            bool recycled;
+            lock (_gate) { recycled = _recycling; _recycling = false; }
             if (DateTimeOffset.UtcNow - started > TimeSpan.FromMinutes(10)) failures = 0;
-            var delay = RestartDelays[Math.Min(failures, RestartDelays.Length - 1)];
-            failures++;
-            lock (_gate) { _restarts++; _lastError = "The source host exited with code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + "."; }
-            _log(LastError + " Starting it again in " + delay.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s.");
+            TimeSpan delay;
+            if (recycled)
+            {
+                // Asked for (Recycle): start again at once, without counting it as a crash.
+                delay = TimeSpan.FromMilliseconds(500);
+                _log("The source host stopped for its restart; starting it again.");
+            }
+            else
+            {
+                delay = RestartDelays[Math.Min(failures, RestartDelays.Length - 1)];
+                failures++;
+                lock (_gate) { _restarts++; _lastError = "The source host exited with code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + "."; }
+                _log(LastError + " Starting it again in " + delay.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s.");
+            }
             lock (_gate) if (ReferenceEquals(_process, process)) _process = null;
             process.Dispose();
             try

@@ -45,6 +45,8 @@ public static class SuwayomiChangeFeedTests
                 Check.True(server.Subscriptions.Any(item => item.Contains("downloadStatusChanged(input: {maxUpdates: 50})", StringComparison.Ordinal)), "download subscription");
                 Check.True(server.Subscriptions.Any(item => item.Contains("libraryUpdateStatusChanged(input: {maxUpdates: 50})", StringComparison.Ordinal)), "library update subscription");
                 Wait(() => changes.OfType<SuwayomiFeedModeChanged>().Any(change => change.Mode == SuwayomiFeedMode.Live), "Live mode is announced");
+                // While live the subscriptions carry chapters and downloads: the library diff reads ids only.
+                Wait(() => server.Queries.Any(query => !query.Contains("totalCount", StringComparison.Ordinal)), "an ids-only library read while live");
 
                 server.Send("""
                     {"id":"autosourcarr-downloads","type":"next","payload":{"data":{"downloadStatusChanged":{"omittedUpdates":false,"updates":[
@@ -99,7 +101,7 @@ public static class SuwayomiChangeFeedTests
                 Wait(() => !errors.IsEmpty, "the unavailable socket is reported");
                 var polls = server.Polls;
                 Wait(() => server.Polls >= polls + 2, "the feed keeps polling");
-                Check.True(changes.OfType<SuwayomiLibraryChanged>().IsEmpty, "The first read is the baseline, not a change.");
+                Check.True(!changes.OfType<SuwayomiLibraryChanged>().Any(), "The first read is the baseline, not a change.");
 
                 server.SetLibrary((1, 4, 0), (3, 1, 0));
                 var library = WaitFor<SuwayomiLibraryChanged>(changes, "membership diff");
@@ -168,6 +170,8 @@ public static class SuwayomiChangeFeedTests
             return fake;
         }
 
+        public ConcurrentQueue<string> Queries { get; } = new();
+
         public void SetLibrary(params (long Id, int Chapters, int Downloads)[] library) { lock (_gate) _library = library; }
 
         private async Task HandleAsync(HttpContext context)
@@ -185,6 +189,7 @@ public static class SuwayomiChangeFeedTests
             var request = JsonNode.Parse(await reader.ReadToEndAsync())!.AsObject();
             Check.True(request["query"]!.GetValue<string>().Contains("inLibrary: true", StringComparison.Ordinal), "The feed only reads the library.");
             Interlocked.Increment(ref _polls);
+            Queries.Enqueue(request["query"]!.GetValue<string>());
             (long Id, int Chapters, int Downloads)[] library;
             lock (_gate) library = _library;
             var nodes = new JsonArray(library.Select(item => (JsonNode)new JsonObject

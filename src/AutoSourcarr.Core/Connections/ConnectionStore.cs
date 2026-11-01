@@ -26,7 +26,14 @@ public sealed record ConnectionView(string Id, string Type, string Label, bool E
 
 public sealed record ConnectionListing(string Revision, IReadOnlyList<ConnectionView> Connections);
 
-public sealed record ConnectionChange(string Revision, ConnectionView? Connection);
+/// <summary>
+/// A saved change. <paramref name="FirstSaved"/>: the first connection written to config.json (older builds refuse that
+/// key). <paramref name="Effective"/>: the enabled switch or a value changed (a label-only change is not).
+/// </summary>
+public sealed record ConnectionChange(string Revision, ConnectionView? Connection, bool FirstSaved = false, bool Effective = true);
+
+/// <summary>A connection was added, changed (switch or values) or deleted.</summary>
+public sealed record ConnectionChangedEvent(string Type, string Id, string Kind);
 
 /// <summary>
 /// Connections in config.json under the top-level <c>connections</c> array (CON-1, CON-5). Secret fields are
@@ -42,6 +49,11 @@ public sealed class ConnectionStore
     public const string SettingsIdPrefix = "settings-";
     public const string LastTestsFileName = "connection-tests.json";
     public const int MaxConnections = 200;
+    public const string MainSuwayomiType = "suwayomi";
+    /// <summary>CON-5 update notices: what happens after a change of a connection of that type.</summary>
+    public const string SolverChangeNotice = "The source host restarts to use the new solver list.";
+    public const string SuwayomiChangeNotice = "The Suwayomi change feed reconnects.";
+    public const string RollbackNotice = "Connections are saved in config.json under \"connections\"; before going back to AutoSourcarr 0.4.x, remove that key, because 0.4.x refuses to start with it.";
     private const int MaxValueLength = 4096;
     private const int MaxLabelLength = 100;
     private const int MaxMessageLength = 500;
@@ -76,6 +88,8 @@ public sealed class ConnectionStore
     private readonly TimeSpan _deadline;
     private readonly TimeProvider _clock;
     private readonly object _testsGate = new();
+    private readonly Action<string>? _warn;
+    private readonly HashSet<string> _warned = new(StringComparer.Ordinal);
     private Dictionary<string, ConnectionTestRecord>? _lastTests;
 
     /// <param name="configurationRoot">The folder of config.json and config.key (SETTINGS_CONFIG_DIR).</param>
@@ -86,11 +100,14 @@ public sealed class ConnectionStore
     /// null reads config.json's settings and source_host sections.</param>
     /// <param name="handlerFactory">A fresh handler per test (disposed after it); tests pass a stub.</param>
     /// <param name="testDeadline">Bound of one test (default 15 s).</param>
+    /// <param name="warn">Reports a saved connection that cannot be read (once per connection and message).</param>
     public ConnectionStore(string configurationRoot, ConnectionTypes types, string? dataDirectory = null,
         Action<IReadOnlyDictionary<string, string?>>? registerSecrets = null,
         Func<IReadOnlyDictionary<string, string?>>? settingValues = null,
-        Func<HttpMessageHandler>? handlerFactory = null, TimeSpan? testDeadline = null, TimeProvider? clock = null)
+        Func<HttpMessageHandler>? handlerFactory = null, TimeSpan? testDeadline = null, TimeProvider? clock = null,
+        Action<string>? warn = null)
     {
+        _warn = warn;
         ArgumentNullException.ThrowIfNull(configurationRoot);
         Types = types ?? throw new ArgumentNullException(nameof(types));
         _config = new ConfigStore(configurationRoot);
@@ -120,13 +137,21 @@ public sealed class ConnectionStore
     public ConnectionTypes Types { get; }
     public TimeSpan TestDeadline => _deadline;
 
-    /// <summary>A fresh handler for one test: no cookies, bounded connect, at most 3 redirects.</summary>
+    /// <summary>
+    /// Raised after a connection was added, changed (enabled switch or values; not a label-only change) or deleted, outside
+    /// the store's lock. Handlers must be quick; an exception in one is reported through the warning callback.
+    /// </summary>
+    public event Action<ConnectionChangedEvent>? Changed;
+
+    /// <summary>
+    /// A fresh handler for one test: no cookies, bounded connect. Redirects are not followed: a test sends keys and
+    /// passwords (Auth-Key, Bearer, Basic) that must never be replayed to another host.
+    /// </summary>
     public static HttpMessageHandler DefaultHandler() => new SocketsHttpHandler
     {
         ConnectTimeout = TimeSpan.FromSeconds(10),
         UseCookies = false,
-        AllowAutoRedirect = true,
-        MaxAutomaticRedirections = 3,
+        AllowAutoRedirect = false,
         AutomaticDecompression = System.Net.DecompressionMethods.All,
         PooledConnectionLifetime = TimeSpan.FromMinutes(1),
     };
@@ -170,22 +195,76 @@ public sealed class ConnectionStore
         }
     }
 
-    /// <summary>Enabled connections of one type (saved first, then the one from Settings), for the services that use them.</summary>
+    /// <summary>
+    /// Enabled connections of one type (saved first, then the one from Settings), for the services that use them. Never
+    /// throws for damage: a saved connection whose secrets cannot be decrypted (other config.key, edited ciphertext) or
+    /// an unreadable config.json is skipped and reported once through the warning callback.
+    /// </summary>
     public IReadOnlyList<ConnectionConfig> Enabled(string type)
     {
         ArgumentNullException.ThrowIfNull(type);
         lock (_gate)
         {
-            var document = _config.ReadDocument();
+            ConfigDocument? document;
+            try { document = _config.ReadDocument(); }
+            catch (ConfigurationException error) { Warn("config", "config.json could not be read, so saved connections are not used: " + error.Message); document = null; }
             var result = new List<ConnectionConfig>();
             if (document?.Connections is { } saved)
             {
-                var secrets = OpenSecrets(document!, create: false);
-                result.AddRange(saved.Where(connection => connection.Enabled && connection.Type == type).Select(connection => Decrypt(connection, secrets)));
+                SettingsSecrets? secrets = null;
+                ConfigurationException? keyError = null;
+                try { secrets = OpenSecrets(document, create: false); }
+                catch (ConfigurationException error) { keyError = error; }
+                void Skip(ConfigConnection connection, string reason) => Warn(connection.Id, "The " + type + " connection \"" + connection.Label
+                    + "\" (" + connection.Id + ") is skipped: its saved secrets cannot be read (" + reason + "). Enter them again in Connections.");
+                foreach (var connection in saved.Where(connection => connection.Enabled && connection.Type == type))
+                {
+                    if (keyError is not null && connection.Secrets.Count > 0) { Skip(connection, keyError.Message); continue; }
+                    try { result.Add(Decrypt(connection, secrets)); }
+                    catch (ConfigurationException error) { Skip(connection, error.Message); }
+                }
             }
-            result.AddRange(FromSettings(document).Where(connection => connection.Type == type));
+            result.AddRange(FromSettings(document).Where(connection => connection.Type == type && connection.Enabled));
             return result;
         }
+    }
+
+    /// <summary>
+    /// The main Suwayomi every feature uses (library, change feed, import): the one from Settings (MAIN_SUWAYOMI_URL) when
+    /// set, else the enabled saved connection. Null when there is none or it cannot be read.
+    /// </summary>
+    public ConnectionConfig? MainSuwayomi()
+    {
+        var all = Enabled(MainSuwayomiType);
+        return all.FirstOrDefault(connection => connection.Id.StartsWith(SettingsIdPrefix, StringComparison.Ordinal)) ?? all.FirstOrDefault();
+    }
+
+    /// <summary>The type of a saved or Settings-derived connection without decrypting it; null when unknown.</summary>
+    public string? TypeOf(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        if (id.StartsWith(SettingsIdPrefix, StringComparison.Ordinal))
+            return SettingsSources.FirstOrDefault(source => SettingsIdPrefix + source.Type == id)?.Type;
+        lock (_gate)
+            return _config.ReadDocument()?.Connections?.FirstOrDefault(connection => connection.Id == id)?.Type;
+    }
+
+    /// <summary>The CON-5 notice for a change of a connection of <paramref name="type"/>, or null when nothing restarts.</summary>
+    public static string? ChangeNotice(string? type) =>
+        global::AutoSourcarr.Core.Connections.Types.SolverConnectionType.IsSolver(type) ? SolverChangeNotice : type == MainSuwayomiType ? SuwayomiChangeNotice : null;
+
+    private void Warn(string key, string message)
+    {
+        lock (_warned)
+            if (!_warned.Add(key + "|" + message)) return;
+        try { _warn?.Invoke(message); }
+        catch (Exception error) when (error is not OutOfMemoryException) { _ = error; }
+    }
+
+    private void Raise(string type, string id, string kind)
+    {
+        try { Changed?.Invoke(new ConnectionChangedEvent(type, id, kind)); }
+        catch (Exception error) when (error is not OutOfMemoryException) { Warn("changed|" + id, "Applying the connection change failed: " + error.Message); }
     }
 
     /// <summary>Adds a connection. Values are checked per field kind; a single-connection type refuses a second one.</summary>
@@ -194,6 +273,7 @@ public sealed class ConnectionStore
         ArgumentNullException.ThrowIfNull(revision);
         var definition = Types.Find(type) ?? throw new SettingsValidationException("Unknown connection type: " + type + ".");
         var name = Label(label, definition.Label);
+        ConnectionChange change;
         lock (_gate)
         {
             var document = _config.ReadDocument() ?? new ConfigDocument();
@@ -203,6 +283,10 @@ public sealed class ConnectionStore
                 throw new SettingsValidationException($"At most {MaxConnections} connections can be saved.");
             if (!definition.Multiple && list.Any(connection => connection.Type == definition.Type))
                 throw new SettingsValidationException(definition.Label + " allows one connection; change or delete the existing one.");
+            // One main Suwayomi: while Settings names one (MAIN_SUWAYOMI_URL), that is the one the library uses.
+            if (definition.Type == MainSuwayomiType && FromSettings(document).Any(connection => connection.Type == MainSuwayomiType))
+                throw new SettingsConflictException("The main Suwayomi is set on the Settings page (MAIN_SUWAYOMI_URL). Change it there, or clear it there before adding a Suwayomi connection here.");
+            var first = list.Count == 0;
             var merged = Merge(definition, new Dictionary<string, string>(StringComparer.Ordinal), values, update: false);
             string id;
             do id = RandomNumberGenerator.GetHexString(12, lowercase: true);
@@ -213,8 +297,10 @@ public sealed class ConnectionStore
             document.Connections = list;
             _config.WriteDocument(document);
             Register([plain]);
-            return new(RevisionOf(_config.ReadDocument()), View(plain, "config"));
+            change = new(RevisionOf(_config.ReadDocument()), View(plain, "config"), FirstSaved: first);
         }
+        Raise(definition.Type, change.Connection!.Id, "added");
+        return change;
     }
 
     /// <summary>
@@ -227,6 +313,7 @@ public sealed class ConnectionStore
         ArgumentNullException.ThrowIfNull(revision);
         if (id.StartsWith(SettingsIdPrefix, StringComparison.Ordinal))
             throw new SettingsConflictException("This connection comes from Settings; change it on the Settings page.");
+        ConnectionChange change;
         lock (_gate)
         {
             var document = _config.ReadDocument() ?? new ConfigDocument();
@@ -249,8 +336,12 @@ public sealed class ConnectionStore
             document.Connections = list;
             _config.WriteDocument(document);
             Register([plain]);
-            return new(RevisionOf(_config.ReadDocument()), View(plain, "config"));
+            var effective = plain.Enabled != current.Enabled || plain.Values.Count != current.Values.Count
+                || plain.Values.Any(pair => !current.Values.TryGetValue(pair.Key, out var before) || before != pair.Value);
+            change = new(RevisionOf(_config.ReadDocument()), View(plain, "config"), Effective: effective);
         }
+        if (change.Effective) Raise(change.Connection!.Type, id, "changed");
+        return change;
     }
 
     public string Delete(string id, string revision)
@@ -259,7 +350,7 @@ public sealed class ConnectionStore
         ArgumentNullException.ThrowIfNull(revision);
         if (id.StartsWith(SettingsIdPrefix, StringComparison.Ordinal))
             throw new SettingsConflictException("This connection comes from Settings; clear it on the Settings page.");
-        string next;
+        string next, type;
         lock (_gate)
         {
             var document = _config.ReadDocument() ?? new ConfigDocument();
@@ -268,12 +359,14 @@ public sealed class ConnectionStore
             if (index < 0)
                 throw new ConnectionNotFoundException("No connection " + id + ".");
             CheckRevision(document, revision);
+            type = list[index].Type;
             list.RemoveAt(index);
             document.Connections = list.Count == 0 ? null : list;
             _config.WriteDocument(document);
             next = RevisionOf(_config.ReadDocument());
         }
         ForgetTest(id);
+        Raise(type, id, "deleted");
         return next;
     }
 
@@ -305,6 +398,8 @@ public sealed class ConnectionStore
                 throw new SettingsValidationException("The connection " + basedOn + " is of another type.");
         }
         var merged = Merge(definition, current?.Values ?? new Dictionary<string, string>(StringComparer.Ordinal), values, update: current is not null);
+        // SupportPrivacy.Register adds every value to one set (keys only select which values count as secret), so
+        // registering each unsaved test under the same key never drops an earlier one.
         Register([new ConnectionConfig("unsaved", definition.Type, definition.Label, true, merged)]);
         return await RunAsync(definition, new ConnectionConfig(current?.Id ?? "unsaved", definition.Type, current?.Label ?? definition.Label, true, merged),
             cancellationToken).ConfigureAwait(false);
@@ -345,10 +440,15 @@ public sealed class ConnectionStore
         }
     }
 
-    /// <summary>Applies a request's values onto <paramref name="current"/> and checks the result per field kind.</summary>
+    /// <summary>
+    /// Applies a request's values onto <paramref name="current"/> and checks the result per field kind. When an address
+    /// field (kind Url) now points at another scheme, host or port, every saved secret the request did not send again is
+    /// dropped: a kept password or key is never sent to a server it was not entered for (updates and tests with an id).
+    /// </summary>
     private static Dictionary<string, string> Merge(IConnectionType type, IReadOnlyDictionary<string, string> current, JsonObject? values, bool update)
     {
         var fields = type.Fields.ToDictionary(field => field.Key, StringComparer.Ordinal);
+        var sent = new HashSet<string>(StringComparer.Ordinal);
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var (key, value) in current)
             if (fields.ContainsKey(key))
@@ -382,8 +482,17 @@ public sealed class ConnectionStore
                     continue; // an empty secret keeps the saved one
                 }
                 result[key] = Normalize(field, text);
+                if (field.Kind == ConnectionFieldKind.Secret) sent.Add(key);
             }
         }
+        if (update && type.Fields.Any(field => field.Kind == ConnectionFieldKind.Url
+                && Origin(current.GetValueOrDefault(field.Key)) != Origin(result.GetValueOrDefault(field.Key))))
+            foreach (var field in type.Fields.Where(field => field.Kind == ConnectionFieldKind.Secret && !sent.Contains(field.Key)))
+            {
+                if (!result.Remove(field.Key)) continue;
+                if (field.Required)
+                    throw new SettingsValidationException(field.Label + ": the address changed, so enter it again; a saved secret is never sent to a different server.");
+            }
         foreach (var field in type.Fields)
         {
             if (!result.ContainsKey(field.Key) && !update && !string.IsNullOrEmpty(field.Default))
@@ -392,6 +501,15 @@ public sealed class ConnectionStore
                 throw new SettingsValidationException(field.Label + " is required.");
         }
         return result;
+    }
+
+    /// <summary>scheme://host:port of an address (the raw text when it is not one); "" when unset.</summary>
+    private static string Origin(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return Uri.TryCreate(value, UriKind.Absolute, out var url) && url.Host.Length > 0
+            ? url.Scheme.ToLowerInvariant() + "://" + url.IdnHost.ToLowerInvariant() + ":" + url.Port.ToString(CultureInfo.InvariantCulture)
+            : value;
     }
 
     private static string Text(ConnectionField field, JsonValue value)
@@ -565,10 +683,21 @@ public sealed class ConnectionStore
             foreach (var (field, setting) in source.Fields)
                 if (type.Fields.Any(item => item.Key == field) && values.GetValueOrDefault(setting) is { Length: > 0 } value)
                     fields[field] = value;
-            result.Add(new(SettingsIdPrefix + source.Type, source.Type, source.Label, true, fields));
+            // FlareSolverr from the source engine settings is only used when FLARESOLVERR_ENABLED is on (default off,
+            // as in the source host) and automatic challenges are not switched off (SOURCE_AUTO_CHALLENGES, default on).
+            var enabled = source.Type != "flaresolverr"
+                || Flag(values.GetValueOrDefault("FLARESOLVERR_ENABLED"), fallback: false) && Flag(values.GetValueOrDefault("SOURCE_AUTO_CHALLENGES"), fallback: true);
+            result.Add(new(SettingsIdPrefix + source.Type, source.Type, source.Label, enabled, fields));
         }
         return result;
     }
+
+    private static bool Flag(string? value, bool fallback) => (value ?? "").Trim().ToLowerInvariant() switch
+    {
+        "true" or "1" or "yes" or "on" => true,
+        "false" or "0" or "no" or "off" => false,
+        _ => fallback,
+    };
 
     private static string Short(string? message)
     {

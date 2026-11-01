@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
@@ -88,13 +89,49 @@ public sealed class SourceWebViewBroker : IAsyncDisposable
 
     public int Count => _sessions.Count;
 
-    /// <summary>An address the WebView may open: absolute http or https with a host, no user name or password. Null otherwise.</summary>
-    public static Uri? CheckUrl(string? value)
+    /// <summary>The source host's port when no running host is known (ApplicationRuntime starts it on 4567).</summary>
+    public const int DefaultHostPort = 4567;
+
+    /// <summary>Cloud metadata services: never opened (they hand out instance credentials).</summary>
+    private static readonly HashSet<string> MetadataHosts = new(StringComparer.Ordinal)
+        { "metadata", "metadata.google.internal", "metadata.goog", "instance-data", "instance-data.ec2.internal", "100.100.100.200", "fd00:ec2::254" };
+
+    /// <summary>
+    /// An address the WebView may open: absolute http or https with a host, no user name or password, and not refused
+    /// by <see cref="Refusal"/>. Null otherwise.
+    /// </summary>
+    public static Uri? CheckUrl(string? value, Uri? hostBase = null)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Length > 4096) return null;
         if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var url) || url.Scheme is not ("http" or "https") || url.Host.Length == 0 || url.UserInfo.Length > 0)
             return null;
-        return url;
+        return Refusal(url, hostBase) is null ? url : null;
+    }
+
+    /// <summary>
+    /// Why the WebView must not open <paramref name="url"/>, or null: link-local addresses (169.254.0.0/16, fe80::/10),
+    /// cloud metadata hosts and the source host's own port on loopback (<paramref name="hostBase"/>, else
+    /// <see cref="DefaultHostPort"/>). Loopback and private (LAN) addresses stay allowed on purpose: the WebView is
+    /// admin-only and a source may run on the administrator's network. Names are checked as written, without a DNS
+    /// lookup; the source host checks typed addresses (navigate) the same way.
+    /// </summary>
+    public static string? Refusal(Uri url, Uri? hostBase = null)
+    {
+        ArgumentNullException.ThrowIfNull(url);
+        var host = url.IdnHost.Trim('[', ']').TrimEnd('.').ToLowerInvariant();
+        if (MetadataHosts.Contains(host)) return "The WebView does not open cloud metadata addresses.";
+        IPAddress? address = null;
+        if (url.HostNameType is UriHostNameType.IPv4 or UriHostNameType.IPv6 && IPAddress.TryParse(host, out var parsed))
+            address = parsed.IsIPv4MappedToIPv6 ? parsed.MapToIPv4() : parsed;
+        if (address is not null && MetadataHosts.Contains(address.ToString().ToLowerInvariant()))
+            return "The WebView does not open cloud metadata addresses.";
+        if (address is not null && (address.IsIPv6LinkLocal
+            || address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && address.GetAddressBytes() is [169, 254, _, _]))
+            return "The WebView does not open link-local addresses (169.254.x.x, fe80::).";
+        var loopback = host == "localhost" || host.EndsWith(".localhost", StringComparison.Ordinal)
+            || address is not null && (IPAddress.IsLoopback(address) || address.Equals(IPAddress.Any) || address.Equals(IPAddress.IPv6Any));
+        if (loopback && url.Port == (hostBase?.Port ?? DefaultHostPort)) return "The WebView does not open the source host itself.";
+        return null;
     }
 
     /// <summary>True when <paramref name="url"/> is on the source's own website: the same host, or one is a subdomain of the other.</summary>
@@ -114,7 +151,8 @@ public sealed class SourceWebViewBroker : IAsyncDisposable
     public async Task<(SourceWebViewSession Session, string Ticket)> OpenAsync(string owner, Uri? url, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(owner);
-        if (url is not null && CheckUrl(url.AbsoluteUri) is null) throw new SourceWebViewException(400, "The WebView opens http and https addresses only.");
+        if (url is not null && CheckUrl(url.AbsoluteUri, _host()?.BaseUrl) is null)
+            throw new SourceWebViewException(400, Refusal(url, _host()?.BaseUrl) ?? "The WebView opens http and https addresses only.");
         await _openGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -161,6 +199,8 @@ public sealed class SourceWebViewBroker : IAsyncDisposable
     {
         if (!_sessions.TryRemove(sessionId, out var session)) return;
         try { await session.Closing.CancelAsync().ConfigureAwait(false); } catch (ObjectDisposedException) { }
+        // Removed from the list above, so this runs once per session; a relay still linked to it is already cancelled.
+        session.Closing.Dispose();
         try
         {
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -182,7 +222,10 @@ public sealed class SourceWebViewBroker : IAsyncDisposable
     public async Task RelayAsync(SourceWebViewSession session, WebSocket socket, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(session); ArgumentNullException.ThrowIfNull(socket);
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.Closing.Token);
+        CancellationToken closing;
+        try { closing = session.Closing.Token; }
+        catch (ObjectDisposedException) { closing = new CancellationToken(canceled: true); } // closed between Claim and here
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, closing);
         using var pageStop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         using var sendGate = new SemaphoreSlim(1, 1);
         var ended = 0;
@@ -321,7 +364,7 @@ public sealed class SourceWebViewBroker : IAsyncDisposable
             JsonObject? message;
             try { message = JsonNode.Parse(buffer.AsSpan(0, count)) as JsonObject; }
             catch (JsonException) { message = null; }
-            if (CheckInput(message) is not { } input)
+            if (CheckInput(message, _host()?.BaseUrl) is not { } input)
             {
                 await sendEvent(new JsonObject { ["type"] = "error", ["message"] = "That input was not accepted." }).ConfigureAwait(false);
                 continue;
@@ -348,7 +391,7 @@ public sealed class SourceWebViewBroker : IAsyncDisposable
     /// wheel {x,y,deltaY}, key/keydown/keyup {key, ctrl?, shift?, meta?}, text {text}, navigate {url (http/https)},
     /// back, forward, reload, resize {width,height}, sync, ping, close. Null when refused.
     /// </summary>
-    public static JsonObject? CheckInput(JsonObject? message)
+    public static JsonObject? CheckInput(JsonObject? message, Uri? hostBase = null)
     {
         if (message?["type"] is not JsonValue typeValue || !typeValue.TryGetValue<string>(out var type)) return null;
         if (type is "ping" or "close") return new JsonObject { ["type"] = type };
@@ -381,8 +424,9 @@ public sealed class SourceWebViewBroker : IAsyncDisposable
                 result["text"] = text;
                 break;
             case "navigate":
-                // The administrator typed this address: any http(s) website is allowed.
-                if (CheckUrl(Text(message, "url")) is not { } url) return null;
+                // The administrator typed this address: any http(s) website is allowed, but not link-local, cloud
+                // metadata or the source host itself (see Refusal); the host checks it again.
+                if (CheckUrl(Text(message, "url"), hostBase) is not { } url) return null;
                 result["url"] = url.AbsoluteUri;
                 break;
             case "resize":

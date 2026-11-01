@@ -1,3 +1,13 @@
+## 0.5.0 (in progress)
+
+C#/.NET conversion (ARC-11); notes are added per conversion phase.
+
+- Phase 7 (Connections): connections are saved in `config.json` under a new top-level
+  `"connections"` key, with secrets encrypted by `config.key`. 0.4.x refuses a
+  `config.json` with keys it does not know, so before rolling back to 0.4.x remove the
+  `"connections"` key (keep a copy to restore later). The first connection you add
+  shows this note in the app.
+
 ## Unreleased
 
 - Reader extension sources moved from `extension/module/src/eu/kanade/tachiyomi/extension/all/autosourcarr/`

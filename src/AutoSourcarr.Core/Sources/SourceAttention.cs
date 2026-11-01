@@ -170,6 +170,13 @@ public sealed class SourceAttention : ISourceAttention, IAsyncDisposable
             {
                 var row = (JsonObject)pair.Value!.DeepClone();
                 row.Remove("operation"); row.Remove("generation"); row["retrying"] = _probes.Contains(pair.Key);
+                // SRC-5: a challenge the host could not solve (image CAPTCHA, WAF) is solved by hand in "Open in WebView"
+                // on the source's website; the cookies it gets unblock the source.
+                var baseUrl = SourceResponseContract.Text(row["base_url"]);
+                var sourceId = SourceResponseContract.Text(row["source_id"]);
+                var website = SourceResponseContract.Text(row["website"]);
+                var url = baseUrl.Length > 0 ? baseUrl : website.Length > 0 ? "https://" + website + "/" : "";
+                row["webview"] = url.Length > 0 || sourceId.Length > 0 ? new JsonObject { ["url"] = url, ["source_id"] = sourceId } : null;
                 return row;
             }).OrderBy(row => Number(row, "first_seen")).ToArray();
             return new() { ["items"] = SourceResponseContract.Array(items), ["count"] = items.Length, ["retry_seconds"] = RetrySeconds };
