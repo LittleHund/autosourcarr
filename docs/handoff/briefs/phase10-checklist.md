@@ -54,3 +54,36 @@ history, tags review, catalogue views, System → reader setup (QR), Installed t
 Green probe (build + all tests) · local check-project + ci-pytest · independent audit, findings fixed
 or recorded · push `conversion`, green CI (run id) · ZIP + sha256 · knowledge records
 `phase10-records.json` · port-map ticks · PC sync · checkpoint (repo copy) · report.
+
+## Recheck of phases 0–9 (2026-11-01)
+
+Three read-only agents compared every closed phase with its plan text, requirements, port-map rows
+and carried items; findings were verified in the code before acting.
+
+Fixed in phase 10 (commit e98ccdb): startup sequence as jobs (merge safety repair, startup
+maintenance with its one-time steps wired, title consensus, Subbed orphan aliases, startup dedup,
+startup metadata, startup additional records, startup feed refresh, origin recovery, reset-hint
+replay); chapters for records attached by discovery; local pacing overflow is a deferral (hard
+rule 3); database resets need a preview token (hard rule 1); resets stop and resume background
+work; orphan-archive installs are inspected (hard rule 8); entry-id token in reader search;
+RuntimeMetrics call sites; OpenAPI for source-repositories/source-health; stale texts.
+
+Not fixed here, with an owner:
+
+| Item | Owner |
+| --- | --- |
+| Internal services panel (`/api/admin/services`, per-instance builder) → 0.5.0 status page | phase 11 |
+| Page-first lists (PERF-5); event-driven UI refresh (PERF-8, UI-13) | phase 11 |
+| Persisted user-confirmed "Fixed" repair state (hard rule 6) | phase 11 |
+| Split-path decision-log atomicity; `CatalogueDiscovery.SourceResult` (exclude deferrals first) | phase 11 |
+| Continuous catalogue discovery crawler (`schedule_continuous_catalog_discovery`) not ported | before cutover (phase 13 at the latest) |
+| `RefreshMediaVariants` startup step has no port (reported "unavailable") | before cutover |
+| Repair runner not used by the app (only tests) | phase 13 (with the runner binary in the image) |
+| WebView not sandboxed (SRC-5, Landlock) | phase 13 |
+| PERF-2 CPU/memory limits; health, raw archive and catalogue review outside the job queue | phase 13 (PIPE-8 tuning) |
+| DNS rebinding, public-suffix cookie check, SNI in CONNECT tunnels (LIMIT records) | phase 13 |
+| Postgres CI service unused | phase 16 |
+| AI code-repair worker (`repair-worker/`) has no port target | owner decision (0.6.0?) |
+| MAT-11 scaled mixed check; MAT-22 profile-change check; Komf as metadata provider; AUTH-8 log location | owner decision |
+| Match-on-ingest title-only attaches (15 of 66 different-work pairs); import evidence gate passes title 0.80 + summary 0.90 | owner decision |
+| AUTH-7/AUTH-9 not marked 0.6.0 in their requirement rows | requirements update (owner) |

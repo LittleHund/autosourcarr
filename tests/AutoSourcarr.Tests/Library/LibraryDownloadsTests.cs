@@ -281,7 +281,7 @@ public static class LibraryDownloadsTests
             Check.Equal("202,204,206", string.Join(',', setup.Pages.Order("2")));
             Check.Equal(1, setup.Pages.MaxActive("1"));
             Check.Equal(1, setup.Pages.MaxActive("2"));
-            Check.Equal(6, setup.Store.Downloaded(entry).Count);
+            Check.True(setup.Store.Downloaded(entry).Count == 6, "Six chapters downloaded; queue: " + setup.Manager.Queue().ToJsonString());
             Check.True(setup.Tasks.History(0, 50)["items"]!.AsArray().Any(row => row!["name"]!.GetValue<string>().StartsWith("Download chapters", StringComparison.Ordinal)),
                 "Per-source download lanes appear in Tasks");
         });

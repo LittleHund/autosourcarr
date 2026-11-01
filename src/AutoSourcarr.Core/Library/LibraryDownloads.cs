@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using AutoSourcarr.Core.Jobs;
 using ImageMagick;
@@ -24,6 +25,8 @@ public sealed class LibraryDownloads : IAsyncDisposable
     private readonly LibraryOptions _options;
     private readonly TimeProvider _time;
     private readonly object _gate = new();
+    /// <summary>One writer per series folder: lanes of different sources may finish chapters of one series at once.</summary>
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _folders = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource _pause = new();
     private bool _disposed;
 
@@ -189,6 +192,21 @@ public sealed class LibraryDownloads : IAsyncDisposable
 
         var named = series with { Title = place.SeriesName };
         var folder = LibraryNames.Inside(_options.Root, place.Folder);
+        // The folder step runs alone per series: the partial-file cleanup must not remove another lane's chapter in
+        // progress, and cover.jpg / details.json are written by one lane at a time.
+        var writer = _folders.GetOrAdd(place.Folder, _ => new SemaphoreSlim(1, 1));
+        await writer.WaitAsync(token).ConfigureAwait(false);
+        try
+        {
+            await WriteChapterAsync(item, place, named, chapter, folder, files, resolved, token).ConfigureAwait(false);
+        }
+        finally { writer.Release(); }
+        CbzFiles.TryDeleteFolder(staging);
+    }
+
+    private async Task WriteChapterAsync(DownloadItem item, LibrarySeries place, LibrarySeriesInfo named, LibraryChapterInfo chapter, string folder,
+        List<string> files, LibraryChapterPages resolved, CancellationToken token)
+    {
         Directory.CreateDirectory(folder);
         CbzFiles.RemovePartials(folder);
         var fileName = LibraryNames.ChapterFile(place.Folder, chapter.Number, chapter.Volume, ComicInfoDocument.ChapterTitle(chapter));
@@ -206,7 +224,6 @@ public sealed class LibraryDownloads : IAsyncDisposable
         if (_store.Downloaded(item.EntryId).TryGetValue(item.ChapterId, out var previous) && previous != relative)
             DeleteRelative(previous);
         _store.Complete(item, relative, files.Count, bytes, resolved.CandidateId);
-        CbzFiles.TryDeleteFolder(staging);
     }
 
     private static void PrepareStaging(string staging, LibraryChapterPages resolved)
