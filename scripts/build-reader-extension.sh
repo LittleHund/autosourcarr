@@ -74,6 +74,14 @@ if [[ -n "${AUTOSOURCARR_EXT_KEYSTORE_B64:-}" ]]; then
 else
   rm -f "$keystore"
   echo '::warning::UNSIGNED-FOR-RELEASE: AUTOSOURCARR_EXT_KEYSTORE_B64 is not set; the reader extension is signed with a throwaway debug key.' >&2
+  # Keiyoushi signs release builds only with <root>/signingkey.jks, so the throwaway key is made here (random password,
+  # deleted with the keystore after the build). Readers cannot update from such an APK to the release-signed one.
+  command -v keytool >/dev/null || { echo 'keytool (JDK) is required to sign a test build.' >&2; exit 5; }
+  throwaway=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24)
+  (umask 077; keytool -genkeypair -noprompt -keystore "$keystore" -storetype PKCS12 -storepass "$throwaway" -keypass "$throwaway" \
+    -alias autosourcarr -keyalg RSA -keysize 2048 -validity 2 -dname "CN=AutoSourcarr test build (not for release)" >/dev/null 2>&1)
+  [[ -s "$keystore" ]] || { echo 'The throwaway signing key could not be created.' >&2; exit 5; }
+  export KEY_STORE_PASSWORD="$throwaway" ALIAS="autosourcarr" KEY_PASSWORD="$throwaway"
 fi
 
 # 4. Build (release APK + Keiyoushi's release JAR). No address: the gradle base URL is metadata only.
@@ -92,7 +100,7 @@ info="$target/build/keiyoushi-source-info.json"
 bash "$root/extension/verify-tachiyomi-apk.sh" "$apk"
 bash "$root/extension/verify-suwayomi-jar.sh" "$jar"
 apksigner=$(find_apksigner) || { echo 'apksigner was not found in the Android SDK.' >&2; exit 7; }
-certs=$("$apksigner" verify --print-certs "$apk")
+certs=$("$apksigner" verify --print-certs "$apk" 2>&1) || { echo "$certs" >&2; echo 'The APK signature does not verify.' >&2; exit 7; }
 fingerprint=$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}' <<< "$certs" | tr -d ': ' | tr 'A-F' 'a-f')
 [[ "$fingerprint" =~ ^[0-9a-f]{64}$ ]] || { echo 'Could not read the APK signing fingerprint.' >&2; exit 7; }
 
