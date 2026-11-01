@@ -45,15 +45,23 @@ public static class SourceRawEndpoints
         Func<HttpContext, Func<Handler, Task<IResult>>, Task<IResult>> run = wrap
             ?? ((context, action) => action(handler() ?? throw new ApiProblem(503, "Source-code storage is not available in this host")));
         Func<HttpContext, Task<IResult>> Route(Func<Handler, HttpContext, Task<IResult>> action) => context => run(context, api => action(api, context));
+        // Handlers go through locals: the route-handler analyzer fails (AD0001) on a delegate produced by an invocation.
+        Func<HttpContext, Task<IResult>> status = Route((api, context) => api.StatusAsync(context));
+        Func<HttpContext, Task<IResult>> project = Route((api, context) => api.ProjectAsync(context));
+        Func<HttpContext, Task<IResult>> requestInput = Route((api, context) => api.RequestInputAsync(context));
+        Func<HttpContext, Task<IResult>> code = Route((api, context) => api.CodeAsync(context));
+        Func<HttpContext, Task<IResult>> origin = Route((api, context) => api.OriginAsync(context));
+        Func<HttpContext, Task<IResult>> discover = Route((api, context) => api.DiscoverAsync(context));
+        Func<HttpContext, Task<IResult>> unavailable = Route((api, context) => api.UnavailableAsync(context));
         return
         [
-            group.MapGet(path + "/{package}", Route((api, context) => api.StatusAsync(context))),
-            group.MapPost(path + "/{package}/project", Route((api, context) => api.ProjectAsync(context))).WithMetadata(ApiJson.BoundedUploadMetadata),
-            group.MapPost(path + "/{package}/request-input", Route((api, context) => api.RequestInputAsync(context))),
-            group.MapGet(path + "/{package}/code", Route((api, context) => api.CodeAsync(context))),
-            group.MapPost(path + "/{package}/origin", Route((api, context) => api.OriginAsync(context))),
-            group.MapPost(path + "/{package}/discover", Route((api, context) => api.DiscoverAsync(context))),
-            group.MapPost(path + "/{package}/unavailable", Route((api, context) => api.UnavailableAsync(context))),
+            group.MapGet(path + "/{package}", status),
+            group.MapPost(path + "/{package}/project", project).WithMetadata(ApiJson.BoundedUploadMetadata),
+            group.MapPost(path + "/{package}/request-input", requestInput),
+            group.MapGet(path + "/{package}/code", code),
+            group.MapPost(path + "/{package}/origin", origin),
+            group.MapPost(path + "/{package}/discover", discover),
+            group.MapPost(path + "/{package}/unavailable", unavailable),
         ];
     }
 
