@@ -1,11 +1,14 @@
   AutoSourcarr.Core -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/bin/Release/net10.0/AutoSourcarr.Core.dll
   AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
-CSC : error AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
+CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
+  AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Sources/SuwayomiLibraryTests.cs(116,169): error CS9007: The interpolated raw string literal does not start with enough '$' characters to allow this many consecutive closing braces as content. [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
 
 Build FAILED.
 
-CSC : error AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
-    0 Warning(s)
+CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Sources/SuwayomiLibraryTests.cs(116,169): error CS9007: The interpolated raw string literal does not start with enough '$' characters to allow this many consecutive closing braces as content. [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+    1 Warning(s)
     1 Error(s)
 
-Time Elapsed 00:00:16.03
+Time Elapsed 00:00:18.78
