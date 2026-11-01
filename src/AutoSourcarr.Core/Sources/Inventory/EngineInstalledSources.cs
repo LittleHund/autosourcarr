@@ -23,8 +23,20 @@ public sealed class InstalledSourceCapture
     internal void RequireTransportCurrent() => _transport.ThrowIfRetired();
 }
 
+/// <summary>
+/// Installed-source observations that also hand out the exact captured JAR bytes (original-APK evidence and repair
+/// input). <see cref="CaptureAsync"/> answers null when the package/version is not installed; a capture is only valid
+/// while <see cref="RequireCurrent"/> does not throw (same engine incarnation and generation). Neither member mutates
+/// the engine; callers that need mutual exclusion with installs hold sharedSourceAdmin.
+/// </summary>
+public interface IInstalledSourceCaptures : IRawInstalledSources
+{
+    Task<InstalledSourceCapture?> CaptureAsync(string package, string version, CancellationToken cancellationToken = default);
+    void RequireCurrent(InstalledSourceCapture capture);
+}
+
 /// <summary>Per-instance native inventory and exact installed JAR observations. Never starts or mutates an engine.</summary>
-public sealed class EngineInstalledSources : IRawInstalledSources, IAsyncDisposable
+public sealed class EngineInstalledSources : IInstalledSourceCaptures, IAsyncDisposable
 {
     public const string InventoryQuery = "query { extensions { nodes { pkgName name lang apkName apkUrl isInstalled isObsolete hasUpdate versionName storeIndexUrl source { nodes { id name lang baseUrl } } } } }";
     private readonly SuwayomiClient _client;

@@ -19,8 +19,10 @@ public static class RequestPolicy
     {
         if (!path.StartsWith("/api/", StringComparison.Ordinal)) return false;
         var control = method == "POST" && (ResetControls.Contains(path) || Starts(path, "/api/admin/instance/", "/api/admin/source-orphans/", "/api/admin/source-maintenance/", "/api/admin/source-extensions/", "/api/admin/source-health/",
-            "/api/v1/source-orphans/", "/api/v1/source-maintenance/"))
-            || method == "PUT" && (path == "/api/admin/source-health/daily" || Match(path, @"^/api/admin/sources/[^/]+/preferences$"));
+            "/api/v1/source-orphans/", "/api/v1/source-maintenance/", "/api/v1/source-repairs/", "/api/v1/source-extensions/", "/api/v1/source-health/"))
+            // Phase 6 moved the source admin routes to /api/v1; their mutations skip catalogue admission like the /api/admin ones.
+            || method == "PUT" && (path is "/api/admin/source-health/daily" or "/api/v1/source-health/daily" or "/api/v1/source-maintenance/watch"
+                || Match(path, @"^/api/(?:admin|v1)/sources/[^/]+/preferences$"));
         control |= method is "POST" or "PUT" or "DELETE" && (Starts(path, "/api/admin/library/", "/api/admin/profiles/", "/api/admin/downloads", "/api/admin/review-workbench/",
             "/api/admin/metadata-fields/", "/api/admin/serving-upgrades/", "/api/admin/policy-simulator/", "/api/admin/engine/compatibility", "/api/v1/engine/")
             || path.StartsWith("/api/admin/candidates/", StringComparison.Ordinal) && path.EndsWith("/quality", StringComparison.Ordinal)

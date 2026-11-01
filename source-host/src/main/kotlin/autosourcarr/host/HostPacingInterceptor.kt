@@ -12,8 +12,13 @@ import java.util.concurrent.atomic.AtomicLong
  * SRC-9 paced traffic: at least [intervalMs] between the starts of two network requests to the same host.
  *
  * Each host has its own reservation clock (no lock shared between hosts): a request takes the next free slot with one
- * compare-and-set and sleeps until it. The wait is bounded by [maxWaitMs]; a slot never lies further ahead than that,
- * so a burst of page images queues for at most [maxWaitMs] and then goes out at the interval rate. The wait ends early
+ * compare-and-set and sleeps until it, so consecutive slots are always [intervalMs] apart. The wait is bounded by
+ * [maxWaitMs]: when the next free slot lies further ahead than that (more than maxWaitMs / intervalMs requests already
+ * queued for the host), the request fails at once with an [IOException] and takes no slot, instead of waiting longer or
+ * being let through early. Letting it through would break the spacing (every overflow request would share one slot and
+ * burst together); waiting longer would tie up dispatcher threads and run into call timeouts anyway. The caller (a
+ * page or chapter fetch) reports the error and can retry once the queue has drained. A slot taken by a request that
+ * is then cancelled stays used, leaving at most one interval of idle time. The wait ends early
  * when the call is cancelled (call timeout or a cancelled request) or the thread is interrupted. Loopback hosts
  * (FlareSolverr, the host itself) are not paced. Installed as a network interceptor, so cached responses never wait.
  * 0 turns pacing off.
@@ -34,7 +39,10 @@ class HostPacingInterceptor(
         return chain.proceed(chain.request())
     }
 
-    /** Takes the next slot of [host] and answers how long to wait for it, in nanoseconds (at most [maxWaitMs]). */
+    /**
+     * Takes the next slot of [host] and answers how long to wait for it, in nanoseconds (at most [maxWaitMs]).
+     * Throws [IOException] without taking a slot when the next free slot is further ahead than [maxWaitMs].
+     */
     internal fun reserve(host: String): Long {
         val interval = TimeUnit.MILLISECONDS.toNanos(intervalMs)
         val horizon = TimeUnit.MILLISECONDS.toNanos(maxWaitMs.coerceAtLeast(0))
@@ -42,8 +50,8 @@ class HostPacingInterceptor(
         while (true) {
             val now = nanoTime()
             val current = clock.get()
-            val free = if (current == Long.MIN_VALUE || current - now < 0) now else current
-            val slot = if (free - now > horizon) now + horizon else free
+            val slot = if (current == Long.MIN_VALUE || current - now < 0) now else current
+            if (slot - now > horizon) throw IOException("paced: too many queued requests for $host")
             if (clock.compareAndSet(current, slot + interval)) {
                 if (next.size > MAX_HOSTS) prune(now)
                 return slot - now

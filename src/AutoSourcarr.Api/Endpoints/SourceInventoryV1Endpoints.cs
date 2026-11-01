@@ -82,7 +82,8 @@ internal static class SourceInventoryV1Endpoints
             {
                 context.Response.Headers.CacheControl = "no-store";
                 if (services.SourceInventory is not { } inventory) return Task.FromResult(Unavailable());
-                var snapshot = inventory.Orphans.Snapshot(WorkerConfigured(), ConfiguredRepositories(services), inventory.Maintenance.Operation());
+                // Installed orphans are repaired by the in-app domain repair (integrated engine); there is no external worker.
+                var snapshot = inventory.Orphans.Snapshot(services.SourceRepair is not null && Integrated(), ConfiguredRepositories(services), inventory.Maintenance.Operation());
                 return Task.FromResult(Answer(snapshot));
             })))
             .WithName("getSourceOrphans")

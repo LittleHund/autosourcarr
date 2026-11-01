@@ -36,20 +36,29 @@ public sealed class DomainRepairException(int status, string code, string messag
 }
 
 /// <summary>Domain repair inputs: an explicit new host (else the old site's redirect is observed), the old host when the
-/// package's sources use several, a search text for the content check, and an http-to-https upgrade.</summary>
-public sealed record DomainRepairOptions(string? NewHost = null, string? OldHost = null, string? Query = null, bool UpgradeToHttps = false);
+/// package's sources use several, a search text for the content check, an http-to-https upgrade, and the content check's
+/// overall deadline (default <see cref="ContentCheck.DefaultDeadline"/>, kept shorter than the repair job's stall timeout).</summary>
+public sealed record DomainRepairOptions(string? NewHost = null, string? OldHost = null, string? Query = null, bool UpgradeToHttps = false,
+    TimeSpan? ContentDeadline = null);
 
 /// <summary>
 /// Phase 6e domain repair of one installed extension:
+/// (0) SRC-8: when a configured repository now offers a maintained (newer) version of the package, the repair is
+///     refused (reason official_replacement) and the person is told to update from the repository instead;
 /// (a) read the installed jar from the host (last working code) and keep it under
 ///     source-maintenance/last-working/&lt;pkg&gt;/&lt;sha256&gt;.jar with a JSON record;
-/// (b) find the new address (explicit, or the old base URL's observed cross-site redirect);
+/// (b) find the new address (explicit, or the old base URL's observed cross-site redirect; parked-domain targets are
+///     refused, see <see cref="ParkingHost"/>);
 /// (c) rewrite the old host in the compiled string constants and run the structure check (<see cref="DomainMigration"/>);
-/// (d) install the repaired jar through the host; (e) run the content check on one of the package's sources;
+/// (d) install the repaired jar through the host; (e) run the content check on one of the package's sources (bounded
+///     by <see cref="DomainRepairOptions.ContentDeadline"/>, progress reported);
 /// (f) when the check fails, install the kept jar again (rollback).
 /// Every run ends in a report (state repaired, refused, failed, rolled_back or rollback_failed) that is saved as the
-/// package's last report under source-maintenance/domain-repairs/&lt;pkg&gt;.json. Host changes run under the shared
-/// source admin lock.
+/// package's last report under source-maintenance/domain-repairs/&lt;pkg&gt;.json. Only host changes and host reads (jar
+/// read, install, restore) hold the shared source admin lock; the redirect lookup and the content check do not. One
+/// repair or rollback per package runs at a time (a second one is refused, reason busy). A cancellation after the
+/// repaired jar was installed (cancel route or job watchdog) restores the kept jar without a token, saves the report
+/// as rolled_back (reason cancelled; rollback_failed when the restore failed) and then rethrows the cancellation.
 /// </summary>
 public sealed class DomainRepair
 {
@@ -57,32 +66,55 @@ public sealed class DomainRepair
     private static readonly Regex Package = new(@"\A[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*){1,20}\z", RegexOptions.CultureInvariant);
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
     private static readonly Regex Digest = new(@"\A[0-9a-f]{64}\z", RegexOptions.CultureInvariant);
+    /// <summary>
+    /// Well-known domain parking and for-sale landing services. A moved site never redirects there; an expired domain
+    /// does. Matched on the final host and every redirect hop (the host or any subdomain of it).
+    /// </summary>
+    private static readonly string[] ParkingServices =
+    [
+        "sedoparking.com", "sedo.com", "bodis.com", "parkingcrew.net", "parkingcrew.com", "above.com", "dan.com", "afternic.com",
+        "hugedomains.com", "undeveloped.com", "domainmarket.com", "parklogic.com", "voodoo.com", "fabulous.com", "skenzo.com",
+        "dsparking.com", "parkingpage.namecheap.com", "domainnamesales.com", "buydomains.com", "sav.com", "porkbun.com",
+        "godaddy.com", "domaincontrol.com", "uniregistry.com", "epik.com", "squadhelp.com", "atom.com", "brandbucket.com",
+        "domainlore.com", "namebright.com", "smartname.com", "trafficz.com", "domainsponsor.com", "searchvity.com",
+    ];
     private readonly string _root;
     private readonly IDomainRepairHost _host;
     private readonly SemaphoreSlim _adminLock;
     private readonly Func<string, CancellationToken, Task<JsonObject>>? _observe;
+    private readonly Func<string, CancellationToken, Task<string?>>? _officialReplacement;
     private readonly TimeProvider _time;
     // REP-1: package -> "versionName|versionCode" whose installed jar is already kept as last working; a repair or
     // rollback of the package forgets it, because those keep the version but change the jar.
     private readonly ConcurrentDictionary<string, string> _keptVersions = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> _keeping = new(StringComparer.Ordinal);
+    // The per-package gate: a repair or rollback of a package runs alone, and no last-working keep reads the package
+    // while a repaired jar that has not passed its content check yet is installed.
+    private readonly ConcurrentDictionary<string, byte> _changing = new(StringComparer.Ordinal);
 
     /// <param name="maintenanceRoot">The app's &lt;data&gt;/source-maintenance folder.</param>
     /// <param name="observe">Observes one public URL and answers WebsiteProbe.OneAsync's JSON (state, final_url, redirects); null disables discovery.</param>
+    /// <param name="officialReplacement">SRC-8: answers why a configured repository now offers a maintained version of the
+    /// package (the repair is then refused), or null when it does not; null skips the check.</param>
     public DomainRepair(string maintenanceRoot, IDomainRepairHost host, SemaphoreSlim adminLock,
-        Func<string, CancellationToken, Task<JsonObject>>? observe = null, TimeProvider? time = null)
+        Func<string, CancellationToken, Task<JsonObject>>? observe = null, TimeProvider? time = null,
+        Func<string, CancellationToken, Task<string?>>? officialReplacement = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(maintenanceRoot);
         _root = Path.GetFullPath(maintenanceRoot);
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _adminLock = adminLock ?? throw new ArgumentNullException(nameof(adminLock));
         _observe = observe;
+        _officialReplacement = officialReplacement;
         _time = time ?? TimeProvider.System;
     }
 
     /// <summary>Production wiring: the source host client and redirect observation through the public fetcher.</summary>
-    public DomainRepair(string maintenanceRoot, SuwayomiClient client, SemaphoreSlim adminLock, IPublicSourceFetcher? fetcher)
-        : this(maintenanceRoot, new SuwayomiDomainRepairHost(client), adminLock, fetcher is null ? null : new Func<string, CancellationToken, Task<JsonObject>>((url, token) => ObserveAsync(fetcher, url, token)))
+    public DomainRepair(string maintenanceRoot, SuwayomiClient client, SemaphoreSlim adminLock, IPublicSourceFetcher? fetcher,
+        Func<string, CancellationToken, Task<string?>>? officialReplacement = null)
+        : this(maintenanceRoot, new SuwayomiDomainRepairHost(client), adminLock,
+            fetcher is null ? null : new Func<string, CancellationToken, Task<JsonObject>>((url, token) => ObserveAsync(fetcher, url, token)),
+            officialReplacement: officialReplacement)
     {
     }
 
@@ -95,6 +127,40 @@ public sealed class DomainRepair
         return result;
     }
 
+    /// <summary>
+    /// Look-alike guard for observed redirects: the parking or for-sale service the observation ended on or passed
+    /// through, or null. Explicit new hosts given by the admin are not checked.
+    /// </summary>
+    public static string? ParkingHost(JsonObject observation)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+        var hosts = new List<string> { SourceResponseContract.Text(observation["final_url"]) };
+        if (observation["redirects"] is JsonArray redirects) hosts.AddRange(redirects.Select(item => SourceResponseContract.Text(item)));
+        foreach (var url in hosts)
+        {
+            var host = HostOf(url);
+            if (host.Length == 0) continue;
+            var parked = ParkingServices.FirstOrDefault(service => host == service || host.EndsWith("." + service, StringComparison.Ordinal));
+            if (parked is not null) return host;
+        }
+        return null;
+    }
+
+    /// <summary>True when both hosts share their name label (the label before the public suffix, e.g. "mangasite" in
+    /// mangasite.com and www.mangasite.net). Informational: the content check decides.</summary>
+    public static bool SharesNameLabel(string first, string second)
+    {
+        static string Label(string host)
+        {
+            var labels = host.Split('.');
+            if (labels.Length < 2) return host;
+            // Two-label public suffixes such as co.uk or com.br: the name is the label before them.
+            var index = labels.Length >= 3 && labels[^2].Length <= 3 && labels[^1].Length == 2 ? labels.Length - 3 : labels.Length - 2;
+            return labels[index];
+        }
+        return first.Length > 0 && second.Length > 0 && Label(first) == Label(second);
+    }
+
     public string LastWorkingDirectory(string packageName) => Path.Combine(_root, "last-working", RequirePackage(packageName));
     public string ReportPath(string packageName) => Path.Combine(_root, "domain-repairs", RequirePackage(packageName) + ".json");
 
@@ -102,6 +168,9 @@ public sealed class DomainRepair
 
     private static string RequirePackage(string packageName) =>
         IsPackageName(packageName) ? packageName : throw new DomainRepairException(400, "invalid_package", "A plain extension package name is required.");
+
+    /// <summary>True while a repair or rollback of the package runs.</summary>
+    public bool IsChanging(string packageName) => _changing.ContainsKey(packageName);
 
     /// <summary>The last saved report of a package, or null.</summary>
     public JsonObject? LastReport(string packageName)
@@ -111,6 +180,13 @@ public sealed class DomainRepair
         if (bytes is null) return null;
         try { return JsonNode.Parse(bytes) as JsonObject; }
         catch (JsonException) { return null; }
+    }
+
+    private async Task<T> UnderAdminLockAsync<T>(Func<Task<T>> work, CancellationToken cancellationToken)
+    {
+        await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await work().ConfigureAwait(false); }
+        finally { _adminLock.Release(); }
     }
 
     /// <summary>Runs the whole repair (a–f). Expected failures end in the report; only a bad package name or cancellation throw.</summary>
@@ -124,7 +200,19 @@ public sealed class DomainRepair
             ["kind"] = "domain-repair", ["package"] = packageName, ["started_at"] = Now(), ["state"] = "running",
             ["requested_new_host"] = options.NewHost, ["requested_old_host"] = options.OldHost,
         };
-        void Say(string text) { report["message"] = text; progress?.Invoke(text); }
+        if (!_changing.TryAdd(packageName, 0))
+        {
+            // Not saved: the running repair owns the package's last report.
+            report["state"] = "refused"; report["reason"] = "busy"; report["finished_at"] = Now();
+            report["message"] = "A repair or rollback of " + packageName + " is already running.";
+            return report;
+        }
+        void Say(string text)
+        {
+            report["message"] = text;
+            try { progress?.Invoke(text); }
+            catch (Exception) { }
+        }
         JsonObject Finish(string state, string message)
         {
             report["state"] = state; report["message"] = message; report["finished_at"] = Now();
@@ -132,26 +220,58 @@ public sealed class DomainRepair
             return report;
         }
 
-        await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         _keptVersions.TryRemove(packageName, out _);
+        // Set once the repaired jar is installed: from then on a cancellation restores the kept jar first.
+        byte[]? keptJar = null; var keptSha = ""; var installed = false;
+        Task<JsonObject> Restore(byte[] kept, string reason)
+        {
+            installed = false;
+            return RestoreAsync(packageName, kept, keptSha, report, reason, Finish);
+        }
         try
         {
-            // (a) the last working code
+            // (0) SRC-8: a maintained version in a configured repository replaces the repair.
+            if (_officialReplacement is not null)
+            {
+                Say("Checking the configured repositories for a maintained version");
+                string? official;
+                try { official = await _officialReplacement(packageName, cancellationToken).ConfigureAwait(false); }
+                catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                {
+                    official = null;
+                    report["official_replacement_check"] = "unavailable: " + error.Message;
+                }
+                if (official is not null)
+                {
+                    report["reason"] = "official_replacement"; report["official_replacement"] = official;
+                    return Finish("refused", "A maintained version is available from a configured repository (" + official
+                        + "). Update or install it from the repository in Sources instead of repairing.");
+                }
+            }
+
+            // (a) the last working code (host reads under the admin lock)
             Say("Reading the installed extension");
-            var extension = await _host.ExtensionAsync(packageName, cancellationToken).ConfigureAwait(false);
-            if (extension is null || !(SourceResponseContract.Boolean(extension["isInstalled"], out var installed) && installed))
+            var (extension, jar) = await UnderAdminLockAsync<(JsonObject? Row, byte[]? Jar)>(async () =>
+            {
+                var row = await _host.ExtensionAsync(packageName, cancellationToken).ConfigureAwait(false);
+                if (row is null || !(SourceResponseContract.Boolean(row["isInstalled"], out var present) && present)
+                    || SourceResponseContract.Text(row["loadError"]).Length > 0)
+                    return (row, (byte[]?)null);
+                return (row, await _host.ReadJarAsync(packageName, cancellationToken).ConfigureAwait(false));
+            }, cancellationToken).ConfigureAwait(false);
+            if (extension is null || !(SourceResponseContract.Boolean(extension["isInstalled"], out var isInstalled) && isInstalled))
                 return Finish("refused", packageName + " is not installed on the source host.");
             var loadError = SourceResponseContract.Text(extension["loadError"]);
             if (loadError.Length > 0) return Finish("refused", "The installed extension does not load (" + loadError + "); a domain migration cannot repair that.");
+            if (jar is null) return Finish("failed", "The installed jar could not be read.");
             var sources = (extension["source"] as JsonObject)?["nodes"] is JsonArray nodes ? nodes.OfType<JsonObject>().ToList() : [];
             report["version"] = SourceResponseContract.Text(extension["versionName"]);
             report["sources_before"] = Sources(sources);
-            var jar = await _host.ReadJarAsync(packageName, cancellationToken).ConfigureAwait(false);
             var kept = Keep(packageName, jar, extension, "before-domain-repair");
             report["kept"] = kept;
-            var keptSha = SourceResponseContract.Text(kept["sha256"]);
+            keptSha = SourceResponseContract.Text(kept["sha256"]);
 
-            // (b) old and new address
+            // (b) old and new address (no lock: public requests)
             string oldHost;
             try { oldHost = OldHost(sources, options.OldHost); }
             catch (DomainMigrationException error) { report["reason"] = error.Code; return Finish("refused", error.Message); }
@@ -178,9 +298,16 @@ public sealed class DomainRepair
                 { report["reason"] = "new_host_unknown"; return Finish("refused", "The old address does not lead to a working site; give the new address."); }
                 if (DomainMigration.SameSite(finalHost, oldHost))
                 { report["reason"] = "new_host_unknown"; return Finish("refused", "The old address still answers on the same site (" + finalHost + "); give the new address if it moved."); }
+                if (ParkingHost(observation) is { } parked)
+                {
+                    report["reason"] = "parked_domain";
+                    return Finish("refused", "The old address redirects to a domain parking or for-sale page (" + parked + "), not to a moved site; give the new address if you know it.");
+                }
                 newHost = finalHost;
                 if (final.StartsWith("https://", StringComparison.Ordinal) && oldBase.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) upgrade = true;
                 report["address_basis"] = "observed-redirect";
+                // A different name is allowed (sites rename when they move) but only the content check can accept it.
+                report["shares_name_label"] = SharesNameLabel(oldHost, newHost);
             }
             report["new_host"] = newHost;
 
@@ -195,22 +322,31 @@ public sealed class DomainRepair
             }
             report["migration"] = migration.Report;
 
-            // (d) install
+            // (d) install (admin lock)
             Say("Installing the repaired extension");
+            keptJar = jar;
             JsonObject repaired;
-            try { repaired = await _host.InstallJarAsync(packageName, migration.Jar, cancellationToken).ConfigureAwait(false); }
+            try
+            {
+                repaired = await UnderAdminLockAsync(async () =>
+                {
+                    // From the first byte sent the host may have the repaired jar: a cancellation restores.
+                    installed = true;
+                    return await _host.InstallJarAsync(packageName, migration.Jar, cancellationToken).ConfigureAwait(false);
+                }, cancellationToken).ConfigureAwait(false);
+            }
             catch (Exception error) when (error is not OperationCanceledException)
             {
                 report["install_error"] = error.Message;
-                return await RestoreAsync(packageName, jar, keptSha, report, "The repaired extension could not be installed: " + error.Message, Finish, cancellationToken).ConfigureAwait(false);
+                return await Restore(jar, "The repaired extension could not be installed: " + error.Message).ConfigureAwait(false);
             }
             var after = (repaired["source"] as JsonObject)?["nodes"] is JsonArray afterNodes ? afterNodes.OfType<JsonObject>().ToList() : [];
             report["sources_after"] = Sources(after);
             var repairedError = SourceResponseContract.Text(repaired["loadError"]);
             if (repairedError.Length > 0)
-                return await RestoreAsync(packageName, jar, keptSha, report, "The repaired extension does not load: " + repairedError, Finish, cancellationToken).ConfigureAwait(false);
+                return await Restore(jar, "The repaired extension does not load: " + repairedError).ConfigureAwait(false);
 
-            // (e) content check on a source that used the old host
+            // (e) content check on a source that used the old host (no lock: source traffic, bounded)
             var checkedIds = sources.Where(row => HostOf(SourceResponseContract.Text(row["baseUrl"])) == oldHost)
                 .Select(row => SourceResponseContract.Identity(row["id"])).Where(id => !string.IsNullOrEmpty(id)).ToHashSet(StringComparer.Ordinal);
             var target = after.FirstOrDefault(row => checkedIds.Contains(SourceResponseContract.Identity(row["id"]) ?? "")
@@ -218,28 +354,43 @@ public sealed class DomainRepair
                 ?? after.FirstOrDefault(row => checkedIds.Contains(SourceResponseContract.Identity(row["id"]) ?? ""))
                 ?? after.FirstOrDefault();
             if (target is null)
-                return await RestoreAsync(packageName, jar, keptSha, report, "The repaired extension has no sources to check.", Finish, cancellationToken).ConfigureAwait(false);
+                return await Restore(jar, "The repaired extension has no sources to check.").ConfigureAwait(false);
             var sourceId = SourceResponseContract.Identity(target["id"]) ?? "";
             Say("Checking content of " + SourceResponseContract.Text(target["name"]));
             var check = await ContentCheck.RunAsync(_host.Content, sourceId, SourceResponseContract.Text(target["name"]), options.Query,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+                cancellationToken: cancellationToken, deadline: options.ContentDeadline, progress: Say).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
             report["content_check"] = check.ToJson();
             if (check.Ok)
             {
                 report["installed_sha256"] = migration.Report["output_sha256"]?.DeepClone();
+                installed = false;
                 return Finish("repaired", "Repaired: " + oldHost + " now reads " + newHost + "; the content check passed ("
                     + check.Pages.ToString(CultureInfo.InvariantCulture) + " pages, first image " + check.ImageBytes.ToString(CultureInfo.InvariantCulture) + " bytes).");
             }
 
             // (f) rollback
-            return await RestoreAsync(packageName, jar, keptSha, report, "The content check failed at " + check.Step + ": " + check.Error, Finish, cancellationToken).ConfigureAwait(false);
+            return await Restore(jar, "The content check failed at " + check.Step + ": " + check.Error).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (installed && keptJar is not null)
+        {
+            // Never leave an unverified repaired jar installed: restore without a token, save, then report the cancel.
+            report["reason"] = "cancelled";
+            await Restore(keptJar!, "The repair was cancelled after the repaired extension was installed.").ConfigureAwait(false);
+            throw;
         }
         catch (Exception error) when (error is not OperationCanceledException && error is not DomainRepairException)
         {
             report["error"] = error.GetType().Name;
+            if (installed && keptJar is not null)
+                return await Restore(keptJar!, "The repair failed after the repaired extension was installed: " + error.Message).ConfigureAwait(false);
             return Finish("failed", error.Message);
         }
-        finally { _adminLock.Release(); }
+        finally
+        {
+            _keptVersions.TryRemove(packageName, out _);
+            _changing.TryRemove(packageName, out _);
+        }
     }
 
     /// <summary>Installs the most recently kept jar of a package again (the last working code before a repair).</summary>
@@ -248,7 +399,17 @@ public sealed class DomainRepair
         RequirePackage(packageName);
         var (sha, record, jar) = LatestKept(packageName) ?? throw new DomainRepairException(404, "nothing_kept", "No working jar of " + packageName + " has been kept.");
         var report = new JsonObject { ["kind"] = "domain-repair-rollback", ["package"] = packageName, ["started_at"] = Now(), ["kept"] = record.DeepClone() };
-        await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!_changing.TryAdd(packageName, 0))
+            throw new DomainRepairException(409, "busy", "A repair or rollback of " + packageName + " is already running.");
+        try
+        {
+            await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            _changing.TryRemove(packageName, out _);
+            throw;
+        }
         _keptVersions.TryRemove(packageName, out _);
         try
         {
@@ -262,7 +423,11 @@ public sealed class DomainRepair
         {
             report["state"] = "rollback_failed"; report["message"] = "The kept jar could not be installed: " + error.Message;
         }
-        finally { _adminLock.Release(); }
+        finally
+        {
+            _adminLock.Release();
+            _changing.TryRemove(packageName, out _);
+        }
         report["finished_at"] = Now();
         SaveReport(packageName, report);
         return report;
@@ -277,9 +442,12 @@ public sealed class DomainRepair
     public async Task<JsonObject?> KeepLastWorkingAsync(string packageName, CancellationToken cancellationToken = default)
     {
         RequirePackage(packageName);
+        // A repair in progress may have an unverified jar installed; that is never kept as working.
+        if (_changing.ContainsKey(packageName)) return null;
         await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            if (_changing.ContainsKey(packageName)) return null;
             var extension = await _host.ExtensionAsync(packageName, cancellationToken).ConfigureAwait(false);
             if (extension is null || !(SourceResponseContract.Boolean(extension["isInstalled"], out var installed) && installed)) return null;
             if (SourceResponseContract.Text(extension["loadError"]).Length > 0) return null;
@@ -321,24 +489,24 @@ public sealed class DomainRepair
         });
     }
 
+    /// <summary>Installs the kept jar again under the admin lock. Never cancelled: it runs after a cancel too.</summary>
     private async Task<JsonObject> RestoreAsync(string packageName, byte[] kept, string keptSha, JsonObject report, string reason,
-        Func<string, string, JsonObject> finish, CancellationToken cancellationToken)
+        Func<string, string, JsonObject> finish)
     {
         report["failure"] = reason;
         try
         {
             // The host's own failure path already reloads the previous jar; installing the kept bytes again makes the
             // outcome explicit and also covers a repaired jar that loaded but does not work.
-            var answer = await _host.InstallJarAsync(packageName, kept, CancellationToken.None).ConfigureAwait(false);
+            var answer = await UnderAdminLockAsync(() => _host.InstallJarAsync(packageName, kept, CancellationToken.None), CancellationToken.None).ConfigureAwait(false);
             var loadError = SourceResponseContract.Text(answer["loadError"]);
             report["rollback"] = new JsonObject { ["sha256"] = keptSha, ["load_error"] = loadError.Length == 0 ? null : loadError };
             if (loadError.Length > 0) return finish("rollback_failed", reason + " The kept jar was installed again but does not load: " + loadError);
             return finish("rolled_back", reason + " The last working jar is installed again.");
         }
-        catch (Exception error) when (error is not OperationCanceledException)
+        catch (Exception error)
         {
             report["rollback"] = new JsonObject { ["sha256"] = keptSha, ["error"] = error.Message };
-            cancellationToken.ThrowIfCancellationRequested();
             return finish("rollback_failed", reason + " Reinstalling the kept jar failed: " + error.Message + ". Use rollback again.");
         }
     }

@@ -279,6 +279,103 @@ public static class DomainMigrationTests
             var refused = repair.RunAsync(FakeHost.Package).GetAwaiter().GetResult();
             Check.Equal("refused", refused["state"]!.GetValue<string>());
         });
+
+        suite.Add("domain repair: SRC-8 a maintained version in a configured repository refuses the repair", () =>
+        {
+            using var temp = new Sandbox();
+            var host = new FakeHost(SampleJar()) { ContentWorks = true };
+            var asked = new List<string>();
+            var repair = new DomainRepair(Path.Combine(temp.Path, "source-maintenance"), host, new SemaphoreSlim(1, 1),
+                officialReplacement: (package, _) => { asked.Add(package); return Task.FromResult<string?>("version 1.4.9 is listed by https://repo.example/index.min.json"); });
+            var refused = repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example")).GetAwaiter().GetResult();
+            Check.Equal("refused", refused["state"]!.GetValue<string>());
+            Check.Equal("official_replacement", refused["reason"]!.GetValue<string>());
+            Check.True(refused["message"]!.GetValue<string>().Contains("repository", StringComparison.Ordinal), "tells the person to use the repository");
+            Check.Equal(0, host.Installs.Count);
+            Check.Equal(FakeHost.Package, asked.Single());
+            Check.Equal("refused", repair.LastReport(FakeHost.Package)!["state"]!.GetValue<string>());
+
+            // No maintained version (or an unreadable inventory): the repair goes ahead.
+            var open = new DomainRepair(Path.Combine(temp.Path, "open"), host, new SemaphoreSlim(1, 1),
+                officialReplacement: (_, _) => Task.FromException<string?>(new HttpRequestException("engine down")));
+            var repaired = open.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example")).GetAwaiter().GetResult();
+            Check.Equal("repaired", repaired["state"]!.GetValue<string>());
+            Check.True(repaired["official_replacement_check"] is not null, "an unavailable check is recorded");
+        });
+
+        suite.Add("domain repair: the admin lock is free during the content check and a second repair of the package is refused", () =>
+        {
+            using var temp = new Sandbox();
+            var host = new FakeHost(SampleJar()) { ContentWorks = true };
+            var admin = new SemaphoreSlim(1, 1);
+            var repair = new DomainRepair(Path.Combine(temp.Path, "source-maintenance"), host, admin);
+            int? lockDuringCheck = null; JsonObject? second = null; DomainRepairException? rollback = null; JsonObject? keep = null;
+            host.DuringCheck = async _ =>
+            {
+                host.DuringCheck = null;
+                lockDuringCheck = admin.CurrentCount;
+                second = await repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "other.example"));
+                try { await repair.RollbackAsync(FakeHost.Package); }
+                catch (DomainRepairException error) { rollback = error; }
+                keep = await repair.KeepLastWorkingAsync(FakeHost.Package);
+            };
+            var progress = new List<string>();
+            var repaired = repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example"), progress.Add).GetAwaiter().GetResult();
+            Check.Equal("repaired", repaired["state"]!.GetValue<string>());
+            Check.Equal(1, lockDuringCheck ?? -1);
+            Check.Equal("refused", second!["state"]!.GetValue<string>());
+            Check.Equal("busy", second!["reason"]!.GetValue<string>());
+            Check.Equal(409, rollback?.Status ?? 0);
+            Check.True(keep is null, "an unverified repaired jar is never kept as working");
+            Check.Equal(1, host.Installs.Count);
+            Check.True(progress.Any(text => text.StartsWith("Content check:", StringComparison.Ordinal)), "the content check reports progress");
+            Check.Equal("repaired", repair.LastReport(FakeHost.Package)!["state"]!.GetValue<string>());
+            Check.Equal(1, admin.CurrentCount);
+        });
+
+        suite.Add("domain repair: a cancel after install restores the kept jar, saves the report and rethrows", () =>
+        {
+            using var temp = new Sandbox();
+            var original = SampleJar();
+            var host = new FakeHost(original) { ContentWorks = true };
+            var admin = new SemaphoreSlim(1, 1);
+            var repair = new DomainRepair(Path.Combine(temp.Path, "source-maintenance"), host, admin);
+            using var cancel = new CancellationTokenSource();
+            host.DuringCheck = _ => { cancel.Cancel(); return Task.CompletedTask; };
+            Check.Throws<OperationCanceledException>(() => repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example"),
+                cancellationToken: cancel.Token).GetAwaiter().GetResult());
+            Check.Equal(2, host.Installs.Count);
+            Check.True(host.Installs[1].AsSpan().SequenceEqual(original), "kept jar installed again after the cancel");
+            var report = repair.LastReport(FakeHost.Package)!;
+            Check.Equal("rolled_back", report["state"]!.GetValue<string>());
+            Check.Equal("cancelled", report["reason"]!.GetValue<string>());
+            Check.Equal(1, admin.CurrentCount);
+            Check.True(!repair.IsChanging(FakeHost.Package), "package gate released");
+
+            // A content check that hangs ends at its deadline and rolls back.
+            host.Jar = original; host.Installs.Clear();
+            host.DuringCheck = token => Task.Delay(Timeout.Infinite, token);
+            var slow = repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example", ContentDeadline: TimeSpan.FromMilliseconds(200)))
+                .GetAwaiter().GetResult();
+            Check.Equal("rolled_back", slow["state"]!.GetValue<string>());
+            Check.True(slow["content_check"]!["error"]!.GetValue<string>().Contains("did not finish", StringComparison.Ordinal), "deadline reported");
+            Check.True(host.Installs[^1].AsSpan().SequenceEqual(original), "kept jar installed again after the deadline");
+        });
+
+        suite.Add("domain repair: an observed redirect to a parking service is refused", () =>
+        {
+            using var temp = new Sandbox();
+            var host = new FakeHost(SampleJar()) { ContentWorks = true };
+            var repair = new DomainRepair(Path.Combine(temp.Path, "source-maintenance"), host, new SemaphoreSlim(1, 1),
+                (url, _) => Task.FromResult(new JsonObject { ["requested_url"] = url, ["final_url"] = "https://old-example.parkingcrew.net/", ["state"] = "working",
+                    ["redirects"] = new JsonArray((JsonNode?)"https://old-example.parkingcrew.net/") }));
+            var refused = repair.RunAsync(FakeHost.Package).GetAwaiter().GetResult();
+            Check.Equal("refused", refused["state"]!.GetValue<string>());
+            Check.Equal("parked_domain", refused["reason"]!.GetValue<string>());
+            Check.Equal(0, host.Installs.Count);
+            // The admin may still name such a host explicitly (manual new_host is not checked).
+            Check.Equal("repaired", repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example")).GetAwaiter().GetResult()["state"]!.GetValue<string>());
+        });
     }
 
     /// <summary>A source host with one installed package whose content check works or fails on demand.</summary>
@@ -309,8 +406,14 @@ public static class DomainMigrationTests
         public Task<JsonObject> DetailsAsync(long mangaId, CancellationToken cancellationToken) =>
             Task.FromResult(new JsonObject { ["manga"] = new JsonObject { ["id"] = mangaId, ["title"] = "T" },
                 ["chapters"] = new JsonArray(new JsonObject { ["id"] = 70, ["mangaId"] = mangaId }, new JsonObject { ["id"] = 71, ["mangaId"] = mangaId }) });
-        public Task<List<string>> PagesAsync(long chapterId, CancellationToken cancellationToken) =>
-            Task.FromResult(ContentWorks ? new List<string> { "/api/v1/manga/7/chapter/1/page/0" } : []);
+        /// <summary>Runs inside the content check (after the repaired jar is installed), before the pages answer.</summary>
+        public Func<CancellationToken, Task>? DuringCheck { get; set; }
+        public async Task<List<string>> PagesAsync(long chapterId, CancellationToken cancellationToken)
+        {
+            if (DuringCheck is { } during) await during(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return ContentWorks ? new List<string> { "/api/v1/manga/7/chapter/1/page/0" } : [];
+        }
         public Task<(byte[] Bytes, string ContentType)> FirstImageAsync(long mangaId, long chapterId, CancellationToken cancellationToken) =>
             Task.FromResult((new byte[2048], "image/jpeg"));
     }

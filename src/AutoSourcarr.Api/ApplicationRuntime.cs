@@ -51,6 +51,10 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private Task? _healthMonitor;
     private AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher? _autoRepair;
     private Task? _autoRepairLoop;
+    private AutoSourcarr.Core.Sources.Inventory.HostRawInstalledSources? _rawInstalled;
+    private AutoSourcarr.Core.Repair.SourceRawService? _raws;
+    private AutoSourcarr.Core.Repair.RawRepositoryCache? _rawRepositories;
+    private AutoSourcarr.Core.Sources.Inventory.SourceBaselineStore? _baselines;
     private readonly CancellationTokenSource _healthStop = new();
     internal AutoSourcarr.Api.Security.AccessControlServices? Access => _access;
     private CatalogueRuntime? _catalogue;
@@ -217,9 +221,18 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._repositoryPreview = new(owner._publicFetcher);
             var maintenanceRoot = Path.Combine(owner._dataDirectory!, "source-maintenance");
             var healthStore = new SourceHealthStore(owner.Database, owner.Privacy);
-            var domainRepair = new AutoSourcarr.Core.Repair.Migration.DomainRepair(maintenanceRoot, owner._source.Client, owner._admin, owner._publicFetcher);
             var orphans = new AutoSourcarr.Core.Sources.Inventory.SourceOrphans(maintenanceRoot, owner._source.Client, owner._publicFetcher!,
                 SourceInventoryServices.BundledSeed, scrub: owner.Privacy.Text);
+            // SRC-8: before a repair, a newer version listed by a configured repository replaces it (same listing rule as the orphan labels).
+            var domainRepair = new AutoSourcarr.Core.Repair.Migration.DomainRepair(maintenanceRoot, owner._source.Client, owner._admin, owner._publicFetcher,
+                officialReplacement: async (package, token) =>
+                {
+                    using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    deadline.CancelAfter(TimeSpan.FromSeconds(15));
+                    var rows = await orphans.ReadInventoryAsync(deadline.Token).ConfigureAwait(false);
+                    var configured = owner._apiV1 is { } api ? SourceInventoryV1Endpoints.ConfiguredRepositories(api) : null;
+                    return AutoSourcarr.Core.Sources.Inventory.SourceOrphans.MaintainedVersion(rows, package, configured);
+                });
             var maintenance = new AutoSourcarr.Core.Sources.Inventory.SourceMaintenanceState(maintenanceRoot, startup.ConfigurationRoot);
             owner._health = new SourceHealthCoordinator(healthStore, owner._source.Client, owner.Io, owner.Lanes,
                 owner.Tasks, new NoRepairObservations(), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
@@ -229,10 +242,54 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             {
                 owner._autoRepair = AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher.Create(maintenanceRoot, maintenance, healthStore, orphans, domainRepair,
                     owner._publicFetcher, ready: () => owner._source.Cached().Ready,
-                    record: summary => owner.Logs.Record("Source repair", "Automatic repair pass: " + (summary["message"]?.GetValue<string>() ?? "")));
+                    record: summary => owner.Logs.Record("Source repair", "Automatic repair pass: " + (summary["message"]?.GetValue<string>() ?? "")),
+                    // REP-7: every automatic attempt is a source-auto-repair job (Tasks → Repairs).
+                    runner: AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher.JobRunner(owner.Jobs));
                 var watcher = owner._autoRepair;
                 owner._autoRepairLoop = Task.Run(() => watcher.RunAsync(error => owner.Errors.Record("Source repair", error.Message,
                     "source-auto-repair|" + error.GetType().Name), owner._healthStop.Token));
+            }
+            // REP-1: source code and the installed package of each source (raws routes, original-APK evidence) on the source host.
+            SourceRawRoutes? rawRoutes = null;
+            if (useHost)
+            {
+                try
+                {
+                    var rawShared = new AutoSourcarr.Core.Repair.RawStore(Path.Combine(owner._dataDirectory!, "sources", "raw"), publicCode: true);
+                    var rawPrivate = new AutoSourcarr.Core.Repair.RawStore(Path.Combine(maintenanceRoot, "raw-private"));
+                    var rawRequests = new PrivateDocumentStore(Path.Combine(maintenanceRoot, "raw-requests"));
+                    var repairHistory = new AutoSourcarr.Core.Repair.RepairHistory(new PrivateDocumentStore(Path.Combine(maintenanceRoot, "history")));
+                    repairHistory.Load();
+                    owner._rawRepositories = new AutoSourcarr.Core.Repair.RawRepositoryCache(Path.Combine(maintenanceRoot, "raw-downloads"), rawShared, owner._publicFetcher!);
+                    owner._rawInstalled = new AutoSourcarr.Core.Sources.Inventory.HostRawInstalledSources(owner._source.Client, maintenanceRoot,
+                        () => { var status = owner._source.Cached(); return (status.Ready, (long)status.Restarts); }, owner.Io);
+                    IReadOnlyList<string> ConfiguredIndexes()
+                    {
+                        try
+                        {
+                            return (owner._repositories?.Snapshot()["repositories"] as JsonArray ?? []).OfType<JsonObject>()
+                                .Select(row => row["url"] is JsonValue url && url.TryGetValue<string>(out var text) ? text : "")
+                                .Where(url => url.Length > 0).ToList();
+                        }
+                        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException
+                            or InvalidOperationException or System.Text.Json.JsonException) { return []; }
+                    }
+                    var repositories = owner._rawRepositories;
+                    owner._raws = new AutoSourcarr.Core.Repair.SourceRawService(
+                        () => new AutoSourcarr.Core.Repair.SourceRawCatalog(rawShared, rawPrivate, rawRequests, repositories, owner._publicFetcher!),
+                        owner._rawInstalled, owner._admin, ConfiguredIndexes, () => new JsonArray(),
+                        owner.Io, owner.Lanes, owner.Tasks, owner.Privacy, message => owner.Logs.Record("Source code", message), repairHistory);
+                    owner._baselines = new AutoSourcarr.Core.Sources.Inventory.SourceBaselineStore(owner._rawInstalled, maintenanceRoot, owner.Io);
+                    rawRoutes = new SourceRawRoutes
+                    {
+                        Service = owner._raws, Installed = owner._rawInstalled, AdminLock = owner._admin, Io = owner.Io, History = repairHistory,
+                    };
+                }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or AutoSourcarr.Core.Repair.RepairHistoryConflictException)
+                {
+                    owner.Errors.Record("Source code", "Source-code storage could not be opened: " + error.Message, "source-raw-storage|" + error.GetType().Name);
+                    rawRoutes = null;
+                }
             }
             owner._healthMonitor = Task.Run(() => owner._health.RunMonitorAsync(error => owner.Errors.Record("Source health", error.Message, "source-health-monitor"),
                 owner._healthStop.Token));
@@ -247,7 +304,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 SourceInventory = new SourceInventoryServices
                 {
                     Orphans = orphans, Maintenance = maintenance, AutoRepair = owner._autoRepair,
-                    Client = owner._source.Client, AdminLock = owner._admin,
+                    Client = owner._source.Client, AdminLock = owner._admin, Baselines = owner._baselines,
                     RecordError = error => owner.Errors.Record("Source orphans", error.Message, "source-orphans|" + error.GetType().Name)
                 },
                 SourceRepair = new SourceRepairServices
@@ -259,10 +316,12 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 {
                     MaintenanceRoot = maintenanceRoot,
                     ReadInstalledJar = (package, token) => owner._source.Client.ReadExtensionJarAsync(package, token),
+                    Raws = rawRoutes,
                 },
                 Sources = new SourceServices
                 {
-                    Configuration = owner._sourceConfiguration!, Client = owner._source.Client, Preferences = owner._sourcePreferences!, AdminLock = owner._admin
+                    Configuration = owner._sourceConfiguration!, Client = owner._source.Client, Preferences = owner._sourcePreferences!, AdminLock = owner._admin,
+                    UploadStagingRoot = Path.Combine(owner._dataDirectory!, "source-upload-previews")
                 },
                 SourceRuntime = new SourceRuntimeServices
                 {
@@ -284,6 +343,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             owner._writer = owner.WriteLogsAsync();
             owner._sourceWatch = owner.WatchSourceAsync();
             await owner._source.StartAsync().ConfigureAwait(false);
+            if (owner._raws is not null) await owner._raws.StartAsync(cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             return owner;
         }
@@ -517,15 +577,21 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             }
         }
         await Attempt("HTTP drain", BeginHttpStopAsync).ConfigureAwait(false);
-        await Attempt("Job queue", () => Jobs.DisposeAsync().AsTask()).ConfigureAwait(false);
-        await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
-        if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
-        if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
+        // The background loops stop first: they start work on the lanes and the job queue, which close next. A running
+        // automatic repair job is cancelled with the job queue and restores the kept jar itself.
         await Attempt("Source health monitor stop", () => _healthStop.CancelAsync()).ConfigureAwait(false);
         if (_healthMonitor is not null)
             await Attempt("Source health monitor", async () => { try { await _healthMonitor.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
         if (_autoRepairLoop is not null)
             await Attempt("Automatic source repair", async () => { try { await _autoRepairLoop.ConfigureAwait(false); } catch (OperationCanceledException) { } }).ConfigureAwait(false);
+        await Attempt("Job queue", () => Jobs.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_raws is not null) await Attempt("Source code archive", () => _raws.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_baselines is not null) await Attempt("Source baselines", () => _baselines.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_rawInstalled is not null) await Attempt("Installed source observations", () => _rawInstalled.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_rawRepositories is not null) await Attempt("Source code downloads", () => _rawRepositories.DisposeAsync().AsTask()).ConfigureAwait(false);
+        await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_health is not null) await Attempt("Source health", () => _health.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_sourcePreferences is not null) await Attempt("Source preferences", () => _sourcePreferences.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_publicFetcher is not null) await Attempt("Public fetcher", () => _publicFetcher.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -552,7 +618,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             foreach (var root in _movedRoots)
                 try { root.Dispose(); } catch (Exception error) { errors.Add(error); }
         try { _roots?.Dispose(); } catch (Exception error) { errors.Add(error); }
-        _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose();
+        _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose(); _healthStop.Dispose();
         if (errors.Count > 0) throw new AggregateException("Application shutdown retained cleanup failures.", errors);
     }
 

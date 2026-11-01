@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Repair.Migration;
 
 namespace AutoSourcarr.Tests.Repair;
@@ -150,6 +151,75 @@ public static class AutoRepairWatcherTests
             lock (errors) Check.Equal(0, errors.Count);
         });
 
+        suite.Add("auto repair: REP-7 each attempt runs as a source-auto-repair job with the package as context", () =>
+        {
+            using var temp = new Sandbox();
+            var tasks = new TaskRegistry();
+            var queue = new JobQueue(tasks);
+            try
+            {
+                var world = new World { Runner = AutoRepairWatcher.JobRunner(queue) };
+                world.Moved.Add("ok.example"); world.Moved.Add("no.example"); world.Moved.Add("bad.example");
+                world.Candidates.AddRange([
+                    new(Prefix + "ok", "https://ok.example", "health-failed"),
+                    new(Prefix + "no", "https://no.example", "orphan"),
+                    new(Prefix + "bad", "https://bad.example", "orphan"),
+                ]);
+                world.Outcome = package => package.EndsWith(".ok", StringComparison.Ordinal) ? "repaired"
+                    : package.EndsWith(".no", StringComparison.Ordinal) ? "refused" : "rolled_back";
+                var summary = world.Watcher(temp.Path).RunOnceAsync().GetAwaiter().GetResult();
+                Check.Equal("done", summary["state"]!.GetValue<string>());
+                Check.Equal(3, world.Repairs.Count);
+                Check.Equal(1, summary["repaired"]!.GetValue<int>());
+                var rows = (tasks.Snapshot()["items"] as JsonArray ?? []).OfType<JsonObject>()
+                    .Where(row => row["kind"]?.GetValue<string>() == AutoRepairWatcher.AttemptJob.Name)
+                    .ToDictionary(row => row["context"]!.GetValue<string>());
+                Check.Equal(3, rows.Count);
+                Check.Equal("automatic", rows[Prefix + "ok"]["origin"]!.GetValue<string>());
+                Check.Equal("completed", rows[Prefix + "ok"]["state"]!.GetValue<string>());
+                Check.Equal("completed", rows[Prefix + "no"]["state"]!.GetValue<string>());
+                Check.Equal("failed", rows[Prefix + "bad"]["state"]!.GetValue<string>());
+                var results = summary["results"]!.AsArray().OfType<JsonObject>().ToDictionary(row => row["package"]!.GetValue<string>());
+                Check.Equal("rolled_back", results[Prefix + "bad"]["state"]!.GetValue<string>());
+            }
+            finally { queue.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        });
+
+        suite.Add("auto repair: a redirect to a parking service is not a move", () =>
+        {
+            var parked = new JsonObject { ["state"] = "working", ["final_url"] = "https://www.sedoparking.com/old.example", ["redirects"] = new JsonArray() };
+            Check.True(AutoRepairWatcher.RedirectTarget(parked, "old.example") is null, "parked final host refused");
+            var through = new JsonObject { ["state"] = "working", ["final_url"] = "https://lander.example/",
+                ["redirects"] = new JsonArray((JsonNode?)"https://ww1.bodis.com/?d=old.example", "https://lander.example/") };
+            Check.True(AutoRepairWatcher.RedirectTarget(through, "old.example") is null, "redirect through a parking service refused");
+            var moved = new JsonObject { ["state"] = "working", ["final_url"] = "https://old.example.net/", ["redirects"] = new JsonArray() };
+            Check.Equal("old.example.net", AutoRepairWatcher.RedirectTarget(moved, "old.example"));
+            Check.True(DomainRepair.SharesNameLabel("mangasite.com", "www.mangasite.net"), "same name label");
+            Check.True(!DomainRepair.SharesNameLabel("mangasite.com", "parked-lookalike.net"), "different name label");
+        });
+
+        suite.Add("auto repair: a saved pass stamp far in the future does not stop the loop", () =>
+        {
+            using var temp = new Sandbox();
+            var root = Path.Combine(temp.Path, "skew");
+            var world = new World();
+            var summaries = new List<JsonObject>();
+            var passDone = new SemaphoreSlim(0);
+            var watcher = world.Watcher(root, record: summary => { lock (summaries) summaries.Add(summary); passDone.Release(); },
+                options: new AutoRepairOptions { FirstDelay = TimeSpan.FromHours(1), Interval = TimeSpan.FromDays(1) });
+            Directory.CreateDirectory(Path.GetDirectoryName(watcher.StatePath)!);
+            File.WriteAllText(watcher.StatePath, "{\"last_pass_at\":\"2200-01-01T00:00:00.0000000+00:00\"}");
+            var errors = new List<Exception>();
+            using var stop = new CancellationTokenSource();
+            var loop = watcher.RunAsync(error => { lock (errors) errors.Add(error); }, stop.Token);
+            Check.True(!loop.IsCompleted, "loop keeps waiting instead of failing on a huge delay");
+            watcher.Trigger();
+            Check.True(passDone.Wait(TimeSpan.FromSeconds(10)), "a triggered pass still runs");
+            stop.Cancel();
+            Check.True(loop.Wait(TimeSpan.FromSeconds(10)), "loop ended");
+            lock (errors) Check.Equal(0, errors.Count);
+        });
+
         suite.Add("last working: a passed package's jar is kept once per digest", () =>
         {
             using var temp = new Sandbox();
@@ -214,14 +284,17 @@ public static class AutoRepairWatcherTests
                         : SameSite.Contains(host) ? "https://www." + host + "/" : url;
                     return Task.FromResult(new JsonObject { ["state"] = "working", ["final_url"] = final });
                 },
-                async (package, repairOptions, token) =>
+                async (package, repairOptions, progress, token) =>
                 {
                     lock (Repairs) Repairs.Add((package, repairOptions));
                     RepairToken = token;
+                    progress?.Invoke("Repairing " + package);
                     if (Gate is { } gate) await gate();
-                    return new JsonObject { ["state"] = Outcome(package), ["message"] = "test", ["new_host"] = "new.example" };
+                    return new JsonObject { ["state"] = Outcome(package), ["message"] = "test " + Outcome(package), ["new_host"] = "new.example" };
                 },
-                options, Time, record);
+                options, Time, record, Runner);
+
+        public AutoRepairJobRunner? Runner { get; set; }
     }
 
     public sealed class FakeTime(DateTimeOffset start) : TimeProvider

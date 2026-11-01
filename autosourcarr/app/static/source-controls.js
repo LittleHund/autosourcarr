@@ -129,15 +129,25 @@ modal.addEventListener('keydown',event=>{
  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
 });
 
-/* A single queue prevents multiple installs competing for the engine. */
+/* A single queue prevents multiple installs competing for the engine. SRC-2: each APK is checked first (nothing is
+   installed), the person reviews its permissions, web addresses and warnings, and only a confirmed file is installed. */
 const upload={queue:[],running:false,rows:[]};
 function uploadStatus(){byId('sourceApkStatus').textContent=upload.running?`Installing extensions · ${upload.queue.length} waiting`:(upload.rows.length?'Installation queue complete. Review the results below.':'');byId('sourceApkClear').hidden=!upload.rows.length;byId('sourceApkClear').disabled=upload.running;}
 function uploadRow(file){const row=element('li');row.dataset.state='queued';row.textContent=file.name+' · Waiting';byId('sourceApkResults').append(row);upload.rows.push(row);return row;}
+function uploadReview(file,report){
+ const list=(title,items)=>`${title}: ${items?.length?items.join(', '):'none'}`;
+ return [`Install ${report.package||file.name}?`,list('Permissions',report.permissions),list('Web addresses',report.domains),list('Warnings',report.warnings),'These checks cannot prove an extension is safe.'].join('\n\n');
+}
 async function drainUploads(){
  if(upload.running)return;upload.running=true;let changed=false;uploadStatus();
  try{while(upload.queue.length){
-  const {file,row}=upload.queue.shift();row.dataset.state='installing';row.textContent=file.name+' · Installing…';uploadStatus();
-  try{const result=await api('/api/v1/source-extensions/upload',{method:'POST',body:file,headers:{'Content-Type':'application/vnd.android.package-archive','X-Filename':encodeURIComponent(file.name)},timeoutMs:240000,noMutationRefresh:true,suppressClientError:true});row.dataset.state='installed';row.textContent=file.name+' · '+(result.message||'Installed');changed=true;}
+  const {file,row}=upload.queue.shift();row.dataset.state='checking';row.textContent=file.name+' · Checking…';uploadStatus();
+  let report;
+  try{report=await api('/api/v1/source-extensions/upload',{method:'POST',body:file,headers:{'Content-Type':'application/vnd.android.package-archive','X-Filename':encodeURIComponent(file.name)},timeoutMs:240000,noMutationRefresh:true,suppressClientError:true});}
+  catch(error){row.dataset.state='failed';row.textContent=file.name+' · Check failed: '+error.message;continue;}
+  if(!window.confirm?.(uploadReview(file,report))){row.dataset.state='cancelled';row.textContent=file.name+' · Not installed (cancelled after review)';continue;}
+  row.dataset.state='installing';row.textContent=file.name+' · Installing…';
+  try{const result=await api('/api/v1/source-extensions/upload/confirm',{method:'POST',body:JSON.stringify({sha256:report.sha256}),timeoutMs:240000,noMutationRefresh:true,suppressClientError:true});row.dataset.state='installed';row.textContent=file.name+' · '+(result.message||'Installed');changed=true;}
   catch(error){const uncertain=error.name==='TimeoutError'||error.name==='TypeError'||Number(error.status_code)>=500||/not confirm|timed? ?out|timeout|network|failed to fetch/i.test(error.message);row.dataset.state=uncertain?'unconfirmed':'failed';row.textContent=file.name+' · '+(uncertain?'Installation not confirmed: ':'Installation failed: ')+error.message+(uncertain?' Refresh Sources to check whether it installed before retrying.':'');if(uncertain)changed=true;}
  }}finally{upload.running=false;uploadStatus();if(changed)refreshManagedSourcesAfterMutation();}
 }

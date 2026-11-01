@@ -65,20 +65,20 @@ const base=path=>Promise.resolve(path.includes('/suggestions')?{items:[{left:fir
   assert(!all(nodes.sourceOrphanList).some(node=>node.href),'Non-HTTPS provenance link is not clickable');
   await all(nodes.sourceOrphanList).find(node=>node.dataset.orphanMutation==='install').onclick();
   assert(!nodes.sourceOrphanList.textContent.includes('Example archive'));assert(nodes.sourceInstalledOrphanList.textContent.includes('Example archive'));
-  assert(nodes.sourceInstalledOrphanList.textContent.includes('Repair worker is not configured'));
+  assert(nodes.sourceInstalledOrphanList.textContent.includes('Source repair is not available'));
   assert(!all(nodes.sourceInstalledOrphanList).some(node=>node.dataset.orphanMutation==='repair'));
   assert(nodes.sourceInstalledOrphanList.textContent.includes('functionality unverified'));
-  // A missing binary can be rebuilt without installing it first; job creation is not installation.
-  let recoveryRequested=false;
-  apiImpl=(path,options)=>{if(path.endsWith('/repair')){recoveryRequested=true;return Promise.resolve({id:'recovery-1'});}return Promise.resolve({items:[{...row(),installed:false,state:'available',archive_url:'https://example.invalid/removed.jar',archive_available:false,can_install:false,can_repair:true,repair_job_id:recoveryRequested?'recovery-1':null}],refresh:{state:'complete'},worker_configured:true});};
+  // Repairs run on installed sources: a not-installed orphan (even with a dead download) is never offered a repair.
+  apiImpl=(path,options)=>Promise.resolve({items:[{...row(),installed:false,state:'available',archive_url:'https://example.invalid/removed.jar',archive_available:false,can_install:false,can_repair:false,repair_job_id:'recovery-1'}],refresh:{state:'complete'},worker_configured:true,repair_available:true});
   await ctx.loadSourceOrphans();
   assert(!all(nodes.sourceOrphanList).some(node=>node.dataset.orphanMutation==='install'),'Known dead download does not offer installation');
-  const rebuild=all(nodes.sourceOrphanList).find(node=>node.dataset.orphanMutation==='repair');assert.equal(rebuild.textContent,'Build and check archive');
-  await rebuild.onclick();assert(recoveryRequested);assert(nodes.sourceOrphanList.textContent.includes('View repair evidence'));assert(!nodes.sourceInstalledOrphanList.textContent.includes('Example archive'));
+  assert(!all(nodes.sourceOrphanList).some(node=>node.dataset.orphanMutation==='repair'),'Not-installed orphans need installation before a repair');
+  assert(nodes.sourceOrphanList.textContent.includes('Install this source first'));
+  assert(nodes.sourceOrphanList.textContent.includes('View repair evidence'));assert(!nodes.sourceInstalledOrphanList.textContent.includes('Example archive'));
   // Cached inventory refresh is not an operation lock; preserve enabled repair controls and poll promptly.
   const delays=[];ctx.setTimeout=(fn,delay)=>{delays.push(delay);return 1;};ctx.clearTimeout=()=>{};
   nodes.sources.classList.contains=()=>true;nodes.sourceOrphanedPanel.classList.contains=()=>true;
-  apiImpl=()=>Promise.resolve({items:[{...row(),can_repair:true}],refresh:{state:'complete',checked_at:1790526381},operation:{state:'idle'},inventory_known:true,inventory_refreshing:true,worker_configured:true});
+  apiImpl=()=>Promise.resolve({items:[{...row(),can_repair:true}],refresh:{state:'complete',checked_at:1790526381},operation:{state:'idle'},inventory_known:true,inventory_refreshing:true,worker_configured:true,repair_available:true});
   await ctx.loadSourceOrphans();assert.equal(delays.at(-1),4000);
   assert(nodes.sourceOrphanStatus.textContent.includes('Checking installed sources'));assert(!nodes.sourceOrphanStatus.textContent.includes('1970'));
   assert.equal(all(nodes.sourceInstalledOrphanList).find(node=>node.dataset.orphanMutation==='repair').disabled,false);

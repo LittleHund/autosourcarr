@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Settings;
 using AutoSourcarr.Core.Sources;
 using AutoSourcarr.Core.Sources.Inventory;
@@ -10,6 +11,13 @@ namespace AutoSourcarr.Core.Repair.Migration;
 
 /// <summary>An installed package that may need a repair: one of its website addresses and why it was picked.</summary>
 public sealed record AutoRepairCandidate(string Package, string BaseUrl, string Reason);
+
+/// <summary>
+/// Runs one automatic repair attempt of a package as a visible job (REP-7) and answers the repair report.
+/// <paramref name="work"/> is the repair itself: it receives a progress callback and the job's cancellation.
+/// </summary>
+public delegate Task<JsonObject> AutoRepairJobRunner(string package, Func<Action<string>?, CancellationToken, Task<JsonObject>> work,
+    CancellationToken cancellationToken);
 
 /// <summary>Limits of one automatic repair pass.</summary>
 public sealed record AutoRepairOptions
@@ -38,6 +46,11 @@ public sealed record AutoRepairOptions
 public sealed class AutoRepairWatcher
 {
     public const string StateFile = "auto-repair.json";
+    /// <summary>The job type of one automatic attempt (Tasks → Repairs shows it as kind "auto").</summary>
+    public static readonly JobType AttemptJob = new("source-auto-repair", "Repair moved source automatically", JobPriority.Low,
+        StallTimeout: TimeSpan.FromMinutes(10));
+    /// <summary>Task.Delay's largest wait is about 24.8 days; waits are clamped well below it.</summary>
+    private static readonly TimeSpan MaximumWait = TimeSpan.FromDays(7);
     private const int MaximumState = 4 * 1024 * 1024;
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
     private static readonly HashSet<string> FailingStates = new(StringComparer.Ordinal) { "failed", "inconclusive" };
@@ -46,10 +59,11 @@ public sealed class AutoRepairWatcher
     private readonly Func<bool> _enabled;
     private readonly Func<CancellationToken, Task<IReadOnlyList<AutoRepairCandidate>>> _candidates;
     private readonly Func<string, CancellationToken, Task<JsonObject>> _observe;
-    private readonly Func<string, DomainRepairOptions, CancellationToken, Task<JsonObject>> _repair;
+    private readonly Func<string, DomainRepairOptions, Action<string>?, CancellationToken, Task<JsonObject>> _repair;
     private readonly AutoRepairOptions _options;
     private readonly TimeProvider _time;
     private readonly Action<JsonObject>? _record;
+    private readonly AutoRepairJobRunner? _runner;
     private readonly SemaphoreSlim _pass = new(1, 1);
     private readonly SemaphoreSlim _wake = new(0, 1);
     private readonly object _gate = new();
@@ -60,11 +74,12 @@ public sealed class AutoRepairWatcher
     /// <param name="observe">Observes one public URL (DomainRepair.ObserveAsync's JSON: state, final_url).</param>
     /// <param name="repair">Runs the domain repair of one package (DomainRepair.RunAsync).</param>
     /// <param name="record">Receives every finished pass summary (for the app log); must not throw.</param>
+    /// <param name="runner">Runs each attempt as a job (<see cref="JobRunner"/> in production); null runs the repair directly.</param>
     public AutoRepairWatcher(string maintenanceRoot, Func<bool> enabled,
         Func<CancellationToken, Task<IReadOnlyList<AutoRepairCandidate>>> candidates,
         Func<string, CancellationToken, Task<JsonObject>> observe,
-        Func<string, DomainRepairOptions, CancellationToken, Task<JsonObject>> repair,
-        AutoRepairOptions? options = null, TimeProvider? time = null, Action<JsonObject>? record = null)
+        Func<string, DomainRepairOptions, Action<string>?, CancellationToken, Task<JsonObject>> repair,
+        AutoRepairOptions? options = null, TimeProvider? time = null, Action<JsonObject>? record = null, AutoRepairJobRunner? runner = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(maintenanceRoot);
         _root = Path.GetFullPath(maintenanceRoot);
@@ -75,17 +90,51 @@ public sealed class AutoRepairWatcher
         _options = options ?? new();
         _time = time ?? TimeProvider.System;
         _record = record;
+        _runner = runner;
     }
 
     /// <summary>Production wiring: the watch switch, the health store and orphan inventory, the public fetcher and the domain repair.
     /// <paramref name="ready"/> (the source engine is ready) gates passes like the switch does.</summary>
     public static AutoRepairWatcher Create(string maintenanceRoot, SourceMaintenanceState maintenance, SourceHealthStore health,
-        SourceOrphans orphans, DomainRepair repair, IPublicSourceFetcher fetcher, Func<bool>? ready = null, Action<JsonObject>? record = null)
+        SourceOrphans orphans, DomainRepair repair, IPublicSourceFetcher fetcher, Func<bool>? ready = null, Action<JsonObject>? record = null,
+        AutoRepairJobRunner? runner = null)
     {
         ArgumentNullException.ThrowIfNull(maintenance); ArgumentNullException.ThrowIfNull(repair); ArgumentNullException.ThrowIfNull(fetcher);
         return new AutoRepairWatcher(maintenanceRoot, () => WatchEnabled(maintenance.Watch()) && (ready?.Invoke() ?? true), Candidates(health, orphans),
             (url, token) => DomainRepair.ObserveAsync(fetcher, url, token),
-            (package, options, token) => repair.RunAsync(package, options, cancellationToken: token), record: record);
+            (package, options, progress, token) => repair.RunAsync(package, options, progress, token), record: record, runner: runner);
+    }
+
+    /// <summary>
+    /// REP-7 production runner: each attempt is a job of <see cref="AttemptJob"/> (key and task context = the package,
+    /// origin automatic) on <paramref name="jobs"/>, so it shows in Tasks → Repairs with progress, cancel and the
+    /// watchdog. A repaired or refused attempt completes the task; any other outcome fails it with the report's message.
+    /// The pass waits for the job; when the job ends without a report (cancelled, frozen, merged) a failed report is answered.
+    /// </summary>
+    public static AutoRepairJobRunner JobRunner(JobQueue jobs)
+    {
+        ArgumentNullException.ThrowIfNull(jobs);
+        return async (package, work, cancellationToken) =>
+        {
+            JsonObject? result = null;
+            var handle = jobs.Enqueue(AttemptJob, package, async job =>
+            {
+                var report = await work(text => job.Report(message: text), job.CancellationToken).ConfigureAwait(false);
+                result = report;
+                var state = SourceResponseContract.Text(report["state"]);
+                var message = SourceResponseContract.Text(report["message"]);
+                if (state is not ("repaired" or "refused")) throw new InvalidOperationException(message.Length > 0 ? message : "Automatic repair ended in state " + state);
+                job.Result(message);
+            }, origin: "automatic", title: "Automatic repair of source " + package, context: package);
+            var outcome = await handle.Completion.WaitAsync(cancellationToken).ConfigureAwait(false);
+            if (result is not null) return result;
+            return new JsonObject
+            {
+                ["state"] = handle.Merged ? "refused" : "failed",
+                ["message"] = handle.Merged ? "An automatic repair of this package was already running."
+                    : "The automatic repair job ended without a report (" + outcome.ToString().ToLowerInvariant() + ").",
+            };
+        };
     }
 
     public static bool WatchEnabled(JsonObject? watch) =>
@@ -154,10 +203,17 @@ public sealed class AutoRepairWatcher
     {
         try
         {
-            var wait = FirstWait();
+            var wait = TimeSpan.Zero;
+            try { wait = FirstWait(); }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                wait = Clamp(_options.FirstDelay);
+                try { recordError?.Invoke(error); }
+                catch (Exception) { }
+            }
             while (!cancellationToken.IsCancellationRequested)
             {
-                await _wake.WaitAsync(wait, cancellationToken).ConfigureAwait(false);
+                await _wake.WaitAsync(Clamp(wait), cancellationToken).ConfigureAwait(false);
                 try { await RunOnceAsync(cancellationToken).ConfigureAwait(false); }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { return; }
                 catch (Exception error)
@@ -165,7 +221,7 @@ public sealed class AutoRepairWatcher
                     try { recordError?.Invoke(error); }
                     catch (Exception) { }
                 }
-                wait = _options.Interval;
+                wait = Clamp(_options.Interval);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
@@ -242,7 +298,10 @@ public sealed class AutoRepairWatcher
             string state, message;
             try
             {
-                var report = await _repair(package, new DomainRepairOptions(OldHost: oldHost), cancellationToken).ConfigureAwait(false);
+                var attemptOptions = new DomainRepairOptions(OldHost: oldHost);
+                var report = _runner is null
+                    ? await _repair(package, attemptOptions, null, cancellationToken).ConfigureAwait(false)
+                    : await _runner(package, (progress, token) => _repair(package, attemptOptions, progress, token), cancellationToken).ConfigureAwait(false);
                 state = SourceResponseContract.Text(report["state"]); message = SourceResponseContract.Text(report["message"]);
                 if (report["new_host"] is JsonValue repairedHost) entry["new_host"] = repairedHost.DeepClone();
                 if (state.Length == 0) state = "failed";
@@ -307,18 +366,26 @@ public sealed class AutoRepairWatcher
     {
         DateTimeOffset? last;
         lock (_gate) last = Stamp(ReadState()["last_pass_at"]);
-        if (last is null) return _options.FirstDelay;
-        var due = last.Value + _options.Interval - _time.GetUtcNow();
-        return due > _options.FirstDelay ? due : _options.FirstDelay;
+        var first = Clamp(_options.FirstDelay);
+        if (last is null) return first;
+        // A saved stamp from the future (clock skew, restored backup) must not become a huge Task.Delay.
+        var due = Clamp(last.Value + _options.Interval - _time.GetUtcNow());
+        return due > first ? Clamp(due) : first;
     }
+
+    /// <summary>Waits between zero and <see cref="MaximumWait"/> (Task.Delay rejects more than about 24.8 days).</summary>
+    internal static TimeSpan Clamp(TimeSpan wait) =>
+        wait < TimeSpan.Zero ? TimeSpan.Zero : wait > MaximumWait ? MaximumWait : wait;
 
     // ------------------------------------------------------------------ helpers
 
-    /// <summary>The new host when the observation ended on a working page of another site, else null.</summary>
+    /// <summary>The new host when the observation ended on a working page of another site, else null. A redirect to or
+    /// through a domain parking or for-sale service (<see cref="DomainRepair.ParkingHost"/>) is not a move.</summary>
     public static string? RedirectTarget(JsonObject observation, string oldHost)
     {
         ArgumentNullException.ThrowIfNull(observation);
         if (SourceResponseContract.Text(observation["state"]) != "working") return null;
+        if (DomainRepair.ParkingHost(observation) is not null) return null;
         var final = HostOf(SourceResponseContract.Text(observation["final_url"]));
         if (final.Length == 0 || DomainMigration.SameSite(final, oldHost)) return null;
         return final;

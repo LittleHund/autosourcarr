@@ -37,7 +37,7 @@
         const select=byId('sourceRepairPackage'),previous=select.value;select.replaceChildren();
         for(const row of inventory.items||[]){const option=document.createElement('option');option.value=row.pkgName;if(option.dataset)option.dataset.originalVersion=String(row.versionName||'');option.textContent=`${row.name} · ${row.versionName}${row.isObsolete?' · missing from catalog':''}`;select.append(option);}
         if([...select.options].some(o=>o.value===previous))select.value=previous;
-        installedLoaded=true;if(!byId('sourceRepairModule').value)select.dispatchEvent(new Event('change'));
+        installedLoaded=true;
       }
     }catch(e){if(own===generation&&setupOwn===setupRevision){if(accountAtStart===controlPaintRevision)unavailableControls(e.message);byId('sourceRepairStatus').textContent=e.message;}}
     finally{loading=false;if(visible())timer=setTimeout(load,controlBusy?2000:10000);}
@@ -166,8 +166,6 @@
     else toast('Setup is still loading. Refresh this page if it stays unavailable.');
   });
   byId('sourceRepairPackage').addEventListener('change',()=>{
-    const parts=byId('sourceRepairPackage').value.replace(/^eu\.kanade\.tachiyomi\.extension\./,'').split('.');
-    byId('sourceRepairModule').value=parts.length===2?`src/${parts[0]}/${parts[1]}`:'';
     resetOriginalConfirmation();
   });
   byId('refreshSourceRepairs').addEventListener('click',()=>{installedLoaded=false;resetOriginalConfirmation();if(!controlRequest)controlError='';loadControl();load();});
@@ -204,11 +202,32 @@
   }
   byId('sourceRepairOriginalApk')?.addEventListener('change',resetOriginalConfirmation);
   byId('attachSourceRepairOriginalApk')?.addEventListener('click',attachOriginalApk);
+  /* "New web address": a bare host name, or a pasted http(s) link trimmed to its host. Answers {host, https}
+     ({host:''} when empty); throws with a user-facing message otherwise. The server validates it again. */
+  function repairNewHost(value){
+    const text=String(value||'').trim();
+    if(!text)return {host:'',https:false};
+    const scheme=/^([a-z][a-z0-9+.-]*):\/\//i.exec(text);
+    if(scheme&&!/^https?$/i.test(scheme[1]))throw new Error('New web address must be a site name or an http(s) link.');
+    let url;
+    try{url=new URL(scheme?text:'https://'+text);}catch{throw new Error('New web address is not a valid site name.');}
+    if(url.username||url.password||url.port)throw new Error('New web address must be a site name without a login or port.');
+    const host=url.hostname.replace(/\.$/,'').toLowerCase();
+    if(host.length>253||!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(host))
+      throw new Error('New web address is not a valid public site name.');
+    return {host,https:!!scheme&&url.protocol==='https:'};
+  }
   byId('sourceRepairForm').addEventListener('submit',async event=>{
     event.preventDefault();if(repairSubmitting||repairBlocked()||storageError)return;
+    let newHost;const hostStatus=byId('sourceRepairNewHostStatus');
+    hostStatus.dataset.hint??=hostStatus.textContent;
+    try{newHost=repairNewHost(byId('sourceRepairNewHost').value);hostStatus.textContent=hostStatus.dataset.hint;}
+    catch(error){hostStatus.textContent=error.message;byId('sourceRepairNewHost').focus();return;}
     const submit=event.target.querySelector('button[type=submit]');repairSubmitting=true;submit.disabled=true;
     try{
-      const job=await api('/api/v1/source-maintenance/jobs',{method:'POST',timeoutMs:45000,body:JSON.stringify({pkg_name:byId('sourceRepairPackage').value,module:byId('sourceRepairModule').value.trim(),revision:byId('sourceRepairRevision').value.trim(),issue:byId('sourceRepairIssue').value.trim()})});
+      const body={pkg_name:byId('sourceRepairPackage').value};
+      if(newHost.host){body.new_host=newHost.host;if(newHost.https)body.https=true;}
+      const job=await api('/api/v1/source-maintenance/jobs',{method:'POST',timeoutMs:45000,body:JSON.stringify(body)});
       await window.openSourceRepairTask(job.id);
     }catch(e){toast(e.message);}finally{repairSubmitting=false;submit.disabled=repairBlocked()||!!storageError;}
   });

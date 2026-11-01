@@ -63,7 +63,7 @@ internal static class RepairV1Endpoints
     {
         [SourceRepairV1Endpoints.DomainRepairJob.Name] = "domain",
         [SourceRepairV1Endpoints.RollbackJob.Name] = "rollback",
-        ["source-auto-repair"] = "auto",
+        [AutoRepairWatcher.AttemptJob.Name] = "auto",
     };
     internal const int FeedbackFileLimit = 256 * 1024;
     internal const int FeedbackTextLimit = 2000;

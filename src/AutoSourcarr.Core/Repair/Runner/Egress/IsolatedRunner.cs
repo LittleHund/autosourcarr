@@ -196,12 +196,12 @@ public sealed partial class IsolatedRunner(string instanceDataRoot, Action<strin
                 || !Integer(root, "uid", out var uid) || uid != expectedUserId || uid == 0
                 || !Integer(root, "ppid", out var parent) || parent != expectedParentProcessId
                 || !Integer(root, "pdeathsig", out var signal) || signal != 9
-                || !Integer(root, "landlock", out var abi) || abi is < 4 or > 1024
+                || !Integer(root, "landlock", out var abi) || abi is < 6 or > 1024
                 || !Integer(root, "nnp", out var nnp) || nnp != 1
                 || !Integer(root, "seccomp", out var seccomp) || seccomp != 2
                 || !Integer(root, "netgate", out var gate) || gate != 1
                 || !Integer(root, "proxy", out var port) || port != expectedPort
-                || !Integer(root, "scoped", out var scoped) || scoped != (abi >= 6 ? 3 : 0))
+                || !Integer(root, "scoped", out var scoped) || scoped != 3)
                 return null;
             return new RunnerProof((int)pid, (uint)uid, (int)parent, (int)abi, (int)port, scoped == 3);
         }

@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Proof for native/repair-runner.c (phase 6e): the runner cannot read /config or the user's
-# home, cannot connect anywhere directly, and reaches only allowed hosts through the proxy.
-# Needs: gcc, python3, curl, Linux with Landlock ABI >= 4, a non-root user.
+# home, cannot connect anywhere directly, reaches only allowed hosts through the proxy, cannot
+# signal the app's other processes, and has a bounded task count.
+# Needs: gcc, python3, curl, Linux with Landlock ABI >= 6, a non-root user.
+# As root (development containers), run it as another user, for example:
+#   setpriv --reuid=nobody --regid=nogroup --clear-groups env HOME=<dir owned by nobody> bash scripts/repair-runner-check.sh
+# Without direct egress, chain the stand-in proxy: EGRESS_STANDIN_UPSTREAM=host:port.
 # Optional: passwordless sudo to create a real /config/secret (otherwise a stand-in path).
 set -u
 # Development containers without direct egress may override the hosts (CI keeps the defaults).
@@ -85,7 +89,7 @@ run() { # run <label> <runner-binary> <program> [args...]; output in $work/out, 
 }
 
 # Proof line and a clean run.
-if run proof "$runner" /usr/bin/true && head -1 "$work/err" | grep -Eq "^AUTOSOURCARR_RUNNER_V1 $hex \{\"pid\":[0-9]+,\"uid\":$(id -u),\"ppid\":[0-9]+,\"pdeathsig\":9,\"landlock\":[4-9][0-9]*,\"nnp\":1,\"seccomp\":2,\"netgate\":1,\"proxy\":$port,\"scoped\":[03]\}$"; then
+if run proof "$runner" /usr/bin/true && head -1 "$work/err" | grep -Eq "^AUTOSOURCARR_RUNNER_V1 $hex \{\"pid\":[0-9]+,\"uid\":$(id -u),\"ppid\":[0-9]+,\"pdeathsig\":9,\"landlock\":([6-9]|[1-9][0-9]+),\"nnp\":1,\"seccomp\":2,\"netgate\":1,\"proxy\":$port,\"scoped\":3\}$"; then
     pass "runner starts, prints its isolation proof and propagates exit 0 ($(head -1 "$work/err" | cut -c1-200))"
 else
     fail "runner proof line or clean exit: $(head -c 600 "$work/err")"
@@ -162,17 +166,62 @@ else
     echo "INFO no java on PATH; JVM check skipped"
 fi
 
-# f. a host without Landlock network rules is refused, with no fallback
-if AUTOSOURCARR_TEST_FORCE_ABI=3 timeout 30 "$test_runner" "$job" "$port" -- /usr/bin/true >/dev/null 2>"$work/err"; then
-    fail "f. forced ABI 3 ran the program"
+# f. a host without Landlock signal scoping (ABI 4/5) is refused, with no fallback
+if AUTOSOURCARR_TEST_FORCE_ABI=5 timeout 30 "$test_runner" "$job" "$port" -- /usr/bin/true >/dev/null 2>"$work/err"; then
+    fail "f. forced ABI 5 ran the program"
 else
     code=$?
-    if [ "$code" = 78 ] && grep -q "no isolation fallback" "$work/err"; then pass "f. forced Landlock ABI 3 exits 78 (no isolation fallback)"
-    else fail "f. forced ABI 3 exit $code: $(head -c 300 "$work/err")"; fi
+    if [ "$code" = 78 ] && grep -q "no isolation fallback" "$work/err"; then pass "f. forced Landlock ABI 5 exits 78 (no isolation fallback)"
+    else fail "f. forced ABI 5 exit $code: $(head -c 300 "$work/err")"; fi
 fi
-if AUTOSOURCARR_TEST_FORCE_ABI=3 timeout 30 "$runner" "$job" "$port" -- /usr/bin/true >/dev/null 2>&1; then
+if AUTOSOURCARR_TEST_FORCE_ABI=5 timeout 30 "$runner" "$job" "$port" -- /usr/bin/true >/dev/null 2>&1; then
     pass "f. the production build ignores AUTOSOURCARR_TEST_FORCE_ABI"
 else fail "f. the production build honoured AUTOSOURCARR_TEST_FORCE_ABI"; fi
+
+# i. a same-uid process outside the sandbox (standing in for the app) cannot be signalled:
+#    once with both layers, once with the seccomp signal gate alone (test build, no Landlock scope).
+sleep 300 &
+victim=$!
+pids+=($victim)
+signal_check() { # signal_check <label> <runner-binary> [env...]
+    local label=$1 binary=$2; shift 2
+    env "$@" timeout 30 "$binary" "$job" "$port" -- /bin/sh -c "kill -9 $victim; /usr/bin/kill -9 $victim; exit 0" >"$work/out" 2>"$work/err" </dev/null
+    if kill -0 "$victim" 2>/dev/null; then pass "i. cannot signal a same-uid process outside the sandbox ($label: $(grep -v AUTOSOURCARR "$work/err" | head -1))"
+    else fail "i. $label killed the outside process: $(head -c 400 "$work/err")"; fi
+}
+signal_check "Landlock scope + seccomp gate" "$runner"
+signal_check "seccomp gate alone" "$test_runner" AUTOSOURCARR_TEST_NO_SIGNAL_SCOPE=1
+grep -q "refused signal to pid $victim outside the repair run" "$work/err" \
+    && pass "i. the seccomp gate itself refused the signal (logged)" || fail "i. no gate refusal logged: $(head -c 400 "$work/err")"
+
+# j. signals inside the run still work (kill of its own children goes through the gate) and the
+#    task ceiling holds: a fork loop is cut off, then cleans up after itself.
+cat > "$job/forks.py" <<'PY'
+import os, signal, sys, time
+children, failed = [], 0
+for _ in range(int(sys.argv[1])):
+    try:
+        pid = os.fork()
+    except OSError:
+        failed += 1
+        continue
+    if pid == 0:
+        time.sleep(60)
+        os._exit(0)
+    children.append(pid)
+for pid in children:
+    os.kill(pid, signal.SIGKILL)
+reaped = sum(1 for pid in children if os.WIFSIGNALED(os.waitpid(pid, 0)[1]))
+os.kill(os.getpid(), 0)
+print(f"started {len(children)} failed {failed} killed {reaped}")
+PY
+if run j "$runner" /usr/bin/python3 -I "$job/forks.py" 50 && grep -q "^started 50 failed 0 killed 50$" "$work/out"; then
+    pass "j. the program can fork and signal its own children ($(cat "$work/out"))"
+else fail "j. in-run fork/signal: $(cat "$work/out") $(head -c 400 "$work/err")"; fi
+if AUTOSOURCARR_TEST_NPROC_BUDGET=24 timeout 60 "$test_runner" "$job" "$port" -- /usr/bin/python3 -I "$job/forks.py" 200 >"$work/out" 2>"$work/err" </dev/null \
+    && read -r _ started _ failed _ killed < "$work/out" && [ "$failed" -gt 0 ] && [ "$started" -lt 200 ] && [ "$killed" = "$started" ]; then
+    pass "j. RLIMIT_NPROC bounds a fork loop (test budget 24: $(cat "$work/out"))"
+else fail "j. NPROC bound: $(cat "$work/out") $(head -c 400 "$work/err")"; fi
 
 # Workspace rules.
 chmod 755 "$job"
