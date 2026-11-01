@@ -377,12 +377,12 @@
       /**
        * Look up the source's repository in the configured indexes (body: revision); runs in the background.
        * POST /api/v1/source-maintenance/raws/{package}/discover
-       * @param {string} package
+       * @param {string} package_
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      discoverSourceRawOrigin(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/discover`, body, options); },
+      discoverSourceRawOrigin(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/discover`, body, options); },
       /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
@@ -393,11 +393,11 @@
       /**
        * Download the retained source code of an installed source as a portable ZIP.
        * GET /api/v1/source-maintenance/raws/{package}/code
-       * @param {string} package
+       * @param {string} package_
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<null>}
        */
-      downloadSourceRawCode(package, options) { return call('GET', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/code`, undefined, options); },
+      downloadSourceRawCode(package_, options) { return call('GET', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/code`, undefined, options); },
       /**
        * Download the repaired jar a domain repair installed (kept copy, or the installed jar when its digest still matches); 404 otherwise.
        * GET /api/v1/source-maintenance/jobs/{jobId}/code
@@ -637,11 +637,11 @@
       /**
        * Raw-code state of an installed source (needs-input, acquiring, available, reconstructing); adopts retained repair code that matches the installed binary.
        * GET /api/v1/source-maintenance/raws/{package}
-       * @param {string} package
+       * @param {string} package_
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      getSourceRaw(package, options) { return call('GET', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}`, undefined, options); },
+      getSourceRaw(package_, options) { return call('GET', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}`, undefined, options); },
       /**
        * The last repair or rollback report of a package (state repaired, refused, failed, rolled_back or rollback_failed, with the migration, structure and content checks).
        * GET /api/v1/source-repairs/{pkgName}
@@ -750,12 +750,12 @@
       /**
        * The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider; 409 until Connections.
        * POST /api/v1/source-maintenance/raws/{package}/unavailable
-       * @param {string} package
+       * @param {string} package_
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      reconstructSourceRaw(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/unavailable`, body, options); },
+      reconstructSourceRaw(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/unavailable`, body, options); },
       /**
        * Collect removed sources from sampled original Keiyoushi history (two years) in the background; at most once a minute.
        * POST /api/v1/source-orphans/refresh
@@ -790,12 +790,12 @@
       /**
        * Ask for new source code input again (body: revision).
        * POST /api/v1/source-maintenance/raws/{package}/request-input
-       * @param {string} package
+       * @param {string} package_
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      requestSourceRawInput(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/request-input`, body, options); },
+      requestSourceRawInput(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/request-input`, body, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
@@ -909,12 +909,12 @@
       /**
        * Fetch the source code from its original public repository (body: revision, origin {repository, module, revision, ecosystem}).
        * POST /api/v1/source-maintenance/raws/{package}/origin
-       * @param {string} package
+       * @param {string} package_
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      setSourceRawOrigin(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/origin`, body, options); },
+      setSourceRawOrigin(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/origin`, body, options); },
       /**
        * Save the source browser identity and apply it to the running engine (sources rebuild their headers).
        * PUT /api/v1/source-browser/user-agent
@@ -980,11 +980,11 @@
       /**
        * Upload the source project ZIP of an installed source (headers X-Raw-Revision, X-Source-Version, optional X-Source-Module; at most 32 MiB). Kept private.
        * POST /api/v1/source-maintenance/raws/{package}/project
-       * @param {string} package
+       * @param {string} package_
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      uploadSourceRawProject(package, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/project`, undefined, options); },
+      uploadSourceRawProject(package_, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/project`, undefined, options); },
     };
   }
 
