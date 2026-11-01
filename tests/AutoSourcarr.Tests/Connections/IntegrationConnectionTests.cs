@@ -424,7 +424,8 @@ public static class IntegrationConnectionTests
                 var first = SuwayomiImport.Enqueue(jobs, temp.Path, token => { reads++; return SuwayomiImport.ReadAsync(graph, at, token); });
                 Check.Equal(JobOutcome.Completed, first.Completion.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult());
                 Check.True(tasks.Find(first.Id)!.Message.Contains("awaiting", StringComparison.OrdinalIgnoreCase)
-                    && tasks.Find(first.Id)!.Message.Contains("phase 8", StringComparison.Ordinal), tasks.Find(first.Id)!.Message);
+                    && tasks.Find(first.Id)!.Message.Contains("import pipeline", StringComparison.Ordinal)
+                    && tasks.Find(first.Id)!.Message.Contains("/api/v1/imports/suwayomi-plan", StringComparison.Ordinal), tasks.Find(first.Id)!.Message);
                 var stored = SuwayomiImport.Load(temp.Path)!;
                 Check.Equal(3, stored.Total);
                 Check.Equal("https://b.test/manga/b", stored.Items[1].RealUrl);

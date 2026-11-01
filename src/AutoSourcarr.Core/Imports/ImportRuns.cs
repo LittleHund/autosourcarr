@@ -114,6 +114,16 @@ public sealed partial class ImportRuns
 
     // ---- runs ------------------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Claims a new import identity in one write: the run row is created only when no run with this id exists, so two
+    /// uploads with the same X-Import-Id create one run and one job (the loser answers the winner's receipt).
+    /// </summary>
+    internal bool TryCreateRun(string importId, string filename) => Write(c => c.Execute("""
+        INSERT INTO import_runs(id,filename,state,total,added,existing,unresolved,failed,skipped,created_at,completed_at)
+        VALUES($id,$file,'running',0,0,0,0,0,0,$now,'')
+        ON CONFLICT(id) DO NOTHING
+        """, ("$id", importId), ("$file", filename.Length > 0 ? filename : "backup.tachibk"), ("$now", Now())) > 0);
+
     /// <summary>_create_import_run.</summary>
     public void CreateRun(string importId, string filename) => Write(c => c.Execute("""
         INSERT INTO import_runs(id,filename,state,total,added,existing,unresolved,failed,skipped,created_at,completed_at)
@@ -164,7 +174,7 @@ public sealed partial class ImportRuns
     public JsonObject ClearHistory(DecisionActor actor)
     {
         ArgumentNullException.ThrowIfNull(actor);
-        return Write(c =>
+        var result = Write(c =>
         {
             var runs = c.QueryAs<string>("SELECT id FROM import_runs WHERE state<>'running'").ToArray();
             var running = Convert.ToInt64(c.Scalar("SELECT COUNT(*) FROM import_runs WHERE state='running'"), CultureInfo.InvariantCulture);
@@ -174,8 +184,15 @@ public sealed partial class ImportRuns
             c.Execute("DELETE FROM import_items WHERE import_id IN (SELECT value FROM json_each($ids))", ("$ids", ids));
             c.Execute("DELETE FROM import_runs WHERE id IN (SELECT value FROM json_each($ids))", ("$ids", ids));
             Log("import.history.clear", actor, [], "Import history cleared; remembered import decisions kept", after: new JsonObject { ["runs"] = runs.Length, ["items"] = items });
-            return new JsonObject { ["runs_cleared"] = runs.Length, ["items_cleared"] = items, ["running_preserved"] = running };
+            return new JsonObject { ["runs_cleared"] = runs.Length, ["items_cleared"] = items, ["running_preserved"] = running, ["cleared_ids"] = new JsonArray(runs.Select(run => (JsonNode?)JsonValue.Create(run)).ToArray()) };
         });
+        // The kept uploads of the cleared runs (a cancelled or failed run never resumes) go with their history.
+        string[] cleared = result["cleared_ids"] is JsonArray clearedIds ? clearedIds.Select(item => item?.GetValue<string>() ?? "").ToArray() : [];
+        result.Remove("cleared_ids");
+        if (DataDirectory is { Length: > 0 } root)
+            foreach (var importId in cleared)
+                if (importId.Length > 0 && ImportIdPattern().IsMatch(importId)) RemoveUpload(Path.Combine(root, RawFolder, importId, "upload.bin"));
+        return result;
     }
 
     // ---- rows ------------------------------------------------------------------------------------------------------
@@ -435,7 +452,9 @@ public sealed partial class ImportRuns
     /// _claim_import_decision: a new revision for this item. With <paramref name="expectedRevision"/> (restart recovery) the
     /// claim succeeds only while the row is still unresolved at that revision; null then means a newer decision exists.
     /// </summary>
-    internal long? Claim(string importId, long itemId, long? expectedRevision = null) => Write(c =>
+    internal long? Claim(string importId, long itemId, long? expectedRevision = null) => Write(c => ClaimIn(c, importId, itemId, expectedRevision));
+
+    private static long? ClaimIn(DatabaseSession c, string importId, long itemId, long? expectedRevision)
     {
         var changed = expectedRevision is { } expected
             ? c.Execute("UPDATE import_items SET decision_revision=decision_revision+1 WHERE import_id=$run AND id=$id AND state='unresolved' AND decision_revision=$rev",
@@ -448,7 +467,7 @@ public sealed partial class ImportRuns
         }
         return Convert.ToInt64(c.Scalar("SELECT decision_revision FROM import_items WHERE import_id=$run AND id=$id", ("$run", importId), ("$id", itemId)),
             CultureInfo.InvariantCulture);
-    });
+    }
 
     /// <summary>_import_decision_superseded: true when a newer decision (or a deletion) replaced this revision.</summary>
     internal bool Superseded(string importId, long itemId, long revision) => Read(c =>

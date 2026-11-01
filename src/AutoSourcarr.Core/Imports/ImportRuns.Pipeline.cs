@@ -35,13 +35,17 @@ public sealed partial class ImportRuns
         var id = (importId ?? "").Trim().ToLowerInvariant();
         if (id.Length == 0) id = Guid.NewGuid().ToString("N");
         if (!ImportIdPattern().IsMatch(id)) throw new ArgumentException("Invalid import identity");
-        if (Receipt(id) is { } existing)
-            return Str(existing, "filename") == name ? existing : throw new ImportConflictException("This import identity already belongs to another filename");
+        JsonObject SameReceipt(JsonObject existing) =>
+            Str(existing, "filename") == name ? existing : throw new ImportConflictException("This import identity already belongs to another filename");
+        if (Receipt(id) is { } earlier) return SameReceipt(earlier);
         if (data.Length == 0) throw new BackupDecodeException("Backup file is empty");
         var library = MihonBackupReader.Read(data);
         if (Library is null) throw new ImportUnavailableException("MAIN_SUWAYOMI_URL is not configured");
+        // The receipt check above is only the fast path: the claim is atomic, so a concurrent upload with the same id
+        // that got here first owns the run, its upload folder and its job.
+        if (!TryCreateRun(id, name))
+            return Receipt(id) is { } winner ? SameReceipt(winner) : throw new ImportConflictException("This import identity is being created; retry");
         var stored = StoreUpload(id, name, data);
-        CreateRun(id, name);
         Log("import.upload", actor, [], "Backup uploaded: " + name, after: new JsonObject
         {
             ["import_id"] = id, ["filename"] = name, ["format"] = library.Format, ["version"] = library.Version, ["manga"] = library.Manga.Count,
@@ -109,8 +113,14 @@ public sealed partial class ImportRuns
         }
         catch (OperationCanceledException)
         {
-            // A stop for maintenance or shutdown: the upload stays, so the next start resumes the run.
-            Recount(importId, progress.CancellationToken.IsCancellationRequested && Jobs is { Paused: true } ? "running" : "cancelled");
+            // Only a person's Cancel ends the run. A shutdown (JobQueue.DisposeAsync), a maintenance pause or a watchdog
+            // stop keeps it "running" with its upload, so startup recovery (or the retry) resumes it from the stored rows.
+            if (progress.CancelledByUser)
+            {
+                Recount(importId, "cancelled");
+                RemoveUpload(stored);
+            }
+            else Recount(importId, "running");
             throw;
         }
         catch (Exception error) when (error is not OutOfMemoryException)
@@ -342,6 +352,8 @@ public sealed partial class ImportRuns
     /// <summary>A strict automatic acceptance found by discovery: claims the row only if nobody decided since (expected revision).</summary>
     private async Task<bool> AcceptAutomaticAsync(string importId, long itemId, long entryId, string reason, long expectedRevision, CancellationToken cancellationToken)
     {
+        // Provider ids on both sides that disagree: never an automatic acceptance, whichever path proposed it.
+        if (IdentityConflict(ItemPayload(ReadItem(importId, itemId)), entryId) is not null) return false;
         if (Claim(importId, itemId, expectedRevision) is not { } revision) return false;
         var item = ItemPayload(ReadItem(importId, itemId));
         try

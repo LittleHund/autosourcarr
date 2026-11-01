@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AutoSourcarr.Core.Catalogue.Metadata;
 using AutoSourcarr.Core.Catalogue.Titles;
 using AutoSourcarr.Core.Connections.Types;
 using AutoSourcarr.Core.Matching;
@@ -146,6 +147,8 @@ public sealed partial class ImportRuns
         var descriptions = EvidenceDescriptions(item);
         var summary = descriptions.SelectMany(left => facts.Descriptions.Select(right => TextMatcher.DescriptionSimilarity(left, right))).DefaultIfEmpty(0).Max();
         var shared = EvidenceIdentities(item).Intersect(facts.Identities).Order(StringComparer.Ordinal).ToArray();
+        // A provider named on both sides with no common id: different works, whatever the titles say (MetadataIdentityGate).
+        if (IdentityConflict(EvidenceIdentities(item), facts.Identities) is { } different) return new ImportEvidence { EntryId = facts.Id, Reason = different };
 
         var importColor = importTitles.Select(TextMatcher.TitleColorVariant).FirstOrDefault(value => value != "unknown") ?? "unknown";
         if (importColor is "colored" or "monochrome" && facts.ColorMode is "colored" or "monochrome" && importColor != facts.ColorMode)
@@ -181,6 +184,30 @@ public sealed partial class ImportRuns
     }
 
     private static string Percent(double value) => Math.Round(value * 100).ToString(CultureInfo.InvariantCulture) + "%";
+
+    /// <summary>
+    /// "different &lt;provider&gt; identities (a / b)" when a provider is named by both the backup's accepted metadata and the
+    /// entry's confident identities with disjoint ids (<see cref="MetadataIdentityGate.Conflicts"/>); null otherwise.
+    /// Identities are "provider:external_id".
+    /// </summary>
+    internal static string? IdentityConflict(IEnumerable<string> importIdentities, IEnumerable<string> entryIdentities)
+    {
+        static JsonObject Snapshot(IEnumerable<string> identities)
+        {
+            var pairs = new JsonArray();
+            foreach (var identity in identities)
+            {
+                var split = identity.IndexOf(':', StringComparison.Ordinal);
+                if (split > 0 && split < identity.Length - 1) pairs.Add(new JsonArray(identity[..split], identity[(split + 1)..]));
+            }
+            return new JsonObject { ["identities"] = pairs };
+        }
+        var conflict = MetadataIdentityGate.Conflicts(Snapshot(importIdentities), Snapshot(entryIdentities)).FirstOrDefault();
+        return conflict.Provider is null ? null : "different " + conflict.Provider + " identities (" + conflict.Left + " / " + conflict.Right + ")";
+    }
+
+    /// <summary>The provider-id conflict between a backup row and an entry (null: none); see <see cref="IdentityConflict(IEnumerable{string}, IEnumerable{string})"/>.</summary>
+    internal string? IdentityConflict(JsonObject item, long entryId) => IdentityConflict(EvidenceIdentities(item), Facts(entryId).Identities);
 
     // ---- candidates ------------------------------------------------------------------------------------------------
 

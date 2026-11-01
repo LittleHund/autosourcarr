@@ -31,6 +31,8 @@ public static class CatalogueFormat
     /// <summary>The header-less format of 0.4.2-0.4.5; still the internal body shape (format, version 1, origin, entries, decisions).</summary>
     public const int LegacyVersion = 1;
     private static readonly string[] HeaderFields = ["format", "format_version", "min_reader_version", "app_version", "schema_version", "created_at", "origin", "entries", "decisions"];
+    /// <summary>Header fields a current-format file may carry in addition (files written before they existed stay readable).</summary>
+    private static readonly string[] OptionalHeaderFields = ["min_reader_app_version"];
     public static string MismatchMessage(string requiredVersion) => "Version mismatch: version " + requiredVersion + " required";
     public const int MaximumBytes = 64 * 1024 * 1024;
     public const int MaximumMembers = 2000;
@@ -209,6 +211,8 @@ public static class CatalogueFormat
         var file = new JsonObject
         {
             ["format"] = Format, ["format_version"] = FileVersion, ["min_reader_version"] = MinimumReaderVersion, ["app_version"] = CompatibilityList.RunningVersion,
+            // The first app version that reads min_reader_version: what an older reader names in its "Version mismatch".
+            ["min_reader_app_version"] = list.ShareReaderAppVersion(MinimumReaderVersion) ?? CompatibilityList.RunningVersion,
             ["schema_version"] = list.CatalogSchema, ["created_at"] = createdAt.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture),
         };
         foreach (var key in new[] { "origin", "entries", "decisions" }) { var node = body[key]; body.Remove(key); file[key] = node; }
@@ -220,21 +224,35 @@ public static class CatalogueFormat
         if (file["format"] is not JsonValue format || format.GetValueKind() != JsonValueKind.String || format.GetValue<string>() != Format) throw new ArgumentException("Choose an exported AutoSourcarr catalogue file");
         if (!Integer(file["format_version"], out var version) || version < FileVersion) throw new ArgumentException("Unsupported catalogue file version");
         if (!Integer(file["min_reader_version"], out var minimum) || minimum < 1 || minimum > version) throw new ArgumentException("Invalid catalogue file header");
-        var declared = file["app_version"] is JsonValue app && app.GetValueKind() == JsonValueKind.String && VersionText(app.GetValue<string>()) ? app.GetValue<string>() : null;
+        var declared = VersionField(file, "app_version");
+        var readerApp = VersionField(file, "min_reader_app_version");
         if (minimum > FileVersion)
         {
+            // X of "Version mismatch: version X required": the file's own min_reader_app_version, else what the local
+            // compatibility list knows for that format, else the writer's app_version, else the format number itself.
             var known = minimum <= int.MaxValue ? CompatibilityList.Current.ShareReaderAppVersion((int)minimum) : null;
-            throw new CatalogueVersionMismatchException(known ?? declared ?? "newer than " + CompatibilityList.RunningVersion);
+            throw new CatalogueVersionMismatchException(readerApp ?? known ?? declared ?? minimum.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
         // A newer format that older readers may still read (min_reader_version <= ours) can add header fields; ours must all be there.
-        if (version == FileVersion) Keys(file, HeaderFields);
+        if (version == FileVersion)
+        {
+            if (HeaderFields.Any(key => !file.ContainsKey(key)) || file.Any(pair => !HeaderFields.Contains(pair.Key) && !OptionalHeaderFields.Contains(pair.Key)))
+                throw new ArgumentException("Unsupported catalogue fields");
+            if (file.ContainsKey("min_reader_app_version") && readerApp is null) throw new ArgumentException("Invalid catalogue file header");
+        }
         else if (HeaderFields.Any(key => !file.ContainsKey(key))) throw new ArgumentException("Unsupported catalogue fields");
         if (declared is null || !Integer(file["schema_version"], out var schema) || schema < 0) throw new ArgumentException("Invalid catalogue file header");
         var created = Text(file["created_at"], 64);
         var body = new JsonObject { ["format"] = Format, ["version"] = LegacyVersion };
         foreach (var key in new[] { "origin", "entries", "decisions" }) { var node = file[key]; file.Remove(key); body[key] = node; }
-        return new CatalogueFile(Validate(body), Header(version, minimum, declared, schema, created, legacy: false));
+        var header = Header(version, minimum, declared, schema, created, legacy: false);
+        if (readerApp is not null) header["min_reader_app_version"] = readerApp;
+        return new CatalogueFile(Validate(body), header);
     }
+
+    /// <summary>A header version text ("0.5.0", "1.2.0-beta+x"), or null when missing or malformed.</summary>
+    private static string? VersionField(JsonObject file, string name) =>
+        file[name] is JsonValue value && value.GetValueKind() == JsonValueKind.String && VersionText(value.GetValue<string>()) ? value.GetValue<string>() : null;
 
     private static bool VersionText(string value) => Regex.IsMatch(value, @"\A[0-9A-Za-z][0-9A-Za-z.+-]{0,63}\z", RegexOptions.CultureInvariant);
 

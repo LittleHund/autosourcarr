@@ -76,7 +76,7 @@ public sealed partial class CatalogueExchange
                 if (owners.Count > 32 || kind == "group" && records.Count > 64) throw new ArgumentException("Review this large group in smaller local groups before applying it");
                 if (kind is not ("group" or "source-match" or "separate")) throw new ArgumentException(view.S("message"));
                 if (kind == "group" && records.Any(record => c.Scalar("SELECT 1 FROM manual_match_bindings WHERE source_id=$p0 AND source_manga_id=$p1", P(record.SourceId, record.MangaId)) is not null)) throw new ArgumentException("A local manual source binding is retained; review it before combining imported members");
-                Protect(c, kind, records, targets);
+                Protect(c, kind, records, targets, explicitReview: !string.IsNullOrEmpty(taskId));
                 if (_structure is null || string.IsNullOrEmpty(taskId)) throw new InvalidOperationException("A visible reviewed task and the journalled merge/split domain owner are required for this structural choice");
                 structural = choice.Copy(); c.Execute("UPDATE catalogue_decisions SET state='pending',message='Applying the reviewed local record mapping',applied_revision=$p0 WHERE uid=$p1 AND digest=$p2", P(revision, uid, digest)); return null;
             });
@@ -117,11 +117,14 @@ public sealed partial class CatalogueExchange
         }
     }
     /// <summary>
-    /// Phase-8 manual decisions win over an imported structural choice: a Separate review between any two involved
-    /// entries, a manual separate record for an involved target, or a manual binding that keeps a record on another entry
-    /// (or, for a split, on this one) refuses the choice before the structure owner is called.
+    /// Phase-8 manual decisions win over an imported structural choice: a local Separate review between involved entries,
+    /// a manual separate record for an involved target, or a manual binding that a source-match would move to another
+    /// entry always refuses the choice before the structure owner is called. A split ("separate") of a manually bound
+    /// record is refused only without an explicit per-decision admin review: the admin's explicit review is itself a manual
+    /// action, and 0.4.5 <c>apply_decision</c> applied it through the same unmatch path as a local manual split (it records
+    /// a manual separate record and a Separate review, so the result is again a protected manual decision).
     /// </summary>
-    private static void Protect(DatabaseSession c, string kind, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targets)
+    private static void Protect(DatabaseSession c, string kind, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targets, bool explicitReview)
     {
         var involved = targets.Concat(records.Select(record => record.EntryId)).Distinct().Order().ToArray();
         if (kind is "group" or "source-match")
@@ -135,7 +138,7 @@ public sealed partial class CatalogueExchange
             var hint = c.Scalar("SELECT entry_id_hint FROM manual_match_bindings WHERE source_id=$p0 AND source_manga_id=$p1", P(record.SourceId, record.MangaId));
             if (hint is null) continue;
             if (kind == "source-match" && targets.Count == 1 && targets[0] != record.EntryId) throw new ArgumentException("A local manual match keeps this source record on its entry; an imported choice cannot move it");
-            if (kind == "separate") throw new ArgumentException("A local manual match keeps this source record on its entry; an imported choice cannot split it");
+            if (kind == "separate" && !explicitReview) throw new ArgumentException("A local manual match keeps this source record on its entry; an imported choice cannot split it");
         }
     }
     private static void Page(int offset, int limit) { if (offset < 0 || limit is < 1 or > 100) throw new ArgumentException("Invalid catalogue review page"); }

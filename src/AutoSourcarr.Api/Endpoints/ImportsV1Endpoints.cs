@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using AutoSourcarr.Api.Http;
 using AutoSourcarr.Core.Imports;
 using AutoSourcarr.Core.Imports.Backup;
+using AutoSourcarr.Core.Matching.Decisions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -44,7 +45,23 @@ internal static class ImportsV1Endpoints
             catch (ImportConflictException error) { return Problem(409, error.Message); }
             catch (ImportPolicyBlockedException error) { return Problem(409, error.Message); }
             catch (ArgumentException error) { return Problem(400, error.Message); }
+            // A multipart body over its limit or malformed (ReadFormAsync): a clear answer instead of a 500.
+            catch (BadHttpRequestException error) { return Problem(error.StatusCode is >= 400 and < 500 ? error.StatusCode : 400, error.Message); }
+            catch (InvalidDataException error)
+            {
+                return error.Message.Contains("limit", StringComparison.OrdinalIgnoreCase)
+                    ? Problem(413, "Backup file is larger than 64 MiB") : Problem(400, "The multipart upload could not be read: " + error.Message);
+            }
         }
+        // Resets are explicit: {confirm: true, preview_token} of the preview the person saw (the phase-8 reset pattern).
+        string ConfirmedToken(JsonObject body)
+        {
+            var token = ManualDecisionsV1Endpoints.BodyText(body, "preview_token");
+            if (!ManualDecisionsV1Endpoints.BodyFlag(body, "confirm") || token.Length == 0)
+                throw new ApiProblem(400, "Confirm the reset: send {\"confirm\": true, \"preview_token\": \"...\"} from its preview.");
+            return token;
+        }
+        IResult OwnerOnly() => Problem(403, "Only the owner or an admin account can reset decisions.");
         string RunId(HttpContext context)
         {
             var id = ManualDecisionsV1Endpoints.Route(context, "importId").Trim().ToLowerInvariant();
@@ -66,10 +83,12 @@ internal static class ImportsV1Endpoints
                 {
                     if (context.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } limit)
                         limit.MaxRequestBodySize = MihonBackupReader.MaxBackupBytes + 1024 * 1024;
-                    var form = await request.ReadFormAsync(context.RequestAborted).ConfigureAwait(false);
+                    // This route's own multipart limit (the global default is larger than a backup may be).
+                    var options = new FormOptions { MultipartBodyLengthLimit = MihonBackupReader.MaxBackupBytes + 1024 * 1024 };
+                    var form = await request.ReadFormAsync(options, context.RequestAborted).ConfigureAwait(false);
                     var file = form.Files["file"] ?? form.Files.FirstOrDefault();
                     if (file is null) return Problem(400, "Choose a .tachibk or .proto.gz backup file.");
-                    if (file.Length > MihonBackupReader.MaxBackupBytes) return Problem(413, "Backup file is larger than 128 MiB");
+                    if (file.Length > MihonBackupReader.MaxBackupBytes) return Problem(413, "Backup file is larger than 64 MiB");
                     filename = file.FileName;
                     if (form["import_id"].ToString() is { Length: > 0 } formId) importId = formId;
                     using var buffer = new MemoryStream();
@@ -85,7 +104,7 @@ internal static class ImportsV1Endpoints
                         catch (UriFormatException) { return Problem(400, "Invalid UTF-8 backup filename"); }
                     }
                     else filename = request.Headers["X-Filename"].ToString();
-                    data = await ApiJson.ReadUploadAsync(request, (int)MihonBackupReader.MaxBackupBytes, "Backup file is larger than 128 MiB",
+                    data = await ApiJson.ReadUploadAsync(request, (int)MihonBackupReader.MaxBackupBytes, "Backup file is larger than 64 MiB",
                         "The backup upload did not finish in time; choose the file again").ConfigureAwait(false);
                 }
                 if (data.Length == 0) return Problem(400, "Backup file is empty");
@@ -126,31 +145,42 @@ internal static class ImportsV1Endpoints
             .WithSummary("Delete finished import runs and their rows; running imports, remembered matches and rejections stay.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
-        group.MapPost("/imports/reset-rejections", (Func<HttpContext, Task<IResult>>)(context => Guard(context, false, (runs, _) =>
-            {
-                var result = runs.ResetRejections(ManualDecisionsV1Endpoints.Actor(context));
-                result["ok"] = true;
-                return Task.FromResult(Answer(result));
-            })))
-            .WithName("resetImportRejections")
-            .WithSummary("Forget every remembered import Reject (explicit reset); unresolved rows search for candidates again.")
-            .Produces<JsonObject>(StatusCodes.Status200OK);
+        foreach (var (path, name, title, preview, reset) in new (string, string, string, Func<ImportRuns, JsonObject>, Func<ImportRuns, DecisionActor, string, JsonObject>)[]
+        {
+            ("reset-rejections", "ImportRejections", "every remembered import Reject (unresolved rows search for candidates again)",
+                runs => runs.PreviewResetRejections(), (runs, actor, token) => runs.ResetRejections(actor, token)),
+            ("reset-manual-autoresolve", "ImportManualAutoresolve", "the remembered manual import matches (ordinary manual matches and groups stay)",
+                runs => runs.PreviewResetManualAutoresolve(), (runs, actor, token) => runs.ResetManualAutoresolve(actor, token)),
+        })
+        {
+            group.MapGet("/imports/" + path, (Func<HttpContext, Task<IResult>>)(context => Guard(context, false, (runs, _) =>
+                    Task.FromResult(MaintenanceV1Endpoints.OwnerOrAdmin(context) ? Answer(preview(runs)) : OwnerOnly()))))
+                .WithName("preview" + name + "Reset")
+                .WithSummary("Preview of forgetting " + title + ": counts and the preview_token the confirmation must send back.")
+                .Produces<JsonObject>(StatusCodes.Status200OK)
+                .Produces<ProblemResponse>(StatusCodes.Status403Forbidden);
 
-        group.MapPost("/imports/reset-manual-autoresolve", (Func<HttpContext, Task<IResult>>)(context => Guard(context, false, (runs, _) =>
-            {
-                var result = runs.ResetManualAutoresolve(ManualDecisionsV1Endpoints.Actor(context));
-                result["ok"] = true;
-                return Task.FromResult(Answer(result));
-            })))
-            .WithName("resetImportManualAutoresolve")
-            .WithSummary("Forget the remembered manual import matches (explicit reset); ordinary manual matches and groups stay.")
-            .Produces<JsonObject>(StatusCodes.Status200OK);
+            group.MapPost("/imports/" + path, (Func<HttpContext, Task<IResult>>)(context => Guard(context, true, (runs, body) =>
+                {
+                    if (!MaintenanceV1Endpoints.OwnerOrAdmin(context)) return Task.FromResult(OwnerOnly());
+                    var result = reset(runs, ManualDecisionsV1Endpoints.Actor(context), ConfirmedToken(body));
+                    result["ok"] = true;
+                    return Task.FromResult(Answer(result));
+                })))
+                .Accepts<JsonObject>("application/json")
+                .WithName("reset" + name)
+                .WithSummary("Forget " + title + " after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when they changed since the preview.")
+                .Produces<JsonObject>(StatusCodes.Status200OK)
+                .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
+                .Produces<ProblemResponse>(StatusCodes.Status403Forbidden)
+                .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
+        }
 
         group.MapPost("/imports/recheck-after-reset", (Func<HttpContext, Task<IResult>>)(context => Guard(context, false, (runs, _) =>
-                Task.FromResult(Answer(runs.RecheckAfterReset(ManualDecisionsV1Endpoints.Actor(context)))))))
+                Task.FromResult(Answer(runs.ScheduleRecheckAfterReset(ManualDecisionsV1Endpoints.Actor(context)), 202)))))
             .WithName("recheckImportsAfterReset")
-            .WithSummary("Recheck accepted imports whose entry is gone (after a catalogue reset) through the kept decision log: manual matches are restored, automatic ones kept only if they still pass the current rules, otherwise reopened.")
-            .Produces<JsonObject>(StatusCodes.Status200OK);
+            .WithSummary("Queue the recheck of accepted imports whose entry is gone (after a catalogue reset) as a task: manual matches are restored (or reopened for review when their work is not back), automatic ones kept only if they still pass the current rules, otherwise reopened. Answers 202 with the task id.")
+            .Produces<JsonObject>(StatusCodes.Status202Accepted);
 
         group.MapPost("/imports/suwayomi-plan", (Func<HttpContext, Task<IResult>>)(context => Guard(context, false, (runs, _) =>
                 Task.FromResult(Answer(runs.ImportSuwayomiPlan(ManualDecisionsV1Endpoints.Actor(context)))))))

@@ -68,10 +68,13 @@ public static class CatalogueHostTests
         var saved = await Body(await f.Request(HttpMethod.Put, profilePath, admin: true, body: profile));
         Check.Equal(1L, saved["revision"]!.GetValue<long>());
         Check.Equal(HttpStatusCode.Conflict, (await f.Request(HttpMethod.Put, profilePath, admin: true, body: profile)).StatusCode);
+        // Phase 9: the override is written through the one /api/v1 path; the 0.4.5 admin PUT is gone.
         var fields = new JsonObject { ["revision"] = 0, ["fields"] = new JsonObject
         { ["description"] = new JsonObject { ["mode"] = "locked", ["value"] = "Saved host description" } } };
-        Check.Equal(HttpStatusCode.OK, (await f.Request(HttpMethod.Put, metadataPath, admin: true, body: fields)).StatusCode);
-        Check.Equal(HttpStatusCode.Conflict, (await f.Request(HttpMethod.Put, metadataPath, admin: true, body: fields)).StatusCode);
+        Check.True((await f.Request(HttpMethod.Put, metadataPath, admin: true, body: fields)).StatusCode != HttpStatusCode.OK, "the admin metadata PUT was removed");
+        var overridden = await f.Request(HttpMethod.Put, FormattableString.Invariant($"/api/v1/entries/{Entry}/metadata/description"), reader: false, admin: true,
+            body: new JsonObject { ["value"] = "Saved host description" });
+        Check.True(overridden.StatusCode == HttpStatusCode.OK, overridden.StatusCode + " " + await overridden.Content.ReadAsStringAsync());
         var shown = await Body(await f.Request(HttpMethod.Get, "/api/reader/v1/entries/17"));
         Check.True(shown["description_for_extension"]!.GetValue<string>().StartsWith("Saved host description", StringComparison.Ordinal));
         var sourceFacts = f.Runtime.Database.Read(DatabaseFile.Catalog, c => c.Query("SELECT source_title FROM source_matches WHERE entry_id=$id", ("$id", Entry))[0].Text("source_title"));

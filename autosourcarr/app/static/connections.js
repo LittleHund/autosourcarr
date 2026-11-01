@@ -9,7 +9,26 @@
   const request = (path, options = {}) => api('/api/v1/connections' + path, { timeoutMs: 25000, noMutationRefresh: true, cache: 'no-store', ...options });
   const send = (path, method, body) => request(path, { method, body: JSON.stringify(body) });
   const state = { data: null, editing: null, loading: null, notice: '' };
-  const importNote = 'Catalogue entries are created from this import when matching arrives (conversion phase 8); until then the import is only stored.';
+  const importNote = 'Create entries adds the stored library to the catalogue through the import pipeline; Imports shows the progress and any rows that need review.';
+
+  /* Phase 9: after a plan is stored, "Create entries" runs it through the import pipeline (POST /api/v1/imports/suwayomi-plan). */
+  function offerCreateEntries(output, plan) {
+    if (plan && plan.status === 'imported') return;
+    const button = document.createElement('button');
+    button.type = 'button'; button.textContent = 'Create entries';
+    const note = document.createElement('div'); note.className = 'muted';
+    button.onclick = async () => {
+      button.disabled = true; note.textContent = 'Queueing…';
+      try {
+        const queued = await api('/api/v1/imports/suwayomi-plan', { method: 'POST', body: '{}', timeoutMs: 25000 });
+        note.textContent = `Creating entries as import ${queued.import_id || ''}${queued.task_id ? ` (task ${queued.task_id})` : ''}; see Imports.`;
+      } catch (error) {
+        note.textContent = 'Create entries failed: ' + error.message + (/not found|404/i.test(error.message) ? ' The library read may still be running; try again when its task finished.' : '');
+        button.disabled = false;
+      }
+    };
+    output.append(document.createElement('br'), button, note);
+  }
 
   /* CON-5: a change answers with an exact notice of what happens next (source host restart, feed reconnect, rollback note). */
   function noticeFrom(answer) {
@@ -165,12 +184,14 @@
         if (current.plan) {
           if (!window.confirm(planSummary(current) + ' Read the library again and replace the stored import?')) {
             output.innerHTML = `${text(planSummary(current))}<br/><small class="muted">${text(importNote)}</small>`;
+            offerCreateEntries(output, current.plan);
             return;
           }
           force = true;
         }
         const queued = await send(path, 'POST', { force });
         output.innerHTML = `Import queued as task ${text(queued.task_id)} (see Tasks). ${text(planSummary(current))}<br/><small class="muted">${text(importNote)}</small>`;
+        offerCreateEntries(output, null);
       } catch (error) { output.textContent = 'Import failed: ' + error.message; }
       finally { button.disabled = false; }
     });
