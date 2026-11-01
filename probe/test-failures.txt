@@ -1,0 +1,53 @@
+FAIL catalogue host: real routes preserve aliases Int64 IDs auth and factual cache state
+System.InvalidOperationException: Expected NotFound; got ServiceUnavailable.
+   at AutoSourcarr.Tests.Check.Equal[T](T expected, T actual) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 67
+   at AutoSourcarr.Tests.CatalogueHostTests.Reads() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs:line 54
+   at AutoSourcarr.Tests.CatalogueHostTests.Reads() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs:line 55
+   at AutoSourcarr.Tests.CatalogueHostTests.<>c.<Register>b__5_0() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs:line 29
+   at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 29
+::error title=catalogue host%3A real routes preserve aliases Int64 IDs auth and factual cache state::System.InvalidOperationException%3A Expected NotFound; got ServiceUnavailable. | at AutoSourcarr.Tests.Check.Equal[T](T expected%2C T actual) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 67 | at AutoSourcarr.Tests.CatalogueHostTests.Reads() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs%3Aline 54 | at AutoSourcarr.Tests.CatalogueHostTests.Reads() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs%3Aline 55 | at AutoSourcarr.Tests.CatalogueHostTests.<>c.<Register>b__5_0() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs%3Aline 29 | at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 29
+PASS catalogue host: metadata and profile CAS persist through the actual app owner
+PASS catalogue host: actual source HTTP pages GET HEAD and served provenance
+PASS catalogue host: network image cancellation joins app shutdown
+PASS catalogue host: cancelled reader waits for the actual shared catalogue gate
+PASS catalogue host: background cache fill holds storage until physical completion
+PASS catalogue host: failed cache construction releases app resources without replacing data
+PASS native media lifecycle:34 original selections use the actual app structural owner
+PASS native media lifecycle:split retains pages history and scan provenance
+PASS native media lifecycle:current manual change and cancellation are rechecked at writer admission
+PASS native media lifecycle:post-commit cache error retains exact recoverable journal
+PASS native media lifecycle:cancelled admitted split finishes its physical cross-file work
+PASS native media lifecycle:ambiguous native rows and nested sessions cannot grant mutation
+PASS native media lifecycle:owner construction never runs automatic changes
+PASS native gallery lifecycle:animation separates from still with real cached chapter replay
+PASS native gallery lifecycle:all manual authority fences retain current owners
+PASS native gallery lifecycle:explicit profiles and disabled combining keep animation identity
+PASS native gallery lifecycle:optimistic metadata conflict defers instead of splitting
+PASS native gallery lifecycle:committed split cancellation drains physical replay
+--
+FAIL library: each source downloads one chapter at a time, in queue order
+System.InvalidOperationException: Expected 6; got 5.
+   at AutoSourcarr.Tests.Check.Equal[T](T expected, T actual) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 67
+   at AutoSourcarr.Tests.Library.LibraryDownloadsTests.<>c.<Register>b__1_5() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Library/LibraryDownloadsTests.cs:line 284
+   at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 29
+::error title=library%3A each source downloads one chapter at a time%2C in queue order::System.InvalidOperationException%3A Expected 6; got 5. | at AutoSourcarr.Tests.Check.Equal[T](T expected%2C T actual) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 67 | at AutoSourcarr.Tests.Library.LibraryDownloadsTests.<>c.<Register>b__1_5() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Library/LibraryDownloadsTests.cs%3Aline 284 | at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 29
+PASS library: a failed chapter stays in the queue with its error and can be retried
+PASS library: monitoring picks up a new chapter and the interrupted check replays read-only
+PASS library: the catalogue view reads series metadata from entries
+PASS library: the /api/v1 library and download routes are admin-only and answer
+PASS imaging: exact thumbnail fingerprints ignore encoding, see pixels and refuse icons
+PASS imaging: fingerprints are cached per URL and record, expire, and stay off when disabled
+PASS imaging: the import tie-break picks only candidates with the exact cover
+PASS imaging: cover hints fail over across records, refresh keys and recovery cooldown
+PASS translation: LibreTranslate requests are cached durably, keyed, and never fail a search
+PASS translation: search names gain origin and literal translations, transient and deduplicated
+PASS translation: the health check answers at once and checks in the background
+PASS tag catalogue: difflib ratio matches Python
+PASS tag catalogue: groups, counts, suggestions and reviews with the decision log
+PASS tag catalogue: the reindex runs as one job and marks the index current
+PASS metadata hydration: provider status lists every provider with what is in use
+PASS metadata hydration: sparse payloads, the feed plan and background enrichment
+PASS metadata hydration: a MangaDex record URL seeds the exact MangaDex identity
+PASS metadata hydration: the orphan identity repair resumes failures and finishes once
+PASS metadata hydration: refresh metadata enriches only while sparse
+PASS reader extension: repository serves only its index, repo, apk, icon and jar files

@@ -1,10 +1,13 @@
-sha=3d858677962b2971c568b9889dc02f8b44f2a7fa
+sha=57059a084007f293d7074877bdfa0bdf570ff0e0
 restore=0
 build=0
-test=0
+test=1
 openapi=0
 client=0
 source_host_build=0
 source_host_check=0
 source_host_csharp=0
 repair_runner=exit=0
+kavita=0
+reader_extension_build=1
+duplicate_user_set=124

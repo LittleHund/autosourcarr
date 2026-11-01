@@ -1,0 +1,27 @@
+::warning::UNSIGNED-FOR-RELEASE: AUTOSOURCARR_EXT_KEYSTORE_B64 is not set; the reader extension is signed with a throwaway debug key.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build.gradle.kts:26:22: Unresolved reference 'security'.
+e: file:///home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build.gradle.kts:27:25: Cannot infer type for type parameter 'V'. Specify it explicitly.
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file '/home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build.gradle.kts' line: 26
+
+* What went wrong:
+Script compilation errors:
+
+  Line 26:     val bytes = java.security.MessageDigest.getInstance("MD5").digest("${slotName(slot).lowercase()}/all/1".toByteArray())
+                                ^ Unresolved reference 'security'.
+
+  Line 27:     return (0..7).map { bytes[it].toLong() and 0xff }.reduce { acc, value -> (acc shl 8) or value } and Long.MAX_VALUE
+                                   ^ Cannot infer type for type parameter 'V'. Specify it explicitly.
+
+2 errors
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 5s

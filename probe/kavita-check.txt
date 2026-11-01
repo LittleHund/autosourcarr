@@ -1,0 +1,45 @@
+OK: 1 series, 2 chapters
+Unable to find image 'jvmilazz0/kavita:0.8.9' locally
+0.8.9: Pulling from jvmilazz0/kavita
+a3629ac5b9f4: Pulling fs layer
+42604ec00e21: Pulling fs layer
+4755ce20b67e: Pulling fs layer
+ae21f418a34a: Pulling fs layer
+f22b818d3bd0: Pulling fs layer
+d3425bc32418: Pulling fs layer
+c65183130753: Pulling fs layer
+4f4fb700ef54: Pulling fs layer
+f22b818d3bd0: Waiting
+d3425bc32418: Waiting
+c65183130753: Waiting
+4f4fb700ef54: Waiting
+ae21f418a34a: Waiting
+a3629ac5b9f4: Verifying Checksum
+a3629ac5b9f4: Download complete
+ae21f418a34a: Verifying Checksum
+ae21f418a34a: Download complete
+4755ce20b67e: Verifying Checksum
+4755ce20b67e: Download complete
+a3629ac5b9f4: Pull complete
+d3425bc32418: Verifying Checksum
+d3425bc32418: Download complete
+c65183130753: Verifying Checksum
+c65183130753: Download complete
+4f4fb700ef54: Download complete
+f22b818d3bd0: Verifying Checksum
+f22b818d3bd0: Download complete
+42604ec00e21: Verifying Checksum
+42604ec00e21: Download complete
+42604ec00e21: Pull complete
+4755ce20b67e: Pull complete
+ae21f418a34a: Pull complete
+f22b818d3bd0: Pull complete
+d3425bc32418: Pull complete
+c65183130753: Pull complete
+4f4fb700ef54: Pull complete
+Digest: sha256:1f2acae7466d022f037ea09f7989eb7c487f916b881174c7a6de33dbfa8acb39
+Status: Downloaded newer image for jvmilazz0/kavita:0.8.9
+Waiting for Kavita (jvmilazz0/kavita:0.8.9) on http://127.0.0.1:5000
+Scanning library 1
+  Sōsō no Frieren: Beyond Journey's End: 2 chapters (1, 2)
+Kavita check passed: 1 series, 2 chapters
