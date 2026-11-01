@@ -60,6 +60,10 @@ jobs:
           dotnet restore AutoSourcarr.slnx > probe/restore.log 2>&1; r=$?
           dotnet build AutoSourcarr.slnx -c Release --no-restore > probe/build.log 2>&1; b=$?
           grep -E "error [A-Z]+[0-9]+|warning [A-Z]+[0-9]+" probe/build.log | sed 's#/home/runner/work/autosourcarr/autosourcarr/##' | sort -u > probe/build-errors.txt
+          if grep -q AD0001 probe/build.log; then
+            dotnet build src/AutoSourcarr.Api/AutoSourcarr.Api.csproj -c Release --no-restore -p:ErrorLog=$PWD/probe/api-analyzer.sarif -p:ReportAnalyzer=true > probe/api-analyzer.log 2>&1
+            python3 -c "import json,sys;d=json.load(open('probe/api-analyzer.sarif'));[print(r.get('ruleId'),json.dumps(r.get('message'))[:6000]) for run in d['runs'] for r in run.get('results',[]) if r.get('ruleId')=='AD0001']" > probe/ad0001.txt 2>&1
+          fi
           t=skipped; o=skipped; c=skipped
           if [ $b -eq 0 ]; then
             command -v nginx >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q nginx-light; } > probe/nginx.log 2>&1
