@@ -1,4 +1,5 @@
 import io.github.keiyoushi.gradle.api.ContentWarning
+import java.security.MessageDigest
 
 plugins {
     alias(kei.plugins.extension)
@@ -23,8 +24,9 @@ fun slotName(slot: Int): String = if (slot == 1) "AutoSourcarr" else "AutoSourca
 // Stable ids: Keiyoushi's own name/lang/versionId digest, pinned per slot so a later display-name change
 // cannot move a library. Slot 1 keeps the id every earlier AutoSourcarr build had.
 fun slotSourceId(slot: Int): Long {
-    val bytes = java.security.MessageDigest.getInstance("MD5").digest("${slotName(slot).lowercase()}/all/1".toByteArray())
-    return (0..7).map { bytes[it].toLong() and 0xff }.reduce { acc, value -> (acc shl 8) or value } and Long.MAX_VALUE
+    // Imported: inside the Gradle Kotlin DSL a bare `java` is the `java` extension, not the package.
+    val bytes = MessageDigest.getInstance("MD5").digest("${slotName(slot).lowercase()}/all/1".toByteArray())
+    return (0..7).map { index -> bytes[index].toLong() and 0xffL }.reduce { acc: Long, value: Long -> (acc shl 8) or value } and Long.MAX_VALUE
 }
 
 keiyoushi {

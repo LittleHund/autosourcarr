@@ -243,6 +243,14 @@
        */
       addManualGroupMember(groupId, body, options) { return call('POST', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/members`, body, options); },
       /**
+       * Add a repository (body: url, revision).
+       * POST /api/v1/source-repositories
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      addSourceRepository(body, options) { return call('POST', '/api/v1/source-repositories', body, options); },
+      /**
        * Forget a separate-entry decision, so matching may attach the record to this entry again.
        * DELETE /api/v1/entries/{entryId}/separate-source/{sourceId}/{sourceMangaId}
        * @param {string} entryId
@@ -261,6 +269,14 @@
        */
       applyCatalogue(body, options) { return call('POST', '/api/v1/catalog-sharing/apply', body, options); },
       /**
+       * Queue the gallery layout job for a source: cached works holding its records are reconciled with the saved policy (no website requests).
+       * POST /api/v1/gallery-policies/{sourceId}/apply
+       * @param {string} sourceId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      applyGalleryPolicy(sourceId, options) { return call('POST', `/api/v1/gallery-policies/${encodeURIComponent(sourceId)}/apply`, undefined, options); },
+      /**
        * Save the previewed policy when rules and evidence are unchanged; nothing is merged or split now. Logged with the signed-in actor.
        * POST /api/v1/policy-simulator/apply
        * @param {JsonObject} body
@@ -277,6 +293,15 @@
        */
       applyReviewWorkbench(body, options) { return call('POST', '/api/v1/review-workbench/apply', body, options); },
       /**
+       * Apply a previewed quality upgrade (body {chapter_id, candidate_id, revision}): the candidate serves this chapter from now on; files, progress and origin history are kept. A changed candidate, sample or policy answers 409.
+       * POST /api/v1/serving-upgrades/{entryId}/apply
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      applyServingUpgrade(entryId, body, options) { return call('POST', `/api/v1/serving-upgrades/${encodeURIComponent(entryId)}/apply`, body, options); },
+      /**
        * Keep the original APK of an installed source as repair evidence (headers confirm the original and its version).
        * POST /api/v1/source-maintenance/original-apk/{pkgName}
        * @param {string} pkgName
@@ -284,6 +309,13 @@
        * @returns {Promise<JsonObject>}
        */
       attachOriginalSourceApk(pkgName, options) { return call('POST', `/api/v1/source-maintenance/original-apk/${encodeURIComponent(pkgName)}`, undefined, options); },
+      /**
+       * The companion browser over the federated discovery pipeline the extension uses. Optional query: mode (POPULAR, LATEST, SEARCH), q, page, min_matches, match_count, sources (repeatable), sort (relevance, sources, title), page_size, force_live, source_id (one connected source).
+       * GET /api/v1/catalogue/browse
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      browseCatalogue(options) { return call('GET', '/api/v1/catalogue/browse', undefined, options); },
       /**
        * Cancel a queued or running repair job; a repair that already changed the source rolls back itself.
        * POST /api/v1/source-maintenance/jobs/{jobId}/cancel
@@ -300,6 +332,22 @@
        * @returns {Promise<TaskActionResponse>}
        */
       cancelTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/cancel`, undefined, options); },
+      /**
+       * Compact card summaries (cover, title, metadata completeness, sources) of up to 500 entries, body {ids}; lets open pages pick up metadata found in the background without a reload.
+       * POST /api/v1/catalogue/entries/summaries
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      catalogueEntrySummaries(body, options) { return call('POST', '/api/v1/catalogue/entries/summaries', body, options); },
+      /**
+       * Control the queue against its revision: {action: start | stop | remove | move | retry, revision, chapter_id, to}.
+       * POST /api/v1/downloads
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      changeDownloadQueue(body, options) { return call('POST', '/api/v1/downloads', body, options); },
       /**
        * Change your own password; other sessions of the account end.
        * POST /api/v1/auth/password
@@ -348,6 +396,24 @@
        * @returns {Promise<JsonObject>}
        */
       checkSourceChallenges(options) { return call('POST', '/api/v1/source-engine/challenges', undefined, options); },
+      /**
+       * Check installed sources now (body: source_ids, or all_enabled true); answers the queued checks.
+       * POST /api/v1/source-health/check
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      checkSourceHealth(body, options) { return call('POST', '/api/v1/source-health/check', body, options); },
+      /**
+       * Fetch the chapters of one attached source record now (a job in Tasks) and answer its chapter coverage. A failed check is remembered on the record without touching its stored chapters.
+       * POST /api/v1/entries/{entryId}/source-records/{sourceId}/{sourceMangaId}/check-chapters
+       * @param {string} entryId
+       * @param {string} sourceId
+       * @param {string} sourceMangaId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      checkSourceRecordChapters(entryId, sourceId, sourceMangaId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/source-records/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}/check-chapters`, undefined, options); },
       /**
        * Clear one field's override; the field returns to the ranked choice. Clearing the title keeps manual alternate titles.
        * DELETE /api/v1/entries/{entryId}/metadata/{field}
@@ -535,6 +601,14 @@
        */
       discoverAdditionalRecords(body, options) { return call('POST', '/api/v1/maintenance/discover-additional', body, options); },
       /**
+       * Search every enabled source for the entry's missing records, then further records on its sources; found records are re-proved before they attach. Runs as a job (202) unless background=false.
+       * POST /api/v1/entries/{entryId}/discover-additional
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      discoverEntrySourceRecords(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/discover-additional`, undefined, options); },
+      /**
        * Look up the source's repository in the configured indexes (body: revision); runs in the background.
        * POST /api/v1/source-maintenance/raws/{package}/discover
        * @param {string} package_
@@ -550,6 +624,30 @@
        * @returns {Promise<UpdateNoticeResponse>}
        */
       dismissUpdateNotice(options) { return call('POST', '/api/v1/settings/update-notice/dismiss', undefined, options); },
+      /**
+       * Queue every chapter of the work that has no CBZ yet (failed ones are retried); answers queued and remaining.
+       * POST /api/v1/library/{entryId}/download
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      downloadLibraryEntry(entryId, options) { return call('POST', `/api/v1/library/${encodeURIComponent(entryId)}/download`, undefined, options); },
+      /**
+       * Download an installed source's APK: its extension store index is read again and the package's current APK is downloaded and checked at request time (AutoSourcarr's own reader extension comes from its local repository).
+       * GET /api/v1/source-extensions/{pkgName}/apk
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      downloadSourceExtensionApk(pkgName, options) { return call('GET', `/api/v1/source-extensions/${encodeURIComponent(pkgName)}/apk`, undefined, options); },
+      /**
+       * Download the JAR the source host runs for an installed source right now (never a cached copy).
+       * GET /api/v1/source-extensions/{pkgName}/jar
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      downloadSourceExtensionJar(pkgName, options) { return call('GET', `/api/v1/source-extensions/${encodeURIComponent(pkgName)}/jar`, undefined, options); },
       /**
        * Download the retained source code of an installed source as a portable ZIP.
        * GET /api/v1/source-maintenance/raws/{package}/code
@@ -591,7 +689,7 @@
        */
       finishSetup(body, options) { return call('POST', '/api/v1/setup/finish', body, options); },
       /**
-       * Full reset as an exclusive job (body {confirm: true}): clears the catalogue and every decision, keeps configuration and main-library subscriptions.
+       * Full reset as an exclusive job (body {confirm: true, preview_token}): clears the catalogue and every decision, keeps configuration and main-library subscriptions.
        * POST /api/v1/maintenance/full-reset
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -606,6 +704,13 @@
        */
       getAccounts(options) { return call('GET', '/api/v1/accounts', undefined, options); },
       /**
+       * Finished general tasks (up to 300, seven days; query offset and limit) plus the 50 newest download events (downloaded, failed, removed).
+       * GET /api/v1/activity/history
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getActivityHistory(options) { return call('GET', '/api/v1/activity/history', undefined, options); },
+      /**
        * Sources that need a person (verification, sign-in): open items with the next automatic retry.
        * GET /api/v1/attention
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -619,6 +724,14 @@
        * @returns {Promise<JsonObject>}
        */
       getAuthStatus(options) { return call('GET', '/api/v1/auth/status', undefined, options); },
+      /**
+       * The admin view of one entry: card fields, every title, active and additional source records with chapter statistics, provider identities and the description shown in the extension.
+       * GET /api/v1/catalogue/entries/{entryId}
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getCatalogueEntry(entryId, options) { return call('GET', `/api/v1/catalogue/entries/${encodeURIComponent(entryId)}`, undefined, options); },
       /**
        * Database sharing overview: origin ID, local entries, catalogue files added, retained incoming versions and pending shared choices.
        * GET /api/v1/catalog-sharing/status
@@ -685,6 +798,13 @@
        */
       getDiagnostics(options) { return call('GET', '/api/v1/diagnostics', undefined, options); },
       /**
+       * The download queue: state (STARTED or STOPPED), queued chapters in order with source, progress and errors, and its revision.
+       * GET /api/v1/downloads
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getDownloadQueue(options) { return call('GET', '/api/v1/downloads', undefined, options); },
+      /**
        * Duplicate review badges for entries (?ids=1,2,...; at most 500) from the completed snapshot, never rescoring; pending while a refresh runs.
        * GET /api/v1/duplicate-candidates
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -699,6 +819,14 @@
        * @returns {Promise<JsonObject>}
        */
       getDuplicateHistoryEvent(eventId, options) { return call('GET', `/api/v1/duplicates/history/${encodeURIComponent(eventId)}`, undefined, options); },
+      /**
+       * The entry's chapters and which source served each of them when (newest first).
+       * GET /api/v1/entries/{entryId}/history
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getEntryHistory(entryId, options) { return call('GET', `/api/v1/entries/${encodeURIComponent(entryId)}/history`, undefined, options); },
       /**
        * Search the catalogue by the entry's own names (main title, alternative and source titles, romanised forms): other entries with an exact shared title, plus the names used.
        * GET /api/v1/entries/{entryId}/manual-search
@@ -716,12 +844,28 @@
        */
       getEntryMetadata(entryId, options) { return call('GET', `/api/v1/entries/${encodeURIComponent(entryId)}/metadata`, undefined, options); },
       /**
+       * The source tags and gallery metadata of an entry's active records; metadata_basis says whether gallery source metadata exists.
+       * GET /api/v1/entries/{entryId}/tags
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getEntryTags(entryId, options) { return call('GET', `/api/v1/entries/${encodeURIComponent(entryId)}/tags`, undefined, options); },
+      /**
        * Recent errors grouped by cause with counts, newest first (resolved ones included).
        * GET /api/v1/errors
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       getErrors(options) { return call('GET', '/api/v1/errors', undefined, options); },
+      /**
+       * A source's gallery policy (profile, combining, criteria, title minimum, tag thresholds), its revision, whether it looks like a gallery source, how many works combine its records and the last layout result.
+       * GET /api/v1/gallery-policies/{sourceId}
+       * @param {string} sourceId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getGalleryPolicy(sourceId, options) { return call('GET', `/api/v1/gallery-policies/${encodeURIComponent(sourceId)}`, undefined, options); },
       /**
        * Status page: version, databases, catalogue counts, active errors and dependency checks.
        * GET /api/v1/health
@@ -786,6 +930,21 @@
        */
       getKeys(options) { return call('GET', '/api/v1/keys', undefined, options); },
       /**
+       * A work's library controls: membership, series folder, monitoring, revision, the last observation and its monitoring clock.
+       * GET /api/v1/library/{entryId}/controls
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getLibraryControls(entryId, options) { return call('GET', `/api/v1/library/${encodeURIComponent(entryId)}/controls`, undefined, options); },
+      /**
+       * AutoSourcarr's own library, filtered and paged (query: search, source, scope = all | catalog | missing_downloads | source_gaps | unmatched | verification | monitored, sort = title | updated | matches, publication, title_state, match_status, source_count, record_count, cursor, limit 1-120).
+       * GET /api/v1/library
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getLibraryPage(options) { return call('GET', '/api/v1/library', undefined, options); },
+      /**
        * Every saved user decision by kind: manual matches and groups, manual titles with their frozen record scope, separate-entry rules, rejected chapters and different-work reviews.
        * GET /api/v1/manual-actions
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -814,6 +973,21 @@
        */
       getMatchingPresets(options) { return call('GET', '/api/v1/matching-presets', undefined, options); },
       /**
+       * The catalogue Matrix from stored data: entries (optional query search, limit 1-500, subbed, source_id, include_chapter_stats), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.
+       * GET /api/v1/matrix
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getMatrix(options) { return call('GET', '/api/v1/matrix', undefined, options); },
+      /**
+       * Chapter coverage for up to 500 entries (body {ids}): served chapter count and latest chapter per entry, and per attached record its chapter count, latest chapter, missing whole chapters and last check.
+       * POST /api/v1/matrix/chapter-stats
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getMatrixChapterStats(body, options) { return call('POST', '/api/v1/matrix/chapter-stats', body, options); },
+      /**
        * Who is calling: name, role and how they signed in.
        * GET /api/v1/auth/me
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -836,6 +1010,13 @@
        */
       getPolicySimulatorOptions(options) { return call('GET', '/api/v1/policy-simulator/options', undefined, options); },
       /**
+       * Reader setup for the System page: the reader extension repository URL, the Mihon and Tachiyomi add-repository links, the reader address and the source of each server slot, and the served build (version, slots, signing). Keys are never included.
+       * GET /api/v1/reader-extension/setup
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getReaderExtensionSetup(options) { return call('GET', '/api/v1/reader-extension/setup', undefined, options); },
+      /**
        * Where repairs run: always inside this instance (no external worker); which repair kinds are available.
        * GET /api/v1/source-maintenance/connection
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -843,7 +1024,7 @@
        */
       getRepairConnection(options) { return call('GET', '/api/v1/source-maintenance/connection', undefined, options); },
       /**
-       * In-app repair state: domain repair availability, whether a repair is running, AI provider (not configured until Connections) and the runner check.
+       * In-app repair state: domain repair availability, whether a repair is running, AI provider (not available in this version; planned for 0.6.0) and the runner check.
        * GET /api/v1/source-maintenance/control
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -857,12 +1038,19 @@
        */
       getRepairHostSetup(options) { return call('GET', '/api/v1/source-maintenance/host-setup', undefined, options); },
       /**
-       * The repair AI provider; answers state not-configured until AI providers arrive with Connections.
+       * The repair AI provider; answers state not-configured: AI providers for repair are not available in this version (planned for 0.6.0).
        * GET /api/v1/source-maintenance/provider
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       getRepairProvider(options) { return call('GET', '/api/v1/source-maintenance/provider', undefined, options); },
+      /**
+       * Scheduled catalogue work (due times, outcomes), feed pages still being ingested, the last 20 chapter quality attempts, runtime metrics and the source engine contract status.
+       * GET /api/v1/research-improvements/status
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getResearchImprovementsStatus(options) { return call('GET', '/api/v1/research-improvements/status', undefined, options); },
       /**
        * Recent matching decisions with who made them (merges, splits, separate works, manual matches, title choices), reviewed batches and their undo state.
        * GET /api/v1/review-workbench
@@ -892,6 +1080,22 @@
        * @returns {Promise<JsonObject>}
        */
       getSecurityEvents(options) { return call('GET', '/api/v1/security/events', undefined, options); },
+      /**
+       * A work's serving profile: preferred languages and sources in order and the quality preference (default, quality, complete), with its revision and the profiles retained from merged works.
+       * GET /api/v1/profiles/{entryId}
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getServingProfile(entryId, options) { return call('GET', `/api/v1/profiles/${encodeURIComponent(entryId)}`, undefined, options); },
+      /**
+       * A work's quality-upgrade policy (enabled, cutoff, minimum_improvement, cooldown_hours, sample_max_age_hours), its revision and the retained earlier policies.
+       * GET /api/v1/serving-upgrades/{entryId}
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getServingUpgradePolicy(entryId, options) { return call('GET', `/api/v1/serving-upgrades/${encodeURIComponent(entryId)}`, undefined, options); },
       /**
        * Effective settings grouped as on the Settings page; secret values are hidden.
        * GET /api/v1/settings
@@ -949,6 +1153,13 @@
        */
       getSourceExtensions(options) { return call('GET', '/api/v1/source-extensions', undefined, options); },
       /**
+       * Source health (SRC-7): each installed source with its last check, the daily check switch and the running checks.
+       * GET /api/v1/source-health
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceHealth(options) { return call('GET', '/api/v1/source-health', undefined, options); },
+      /**
        * Source repair status: worker configuration, the daily check switch and the last repair promotion and which repair kinds can run.
        * GET /api/v1/source-maintenance
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1002,6 +1213,13 @@
        * @returns {Promise<JsonObject>}
        */
       getSourceRepairJob(jobId, options) { return call('GET', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}`, undefined, options); },
+      /**
+       * The configured extension repositories (SRC-1) with the revision a change must name.
+       * GET /api/v1/source-repositories
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceRepositories(options) { return call('GET', '/api/v1/source-repositories', undefined, options); },
       /**
        * Available sources with enabled, priority, group and language choices, and the source groups.
        * GET /api/v1/source-settings
@@ -1100,6 +1318,13 @@
        */
       listCatalogueDecisions(options) { return call('GET', '/api/v1/catalog-sharing/decisions', undefined, options); },
       /**
+       * Catalogue entries as cards, newest first or matching the optional query 'search' (local titles only), at most 'limit' (default 200, at most 1000).
+       * GET /api/v1/catalogue/entries
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listCatalogueEntries(options) { return call('GET', '/api/v1/catalogue/entries', undefined, options); },
+      /**
        * Incoming entry versions retained for review, with local candidates. Optional query for the UI: offset, limit (1-50).
        * GET /api/v1/catalog-sharing/records
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1144,12 +1369,40 @@
        */
       listImportRuns(options) { return call('GET', '/api/v1/imports', undefined, options); },
       /**
+       * Every metadata provider with its identity scope (work or edition), priority, whether it is configured and in use, and its last rate-limit view.
+       * GET /api/v1/metadata-providers
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listMetadataProviders(options) { return call('GET', '/api/v1/metadata-providers', undefined, options); },
+      /**
        * Entries whose source records may be different works (different formats, color editions, titles with unrelated detailed summaries), from the saved findings of the last mixed-entry check, with counts and the check's progress. Optional query: state, q, offset, limit.
        * GET /api/v1/mixed-entries
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       listMixedEntries(options) { return call('GET', '/api/v1/mixed-entries', undefined, options); },
+      /**
+       * Every reviewed tag pair (same or separate), newest first.
+       * GET /api/v1/tags/reviews
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listTagReviews(options) { return call('GET', '/api/v1/tags/reviews', undefined, options); },
+      /**
+       * One page of indexed source tags with their canonical tag, equivalent aliases and how many sources and entries use them. Optional query: search (namespace and name), limit (≤ 200), offset.
+       * GET /api/v1/tags
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listTags(options) { return call('GET', '/api/v1/tags', undefined, options); },
+      /**
+       * Tags in one namespace with a similar spelling that are not yet reviewed or equivalent, best first; review them before treating them as the same.
+       * GET /api/v1/tags/suggestions
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listTagSuggestions(options) { return call('GET', '/api/v1/tags/suggestions', undefined, options); },
       /**
        * Merged entries whose source records can be split apart again, with every record and its match type.
        * GET /api/v1/maintenance/unmatch-duplicates
@@ -1208,6 +1461,15 @@
        */
       moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
       /**
+       * Check which chapters are downloaded ({refresh: true} first fetches the source chapter lists again). Read-only otherwise; safe to repeat.
+       * POST /api/v1/library/{entryId}/observe
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      observeLibraryEntry(entryId, body, options) { return call('POST', `/api/v1/library/${encodeURIComponent(entryId)}/observe`, body, options); },
+      /**
        * Override one field: body {value} (status as a word or 0-6, year as a number, names as text or a list), or {source_id, source_manga_id} to follow an attached record (description, cover, authors, artists). The title override is the entry's main title. Recorded with the caller as actor.
        * PUT /api/v1/entries/{entryId}/metadata/{field}
        * @param {string} entryId
@@ -1247,6 +1509,13 @@
        * @returns {Promise<JsonObject>}
        */
       previewConsolidateDuplicates(options) { return call('GET', '/api/v1/maintenance/consolidate-preview', undefined, options); },
+      /**
+       * Preview of a full reset: the saved manual decisions per kind and the preview_token the confirmation must send back.
+       * GET /api/v1/maintenance/full-reset
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewFullResetDatabase(options) { return call('GET', '/api/v1/maintenance/full-reset', undefined, options); },
       /**
        * Preview of forgetting the remembered manual import matches (ordinary manual matches and groups stay): counts and the preview_token the confirmation must send back.
        * GET /api/v1/imports/reset-manual-autoresolve
@@ -1291,6 +1560,13 @@
        */
       previewRepairSetup(options) { return call('POST', '/api/v1/source-maintenance/setup-preview', undefined, options); },
       /**
+       * Preview of a database reset: the saved manual decisions per kind and the preview_token the confirmation must send back.
+       * GET /api/v1/maintenance/reset-database
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewResetDatabase(options) { return call('GET', '/api/v1/maintenance/reset-database', undefined, options); },
+      /**
        * Check 1 to 100 review items (pairs to keep separate, or actions: separate, merge, split, manual.match, title) and return their effects and a revision.
        * POST /api/v1/review-workbench/preview
        * @param {JsonObject} body
@@ -1298,6 +1574,23 @@
        * @returns {Promise<JsonObject>}
        */
       previewReviewWorkbench(body, options) { return call('POST', '/api/v1/review-workbench/preview', body, options); },
+      /**
+       * Preview serving another candidate for one chapter (body {chapter_id, candidate_id}): quality before/after, the blockers (disabled, locked record, stale samples, cutoff, minimum improvement, cooldown) and the revision to apply.
+       * POST /api/v1/serving-upgrades/{entryId}/preview
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewServingUpgrade(entryId, body, options) { return call('POST', `/api/v1/serving-upgrades/${encodeURIComponent(entryId)}/preview`, body, options); },
+      /**
+       * Read a repository index (body: url) without adding it: its name and extensions.
+       * POST /api/v1/source-repositories/preview
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewSourceRepository(body, options) { return call('POST', '/api/v1/source-repositories/preview', body, options); },
       /**
        * Use an additional record as the primary record of its source; the old primary stays as an additional record.
        * POST /api/v1/entries/{entryId}/variants/{sourceId}/{sourceMangaId}/promote
@@ -1324,7 +1617,7 @@
        */
       recheckImportsAfterReset(options) { return call('POST', '/api/v1/imports/recheck-after-reset', undefined, options); },
       /**
-       * The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider; 409 until Connections.
+       * The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider: code rebuilds by an AI provider are not available in this version (planned for 0.6.0), so this answers 409.
        * POST /api/v1/source-maintenance/raws/{package}/unavailable
        * @param {string} package_
        * @param {JsonObject} body
@@ -1348,6 +1641,38 @@
        */
       refreshBrowseFeeds(options) { return call('POST', '/api/v1/maintenance/refresh-feeds', undefined, options); },
       /**
+       * Refresh the whole work: clear its cached covers, queue a chapter refresh of every record (a job in Tasks), a metadata refresh of every record and a forced provider-identity refresh.
+       * POST /api/v1/entries/{entryId}/refresh-all
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      refreshEntryAll(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/refresh-all`, undefined, options); },
+      /**
+       * Clear the cached unified cover and every active record's cover of an entry; they are fetched again on the next view.
+       * POST /api/v1/entries/{entryId}/refresh-covers
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      refreshEntryCovers(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/refresh-covers`, undefined, options); },
+      /**
+       * Look the entry up at the enabled metadata providers now (force=true ignores the cached answers); a provider record is accepted only on strict native evidence. Answers the result with the entry.
+       * POST /api/v1/entries/{entryId}/identity/refresh
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      refreshEntryIdentity(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/identity/refresh`, undefined, options); },
+      /**
+       * Fetch the details of every active record again (no chapters) and, while fields are still missing, look the entry up at the metadata providers. Runs as a job (202) unless background=false, which answers {entry, still_sparse}.
+       * POST /api/v1/entries/{entryId}/refresh-metadata
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      refreshEntryMetadata(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/refresh-metadata`, undefined, options); },
+      /**
        * Collect removed sources from sampled original Keiyoushi history (two years) in the background; at most once a minute.
        * POST /api/v1/source-orphans/refresh
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1361,6 +1686,21 @@
        * @returns {Promise<JsonObject>}
        */
       regenerateAdminToken(options) { return call('POST', '/api/v1/keys/admin-token/regenerate', undefined, options); },
+      /**
+       * Index the tags of every active source record again from its saved metadata (no website requests), as one job; a second request joins the running one.
+       * POST /api/v1/tags/reindex
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      reindexTags(options) { return call('POST', '/api/v1/tags/reindex', undefined, options); },
+      /**
+       * Reject one chapter candidate: it stays rejected after source refreshes and is not served until restored. Answers the chapter details.
+       * POST /api/v1/candidates/{candidateId}/reject
+       * @param {string} candidateId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      rejectChapterCandidate(candidateId, options) { return call('POST', `/api/v1/candidates/${encodeURIComponent(candidateId)}/reject`, undefined, options); },
       /**
        * Reject an accepted Added/Existing match: remembered for this backup identity; a verified import addition is removed from the main library and alternatives are searched.
        * POST /api/v1/imports/{importId}/items/{itemId}/reject
@@ -1380,6 +1720,14 @@
        * @returns {Promise<JsonObject>}
        */
       removeManualGroupMember(groupId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
+      /**
+       * Remove a repository (body: url, revision).
+       * DELETE /api/v1/source-repositories
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      removeSourceRepository(body, options) { return call('DELETE', '/api/v1/source-repositories', body, options); },
       /**
        * Repair entries missing a cover, summary, creators, genres or status (body {limit}, default 500, at most 5000): provider identity first, then the detail of their best source records, paced, as one cancellable job.
        * POST /api/v1/maintenance/refresh-metadata
@@ -1430,7 +1778,7 @@
        */
       resetCovers(options) { return call('POST', '/api/v1/maintenance/reset-covers', undefined, options); },
       /**
-       * Database reset as an exclusive job (body {confirm: true}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.
+       * Database reset as an exclusive job (body {confirm: true, preview_token}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.
        * POST /api/v1/maintenance/reset-database
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1492,6 +1840,14 @@
        */
       restartSources(options) { return call('POST', '/api/v1/source-browser/restart', undefined, options); },
       /**
+       * Restore a rejected chapter candidate so the resolver may serve it again. Answers the chapter details.
+       * POST /api/v1/candidates/{candidateId}/restore
+       * @param {string} candidateId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      restoreChapterCandidate(candidateId, options) { return call('POST', `/api/v1/candidates/${encodeURIComponent(candidateId)}/restore`, undefined, options); },
+      /**
        * Check an assistance item again now (in the background).
        * POST /api/v1/attention/{attentionId}/retry
        * @param {string} attentionId
@@ -1550,6 +1906,14 @@
        */
       reviewMixedEntry(entryId, body, options) { return call('POST', `/api/v1/mixed-entries/${encodeURIComponent(entryId)}/review`, body, options); },
       /**
+       * Review two tags, body {left_id, right_id, decision}: same (one namespace only), different (kept separate) or clear. Tag equivalence is matching evidence only and never merges entries. Recorded with the caller as actor.
+       * POST /api/v1/tags/review
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      reviewTags(body, options) { return call('POST', '/api/v1/tags/review', body, options); },
+      /**
        * Revoke a key at once (a lost phone is cut off without touching other devices).
        * DELETE /api/v1/keys/{keyId}
        * @param {string} keyId
@@ -1581,7 +1945,7 @@
        */
       runAutomaticDuplicates(options) { return call('POST', '/api/v1/duplicates/automatic', undefined, options); },
       /**
-       * Repair control actions: check (or prepare) runs the repair runner self-check; account actions answer 409 until an AI provider is configured.
+       * Repair control actions: check (or prepare) runs the repair runner self-check; account actions answer 409 because AI-assisted repair is not available in this version (planned for 0.6.0).
        * POST /api/v1/source-maintenance/control/{action}
        * @param {string} action
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1595,6 +1959,24 @@
        * @returns {Promise<JsonObject>}
        */
       runSourceAutoRepair(options) { return call('POST', '/api/v1/source-maintenance/auto-repair/run', undefined, options); },
+      /**
+       * Sample a chapter candidate's pages (body {sample_count}, 2-12, default 5) and score its quality from page size, file size and broken pages. A run that cannot observe every sampled page keeps the old score; every attempt is recorded.
+       * POST /api/v1/candidates/{candidateId}/quality
+       * @param {string} candidateId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      sampleCandidateQuality(candidateId, body, options) { return call('POST', `/api/v1/candidates/${encodeURIComponent(candidateId)}/quality`, body, options); },
+      /**
+       * Save a source's gallery policy (body {revision, policy}) and queue the layout job that applies it to cached records. A stale revision answers 409.
+       * PUT /api/v1/gallery-policies/{sourceId}
+       * @param {string} sourceId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveGalleryPolicy(sourceId, body, options) { return call('PUT', `/api/v1/gallery-policies/${encodeURIComponent(sourceId)}`, body, options); },
       /**
        * Save a local identity review: confirmed, excluded, needs-review, reset (inherited) or restore (restore_id). Source bindings, merges and chapters are unchanged. Body: reference, decision, revision, note, restore_id.
        * POST /api/v1/identity-review/{entryId}
@@ -1615,6 +1997,24 @@
        * @returns {Promise<JsonObject>}
        */
       saveMatchingPolicy(scope, subject, direction, body, options) { return call('PUT', `/api/v1/matching-policies/${encodeURIComponent(scope)}/${encodeURIComponent(subject)}/${encodeURIComponent(direction)}`, body, options); },
+      /**
+       * Save a work's serving profile (body {revision, profile: {languages, sources, quality}}). Preferences only rank candidates already admitted by identity and edition checks; a stale revision answers 409.
+       * PUT /api/v1/profiles/{entryId}
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveServingProfile(entryId, body, options) { return call('PUT', `/api/v1/profiles/${encodeURIComponent(entryId)}`, body, options); },
+      /**
+       * Save a work's quality-upgrade policy (body {revision, policy}); upgrades stay off until enabled. A stale revision or an invalid threshold answers 409.
+       * PUT /api/v1/serving-upgrades/{entryId}
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveServingUpgradePolicy(entryId, body, options) { return call('PUT', `/api/v1/serving-upgrades/${encodeURIComponent(entryId)}`, body, options); },
       /**
        * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
        * PUT /api/v1/settings
@@ -1687,12 +2087,38 @@
        */
       setEntryPreferredTitle(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/preferred-title`, body, options); },
       /**
+       * Add a work to the library or remove it ({revision, in_library, monitored}). Removing keeps downloaded chapters and drops only queued ones.
+       * PUT /api/v1/library/{entryId}/membership
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setLibraryMembership(entryId, body, options) { return call('PUT', `/api/v1/library/${encodeURIComponent(entryId)}/membership`, body, options); },
+      /**
+       * Turn monitoring of new chapters on or off ({revision, monitored}); a monitored work downloads new chapters automatically.
+       * PUT /api/v1/library/{entryId}/monitoring
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setLibraryMonitoring(entryId, body, options) { return call('PUT', `/api/v1/library/${encodeURIComponent(entryId)}/monitoring`, body, options); },
+      /**
        * Retired: external repair worker connections were removed (410).
        * PUT /api/v1/source-maintenance/connection
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<null>}
        */
       setRepairConnection(options) { return call('PUT', '/api/v1/source-maintenance/connection', undefined, options); },
+      /**
+       * Turn the daily source health check on or off (body: enabled).
+       * PUT /api/v1/source-health/daily
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setSourceHealthDaily(body, options) { return call('PUT', '/api/v1/source-health/daily', body, options); },
       /**
        * Turn automatic repair of moved sources on or off (domain repairs need no worker).
        * PUT /api/v1/source-maintenance/watch

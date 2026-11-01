@@ -922,7 +922,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             var services = new JsonObject { ["jobs"] = jobs };
             return new(runtime, null, source, services, owner.Jobs.Annotate(owner.Tasks.Snapshot()));
         }
-        public JsonObject ImportContext(JsonArray errors) => new() { ["note"] = "Import context returns with conversion phase 9." };
+        public JsonObject ImportContext(JsonArray errors) => new() { ["note"] = "Import diagnostics are kept per import row (Imports page); none are added here." };
     }
 
     /// <summary>Held regular-file locks, not deletion/recreation markers. Raw-source storage

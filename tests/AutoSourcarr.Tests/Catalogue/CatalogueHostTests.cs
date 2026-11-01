@@ -51,8 +51,11 @@ public static class CatalogueHostTests
         Check.Equal(51L, chapters["items"]![0]!["id"]!.GetValue<long>());
         Check.Equal(HttpStatusCode.NotFound, (await f.Request(HttpMethod.Get, "/api/reader/v1/entries/99999")).StatusCode);
         Check.Equal(HttpStatusCode.UnprocessableEntity, (await f.Request(HttpMethod.Get, "/api/reader/v1/entries/9223372036854775808")).StatusCode);
-        Check.Equal(HttpStatusCode.NotFound, (await f.Request(HttpMethod.Get, "/api/reader/v1/browse/popular")).StatusCode);
-        Check.Equal(HttpStatusCode.NotFound, (await f.Request(HttpMethod.Get, "/api/reader/v1/entries/17/refresh")).StatusCode);
+        // Phase 10 (READ-3) maps the reader browse: with no saved feed page yet, Popular answers "preparing" (503 + Retry-After)
+        // instead of an empty or unrelated list; the feed crawl and refresh are covered by ReaderBrowseTests.
+        var popular = await f.Request(HttpMethod.Get, "/api/reader/v1/browse/popular");
+        Check.Equal(HttpStatusCode.ServiceUnavailable, popular.StatusCode);
+        Check.True(popular.Headers.RetryAfter is not null, "preparing answers carry Retry-After");
     }
     private static async Task Decisions()
     {
