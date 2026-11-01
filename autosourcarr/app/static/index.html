@@ -521,6 +521,7 @@
 <button class="settingsSubtab" data-settings-subtab="configuration" type="button">Application settings</button>
 <button class="settingsSubtab" data-settings-subtab="services" type="button">Services</button>
 <button class="settingsSubtab" data-settings-subtab="browser" type="button">Source browser</button>
+<button class="settingsSubtab" data-settings-subtab="connections" type="button">Connections</button>
 <button class="settingsSubtab" data-settings-subtab="security" type="button">Security</button>
 </div>
 <div class="settingsSubpane active" id="settingsCustomizationPane"><div class="browserStatus muted" id="preferenceSaveState" role="status">Preferences load from your user profile.</div>
@@ -581,6 +582,15 @@ proxy_set_header Remote-Groups $groups;</code></pre><p class="muted">These are t
 <section class="statusPanel"><h3>User agent</h3><p class="muted">Choose the browser identity sent to sources. Applying or resetting it briefly restarts the source process.</p><label for="sourceUserAgentPreset">Browser identity</label><select id="sourceUserAgentPreset" disabled><option value="default">Engine default (reset)</option></select><label for="sourceUserAgentValue">User-agent string</label><textarea id="sourceUserAgentValue" rows="3" maxlength="1024" spellcheck="false" readonly></textarea><p class="muted" id="sourceUserAgentRuntime">Current runtime identity is being checked.</p><p class="muted">An extension with its own headers may override this value. Cloudflare solvers may use their own matching user agent and cookies.</p><div class="toolbar wrap"><button id="applySourceUserAgent" class="goodAction" type="button" disabled>Apply and restart sources</button><button id="resetSourceUserAgent" type="button" disabled>Reset to engine default</button></div></section>
 <section class="statusPanel"><h3>Cookies and WebView data</h3><p>Clear source website cookies, sign-ins, local storage and WebView cache. This also resets the configured solver session if reachable.</p><p class="muted">Source extensions, library databases, downloads and application settings are retained. Open source WebViews will close and sources will restart.</p><button class="dangerAction" id="clearSourceBrowserData" type="button" disabled>Clear source cookies and WebView data</button></section>
 </div></div>
+<div class="settingsSubpane" hidden id="settingsConnectionsPane">
+<div class="toolbar wrap"><p class="muted grow" id="connectionsState">Add, test and enable external services.</p><button id="connectionsRefresh" type="button">Refresh</button></div>
+<section class="statusPanel"><h3 id="connectionFormTitle">Add a connection</h3><div class="toolbar wrap"><label>Type<select id="connectionAddType"></select></label></div><p class="muted" id="connectionAddPurpose"></p>
+<form class="toolbar wrap" id="connectionAddForm" onsubmit="return false"></form>
+<div class="toolbar wrap"><button id="connectionAddTest" type="button">Test</button><button class="goodAction" id="connectionAddSave" type="button">Add connection</button><button hidden id="connectionEditCancel" type="button">Cancel</button></div>
+<div class="notice" hidden id="connectionAddResult" role="status"></div></section>
+<section class="statusPanel"><h3>Connections</h3><div class="muted" id="connectionsList">Loading…</div></section>
+<section class="statusPanel"><h3>Connection types</h3><div class="muted" id="connectionTypes">Loading…</div></section>
+</div>
 <div class="settingsSubpane" hidden id="settingsSecurityPane">
 <div class="toolbar wrap"><p class="muted grow" id="securityWho">Accounts, keys and the security log.</p><button id="securityRefresh" type="button">Refresh</button><button id="securitySignOut" type="button">Sign out</button></div>
 <section class="statusPanel"><h3>Admin token</h3><p class="muted">Created automatically. Scripts and the old admin-token prompt use it. Only the owner can replace it.</p><p><code id="securityAdminToken">…</code></p><div class="toolbar wrap"><button id="securityShowToken" type="button">Show</button><button id="securityRegenerateToken" class="dangerAction" type="button">Replace token</button></div></section>
@@ -700,5 +710,6 @@ proxy_set_header Remote-Groups $groups;</code></pre><p class="muted">These are t
 <script src="/static/reimagined-controls.js?v=0.4.5"></script>
 <script src="/static/reimagined.js?v=0.4.5"></script>
 <script src="/static/accounts.js?v=0.4.5"></script>
+<script src="/static/connections.js?v=0.4.5"></script>
 <script src="/static/filter-summary.js?v=0.4.5"></script>
 </body></html>

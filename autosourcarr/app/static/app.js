@@ -156,13 +156,14 @@ function applyThemeStyle(value,save=false){
 applyTheme(readLocalUiPreference('theme')||'blue',readLocalUiPreference('customColor')||DEFAULT_CUSTOM_COLOR);
 function applyDensity(value){const density=String(value||'')==='compact'?'compact':'comfortable';document.documentElement.dataset.density=density;writeLocalUiPreference('density',density);document.querySelectorAll('.densityChoice').forEach(b=>{const active=b.dataset.density===density;b.classList.toggle('active',active);b.setAttribute('aria-checked',active?'true':'false');});}
 function setSettingsSubtab(value,save=true){
-  const name=['configuration','browser','services','security'].includes(value)?value:'customization';
+  const name=['configuration','browser','services','connections','security'].includes(value)?value:'customization';
   document.querySelectorAll('.settingsSubtab').forEach(b=>{b.classList.toggle('active',b.dataset.settingsSubtab===name);b.setAttribute('aria-selected',String(b.dataset.settingsSubtab===name));});
-  for(const [key,id] of [['customization','settingsCustomizationPane'],['configuration','settingsConfigurationPane'],['browser','settingsBrowserPane'],['services','settingsServicesPane'],['security','settingsSecurityPane']]){const pane=document.getElementById(id);if(pane){pane.hidden=name!==key;pane.classList.toggle('active',name===key);}}
+  for(const [key,id] of [['customization','settingsCustomizationPane'],['configuration','settingsConfigurationPane'],['browser','settingsBrowserPane'],['services','settingsServicesPane'],['connections','settingsConnectionsPane'],['security','settingsSecurityPane']]){const pane=document.getElementById(id);if(pane){pane.hidden=name!==key;pane.classList.toggle('active',name===key);}}
   document.querySelectorAll('.settingsConfigAction').forEach(x=>x.hidden=name!=='configuration');
   writeLocalUiPreference('settingsSubtab',name);if(save&&uiPreferencesState.loaded)queueUiPreferenceSave('settingsSubtab',name);
   if(document.querySelector('#settings.active'))ensureSettingsPane().catch(e=>toast(e.message));
   if(name==='security'&&typeof loadSecurityPane==='function')loadSecurityPane();
+  if(name==='connections'&&typeof loadConnectionsPane==='function')loadConnectionsPane();
 }
 applyDensity(readLocalUiPreference('density')||'comfortable');
 function updateUiPreferenceOwner(){

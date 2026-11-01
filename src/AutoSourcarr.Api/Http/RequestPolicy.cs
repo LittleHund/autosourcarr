@@ -5,12 +5,14 @@ namespace AutoSourcarr.Api.Http;
 public static class RequestPolicy
 {
     private static readonly HashSet<string> Polls = ["/api/admin/imports", "/api/admin/matrix", "/api/admin/source-health", "/api/admin/source-maintenance", "/api/admin/source-maintenance/control", "/api/v1/source-maintenance"];
-    private static readonly HashSet<string> NonInteractive = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events", "/api/admin/duplicates", "/api/admin/duplicate-candidates", "/api/admin/entries/summaries", "/api/admin/matrix/chapter-stats"];
+    private static readonly HashSet<string> NonInteractive = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events", "/api/admin/duplicates", "/api/admin/duplicate-candidates", "/api/admin/entries/summaries", "/api/admin/matrix/chapter-stats",
+        // The WebView WebSocket stays open up to 15 minutes: it must not hold the interactive lane or catalogue admission.
+        "/api/v1/source-webview/socket"];
     private static readonly HashSet<string> NoMutationTask = ["/api/admin/entries/summaries", "/api/admin/duplicate-candidates", "/api/admin/matrix/chapter-stats", "/api/admin/duplicates/automatic",
         "/api/admin/imports/clear-history", "/api/admin/imports/reset-rejections", "/api/admin/imports/reset-manual-autoresolve", "/api/admin/ui-preferences", "/api/admin/maintenance/refresh-metadata",
         "/api/admin/maintenance/discover-additional", "/api/admin/subbed/search-all", "/api/admin/subbed/repair-unmatched", "/api/admin/maintenance/full-reset", "/api/admin/maintenance/consolidate", "/api/admin/manual-actions"];
     private static readonly HashSet<string> ResetControls = ["/api/admin/maintenance/reset-database", "/api/admin/maintenance/full-reset", "/api/admin/maintenance/reset-all-manual-actions", "/api/admin/storage/database/move", "/api/v1/storage/database/move"];
-    private static readonly HashSet<string> Monitoring = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events"];
+    private static readonly HashSet<string> Monitoring = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events", "/api/v1/source-webview/socket"];
 
     public static bool Interactive(string method, string path) => !(method == "GET" && (Polls.Contains(path) || Match(path, @"^/api/admin/imports/[^/]+/items(?:/[0-9]+)?$"))
         || Starts(path, "/static/", "/api/v1/covers/", "/api/v1/source-covers/", "/api/v1/source-icon/", "/api/v1/source-extension-icon/") || NonInteractive.Contains(path));
@@ -24,7 +26,9 @@ public static class RequestPolicy
             || method == "PUT" && (path is "/api/admin/source-health/daily" or "/api/v1/source-health/daily" or "/api/v1/source-maintenance/watch"
                 || Match(path, @"^/api/(?:admin|v1)/sources/[^/]+/preferences$"));
         control |= method is "POST" or "PUT" or "DELETE" && (Starts(path, "/api/admin/library/", "/api/admin/profiles/", "/api/admin/downloads", "/api/admin/review-workbench/",
-            "/api/admin/metadata-fields/", "/api/admin/serving-upgrades/", "/api/admin/policy-simulator/", "/api/admin/engine/compatibility", "/api/v1/engine/")
+            "/api/admin/metadata-fields/", "/api/admin/serving-upgrades/", "/api/admin/policy-simulator/", "/api/admin/engine/compatibility", "/api/v1/engine/",
+            // Phase 7: connections live in config.json, not the catalogue; a test may wait up to 15 s on a remote service.
+            "/api/v1/connections")
             || path.StartsWith("/api/admin/candidates/", StringComparison.Ordinal) && path.EndsWith("/quality", StringComparison.Ordinal)
             || (path.StartsWith("/api/admin/tasks/", StringComparison.Ordinal) || path.StartsWith("/api/v1/tasks/", StringComparison.Ordinal)) && path.EndsWith("/retry-safe", StringComparison.Ordinal));
         return !control && !(method is "GET" or "HEAD" && Monitoring.Contains(path));

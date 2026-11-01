@@ -7,6 +7,11 @@
 // No dependencies. Output is deterministic so CI can regenerate and diff it (--check exits 1 on drift).
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+const reserved = new Set(['break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else', 'enum',
+  'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'implements', 'import', 'in', 'instanceof', 'interface', 'let', 'new',
+  'null', 'package', 'private', 'protected', 'public', 'return', 'static', 'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof',
+  'var', 'void', 'while', 'with', 'yield', 'await', 'arguments', 'eval', 'body', 'options']);
+const identifier = name => reserved.has(name) ? name + '_' : name;
 
 const args = process.argv.slice(2);
 const check = args[0] === '--check';
@@ -107,7 +112,8 @@ for (const path of Object.keys(spec.paths ?? {}).sort()) {
 }
 operations.sort((a, b) => a.operation.operationId.localeCompare(b.operation.operationId));
 for (const { path, method, operation } of operations) {
-  const params = (operation.parameters ?? []).filter(p => p.in === 'path').map(p => p.name);
+  // Path names become JavaScript parameters: reserved words (package, interface, …) get a trailing underscore.
+  const params = (operation.parameters ?? []).filter(p => p.in === 'path').map(p => identifier(p.name));
   const success = Object.entries(operation.responses ?? {}).find(([code]) => code.startsWith('2'));
   const schema = success?.[1]?.content?.['application/json']?.schema;
   const returns = schema ? typeOf(schema) : 'null';
@@ -123,7 +129,7 @@ for (const { path, method, operation } of operations) {
   emit('       */');
   const signature = [...params, ...(hasBody ? ['body'] : []), 'options'].join(', ');
   const url = params.length
-    ? '`' + path.replace(/\{([^}]+)\}/g, (_, name) => '${encodeURIComponent(' + name + ')}') + '`'
+    ? '`' + path.replace(/\{([^}]+)\}/g, (_, name) => '${encodeURIComponent(' + identifier(name) + ')}') + '`'
     : `'${path}'`;
   emit(`      ${operation.operationId}(${signature}) { return call('${method.toUpperCase()}', ${url}, ${hasBody ? 'body' : 'undefined'}, options); },`);
 }

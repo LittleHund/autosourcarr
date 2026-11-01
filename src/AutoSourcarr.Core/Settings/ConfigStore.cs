@@ -81,6 +81,35 @@ public sealed class ConfigDocument
 
     [JsonPropertyName("update")]
     public ConfigUpdateRecord? Update { get; set; }
+
+    /// <summary>Saved external-service connections (CON-1/CON-5); absent until the first one is added. Written by ConnectionStore only.</summary>
+    [JsonPropertyName("connections")]
+    public List<ConfigConnection>? Connections { get; set; }
+}
+
+/// <summary>
+/// One saved connection in config.json. Secret field values are kept in <see cref="Secrets"/>, encrypted with
+/// <see cref="SettingsSecrets"/> under the key <c>connections.&lt;id&gt;.&lt;field&gt;</c>, so a ciphertext cannot move to another connection.
+/// </summary>
+public sealed class ConfigConnection
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "";
+
+    [JsonPropertyName("label")]
+    public string Label { get; set; } = "";
+
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; } = true;
+
+    [JsonPropertyName("values")]
+    public Dictionary<string, string> Values { get; set; } = new(StringComparer.Ordinal);
+
+    [JsonPropertyName("secrets")]
+    public Dictionary<string, string> Secrets { get; set; } = new(StringComparer.Ordinal);
 }
 
 /// <summary>The last finished setup wizard run; Finish with the same transaction id is answered from here.</summary>
@@ -179,6 +208,7 @@ public sealed class ConfigValues(
 [JsonSourceGenerationOptions(WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]
 [JsonSerializable(typeof(ConfigDocument))]
+[JsonSerializable(typeof(List<ConfigConnection>))]
 internal sealed partial class ConfigJsonContext : JsonSerializerContext;
 
 /// <summary>Reads and writes config.json in the configuration root (SETTINGS_CONFIG_DIR).</summary>
@@ -211,6 +241,10 @@ public sealed class ConfigStore(string root)
             if (section is null || section.Values is null || section.Secrets is null
                 || section.Values.Values.Any(value => value is null) || section.Secrets.Values.Any(value => value is null))
                 throw new ConfigurationException("config.json has an empty (null) section or value; it was not changed. Restore it from a backup.");
+        if (document.Connections is { } connections && connections.Any(connection => connection is null || connection.Id is null || connection.Type is null
+                || connection.Label is null || connection.Values is null || connection.Secrets is null
+                || connection.Values.Values.Any(value => value is null) || connection.Secrets.Values.Any(value => value is null)))
+            throw new ConfigurationException("config.json has an empty (null) connection or connection value; it was not changed. Restore it from a backup.");
         return document;
     }
 
@@ -273,7 +307,13 @@ public sealed class ConfigStore(string root)
         Conversion = document.Conversion,
         ManagedKeys = document.ManagedKeys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
         Setup = document.Setup,
-        Update = document.Update
+        Update = document.Update,
+        Connections = document.Connections?.Select(connection => new ConfigConnection
+        {
+            Id = connection.Id, Type = connection.Type, Label = connection.Label, Enabled = connection.Enabled,
+            Values = new Dictionary<string, string>(connection.Values.OrderBy(pair => pair.Key, StringComparer.Ordinal), StringComparer.Ordinal),
+            Secrets = new Dictionary<string, string>(connection.Secrets.OrderBy(pair => pair.Key, StringComparer.Ordinal), StringComparer.Ordinal)
+        }).ToList()
     };
 
     private static ConfigSection Sorted(ConfigSection section)

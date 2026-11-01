@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta name="referrer" content="no-referrer"/>
+<title>WebView · AutoSourcarr</title>
+<link href="/static/ui.css?v=0.5.0" rel="stylesheet"/>
+<link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico?v=0.5.0"/>
+<style>
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column}
+  .webviewBar{display:flex;gap:6px;align-items:center;padding:8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .webviewBar form{display:flex;flex:1;gap:6px;min-width:240px}
+  .webviewBar input{flex:1;min-width:0}
+  .webviewStatus{padding:4px 10px;font-size:12px;color:var(--muted);min-height:1.4em}
+  .webviewStage{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:8px}
+  #webviewCanvas{max-width:100%;height:auto;background:#fff;outline:none;cursor:default;border:1px solid var(--line)}
+  #webviewCanvas:focus{border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="webviewBar" role="toolbar" aria-label="WebView controls">
+  <button id="webviewBack" type="button" title="Back" aria-label="Back">&#8592;</button>
+  <button id="webviewForward" type="button" title="Forward" aria-label="Forward">&#8594;</button>
+  <button id="webviewReload" type="button" title="Reload" aria-label="Reload">&#8635;</button>
+  <form id="webviewAddress"><input id="webviewUrl" type="url" spellcheck="false" autocomplete="off" aria-label="Address" placeholder="https://"/><button type="submit">Go</button></form>
+  <button id="webviewPaste" type="button" title="Type text from the clipboard into the page">Paste text</button>
+  <button id="webviewClose" type="button" class="danger">Done</button>
+</div>
+<div id="webviewStatus" class="webviewStatus" role="status" aria-live="polite">Connecting…</div>
+<div class="webviewStage"><canvas id="webviewCanvas" width="1280" height="800" tabindex="0" aria-label="Website page; click to interact, type when focused"></canvas></div>
+<script src="/static/source-webview.js?v=0.5.0"></script>
+</body>
+</html>

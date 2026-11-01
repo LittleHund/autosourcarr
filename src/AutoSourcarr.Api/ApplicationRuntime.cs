@@ -52,6 +52,11 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher? _autoRepair;
     private Task? _autoRepairLoop;
     private AutoSourcarr.Core.Sources.Library.SuwayomiLibrary? _library;
+    private AutoSourcarr.Core.Connections.ConnectionStore? _connections;
+    private System.Net.Http.SocketsHttpHandler? _integrationHttp;
+    private AutoSourcarr.Core.Connections.Types.SuwayomiChangeFeed? _suwayomiFeed;
+    private AutoSourcarr.Core.Sources.WebView.SourceWebViewBroker? _webView;
+    private SourceWebViewServices? _webViewServices;
     private AutoSourcarr.Core.Sources.Inventory.HostRawInstalledSources? _rawInstalled;
     private AutoSourcarr.Core.Repair.SourceRawService? _raws;
     private AutoSourcarr.Core.Repair.RawRepositoryCache? _rawRepositories;
@@ -131,13 +136,15 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     /// user agent.
     /// </summary>
     internal static IReadOnlyDictionary<string, string> SourceHostEnvironment(AutoSourcarrSettings settings, SourceEngineEnvironment launch,
-        IReadOnlyDictionary<string, string?> environment)
+        IReadOnlyDictionary<string, string?> environment, IEnumerable<AutoSourcarr.Core.Connections.ConnectionConfig>? solvers = null)
     {
         var result = launch.BuildLaunch(environment, settings).Launch.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         foreach (var key in new[] { "JAVA_TOOL_OPTIONS", "BIND_IP", "BIND_PORT", "AUTH_MODE", "BASIC_AUTH_ENABLED", "WEB_UI_ENABLED",
             "INITIAL_OPEN_IN_BROWSER_ENABLED", "AUTOSOURCARR_SOURCE_UA_REVISION", "AUTOSOURCARR_SOURCE_UA_STATUS" })
             result.Remove(key);
         result["SOURCE_MIN_INTERVAL_MS"] = Math.Clamp(settings.SourceMinIntervalMs, 0, 60_000).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        // CON-2: enabled FlareSolverr/Byparr connections are the fallback after the built-in WebView (cookies only).
+        result["AUTOSOURCARR_SOLVERS"] = AutoSourcarr.Core.Connections.Types.SolverConnectionType.HostEnvironment(solvers ?? []);
         return result;
     }
 
@@ -179,12 +186,24 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             if (owner._native is not null)
                 owner._snapshots = await NativeSourceSnapshots.CreateAsync(owner._native, owner.Io, cancellationToken).ConfigureAwait(false);
             var launch = new SourceEngineEnvironment(startup.ConfigurationRoot, "/home/suwayomi/.local/share/Tachidesk", owner.Privacy);
+            // CON-1/CON-5: the Connections menu (config.json "connections", secrets encrypted); solvers feed the host launch.
+            owner._connections = new AutoSourcarr.Core.Connections.ConnectionStore(startup.ConfigurationRoot,
+                new AutoSourcarr.Core.Connections.ConnectionTypes([.. AutoSourcarr.Core.Connections.Types.SolverConnectionType.All,
+                    .. AutoSourcarr.Core.Connections.Types.IntegrationConnectionTypes.All]),
+                owner._dataDirectory, registerSecrets: values => owner.Privacy.Register(values),
+                settingValues: () => owner._apiV1 is { } api ? api.Editor.Effective() : new Dictionary<string, string?>());
+            owner._integrationHttp = new System.Net.Http.SocketsHttpHandler { UseProxy = false, ConnectTimeout = TimeSpan.FromSeconds(10),
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5), AutomaticDecompression = System.Net.DecompressionMethods.All };
             if (useHost)
             {
                 var (java, jar) = SourceHostProcess.Locate(environment);
                 // Built for every launch: a restarted host gets the saved browser identity and repositories.
                 var process = new SourceHostProcess(java, jar, Path.Combine(owner._dataDirectory!, "source-host"), 4567,
-                    () => SourceHostEnvironment(owner.Settings, launch, environment), line => owner.Logs.Record("Source host", line));
+                    () => SourceHostEnvironment(owner.Settings, launch, environment, owner._connections is { } store
+                        ? AutoSourcarr.Core.Connections.Types.SolverConnectionType.All.SelectMany(type => store.Enabled(type.Type)).ToList() : null),
+                    line => owner.Logs.Record("Source host", line));
+                owner._webView = new AutoSourcarr.Core.Sources.WebView.SourceWebViewBroker(() => process.Running
+                    ? new AutoSourcarr.Core.Sources.WebView.SourceHostEndpoint(new Uri(process.BaseUrl), process.Token) : null);
                 owner.Privacy.Register(new Dictionary<string, string?> { ["source_host_token"] = process.Token });
                 try { await process.StartAsync(TimeSpan.FromMinutes(3), cancellationToken).ConfigureAwait(false); }
                 catch (Exception error) when (error is TimeoutException or InvalidOperationException or System.ComponentModel.Win32Exception)
@@ -316,6 +335,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     RecordError = error => owner.Errors.Record("Source repair", error.Message, "source-repair|" + error.GetType().Name)
                 },
                 Library = new LibraryV1Services { Library = owner._library },
+                Connections = new ConnectionsV1Services { Store = owner._connections },
                 Repair = new RepairV1Services
                 {
                     MaintenanceRoot = maintenanceRoot,
@@ -325,7 +345,14 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 Sources = new SourceServices
                 {
                     Configuration = owner._sourceConfiguration!, Client = owner._source.Client, Preferences = owner._sourcePreferences!, AdminLock = owner._admin,
-                    UploadStagingRoot = Path.Combine(owner._dataDirectory!, "source-upload-previews")
+                    UploadStagingRoot = Path.Combine(owner._dataDirectory!, "source-upload-previews"),
+                    // SRC-2: optional MalwareBazaar hash lookup from an enabled connection.
+                    HashLookup = () =>
+                    {
+                        if (owner._connections?.Enabled("malwarebazaar").FirstOrDefault() is not { } bazaar || owner._integrationHttp is null) return null;
+                        try { return AutoSourcarr.Core.Connections.Types.MalwareBazaarConnectionType.CreateClient(bazaar, owner._integrationHttp, TimeSpan.FromSeconds(5)); }
+                        catch (ArgumentException) { return null; }
+                    }
                 },
                 SourceRuntime = new SourceRuntimeServices
                 {
@@ -343,6 +370,26 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     SourceEngineCapabilityIdentity.ConfiguredExternal(startup.Settings.MainSuwayomiUrl,
                         startup.Settings.MainSuwayomiUsername, startup.Settings.MainSuwayomiPassword), owner.Privacy, "main");
             }
+            // CON-3: Suwayomi change feed (subscriptions, library diff, polling fallback) keeps the main-library view current.
+            if (owner._connections.Enabled("suwayomi").FirstOrDefault() is { } mainConnection)
+            {
+                try
+                {
+                    owner._suwayomiFeed = new AutoSourcarr.Core.Connections.Types.SuwayomiChangeFeed(
+                        AutoSourcarr.Core.Connections.Types.SuwayomiEndpoint.FromConnection(mainConnection), owner._integrationHttp,
+                        owner.OnSuwayomiChange, error => owner.Logs.Record("Main library feed", error.Message));
+                    owner._suwayomiFeed.Start();
+                }
+                catch (ArgumentException error) { owner.Logs.Record("Main library feed", error.Message); }
+            }
+            if (owner._webView is not null)
+                owner._webViewServices = new SourceWebViewServices
+                {
+                    Broker = owner._webView,
+                    SourceBaseUrl = async (id, token) =>
+                        (await owner._source.Client.SourcesAsync(token).ConfigureAwait(false))
+                            .FirstOrDefault(row => row["id"]?.ToString() == id)?["baseUrl"] is JsonValue value && value.TryGetValue<string>(out var text) ? text : null,
+                };
             try { await owner._library.RestoreDisplaySnapshotAsync(cancellationToken).ConfigureAwait(false); }
             catch (Exception error) when (error is not OperationCanceledException)
             { owner.Logs.Record("Main library", "Saved library snapshot could not be read (" + error.GetType().Name + ")."); }
@@ -392,6 +439,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             endpoints.MapEngineCompatibility(_source!.CapabilityService, _mainCapabilities, () => Settings, _admin);
             Catalogue.MapEndpoints(endpoints, Io, () => Settings, _admin);
             endpoints.MapApiV1(_apiV1!);
+            endpoints.MapSourceWebView(() => _webViewServices, () => Settings);
             // Phase 6: repositories and source health under /api/v1 (same handlers as the stage-26 /api/admin wires).
             endpoints.MapSourceRepositories(_repositories!, _repositoryPreview!, Io, () => Settings, "/api/v1/source-repositories");
             endpoints.MapSourceHealth(_health!, () => Settings, _admin, "/api/v1/source-health");
@@ -415,6 +463,30 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             context.RequestAborted = linked.Token;
             try { await next(context).ConfigureAwait(false); }
             finally { context.RequestAborted = original; }
+        }
+    }
+
+    private void OnSuwayomiChange(AutoSourcarr.Core.Connections.Types.SuwayomiChange change)
+    {
+        switch (change)
+        {
+            case AutoSourcarr.Core.Connections.Types.SuwayomiLibraryChanged library:
+                _library?.Invalidate(); _library?.ScheduleStatusRefresh(force: true);
+                Events.Publish("library", new JsonObject
+                {
+                    ["change"] = "suwayomi-library",
+                    ["added"] = new JsonArray(library.Added.Select(id => (JsonNode)id).ToArray()),
+                    ["removed"] = new JsonArray(library.Removed.Select(id => (JsonNode)id).ToArray())
+                });
+                break;
+            case AutoSourcarr.Core.Connections.Types.SuwayomiChaptersChanged or AutoSourcarr.Core.Connections.Types.SuwayomiDownloadChanged:
+                _library?.Invalidate(); _library?.ScheduleStatusRefresh(force: true);
+                Events.Pulse("library", TimeSpan.FromSeconds(1), new JsonObject { ["change"] = "suwayomi-chapters" });
+                break;
+            case AutoSourcarr.Core.Connections.Types.SuwayomiFeedModeChanged mode:
+                Events.Publish("connections", new JsonObject
+                    { ["type"] = "suwayomi", ["feed"] = mode.Mode.ToString().ToLowerInvariant(), ["reason"] = mode.Reason });
+                break;
         }
     }
 
@@ -611,9 +683,11 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         if (_health is not null) await Attempt("Source health", () => _health.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_sourcePreferences is not null) await Attempt("Source preferences", () => _sourcePreferences.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_publicFetcher is not null) await Attempt("Public fetcher", () => _publicFetcher.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_suwayomiFeed is not null) await Attempt("Main library feed", () => _suwayomiFeed.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_library is not null) await Attempt("Main library", () => _library.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_main is not null) await Attempt("Main transport", () => _main.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_webView is not null) await Attempt("Source WebView sessions", () => _webView.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_source is not null) await Attempt("Source lifetime", () => _source.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_native is not null) await Attempt("Native lifetime", () => _native.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Source status watch cancellation", () => _watchStop.CancelAsync()).ConfigureAwait(false);
@@ -625,6 +699,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             await Attempt("Database close", async () =>
             { await _healthIo.RunAsync(() => { _database.Dispose(); return 0; }, CancellationToken.None).ConfigureAwait(false); }).ConfigureAwait(false);
         await Attempt("Health physical I/O", () => _healthIo.DisposeAsync().AsTask()).ConfigureAwait(false);
+        _integrationHttp?.Dispose();
         await Attempt("Log writer cancellation", () => _logStop.CancelAsync()).ConfigureAwait(false);
         if (_writer is not null) await Attempt("Log writer", () => _writer).ConfigureAwait(false);
         if (_logs is not null) await Attempt("Diagnostic store", () => _logs.DisposeAsync().AsTask()).ConfigureAwait(false);
