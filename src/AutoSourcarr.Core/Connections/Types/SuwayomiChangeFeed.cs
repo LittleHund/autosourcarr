@@ -35,6 +35,8 @@ public sealed record SuwayomiChangeFeedOptions
     public TimeSpan LivePollInterval { get; init; } = TimeSpan.FromSeconds(10);
     public TimeSpan ReconnectMin { get; init; } = TimeSpan.FromSeconds(1);
     public TimeSpan ReconnectMax { get; init; } = TimeSpan.FromSeconds(60);
+    /// <summary>The reconnect back-off starts over only after a socket stayed up this long (a socket that opens and drops at once keeps backing off).</summary>
+    public TimeSpan StableAfter { get; init; } = TimeSpan.FromSeconds(30);
     /// <summary>graphql-transport-ws ping interval; no message for two intervals means the socket is dead.</summary>
     public TimeSpan KeepAlive { get; init; } = TimeSpan.FromSeconds(20);
     public TimeSpan ConnectTimeout { get; init; } = TimeSpan.FromSeconds(10);
@@ -114,9 +116,10 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
         while (!token.IsCancellationRequested)
         {
             var refused = false;
+            DateTimeOffset? connectedAt = null;
             try
             {
-                await RunSocketAsync(() => attempt = 0, token).ConfigureAwait(false);
+                await RunSocketAsync(() => connectedAt = DateTimeOffset.UtcNow, token).ConfigureAwait(false);
                 SetMode(SuwayomiFeedMode.Polling, "The Suwayomi subscription socket closed; polling until it reconnects.");
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
@@ -129,6 +132,7 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
                 lock (_gate) { fresh = error.Message != _lastSocketError; _lastSocketError = error.Message; }
                 if (fresh) Report(error);
             }
+            if (connectedAt is { } since && DateTimeOffset.UtcNow - since >= _options.StableAfter) attempt = 0;
             var delay = refused ? _options.ReconnectMax : Backoff(attempt++);
             try { await Task.Delay(delay, token).ConfigureAwait(false); }
             catch (OperationCanceledException) { break; }
@@ -289,7 +293,7 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
         }
     }
 
-    // ---- library diff (membership always; chapter/download counts only while not live)
+    // ---- library diff (membership always; chapter/download counts only while not live, and only read then)
 
     private async Task PollLoopAsync(CancellationToken token)
     {
@@ -298,7 +302,8 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
         {
             try
             {
-                var current = await ReadLibraryAsync(token).ConfigureAwait(false);
+                // While live, the subscriptions report chapters and downloads: read ids only (a much lighter query).
+                var current = await ReadLibraryAsync(Mode == SuwayomiFeedMode.Live, token).ConfigureAwait(false);
                 if (baseline is null)
                 {
                     if (_options.EmitInitialLibrary && current.Count > 0) Emit(new SuwayomiLibraryChanged([.. current.Keys.Order()], []));
@@ -320,14 +325,14 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
         }
     }
 
-    private async Task<Dictionary<long, (int Chapters, int Downloads)>> ReadLibraryAsync(CancellationToken token)
+    private async Task<Dictionary<long, (int Chapters, int Downloads)>> ReadLibraryAsync(bool idsOnly, CancellationToken token)
     {
         while (true)
         {
-            var fields = PollFields[Math.Min(Volatile.Read(ref _pollFields), PollFields.Length - 1)];
+            var fields = idsOnly ? PollFields[^1] : PollFields[Math.Min(Volatile.Read(ref _pollFields), PollFields.Length - 1)];
             List<JsonObject> rows;
             try { rows = await _graph.LibraryAsync(fields, token).ConfigureAwait(false); }
-            catch (ConnectionHttpException error) when (error.Message.Contains("GraphQL error", StringComparison.Ordinal) && Volatile.Read(ref _pollFields) < PollFields.Length - 1)
+            catch (ConnectionHttpException error) when (!idsOnly && error.Message.Contains("GraphQL error", StringComparison.Ordinal) && Volatile.Read(ref _pollFields) < PollFields.Length - 1)
             {
                 Interlocked.Increment(ref _pollFields); // an older server without downloadCount: ids only
                 continue;
@@ -350,9 +355,10 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
         var downloads = new List<long>();
         foreach (var (id, now) in after.OrderBy(pair => pair.Key))
         {
+            // -1: not read (ids-only while live, or an older server); unknown is not a change.
             if (!before.TryGetValue(id, out var then)) continue;
-            if (now.Chapters != then.Chapters) chapters.Add(id);
-            if (now.Downloads != then.Downloads) downloads.Add(id);
+            if (then.Chapters >= 0 && now.Chapters >= 0 && now.Chapters != then.Chapters) chapters.Add(id);
+            if (then.Downloads >= 0 && now.Downloads >= 0 && now.Downloads != then.Downloads) downloads.Add(id);
         }
         if (chapters.Count > 0) Emit(new SuwayomiChaptersChanged(chapters, false));
         if (downloads.Count > 0) Emit(new SuwayomiDownloadChanged(downloads, [], false));

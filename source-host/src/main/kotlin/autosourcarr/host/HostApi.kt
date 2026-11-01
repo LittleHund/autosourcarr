@@ -280,7 +280,7 @@ class HostApi(
         when {
             method == "POST" && rest.isEmpty() -> {
                 val body = body(exchange)
-                val url = body["url"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let { InteractiveWebView.checkedUrl(it) }
+                val url = body["url"]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }?.let { InteractiveWebView.reachableUrl(it) }
                 val session =
                     InteractiveWebView.open(
                         url,

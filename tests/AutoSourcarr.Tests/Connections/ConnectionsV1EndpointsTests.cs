@@ -6,6 +6,7 @@ using AutoSourcarr.Api.Http;
 using AutoSourcarr.Api.Security;
 using AutoSourcarr.Core.Accounts;
 using AutoSourcarr.Core.Connections;
+using AutoSourcarr.Core.Connections.Types;
 using AutoSourcarr.Core.Settings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -54,6 +55,8 @@ public static class ConnectionsV1EndpointsTests
             var id = created["connection"]!["id"]!.GetValue<string>();
             revision = created["revision"]!.GetValue<string>();
             Check.Equal(true, created["connection"]!["values"]!["api_key"]!["set"]!.GetValue<bool>());
+            // The first saved connection carries the rollback note (0.4.x refuses config.json with "connections").
+            Check.Equal(ConnectionStore.RollbackNotice, created["notice"]!.GetValue<string>());
             Check.True(!File.ReadAllText(Path.Combine(setup.ConfigRoot, ConfigStore.FileName)).Contains(Secret, StringComparison.Ordinal), "encrypted on disk");
 
             var listText = setup.Send(HttpMethod.Get, Root).Content.ReadAsStringAsync().GetAwaiter().GetResult();
@@ -90,6 +93,7 @@ public static class ConnectionsV1EndpointsTests
                 ["revision"] = revision, ["enabled"] = false, ["values"] = new JsonObject { ["api_key"] = new JsonObject { ["set"] = true } },
             }), HttpStatusCode.OK);
             Check.Equal(false, changed["connection"]!["enabled"]!.GetValue<bool>());
+            Check.True(changed["notice"] is null, "no restart notice for this type");
             Check.Equal(Secret, setup.Store.Find(id)!.Value("api_key"));
             Check.Equal(HttpStatusCode.Conflict, setup.Send(HttpMethod.Put, Root + "/" + id, new JsonObject { ["revision"] = revision, ["enabled"] = true }).StatusCode);
             Check.Equal(HttpStatusCode.BadRequest, setup.Send(HttpMethod.Put, Root + "/" + id, new JsonObject { ["revision"] = changed["revision"]!.DeepClone(), ["enabled"] = "yes" }).StatusCode);
@@ -130,6 +134,66 @@ public static class ConnectionsV1EndpointsTests
             Check.Equal(1, Body(setup.Send(HttpMethod.Get, Root), HttpStatusCode.OK)["connections"]!.AsArray().Count);
         });
 
+        suite.Add("connections v1: exact change notices, and the one-time Suwayomi import route (202, 404, 409, plan summary)", () =>
+        {
+            var types = new ConnectionTypes([new FakeConnectionType("fake", true), new FakeConnectionType("flaresolverr", true, urlOnly: true),
+                new FakeConnectionType("suwayomi", false, urlOnly: true)]);
+            using var setup = new Setup(types: types, withImport: true);
+            var revision = Body(setup.Send(HttpMethod.Get, Root), HttpStatusCode.OK)["revision"]!.GetValue<string>();
+            var solver = Body(setup.Send(HttpMethod.Post, Root, new JsonObject
+            {
+                ["revision"] = revision, ["type"] = "flaresolverr", ["values"] = new JsonObject { ["url"] = "http://flaresolverr:8191" },
+            }), HttpStatusCode.Created);
+            Check.Equal(ConnectionStore.SolverChangeNotice + " " + ConnectionStore.RollbackNotice, solver["notice"]!.GetValue<string>());
+            var solverId = solver["connection"]!["id"]!.GetValue<string>();
+            var switched = Body(setup.Send(HttpMethod.Put, Root + "/" + solverId, new JsonObject { ["revision"] = solver["revision"]!.DeepClone(), ["enabled"] = false }), HttpStatusCode.OK);
+            Check.Equal("The source host restarts to use the new solver list.", switched["notice"]!.GetValue<string>());
+            var renamed = Body(setup.Send(HttpMethod.Put, Root + "/" + solverId, new JsonObject { ["revision"] = switched["revision"]!.DeepClone(), ["label"] = "Renamed" }), HttpStatusCode.OK);
+            Check.True(renamed["notice"] is null, "a label-only change restarts nothing");
+            var suwayomi = Body(setup.Send(HttpMethod.Post, Root, new JsonObject
+            {
+                ["revision"] = renamed["revision"]!.DeepClone(), ["type"] = "suwayomi", ["values"] = new JsonObject { ["url"] = "http://suwayomi:4567" },
+            }), HttpStatusCode.Created);
+            Check.Equal("The Suwayomi change feed reconnects.", suwayomi["notice"]!.GetValue<string>());
+            var suwayomiId = suwayomi["connection"]!["id"]!.GetValue<string>();
+            revision = suwayomi["revision"]!.GetValue<string>();
+
+            // Import: Suwayomi connections only.
+            Check.Equal(HttpStatusCode.NotFound, setup.Send(HttpMethod.Post, Root + "/ffffffffffff/import").StatusCode);
+            Check.Equal(HttpStatusCode.Conflict, setup.Send(HttpMethod.Post, Root + "/" + solverId + "/import").StatusCode);
+            Check.Equal(HttpStatusCode.Conflict, setup.Send(HttpMethod.Get, Root + "/" + solverId + "/import").StatusCode);
+            Check.Equal(HttpStatusCode.BadRequest, setup.Send(HttpMethod.Post, Root + "/" + suwayomiId + "/import", new JsonObject { ["force"] = "yes" }).StatusCode);
+            var empty = Body(setup.Send(HttpMethod.Get, Root + "/" + suwayomiId + "/import"), HttpStatusCode.OK);
+            Check.True(empty["plan"] is null, "no plan before the first import");
+            var queued = Body(setup.Send(HttpMethod.Post, Root + "/" + suwayomiId + "/import"), HttpStatusCode.Accepted);
+            Check.Equal("task-1", queued["task_id"]!.GetValue<string>());
+            Check.Equal(SuwayomiImport.AwaitingMatchingNote, queued["note"]!.GetValue<string>());
+            Body(setup.Send(HttpMethod.Post, Root + "/" + suwayomiId + "/import", new JsonObject { ["force"] = true }), HttpStatusCode.Accepted);
+            Check.Equal(suwayomiId + ":False," + suwayomiId + ":True", string.Join(',', setup.Imports));
+            var summary = Body(setup.Send(HttpMethod.Get, Root + "/" + suwayomiId + "/import"), HttpStatusCode.OK)["plan"]!.AsObject();
+            Check.Equal(SuwayomiImport.AwaitingMatching, summary["status"]!.GetValue<string>());
+            Check.Equal(2, summary["counts"]!["total"]!.GetValue<int>());
+            Check.Equal(1, summary["counts"]!["sources"]!.GetValue<int>());
+            Check.True(summary["saved_at"]!.GetValue<string>().StartsWith("2026-", StringComparison.Ordinal), summary.ToJsonString());
+            Check.True(summary["items"] is null, "the summary leaves the items out");
+
+            // A switched-off Suwayomi connection does not import; delete answers the feed notice.
+            var off = Body(setup.Send(HttpMethod.Put, Root + "/" + suwayomiId, new JsonObject { ["revision"] = revision, ["enabled"] = false }), HttpStatusCode.OK);
+            Check.Equal(HttpStatusCode.Conflict, setup.Send(HttpMethod.Post, Root + "/" + suwayomiId + "/import").StatusCode);
+            var deleted = Body(setup.Send(HttpMethod.Delete, Root + "/" + suwayomiId + "?revision=" + off["revision"]!.GetValue<string>()), HttpStatusCode.OK);
+            Check.Equal(ConnectionStore.SuwayomiChangeNotice, deleted["notice"]!.GetValue<string>());
+
+            // Without the import delegates the routes answer 503.
+            using var plain = new Setup(types: types);
+            var row = Body(plain.Send(HttpMethod.Post, Root, new JsonObject
+            {
+                ["revision"] = Body(plain.Send(HttpMethod.Get, Root), HttpStatusCode.OK)["revision"]!.DeepClone(), ["type"] = "suwayomi",
+                ["values"] = new JsonObject { ["url"] = "http://suwayomi:4567" },
+            }), HttpStatusCode.Created)["connection"]!["id"]!.GetValue<string>();
+            Check.Equal(HttpStatusCode.ServiceUnavailable, plain.Send(HttpMethod.Post, Root + "/" + row + "/import").StatusCode);
+            Check.Equal(HttpStatusCode.ServiceUnavailable, plain.Send(HttpMethod.Get, Root + "/" + row + "/import").StatusCode);
+        });
+
         suite.Add("connections v1: without the store the routes answer 503", () =>
         {
             using var setup = new Setup(withStore: false);
@@ -145,7 +209,7 @@ public static class ConnectionsV1EndpointsTests
                 .SelectMany(endpoint => (endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["GET"])
                     .Select(method => (Method: method, Path: endpoint.RoutePattern.RawText!.Replace("{connectionId}", "ffffffffffff", StringComparison.Ordinal))))
                 .Distinct().ToArray();
-            Check.Equal(6, routes.Length);
+            Check.Equal(8, routes.Length);
             using var anonymous = setup.Server.CreateClient();
             using var guest = setup.Server.CreateClient();
             guest.DefaultRequestHeaders.Add("X-Test-Guest", "1");
@@ -184,11 +248,13 @@ public static class ConnectionsV1EndpointsTests
         public List<string> Requests { get; } = [];
         public TestServer Server { get; }
         public HttpClient Client { get; }
+        public List<string> Imports { get; } = [];
 
-        public Setup(bool withStore = true)
+        public Setup(bool withStore = true, ConnectionTypes? types = null, bool withImport = false)
         {
             var settings = new AutoSourcarrSettings { AdminToken = "admin" };
-            Store = new ConnectionStore(_temp.Path, ConnectionStoreTests.Registry(), Path.Combine(_temp.Path, "data"), handlerFactory: () =>
+            SuwayomiImportPlan? plan = null;
+            Store = new ConnectionStore(_temp.Path, types ?? ConnectionStoreTests.Registry(), Path.Combine(_temp.Path, "data"), handlerFactory: () =>
             {
                 var handler = new StubHandler(request =>
                 {
@@ -201,7 +267,19 @@ public static class ConnectionsV1EndpointsTests
             });
             var services = new ApiV1Services(() => settings, _temp.Path, null)
             {
-                Connections = withStore ? new ConnectionsV1Services { Store = Store } : null,
+                Connections = !withStore ? null : withImport ? new ConnectionsV1Services
+                {
+                    Store = Store,
+                    StartImport = (connection, force) =>
+                    {
+                        lock (Imports) Imports.Add(connection.Id + ":" + force);
+                        plan = SuwayomiImport.Build([JsonNode.Parse("""{"id":1,"sourceId":"42","url":"/a","title":"A"}""")!.AsObject(),
+                            JsonNode.Parse("""{"id":2,"sourceId":"42","url":"/b","title":"B"}""")!.AsObject()], null, connection.Value("url"),
+                            new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero));
+                        return "task-" + Imports.Count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    },
+                    ImportPlan = () => plan,
+                } : new ConnectionsV1Services { Store = Store },
             };
             _host = new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer()
                 .ConfigureServices(collection => collection.AddRouting())

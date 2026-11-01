@@ -763,7 +763,7 @@ function renderAttention(){
   if(badge){badge.hidden=!items.length;badge.textContent=String(items.length);}
   $('#attentionSummary').textContent=items.length?`${items.length} website${items.length===1?'':'s'} paused · one automatic retry per hour, including while this page is closed.`:'No sources need your help.';
   const signature=JSON.stringify(items);if(signature===attentionSignature)return;attentionSignature=signature;
-  box.innerHTML=items.map(item=>`<article class="card assistanceCard"><div class="toolbar wrap"><h3 class="grow">${esc(item.name||'Source')}</h3><span class="publicationPill">${item.retrying?'Checking…':'Waiting for you'}</span></div><p><strong>${esc(item.reason)}</strong></p><p class="muted">${esc(item.website||item.base_url||'Source verification')} · ${Number(item.occurrences)||1} reported failure${Number(item.occurrences)===1?'':'s'}</p><p class="attentionNextRetry">Next automatic retry: ${esc(new Date(item.next_retry_at*1000).toLocaleString())}</p><div class="toolbar wrap"><button data-attention-webview="${esc(item.id)}">Open WebView</button><button class="primaryAction" data-attention-retry="${esc(item.id)}" ${item.retrying?'disabled':''}>I’ve completed verification — retry</button></div>${item.last_retry_error?`<p class="muted">Last retry: ${esc(shortText(item.last_retry_error,240))}</p>`:''}<details><summary>Technical details</summary><pre>${esc(item.detail||'')}</pre></details></article>`).join('');
+  box.innerHTML=items.map(item=>`<article class="card assistanceCard"><div class="toolbar wrap"><h3 class="grow">${esc(item.name||'Source')}</h3><span class="publicationPill">${item.retrying?'Checking…':'Waiting for you'}</span></div><p><strong>${esc(item.reason)}</strong></p><p class="muted">${esc(item.website||item.base_url||'Source verification')} · ${Number(item.occurrences)||1} reported failure${Number(item.occurrences)===1?'':'s'}</p><p class="attentionNextRetry">Next automatic retry: ${esc(new Date(item.next_retry_at*1000).toLocaleString())}</p><div class="toolbar wrap">${item.webview?`<button data-attention-webview="${esc(item.id)}" title="Solve the check on the source's website; its cookies unblock the source">Open in WebView</button>`:''}<button class="primaryAction" data-attention-retry="${esc(item.id)}" ${item.retrying?'disabled':''}>I’ve completed verification — retry</button></div>${item.last_retry_error?`<p class="muted">Last retry: ${esc(shortText(item.last_retry_error,240))}</p>`:''}<details><summary>Technical details</summary><pre>${esc(item.detail||'')}</pre></details></article>`).join('');
 }
 async function loadAttention(force=false){
   if(attentionPromise)return attentionPromise;
@@ -776,7 +776,7 @@ $('#refreshAttention').onclick=()=>loadAttention(true).catch(e=>toast(e.message)
 $('#attentionItems').addEventListener('click',async event=>{
   const button=event.target.closest('button');if(!button)return;
   const id=button.dataset.attentionWebview||button.dataset.attentionRetry,item=attentionState.items.find(x=>x.id===id);if(!item)return;
-  if(button.dataset.attentionWebview){openSourceWebview(item.base_url,item.source_id);return;}
+  if(button.dataset.attentionWebview){openSourceWebview(item.webview?.url||item.base_url||'',item.webview?.source_id||item.source_id||'');return;}
   button.disabled=true;
   try{await apiV1({noMutationRefresh:true,timeoutMs:5000,suppressClientError:true}).retryAttention(id);toast('Verification check queued');await loadAttention(true);}
   catch(e){toast('Unable to retry verification: '+e.message);button.disabled=false;}

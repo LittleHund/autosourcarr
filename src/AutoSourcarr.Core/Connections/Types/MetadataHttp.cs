@@ -117,21 +117,24 @@ internal sealed class MetadataHttp : IDisposable
             Limiter.Observe(remaining, ResetIn(response));
     }
 
-    /// <summary>X-RateLimit-Reset (AniList: unix seconds) or X-RateLimit-Retry-After (MangaDex: unix seconds).</summary>
-    private static TimeSpan? ResetIn(HttpResponseMessage response)
+    /// <summary>
+    /// X-RateLimit-Reset (AniList: unix seconds) or X-RateLimit-Retry-After (MangaDex: unix seconds), measured against the
+    /// limiter's clock (the same clock its waits use, so a test clock works end to end).
+    /// </summary>
+    private TimeSpan? ResetIn(HttpResponseMessage response)
     {
         var stamp = HeaderLong(response, "X-RateLimit-Reset") ?? HeaderLong(response, "X-RateLimit-Retry-After");
         if (stamp is not { } seconds || seconds <= 0) return null;
-        var delay = DateTimeOffset.FromUnixTimeSeconds(Math.Min(seconds, 253402300799)) - DateTimeOffset.UtcNow;
+        var delay = DateTimeOffset.FromUnixTimeSeconds(Math.Min(seconds, 253402300799)) - Limiter.Time.GetUtcNow();
         return delay > TimeSpan.Zero ? delay : null;
     }
 
-    internal static TimeSpan? RetryAfter(HttpResponseMessage response)
+    internal TimeSpan? RetryAfter(HttpResponseMessage response)
     {
         if (response.Headers.RetryAfter is { } header)
         {
             if (header.Delta is { } delta) return delta < TimeSpan.Zero ? TimeSpan.Zero : delta;
-            if (header.Date is { } date) { var delay = date - DateTimeOffset.UtcNow; return delay > TimeSpan.Zero ? delay : TimeSpan.Zero; }
+            if (header.Date is { } date) { var delay = date - Limiter.Time.GetUtcNow(); return delay > TimeSpan.Zero ? delay : TimeSpan.Zero; }
         }
         return ResetIn(response);
     }

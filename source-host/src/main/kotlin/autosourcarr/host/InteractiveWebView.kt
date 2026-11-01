@@ -67,8 +67,8 @@ import javax.swing.JPanel
  * SRC-5 "Open in WebView": an interactive page in the embedded Chromium for an administrator (image CAPTCHAs, sign-ins,
  * anything a source needs a human for). The page renders off screen; the app reads frames and events from
  * `GET /v1/webview/sessions/{id}/stream` and sends input to `POST /v1/webview/sessions/{id}/input`. Cookies the page
- * gets are copied into the host cookie jar (every 5 seconds, after each page load and on close), which is how a
- * solved CAPTCHA unblocks the source. Bounds: at most [MAX_SESSIONS] sessions, idle 5 minutes, 15 minutes in total,
+ * gets on the hosts its main frame loaded are copied into the host cookie jar (every 5 seconds, after each page load
+ * and on close), which is how a solved CAPTCHA unblocks the source. Bounds: at most [MAX_SESSIONS] sessions, idle 5 minutes, 15 minutes in total,
  * at most 5 frames a second.
  *
  * Stream format: repeated messages of one type byte, a 4-byte big-endian length and the payload:
@@ -83,6 +83,9 @@ object InteractiveWebView {
     const val FRAME_INTERVAL_MS = 200L
     private const val COOKIE_SYNC_MS = 5000L
     private const val HEARTBEAT_MS = 15_000L
+
+    /** How long a WebView session cookie (one without an expiry) stays in the host cookie jar. */
+    private const val SESSION_COOKIE_MS = 24 * 60 * 60 * 1000L
 
     private val sessions = ConcurrentHashMap<String, Session>()
     private val random = SecureRandom()
@@ -105,6 +108,46 @@ object InteractiveWebView {
     fun checkedUrl(raw: String): HttpUrl {
         val url = raw.trim().toHttpUrlOrNull() ?: throw IllegalArgumentException("The WebView opens http and https addresses only")
         require(url.username.isEmpty() && url.password.isEmpty()) { "Addresses with a user name or password are not opened" }
+        return url
+    }
+
+    /** Cloud metadata services: never opened in the WebView (they hand out instance credentials). */
+    private val metadataHosts =
+        setOf(
+            "metadata", "metadata.google.internal", "metadata.goog", "instance-data", "instance-data.ec2.internal",
+            "100.100.100.200", "fd00:ec2::254",
+        )
+
+    /**
+     * An address the interactive WebView may open or navigate to: [checkedUrl], and not a link-local address
+     * (169.254.0.0/16, fe80::/10), a cloud metadata host or this host's own port on loopback. Loopback and private
+     * (LAN) addresses stay allowed: an administrator may run a source on the local network. Names are checked as typed
+     * (no DNS lookup here); the app checks the session address the same way before it asks for a session.
+     */
+    fun reachableUrl(raw: String): HttpUrl {
+        val url = checkedUrl(raw)
+        val host = url.host.lowercase().removePrefix("[").removeSuffix("]").removeSuffix(".")
+        require(host !in metadataHosts) { "The WebView does not open cloud metadata addresses" }
+        val literal =
+            // Literal addresses only (an IPv6 literal or a dotted IPv4), so this never waits on DNS.
+            if (host.contains(':') || Regex("""\d{1,3}(\.\d{1,3}){3}""").matches(host)) {
+                runCatching { java.net.InetAddress.getByName(host) }.getOrNull()
+            } else {
+                null
+            }
+        val address =
+            (literal as? java.net.Inet6Address)?.let { v6 ->
+                // An IPv4-mapped IPv6 address is checked as its IPv4 address.
+                val bytes = v6.address
+                if (bytes.take(10).all { it.toInt() == 0 } && bytes[10].toInt() == -1 && bytes[11].toInt() == -1) {
+                    java.net.InetAddress.getByAddress(bytes.copyOfRange(12, 16))
+                } else {
+                    v6
+                }
+            } ?: literal
+        require(address?.isLinkLocalAddress != true) { "The WebView does not open link-local addresses (169.254.x.x, fe80::)" }
+        val loopback = host == "localhost" || host.endsWith(".localhost") || address?.isLoopbackAddress == true || address?.isAnyLocalAddress == true
+        require(!(loopback && url.port == HostConfig.port)) { "The WebView does not open the source host itself" }
         return url
     }
 
@@ -161,6 +204,9 @@ object InteractiveWebView {
 
         @Volatile private var currentUrl: String = start
         private val clearances = ConcurrentHashMap<String, String>()
+
+        /** Hosts the page's main frame loaded in this session; only their cookies reach the host cookie jar. */
+        private val visitedHosts = ConcurrentHashMap.newKeySet<String>()
         private val client: CefClient = runBlocking { CefHelper.createClient() }
         private val browser: CefBrowser
 
@@ -170,10 +216,17 @@ object InteractiveWebView {
             client.addLoadHandler(LoadHandler())
             // The page starts with the source cookies the host already has (sign-ins, earlier clearances).
             WebViewEngine.copyCookiesIntoBrowser()
+            start.toHttpUrlOrNull()?.let { visitedHosts.add(it.host.lowercase()) }
             browser =
-                client.createBrowser(start, CefRendering.CefRenderingWithHandler(RenderHandler(), JPanel()), false).apply {
-                    createImmediately()
-                    setFocus(true)
+                try {
+                    client.createBrowser(start, CefRendering.CefRenderingWithHandler(RenderHandler(), JPanel()), false).apply {
+                        createImmediately()
+                        setFocus(true)
+                    }
+                } catch (error: Throwable) {
+                    // No session will own this client: release it before the error reaches the caller.
+                    runCatching { client.disposeWithJsHandler() }.onFailure { logger.warn(it) { "Releasing the WebView client failed" } }
+                    throw error
                 }
             event("ready") {
                 put("id", id)
@@ -349,7 +402,7 @@ object InteractiveWebView {
                     }
                 }
                 "navigate" -> {
-                    val url = checkedUrl(text("url").orEmpty())
+                    val url = reachableUrl(text("url").orEmpty())
                     browser.loadURL(url.toString())
                 }
                 "back" -> if (browser.canGoBack()) browser.goBack()
@@ -447,9 +500,20 @@ object InteractiveWebView {
             }
         }
 
+        /** A cookie for [domain] (host-only when [hostOnly]) belongs to a host this session's main frame visited. */
+        private fun visited(
+            domain: String,
+            hostOnly: Boolean,
+        ): Boolean {
+            val name = domain.lowercase()
+            return visitedHosts.any { host -> host == name || (!hostOnly && host.endsWith(".$name")) }
+        }
+
         /**
-         * Copies Chromium's cookies into the host cookie jar (as Suwayomi's WebView does). A new cf_clearance belongs
-         * to the browser's user agent, so the source client then uses that agent (as after a WebView Cloudflare solve).
+         * Copies Chromium's cookies into the host cookie jar (as Suwayomi's WebView does), limited to the hosts this
+         * session's main frame loaded: the global Chromium store also holds other sessions' and third-party cookies.
+         * Session cookies (no expiry) are kept for [SESSION_COOKIE_MS], not forever. A new cf_clearance belongs to the
+         * browser's user agent, so the source client then uses that agent (as after a WebView Cloudflare solve).
          */
         fun syncCookies() {
             val manager = CefCookieManager.getGlobalManager() ?: return
@@ -460,6 +524,7 @@ object InteractiveWebView {
             manager.visitAllCookies { cookie, count, total, _ ->
                 runCatching {
                     val domain = cookie.domain.removePrefix(".")
+                    if (!visited(domain, hostOnly = !cookie.domain.startsWith("."))) return@runCatching
                     val built =
                         Cookie
                             .Builder()
@@ -468,7 +533,11 @@ object InteractiveWebView {
                             .path(if (cookie.path?.startsWith('/') == true) cookie.path else "/")
                             .apply {
                                 if (cookie.domain.startsWith(".")) domain(domain) else hostOnlyDomain(domain)
-                                if (cookie.hasExpires && cookie.expires != null) expiresAt(cookie.expires.time) else expiresAt(Long.MAX_VALUE)
+                                if (cookie.hasExpires && cookie.expires != null) {
+                                    expiresAt(cookie.expires.time)
+                                } else {
+                                    expiresAt(System.currentTimeMillis() + SESSION_COOKIE_MS)
+                                }
                                 if (cookie.httponly) httpOnly()
                                 if (cookie.secure) secure()
                             }.build()
@@ -566,6 +635,7 @@ object InteractiveWebView {
             ) {
                 if (!frame.isMain) return
                 currentUrl = url
+                url.toHttpUrlOrNull()?.let { visitedHosts.add(it.host.lowercase()) }
                 event("address") { put("url", url) }
             }
 
@@ -584,6 +654,7 @@ object InteractiveWebView {
                 httpStatusCode: Int,
             ) {
                 if (!frame.isMain) return
+                frame.url?.toHttpUrlOrNull()?.let { visitedHosts.add(it.host.lowercase()) }
                 event("load") {
                     put("url", frame.url)
                     put("status", httpStatusCode)

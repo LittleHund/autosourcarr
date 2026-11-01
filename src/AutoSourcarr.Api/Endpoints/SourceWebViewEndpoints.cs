@@ -50,7 +50,9 @@ public static class SourceWebViewEndpoints
                     return Problem(400, "url and source_id must be text.");
                 Uri? url = null;
                 if (!string.IsNullOrWhiteSpace(rawUrl) && (url = SourceWebViewBroker.CheckUrl(rawUrl)) is null)
-                    return Problem(400, "The WebView opens http and https addresses only (no user name or password).");
+                    return Problem(400, Uri.TryCreate(rawUrl.Trim(), UriKind.Absolute, out var parsed) && parsed.Scheme is "http" or "https"
+                        && parsed.UserInfo.Length == 0 && SourceWebViewBroker.Refusal(parsed) is { } refusal
+                        ? refusal : "The WebView opens http and https addresses only (no user name or password).");
                 if (!string.IsNullOrWhiteSpace(sourceId))
                 {
                     string? baseText;

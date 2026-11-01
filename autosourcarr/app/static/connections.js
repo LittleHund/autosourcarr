@@ -8,7 +8,21 @@
   const when = iso => iso ? new Date(iso).toLocaleString() : 'never';
   const request = (path, options = {}) => api('/api/v1/connections' + path, { timeoutMs: 25000, noMutationRefresh: true, cache: 'no-store', ...options });
   const send = (path, method, body) => request(path, { method, body: JSON.stringify(body) });
-  const state = { data: null, editing: null, loading: null };
+  const state = { data: null, editing: null, loading: null, notice: '' };
+  const importNote = 'Catalogue entries are created from this import when matching arrives (conversion phase 8); until then the import is only stored.';
+
+  /* CON-5: a change answers with an exact notice of what happens next (source host restart, feed reconnect, rollback note). */
+  function noticeFrom(answer) {
+    state.notice = answer && typeof answer.notice === 'string' ? answer.notice : '';
+    if (state.notice) toast(state.notice);
+  }
+
+  function planSummary(data) {
+    const plan = data && data.plan;
+    if (!plan) return 'Not imported yet.';
+    const counts = plan.counts || {};
+    return `Imported ${Number(counts.total) || 0} manga from ${Number(counts.sources) || 0} sources on ${when(plan.saved_at)} (${plan.status || 'stored'}).`;
+  }
 
   const typeOf = name => (state.data?.types || []).find(type => type.type === name);
   const connectionOf = id => (state.data?.connections || []).find(item => item.id === id);
@@ -98,10 +112,12 @@
   async function saveForm() {
     const label = $('connectionLabel')?.value.trim() || null;
     try {
-      if (state.editing) await send('/' + encodeURIComponent(state.editing), 'PUT', { revision: state.data.revision, label, values: collect() });
-      else await send('', 'POST', { revision: state.data.revision, type: $('connectionAddType').value, label, values: collect() });
+      const answer = state.editing
+        ? await send('/' + encodeURIComponent(state.editing), 'PUT', { revision: state.data.revision, label, values: collect() })
+        : await send('', 'POST', { revision: state.data.revision, type: $('connectionAddType').value, label, values: collect() });
       state.editing = null;
       toast('Connection saved.');
+      noticeFrom(answer);
       await loadConnectionsPane(true);
     } catch (error) {
       toast(error.message);
@@ -120,6 +136,7 @@
         const last = item.last_test ? `${item.last_test.ok ? 'Passed' : 'Failed'} ${text(when(item.last_test.at))}<br/><small class="muted">${text(item.last_test.message)}</small>` : 'never';
         const enabled = `<label><input type="checkbox" data-enable="${text(item.id)}"${item.enabled ? ' checked' : ''}${item.editable ? '' : ' disabled'}/> ${item.enabled ? 'On' : 'Off'}</label>`;
         const actions = `<button type="button" data-test="${text(item.id)}"${item.type_known ? '' : ' disabled'}>Test</button>` +
+          (item.type === 'suwayomi' && item.type_known ? `<button type="button" data-import="${text(item.id)}">Import library</button>` : '') +
           (item.editable ? `<button type="button" data-edit="${text(item.id)}"${item.type_known ? '' : ' disabled'}>Change</button><button type="button" class="dangerAction" data-delete="${text(item.id)}">Delete</button>` : '');
         return `<tr><td>${text(item.label)}${fromSettings ? '<br/><small class="muted">From Settings; change it on the Application settings tab.</small>' : ''}</td>` +
           `<td>${text(type?.label || item.type)}${item.type_known ? '' : ' <small class="muted">(not available in this version)</small>'}</td><td>${enabled}</td><td>${last}</td>` +
@@ -127,7 +144,7 @@
       }).join('') + '</tbody></table>';
     const result = id => [...target.querySelectorAll('[data-result]')].find(node => node.dataset.result === id);
     target.querySelectorAll('[data-enable]').forEach(box => box.onchange = async () => {
-      try { await send('/' + encodeURIComponent(box.dataset.enable), 'PUT', { revision: state.data.revision, enabled: box.checked }); }
+      try { noticeFrom(await send('/' + encodeURIComponent(box.dataset.enable), 'PUT', { revision: state.data.revision, enabled: box.checked })); }
       catch (error) { toast(error.message); }
       await loadConnectionsPane(true);
     });
@@ -138,6 +155,25 @@
       catch (error) { output.textContent = 'Test failed: ' + error.message; }
       finally { button.disabled = false; }
     });
+    /* CON-3 one-time import of the main Suwayomi library: shows the stored plan, and queues a (re)read as a task. */
+    target.querySelectorAll('[data-import]').forEach(button => button.onclick = async () => {
+      const id = button.dataset.import, output = result(id), path = '/' + encodeURIComponent(id) + '/import';
+      button.disabled = true; output.hidden = false; output.textContent = 'Reading the stored import…';
+      try {
+        const current = await request(path);
+        let force = false;
+        if (current.plan) {
+          if (!window.confirm(planSummary(current) + ' Read the library again and replace the stored import?')) {
+            output.innerHTML = `${text(planSummary(current))}<br/><small class="muted">${text(importNote)}</small>`;
+            return;
+          }
+          force = true;
+        }
+        const queued = await send(path, 'POST', { force });
+        output.innerHTML = `Import queued as task ${text(queued.task_id)} (see Tasks). ${text(planSummary(current))}<br/><small class="muted">${text(importNote)}</small>`;
+      } catch (error) { output.textContent = 'Import failed: ' + error.message; }
+      finally { button.disabled = false; }
+    });
     target.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => {
       state.editing = button.dataset.edit; renderForm();
       $('connectionAddForm').scrollIntoView({ block: 'nearest' });
@@ -145,7 +181,7 @@
     target.querySelectorAll('[data-delete]').forEach(button => button.onclick = async () => {
       const item = connectionOf(button.dataset.delete);
       if (!window.confirm(`Delete the connection "${item?.label || button.dataset.delete}"? Features that use it stop working until you add it again.`)) return;
-      try { await request('/' + encodeURIComponent(button.dataset.delete) + '?revision=' + encodeURIComponent(state.data.revision), { method: 'DELETE' }); }
+      try { noticeFrom(await request('/' + encodeURIComponent(button.dataset.delete) + '?revision=' + encodeURIComponent(state.data.revision), { method: 'DELETE' })); }
       catch (error) { toast(error.message); }
       if (state.editing === button.dataset.delete) state.editing = null;
       await loadConnectionsPane(true);
@@ -170,7 +206,8 @@
         state.data = await request('');
         if (state.editing && !connectionOf(state.editing)?.editable) state.editing = null;
         renderTypes(); renderForm(); renderList();
-        $('connectionsState').textContent = 'Add, test and enable external services. Secrets are stored encrypted and never shown again.';
+        $('connectionsState').textContent = 'Add, test and enable external services. Secrets are stored encrypted and never shown again.' +
+          (state.notice ? ' Last change: ' + state.notice : '');
       } catch (error) { $('connectionsState').textContent = 'Unable to load connections: ' + error.message; }
       finally { state.loading = null; }
     })();
