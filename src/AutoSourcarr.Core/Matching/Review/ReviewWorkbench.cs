@@ -365,15 +365,15 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
                 var records = Strings(item["records"]);
                 if (records.Count is < 1 or > 500 || records.Any(record => !RecordPattern.IsMatch(record)) || records.Distinct(StringComparer.Ordinal).Count() != records.Count)
                     throw new ReviewException(400, "Choose 1 to 500 distinct source records (source_id:source_manga_id)");
-                return new ReviewAction(SplitKind, Id(item["entry"], "Use an exact positive work ID"), records.Order(StringComparer.Ordinal).ToList(), null);
+                return new ReviewAction(SplitKind, Id(item["entry"], "Use an exact positive work ID"), 0, records.Order(StringComparer.Ordinal).ToList(), null);
             case ManualMatchKind:
                 var record = Text(item["record"]) ?? "";
                 if (!RecordPattern.IsMatch(record)) throw new ReviewException(400, "Choose one source record (source_id:source_manga_id)");
-                return new ReviewAction(ManualMatchKind, Id(item["entry"], "Use an exact positive work ID"), [record], null);
+                return new ReviewAction(ManualMatchKind, Id(item["entry"], "Use an exact positive work ID"), 0, [record], null);
             case TitleKind:
                 var title = item["title"] is null ? null : Text(item["title"])?.Trim() ?? throw new ReviewException(400, "Title must be text or null");
                 if (title is { Length: < 1 or > 500 }) throw new ReviewException(400, "Use a title of 1 to 500 characters, or null to clear the manual title");
-                return new ReviewAction(TitleKind, Id(item["entry"], "Use an exact positive work ID"), [], title);
+                return new ReviewAction(TitleKind, Id(item["entry"], "Use an exact positive work ID"), 0, [], title);
             default:
                 throw new ReviewException(400, "Unknown review item kind; use separate, merge, split, manual.match or title");
         }

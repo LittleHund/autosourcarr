@@ -46,6 +46,7 @@ public sealed partial class EditionProfiles : IEditionGate
     }
 
     /// <summary>mixed_color_confidence: the confidence a color or media decision needs to count.</summary>
+    public EditionOptions Options => _options();
     public double MinimumConfidence => Math.Clamp(_options().MinimumConfidence, 0, 1);
     internal string Stamp() => _clock.GetUtcNow().ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
 
