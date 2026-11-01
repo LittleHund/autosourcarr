@@ -23,6 +23,11 @@ public sealed class MatchingTitlesV1Services
     public required MatchingPolicyStore Policies { get; init; }
     /// <summary>Live search of one source: (source id, query, page) → {mangas, hasNextPage} (SuwayomiClient.FetchSourceMangaAsync "SEARCH"). Null: local search only.</summary>
     public Func<string, string, int, CancellationToken, Task<JsonObject>>? SearchSource { get; init; }
+    /// <summary>
+    /// MAT-20: machine-translated extra search names (names, genre, source language). They only widen the live search;
+    /// results are still ranked against the entry's own titles and nothing is stored. Null: no translation.
+    /// </summary>
+    public Func<IReadOnlyList<SearchName>, string, string, CancellationToken, Task<IReadOnlyList<SearchName>>>? TranslateNames { get; init; }
     /// <summary>At most this many names are searched live per request (the rest only rank results).</summary>
     public int LiveQueryLimit { get; init; } = 4;
     public TimeSpan SearchTimeout { get; init; } = TimeSpan.FromSeconds(25);
@@ -59,6 +64,8 @@ public sealed class MatchingTitlesV1Services
         var names = Names(canonical, query, allNames);
         if (names.Count == 0) return new JsonObject { ["mangas"] = new JsonArray(), ["hasNextPage"] = false, ["error"] = "No searchable titles", ["queries"] = new JsonArray() };
         var entry = Ingest.GetEntry(canonical);
+        if (allNames && TranslateNames is { } translate)
+            names = [.. await translate(names, Text(entry["genre"]), "", cancellationToken).ConfigureAwait(false)];
         var target = new MatchCandidate
         {
             Titles = Titles.EntryTitles(canonical),

@@ -3,6 +3,10 @@ using System.Text.Json.Nodes;
 using AutoSourcarr.Api.Endpoints;
 using AutoSourcarr.Core.Catalogue.Gallery;
 using AutoSourcarr.Core.Catalogue.Maintenance;
+using AutoSourcarr.Core.Catalogue.Metadata.Hydration;
+using AutoSourcarr.Core.Catalogue.Serving;
+using AutoSourcarr.Core.Imaging;
+using AutoSourcarr.Core.Reader;
 using AutoSourcarr.Core.Catalogue.Metadata;
 using AutoSourcarr.Core.Catalogue.Structure;
 using AutoSourcarr.Core.Catalogue.Tags;
@@ -27,7 +31,7 @@ internal sealed partial class ApplicationRuntime
     /// <summary>The phase-8 services the /api/v1 matching routes use.</summary>
     private sealed record MatchingWiring(MatchingTitlesV1Services Titles, ManualDecisionsV1Services Manual, MaintenanceV1Services Maintenance,
         DuplicateMatching Duplicates, MixedEntriesV1Services Mixed, TagSynonymsV1Services TagSynonyms, ReviewV1Services Review,
-        IDecisionLog Decisions, MetadataV1Services Metadata, DiscoveryV1Services Discovery, ImportsV1Services Imports);
+        IDecisionLog Decisions, MetadataV1Services Metadata, DiscoveryV1Services Discovery, ImportsV1Services Imports, ReadingWiring Reading);
 
     /// <summary>
     /// Phase 8 "Matching": one decision log (every service records through it; the review workbench scopes it to a
@@ -60,6 +64,13 @@ internal sealed partial class ApplicationRuntime
         var titles = new CatalogueTitles(database, writeGate, decisions) { TitlesChanged = _ => owner._duplicates?.Invalidate() };
         var evidence = new NativeCatalogueEvidence(catalogue.NativeMetadata, new GalleryEvidenceService(database, writeGate),
             () => owner.Settings.DuplicateAutoMergeMinSummaryChars, () => owner.Settings.ExactThumbnailMatching);
+        // Phase 10 (10C): decoded thumbnail fingerprints (exact-pixel identity evidence) and remembered source cover hints.
+        var thumbnails = new ThumbnailFingerprints(database, () => owner.Settings, new SuwayomiThumbnailSource(owner.SourceRuntime.Client));
+        var coverHints = new CoverHints(database, () => owner.Settings, (sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId, eager: true));
+        // MAT-20: machine translations only widen searches (manual source search, additional-record discovery).
+        var translator = new Core.Translation.TranslationClient(database, () => owner.Settings);
+        owner._translator = translator;
+        var translatedNames = new Core.Translation.TranslatedSearchNames(translator, () => owner.Settings);
 
         // Phase 9 metadata: _choose_metadata in its own catalogue write (the chooser runs inside it as the field policy).
         void Choose(long id)
@@ -84,6 +95,7 @@ internal sealed partial class ApplicationRuntime
             AddTitle = (id, title, language, kind, source) => titles.AddTitle(id, title, language, kind, source),
             IdentitiesChanged = id => { Choose(id); owner._duplicates?.Invalidate(); },
             Failed = (_, error) => owner.Logs.Record("Metadata", "Identity lookup failed (" + error.GetType().Name + ")."),
+            Fingerprints = thumbnails.HydrateAsync,
         };
         owner._metadataIdentity = identity;
         var chooser = new MetadataChooser(database, writeGate, decisions, titles)
@@ -108,7 +120,10 @@ internal sealed partial class ApplicationRuntime
             });
         var manual = new ManualDecisions(database, writeGate, decisions, operations);
         ingest = new EntryIngest(database, writeGate, decisions, new ManualDecisionsView(manual),
-            followUps: new MetadataIngestFollowUps(identity) { Choose = Choose, Hydrate = (sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId) },
+            // Phase 10: a new source record also seeds identities from its source ids and remembers its cover hint.
+            followUps: new SourceIdentitySeed(database, writeGate,
+                new MetadataIngestFollowUps(identity) { Choose = Choose, Hydrate = (sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId) }, coverHints)
+            { IdentityAdded = id => { Choose(id); owner._duplicates?.Invalidate(); } },
             autoMatchThreshold: () => owner.Settings.AutoMatchThreshold, identityOnIngest: () => owner.Settings.MetadataIdentityOnIngest)
         { Policies = policies, Presets = presets };
         Func<long, JsonObject> entryView = new Core.Catalogue.CatalogueQueries(database, writeGate, _ => false).Entry;
@@ -138,6 +153,7 @@ internal sealed partial class ApplicationRuntime
                 (mangaId, details, chapters, token) => owner.SourceRuntime.Client.FetchMangaAndChaptersAsync(mangaId, details, chapters, token)),
             Metadata = new MetadataClientsImportSearch(providers.Current),
             Identities = identity,
+            ExactThumbnails = thumbnails.ImportExactEntryIdsAsync,
         };
         _ = imports.ScheduleStartupRecovery();
 
@@ -150,12 +166,14 @@ internal sealed partial class ApplicationRuntime
         }, library, owner.Jobs, entryView, owner._dataDirectory);
         duplicates.SourceAttachmentRepair = () => maintenance.RepairUnsafeAutomaticSourceAttachments();
 
+        // Phase 10: colour detection samples real pages of the served candidates (IPageImageSource).
+        var candidatePages = new ReaderCandidatePages(database, writeGate, new SuwayomiReaderPageSource(owner.SourceRuntime.Client), catalogue.Pages);
         var editions = new EditionProfiles(database, () =>
         {
             var settings = owner.Settings;
             return new EditionOptions(settings.ColorDetectionEnabled, settings.ColorDetectionMinConfidence, settings.ColorDetectionColoredPixelFraction,
                 settings.ColorDetectionSamplePages, settings.ColorDetectionTimeout);
-        });
+        }, new ReaderPageImages(database, candidatePages, new MagickPageRasterDecoder()));
         var mixed = new MixedEntries(database, editions, decisions, structure, catalogue.NativeMetadata);
         // A check interrupted by a restart continues from its saved cursor.
         var check = mixed.CheckStatus();
@@ -166,7 +184,11 @@ internal sealed partial class ApplicationRuntime
         {
             Identity = identity, ChooseMetadata = Choose,
             RecordAttached = (_, sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId),
+            TranslateNames = (names, genre, language, token) => translatedNames.ExpandAsync(names, genre, language, token),
         };
+
+        var reading = OpenReading(owner, library, new ReadingInputs(decisions, identity, ingest, discovery, providers, candidatePages, coverHints,
+            translator, translatedNames));
 
         var review = new ReviewV1Services
         {
@@ -179,6 +201,7 @@ internal sealed partial class ApplicationRuntime
             {
                 Titles = titles, Ingest = ingest, Presets = presets, Policies = policies,
                 SearchSource = (sourceId, query, page, token) => owner.SourceRuntime.Client.FetchSourceMangaAsync(sourceId, "SEARCH", page, query, token),
+                TranslateNames = (names, genre, language, token) => translatedNames.ExpandAsync(names, genre, language, token),
             },
             new ManualDecisionsV1Services { Manual = manual, Log = decisionLog, Entry = entryView },
             new MaintenanceV1Services
@@ -195,6 +218,7 @@ internal sealed partial class ApplicationRuntime
             decisions,
             new MetadataV1Services { Chooser = chooser },
             new DiscoveryV1Services { Discovery = discovery, SubbedEntryIds = (force, token) => library.SubbedEntryIdsAsync(force, token) },
-            new ImportsV1Services { Runs = imports });
+            new ImportsV1Services { Runs = imports },
+            reading);
     }
 }

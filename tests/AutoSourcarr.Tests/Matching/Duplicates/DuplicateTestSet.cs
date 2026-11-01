@@ -117,6 +117,8 @@ public static class DuplicateTestSet
 {
     public const string EnvironmentVariable = "AUTOSOURCARR_DUPLICATE_TEST_SET";
     public static string SyntheticPath => ConfigurationTests.Fixture(Path.Combine("matching", "duplicate-pairs.synthetic.json"));
+    /// <summary>The user's own decisions as pairs (phase 10: committed temporarily, removed before cutover).</summary>
+    public static string UserPath => ConfigurationTests.Fixture(Path.Combine("matching", "duplicate-pairs.user.json"));
 
     public sealed record Result(int Pairs, int SamePairs, int Merged, int MergedSame, IReadOnlyList<string> WrongMerges, IReadOnlyList<string> Missed)
     {

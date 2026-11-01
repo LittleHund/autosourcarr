@@ -45,5 +45,5 @@ internal sealed class ChapterWorld : IDisposable
     public long Scalar(DatabaseFile file, string sql, params (string, object?)[] parameters) =>
         Convert.ToInt64(Database.Read(file, session => session.Scalar(sql, parameters)), System.Globalization.CultureInfo.InvariantCulture);
 
-    public void Dispose() => _sandbox.Dispose();
+    public void Dispose() { Database.Dispose(); _sandbox.Dispose(); }
 }

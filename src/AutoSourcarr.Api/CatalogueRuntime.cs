@@ -3,6 +3,7 @@ using AutoSourcarr.Core.Settings;
 using AutoSourcarr.Core.Concurrency;
 using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Catalogue;
+using AutoSourcarr.Core.Catalogue.Browse;
 using AutoSourcarr.Core.Catalogue.Chapters;
 using AutoSourcarr.Core.Catalogue.Structure;
 using AutoSourcarr.Core.Catalogue.Records;
@@ -41,6 +42,14 @@ internal sealed class CatalogueRuntime : IAsyncDisposable
     internal NativeMetadataHydration Hydration => _hydration ?? throw new InvalidOperationException("Native hydration is not initialized.");
     /// <summary>The record-wide native chapter writer (manual matches store the chapters of a just attached record).</summary>
     internal NativeChapterWriter Chapters => _chapters ?? throw new InvalidOperationException("Native chapter writer is not initialized.");
+    /// <summary>Phase 10: the reader stores the chapters/serving/library services build on.</summary>
+    internal ReaderRepository Repository => _repository ?? throw new InvalidOperationException("Reader repository is not initialized.");
+    internal ReaderPageService Pages => _pages ?? throw new InvalidOperationException("Reader pages are not initialized.");
+    internal ServingProfileRepository Profiles => _profiles ?? throw new InvalidOperationException("Serving profiles are not initialized.");
+    internal IReaderCatalogueRead ReaderRead => _catalogue ?? throw new InvalidOperationException("Catalogue is not initialized.");
+    internal DisplayMetadata Display => _display ?? throw new InvalidOperationException("Display metadata is not initialized.");
+    /// <summary>Phase 10 reader browse (cached feeds, chapter freshness); set by the app before the endpoints are mapped.</summary>
+    internal ReaderBrowse? Browse { get; set; }
     internal GalleryReconciliationResult ReconcileGallery(long entryId, CancellationToken cancellationToken = default)
         => Structure.ReconcileGallery(entryId, _chapters ?? throw new InvalidOperationException("Native chapter writer is not initialized."), cancellationToken);
 
@@ -96,8 +105,18 @@ internal sealed class CatalogueRuntime : IAsyncDisposable
     internal void MapEndpoints(IEndpointRouteBuilder endpoints, BoundedWorkScheduler io,
         Func<AutoSourcarrSettings> settings, SemaphoreSlim admin)
     {
-        endpoints.MapReaderCatalogueRead(_catalogue ?? throw new InvalidOperationException("Catalogue is not initialized."));
-        endpoints.MapReaderServing(_repository!, _pages!, io);
+        // Phase 10: with browse wired the reader reads cached feeds and refreshes stale chapters; the routes,
+        // the reader key protection and the /api/reader/v1 alias are the same either way.
+        if (Browse is { } browse)
+        {
+            endpoints.MapReaderCatalogue(browse);
+            endpoints.MapReaderServing(_repository!, _pages!, io, browse.ChaptersRead);
+        }
+        else
+        {
+            endpoints.MapReaderCatalogueRead(_catalogue ?? throw new InvalidOperationException("Catalogue is not initialized."));
+            endpoints.MapReaderServing(_repository!, _pages!, io);
+        }
         endpoints.MapServingProfiles(_profiles!, io, settings, admin);
         endpoints.MapDisplayMetadata(_display!, io, settings);
     }

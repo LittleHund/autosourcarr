@@ -121,7 +121,7 @@ public static class LibraryProjection
                COALESCE(lt.observation_json,'{}') observation_json,lower(e.preferred_title) title_key
               FROM entries e LEFT JOIN matched m ON m.entry_id=e.id
               LEFT JOIN library_tracking lt ON lt.entry_id=e.id WHERE
-            """ + where + ") ";
+            """ + " " + where + ") ";
         var (key, direction, comparison) = query.Sort switch
         {
             "title" => ("title_key", "ASC", ">"),

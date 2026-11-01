@@ -185,6 +185,18 @@ public sealed class ApiV1Services
     public DiscoveryV1Services? Discovery { get; init; }
     /// <summary>Phase 9 backup imports and the Suwayomi library plan import (9A); null answers 503.</summary>
     public ImportsV1Services? Imports { get; init; }
+    /// <summary>Phase 10 chapters: lists, details, candidate review, quality, refresh (10A); null answers 503.</summary>
+    public ChaptersV1Services? Chapters { get; init; }
+    /// <summary>Phase 10 serving: gallery policies and layout, quality upgrades, serving profiles (10A); null answers 503.</summary>
+    public ServingV1Services? Serving { get; init; }
+    /// <summary>Phase 10 CBZ library, download queue and activity history (10B); null answers 503.</summary>
+    public LibraryDownloadsV1Services? LibraryDownloads { get; init; }
+    /// <summary>Phase 10 catalogue views, cover hints, metadata refresh and identity (10C); null answers 503.</summary>
+    public CatalogueV1Services? CatalogueViews { get; init; }
+    /// <summary>Phase 10 tag catalogue and tag review (10C); null answers 503.</summary>
+    public TagsV1Services? Tags { get; init; }
+    /// <summary>Phase 10 reader extension repository, setup links and per-source downloads (10D); null answers 503.</summary>
+    public ReaderExtensionServices? ReaderExtension { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -552,6 +564,7 @@ public static class ApiV1Endpoints
         SourceRepairV1Endpoints.Map(group, services, json, services.SourceRepair);
         RepairV1Endpoints.Map(group, services, json);
         LibraryV1Endpoints.Map(group, services, json);
+        LibraryDownloadsV1Endpoints.Map(group, services, json, services.LibraryDownloads);
         ConnectionsV1Endpoints.Map(group, services, json);
         // Phase 8 "Matching" (port-map MatchingEndpoints + MaintenanceEndpoints).
         MatchingTitlesV1Endpoints.Map(group, services.MatchingTitles, json);
@@ -566,6 +579,12 @@ public static class ApiV1Endpoints
         MetadataV1Endpoints.Map(group, json, services.Metadata);
         DiscoveryV1Endpoints.Map(group, services, json, services.Discovery);
         ImportsV1Endpoints.Map(group, json, services.Imports);
+        // Phase 10 "Chapters and reader".
+        ReaderExtensionV1Endpoints.Map(endpoints, group, services, json, services.ReaderExtension);
+        ChaptersV1Endpoints.Map(group, services, json, services.Chapters);
+        ServingV1Endpoints.Map(group, services, json, services.Serving);
+        CatalogueV1Endpoints.Map(group, services, json, services.CatalogueViews);
+        TagsV1Endpoints.Map(group, services, json, services.Tags);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

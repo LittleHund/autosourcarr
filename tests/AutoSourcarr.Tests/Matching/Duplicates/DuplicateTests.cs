@@ -26,13 +26,19 @@ public static class DuplicateTests
             Check.True(result.Ingest is { } ingest && ingest.Pairs == result.Pairs, "the ingest path is evaluated over the same pairs");
             Check.True(result.Ingest!.WrongMerges.Count == 0, "Ingest wrong merges: " + string.Join("; ", result.Ingest!.WrongMerges));
         });
+        // The user's own decisions (2,680 pairs; committed until cutover) or a set named by the environment variable.
+        // Pairs labelled same came from historical automatic merges, so recall is reported, never asserted.
         var privateSet = Environment.GetEnvironmentVariable(DuplicateTestSet.EnvironmentVariable);
-        if (!string.IsNullOrWhiteSpace(privateSet) && File.Exists(privateSet))
-            suite.Add("duplicates: private duplicate test set scores no wrong merges", () =>
+        if (string.IsNullOrWhiteSpace(privateSet) || !File.Exists(privateSet)) privateSet = DuplicateTestSet.UserPath;
+        if (File.Exists(privateSet))
+            suite.Add("duplicates: user duplicate test set scores no wrong merges on the automatic sweep and on ingest", () =>
             {
                 var result = DuplicateTestSet.Evaluate(privateSet);
-                Console.WriteLine(DuplicateTestSet.Report(result));
+                Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                    $"user duplicate set: pairs {result.Pairs} · wrong merges {result.WrongMerges.Count} · recall {result.Recall:P1} · ingest wrong merges {result.Ingest?.WrongMerges.Count} · ingest recall {result.Ingest?.Recall:P1}"));
                 Check.True(result.WrongMerges.Count == 0, "Wrong merges: " + result.WrongMerges.Count.ToString(CultureInfo.InvariantCulture));
+                Check.True(result.Ingest is { } ingest && ingest.WrongMerges.Count == 0,
+                    "Ingest wrong merges: " + (result.Ingest?.WrongMerges.Count ?? -1).ToString(CultureInfo.InvariantCulture));
             });
 
         suite.Add("duplicates: stand-in gate blocks editions, adaptations, sequels and other creators", () =>

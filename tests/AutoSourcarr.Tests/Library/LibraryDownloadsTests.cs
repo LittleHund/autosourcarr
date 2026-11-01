@@ -19,6 +19,7 @@ using AutoSourcarr.Core.Settings;
 using AutoSourcarr.Tests.Matching;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -189,6 +190,16 @@ public static class LibraryDownloadsTests
             Check.True(errors.Count == 0, string.Join("\n", errors));
             Check.Equal(title, JsonNode.Parse(File.ReadAllText(Path.Combine(series, "details.json")))!["title"]!.GetValue<string>());
             CbzLibraryCheck.RunPythonChecker(setup.Options.Root, 1, 2);
+            // The CI probe opens this library in Kavita (scripts/kavita-check.sh): LIBRARY_EXPORT receives a copy.
+            if (Environment.GetEnvironmentVariable("LIBRARY_EXPORT") is { Length: > 0 } export)
+            {
+                foreach (var file in Directory.EnumerateFiles(setup.Options.Root, "*", SearchOption.AllDirectories))
+                {
+                    var target = Path.Combine(export, Path.GetRelativePath(setup.Options.Root, file));
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    File.Copy(file, target, overwrite: true);
+                }
+            }
 
             var observed = setup.Manager.ObserveAsync(entry).GetAwaiter().GetResult();
             var observation = observed["observation"]!.AsObject();
