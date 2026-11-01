@@ -1,22 +1,26 @@
-# Checkpoint — 2026-11-01 16:35 CET (Phases 0–9 DONE; Phase 10 next)
+# Checkpoint — 2026-11-01 21:30 CET (Phases 0–10 DONE; paused before Phase 11 at the owner's request)
 
-STATUS: 0.5.0 · Phase 9/14 done · next Phase 10 Chapters/reader · 76% done (131/173 plan-h) · remaining to cutover 42 plan-h (≈ 8.2 h) · 0.6.0 after that ~35 plan-h (≈ 5.5 h)
+STATUS: 0.5.0 · Phase 10/14 done · next Phase 11 Web UI finish (paused) · 84% done (146/173 plan-h) · remaining to cutover 27 plan-h + moved items (≈ 7.5 h) · 0.6.0 after that ~35 plan-h (≈ 5.5 h)
 
-RE-ESTIMATE #10 (1 Nov 16:35). Phase 9 took 2.1 h against 2.55. Measured pace phases 0–9: 20.4 h for 131 plan-h = 0.156 h per plan-h. Difficulty factors kept.
+RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code on the owner's PC) against 2.35: about 1.3 h went to fixing what a recheck of phases 0–9 found and six CI probe rounds (reader extension build script, signing, flaky tests). Pace phases 0–10: 24.4 h for 146 plan-h = 0.167 h per plan-h. Phases 11 and 13 grow with the recheck items moved to them (+0.6 h, +1.0 h).
 
 | Phase | plan-h | expected h | status |
 | 0–5 | 70 | 11.35 actual | done |
 | 6 Sources/repair | 17 | 3.4 actual | done |
 | 7 Connections | 7 | 1.25 actual | done |
 | 8 Matching | 21 | 2.3 actual | done |
-| 9 Imports/metadata/sharing | 16 | 2.1 actual (14:20–16:30) | done |
-| 10 Chapters/reader | 15 | 2.35 | next |
-| 11 Web UI finish | 6 | 1.4 (×1.5 Playwright) | |
+| 9 Imports/metadata/sharing | 16 | 2.1 actual | done |
+| 10 Chapters/reader | 15 | 4.0 actual (17:33–21:30) | done |
+| 11 Web UI finish | 6 | 2.0 (×1.5 Playwright; + services panel, page-first lists, event-driven UI, Fixed state, split atomicity, SourceResult) | next (paused) |
 | 12 Backup | 6 | 0.95 | |
-| 13 Pipeline | 7 | 1.65 (×1.5 image builds) | |
+| 13 Pipeline | 7 | 2.65 (×1.5 image builds; + reader extension in the image, repair runner wired, WebView sandbox, PERF-2 limits, network checks, continuous discovery crawler) | |
 | 14 Cutover | 8 | 1.85 (×1.5 real data, your command) | |
-| 0.5.0 total | 173 | 20.4 done + ≈ 8.2 remaining | |
+| 0.5.0 total | 173 | 24.4 done + ≈ 7.5 remaining | |
 | 0.6.0 (15–17) | 35 | ≈ 5.5 | |
+
+Phase 10 (closed): local build + tests on the owner's PC (.NET SDK 10.0.403; owner decision 1 Nov: local first, one probe per round). Probe b772773 green: build, 1193/1193 C# tests, OpenAPI/client, source-host build/check/C# tests 5/5 (incl. "reader extension reads two servers with separate device keys"), repair runner, Kavita 0.8.9 (1 series, 2 chapters), reader extension build (APK + JAR, 5 slots, signed with a throwaway key: owner secrets not set). Commits 8b4129b (wiring), 20f82fa (audit fixes), e98ccdb (recheck fixes), 54668a0, 788178d, eeafd3d, 38472b6 (probe fixes). Audit: 13 findings, 8 fixed, 5 limitations. Checklist: docs/handoff/briefs/phase10-checklist.md (plan, CHAP-1..7, READ-1..5, MAT-20, port-map rows, UI pages; recheck of 0–9 with owners). Done when: Kavita ✓ (CI), two servers with separate keys ✓ (source host + built JAR, CI); Mihon on a phone not run. User duplicate set: sweep 0 wrong merges (300-pair sample incl. all 66 different-work pairs); ingest attaches 15 identical-title pairs → owner decision. Not run here: full Python suite on Linux (conversion CI runs it), Mihon device test, Docker validation.
+
+Open decisions for the owner (1 Nov): (a) stricter match-on-ingest for title-only matches; (b) import evidence gate passing title 0.80 + summary 0.90; (c) MAT-11 scaled check, MAT-22 profile-change check, Komf as provider, AUTH-8 log location; (d) a port target for the AI code-repair worker; (e) mark AUTH-7/AUTH-9 as 0.6.0 in the requirements; earlier: (2) custom test runner vs xUnit, (3) SET-5 /config vs /data.
 
 RULE (31 Oct): before a phase starts, write its checklist from (a) the plan's phase text and "Done when" (plan doc = Claude Docs 4cf80085-d5a6-40e1-9c4e-c40a0e4fbbba, search the node 9b1de541-77e7 with {"kind":"search","text":"<n> <Name>"}), (b) its requirement IDs (claude/requirements.md), (c) its port-map rows incl. section 0 route assignments, (d) the UI pages it must move to /api/v1, (e) phase end: green CI on `conversion`, ZIP in F:\claude projects\autosourcarr data, knowledge-DB records (device VM: `cd $HOME; cp "<data>/AutoSourcarr-knowledge.sqlite3" kdb.sqlite3; uv run --python 3.12 --no-project python kdb.py --db kdb.sqlite3 index <zip>; ... import <records.json>; ... check; cp back`; record states: implemented/verified/resolved/open, not "accepted"), port-map ticks (docs/port-map.md in the repo, uploaded to claude/port-map.md), PC sync (zip of `git diff --name-only <prev>..HEAD` minus .github → conversion-export, extracted in the device VM into ~/mnt/autosourcarr/autosourcarr), independent audit by a fresh agent, re-estimate with actual time, report.
 

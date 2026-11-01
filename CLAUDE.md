@@ -45,12 +45,12 @@ are no longer used. Plan: `docs/handoff/conversion-plan.md` (copy of Claude Docs
 | 7 Connections (menu, solvers, WebView, metadata providers, Suwayomi feed) | done | 6acfff5, CI 41272743279 green |
 | 8 Matching (scorer, decisions log, duplicates, mixed entries, workbench) | done | 26ef573, CI 41309786259 green |
 | 9 Imports, metadata, sharing | done | 1cc573b, CI 41321311062 green |
-| **10 Chapters/reader** | **in progress, paused** | WIP commit 3ed0b4e (on `handoff/phase-10-wip`, see below) |
+| 10 Chapters/reader | done (2026-11-01, Claude Code on the PC) | see `docs/handoff/project-docs/checkpoint.md`; probe b772773 green |
 | 11 Web UI finish, 12 Backup, 13 Pipeline/image, 14 Cutover | open | — |
 | 15–17 (0.6.0) | open | — |
 
-Progress: 131 of 173 plan-hours (76 %); estimate ≈ 8.2 h to cutover, ≈ 5.5 h for 0.6.0
-(measured pace 0.156 h per plan-hour, phases 0–9).
+Progress: 146 of 173 plan-hours (84 %); estimate ≈ 7.5 h to cutover, ≈ 5.5 h for 0.6.0
+(measured pace 0.167 h per plan-hour, phases 0–10). Paused before phase 11 at the owner's request.
 
 **Phase 10 state:** four parts were written by sub-agents and saved in local WIP commit `3ed0b4e`
 (not pushed, never compiled): 10A chapters/serving/quality (`Core/Catalogue/{Chapters,Serving,Browse}`),
@@ -203,7 +203,9 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 
 | Date | Item | State |
 | --- | --- | --- |
-| 2026-11-01 | Phase 10 integration interrupted before any wiring was committed; WIP commit 3ed0b4e is uncompiled and unwired (brief: `docs/handoff/briefs/phase10-integration.md`). | open |
+| 2026-11-01 | Phase 10 wired, audited and green (probe b772773); a recheck of phases 0–9 fixed the startup sequence, reset previews, pacing deferral and orphan APK checks; the remaining items have an owner in `docs/handoff/briefs/phase10-checklist.md`. | resolved |
+| 2026-11-01 | This PC has a .NET 10 SDK and nuget access: build and test locally first, then one ci-probe per round (owner decision). | decision |
+| 2026-11-01 | Open owner decisions: stricter match-on-ingest (15 identical-title pairs); import gate title 0.80 + summary 0.90; MAT-11/MAT-22/Komf/AUTH-8; AI repair worker port target; AUTH-7/9 marked 0.6.0. | open |
 | 2026-11-01 | `duplicate-pairs.user.json` (2,680 pairs from the user's decisions) committed locally for CI; user agreed it need not be private but **must be removed once everything functions**. | open (remove before cutover) |
 | 2026-11-01 | Reader extension signing: user must add GitHub secrets `AUTOSOURCARR_EXT_KEYSTORE_B64`, `_KEYSTORE_PASSWORD`, `_KEY_PASSWORD`, `_KEY_ALIAS` (= `autosourcarr`); without them CI signs with a throwaway key. | waiting on user |
 | 2026-11-01 | Reader extension slot count is fixed at build time (5); "add more from Mihon" is not possible with the Keiyoushi plugin. | limitation |

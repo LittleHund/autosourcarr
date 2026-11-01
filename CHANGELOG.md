@@ -7,6 +7,19 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   `config.json` with keys it does not know, so before rolling back to 0.4.x remove the
   `"connections"` key (keep a copy to restore later). The first connection you add
   shows this note in the app.
+- Phase 10 (Chapters and reader): new catalogue tables for the CBZ library (`library_series`,
+  `download_queue`, `library_downloads`, `download_history`, `library_state`; migration
+  2026110192) and the setting `LIBRARY_DIR`. 0.4.x ignores these tables. The reader extension
+  repository is served at `/api/reader/repo/` without a key (GET/HEAD only); the reader API at
+  `/api/reader/v1` keeps its key and Authelia rule. Add the repo path to Authelia/NPM when you
+  deploy 0.5.0 (`docs/reverse-proxy/`). Limits: the reader extension is not yet built into the
+  image (phase 13); match-on-ingest can still attach two works that share an exact title and
+  have no other evidence (open owner decision).
+- Phase 10 recheck: `POST /api/v1/maintenance/reset-database` and `/full-reset` now need the
+  `preview_token` from `GET` on the same path (the UI fetches it); a reset stops and drains
+  background work first. The 0.4.5 startup jobs run again (merge safety repair, startup
+  maintenance, startup dedup and the other `*_ON_STARTUP` settings, reset-hint replay). The
+  source host answers a local pacing overflow as a deferral instead of a source error.
 
 ## Unreleased
 
