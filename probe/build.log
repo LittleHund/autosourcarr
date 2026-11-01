@@ -2,12 +2,13 @@
   AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
 CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
   AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
-  AutoSourcarr.Tests -> /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/bin/Release/net10.0/AutoSourcarr.Tests.dll
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Imports/ImportsAuditTests.cs(157,67): error CS1061: 'RouteGroupBuilder' does not contain a definition for 'AddEndpointFilter' and no accessible extension method 'AddEndpointFilter' accepting a first argument of type 'RouteGroupBuilder' could be found (are you missing a using directive or an assembly reference?) [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
 
-Build succeeded.
+Build FAILED.
 
 CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
+/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Imports/ImportsAuditTests.cs(157,67): error CS1061: 'RouteGroupBuilder' does not contain a definition for 'AddEndpointFilter' and no accessible extension method 'AddEndpointFilter' accepting a first argument of type 'RouteGroupBuilder' could be found (are you missing a using directive or an assembly reference?) [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
     1 Warning(s)
-    0 Error(s)
+    1 Error(s)
 
-Time Elapsed 00:00:42.15
+Time Elapsed 00:00:23.31

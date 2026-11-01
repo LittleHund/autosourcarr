@@ -1,0 +1,11 @@
+mihon-backup-watch: mihonapp/mihon v0.21.3: 84 @ProtoNumber fields in 10 classes
+Declared in MihonBackup.proto but not written by this release (kept for older backups):
+  Backup: 100 = legacy_broken_sources: bytes
+  BackupManga: 102 = legacy_broken_history: bytes
+The Mihon backup model changed; update MihonBackup.proto, add a sample backup and extend MihonBackupReader.DetectVersion:
+~ message BackupManga (Kotlin BackupManga) has new field numbers:
++     10 = customCover: String
++     11 = lastUpdate: Long
++     12 = lastInit: Long
++     15 = flags: Int
+exit=1
