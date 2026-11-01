@@ -1,1 +1,1 @@
-src/AutoSourcarr.Core/Repair/Migration/DomainMigration.cs(10,77): error CS0509: 'DomainMigrationException': cannot derive from sealed type 'InvalidDataException' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+CSC : error AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
