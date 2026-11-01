@@ -123,9 +123,12 @@ public sealed class ChapterRefresh(SqliteDatabase database, object sourceWriteGa
             writer.Write(batch, updateScan: true, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+        // A local time limit or a capacity deferral says nothing about the source: the record keeps its last check, so
+        // it stays due for the next refresh and is not shown as a source error.
+        catch (Exception error) when (error is OperationCanceledException or Concurrency.WorkDeferredException or Sources.SourceWorkDeferredException) { throw; }
         catch (Exception error)
         {
-            Failed(record, error is OperationCanceledException ? "Source did not answer in time" : error.Message);
+            Failed(record, error.Message);
             throw;
         }
         Stored?.Invoke(record.EntryId, record.SourceId, record.MangaId);

@@ -417,11 +417,13 @@ async function loadApkDownload(){
   const button=document.querySelector('#downloadApk'),message=document.querySelector('#apkDownloadStatus');
   button.disabled=true;
   try{
-    const data=await api('/api/admin/extension-apk',{cache:'no-store',timeoutMs:6000,noMutationRefresh:true});
-    apkDownloadState={...apkDownloadState,...data};
-    button.textContent='Download APK · v'+data.version;button.disabled=!data.available;
-    message.textContent=data.available?`Ready · Android extension ${data.extension_version} · ${Math.ceil(data.size/1024)} KB`:(data.message||'APK not built for this version.');
-    document.querySelector('#apkBuildHelp').hidden=!!data.available;
+    // Phase 10: the prebuilt reader extension is served from AutoSourcarr's own repository (/api/reader/repo/).
+    const setup=await api('/api/v1/reader-extension/setup',{cache:'no-store',timeoutMs:6000,noMutationRefresh:true});
+    const extension=setup.extension||{};const available=!!extension.apk;
+    apkDownloadState={...apkDownloadState,available,version:extension.version_name||'',path:extension.apk||''};
+    button.textContent='Download APK · v'+apkDownloadState.version;button.disabled=!available;
+    message.textContent=available?`Ready · Android extension ${extension.version_name}${extension.signed_for_release?'':' · not release-signed'}`:(extension.message||'APK not built for this version.');
+    document.querySelector('#apkBuildHelp').hidden=available;
   }catch(e){apkDownloadState.available=false;message.textContent='Unable to check the APK: '+e.message;document.querySelector('#apkBuildHelp').hidden=false;}
   finally{apkDownloadState.loading=false;}
 }
@@ -430,7 +432,7 @@ async function downloadCurrentApk(){
   const button=document.querySelector('#downloadApk'),message=document.querySelector('#apkDownloadStatus'),version=apkDownloadState.version;
   apkDownloadState.downloading=true;button.disabled=true;message.textContent='Preparing current APK…';
   try{
-    const blob=await api('/api/admin/extension-apk/download?version='+encodeURIComponent(version),{responseType:'blob',cache:'no-store',timeoutMs:60000,noMutationRefresh:true});
+    const blob=await api(apkDownloadState.path,{responseType:'blob',cache:'no-store',timeoutMs:60000,noMutationRefresh:true});
     if(blob.type!=='application/vnd.android.package-archive'||!blob.size)throw new Error('The server returned no valid APK. Check your sign-in, then refresh Status.');
     downloadBlob(blob,`AutoSourcarr-v${version}-Tachiyomi-Mihon.apk`);message.textContent='APK download started · v'+version;
   }catch(e){message.textContent='APK download failed: '+e.message;}

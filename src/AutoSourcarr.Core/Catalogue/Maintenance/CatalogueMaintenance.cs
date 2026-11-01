@@ -35,6 +35,8 @@ public sealed partial class CatalogueMaintenance
         "source_color_profiles", "titles", "entries", "settings",
         "gallery_layout_candidates", "pending_entry_splits", "pending_entry_merges", "automatic_merge_lineage", "automatic_merge_events",
         "mixed_entry_findings",
+        // Phase 10: queued downloads point at chapters the reset rebuilds; library membership and downloaded files stay.
+        "download_queue",
     ];
 
     /// <summary>full_reset_database: everything learned or decided; source_config, source_groups and user_ui_preferences stay.</summary>
@@ -45,6 +47,7 @@ public sealed partial class CatalogueMaintenance
         "catalogue_record_bindings", "catalogue_record_resolutions",
         "portable_identity_reviews", "portable_identity_review_history",
         "quality_attempts", "crawl_pending", "due_work", "library_complete_observations", "serving_choices",
+        "library_series", "download_queue", "library_downloads", "download_history", "library_state",
         "display_metadata", "display_metadata_history", "serving_upgrade_policies", "serving_upgrade_history",
         "policy_preview_history", "serving_policy_history",
         "serving_profiles", "library_tracking", "entry_preference_history", "matching_review_actions",

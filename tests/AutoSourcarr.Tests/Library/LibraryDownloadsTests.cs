@@ -167,6 +167,39 @@ public static class LibraryDownloadsTests
             Check.Equal("queued", setup.Store.Queued(102)!.State);
         });
 
+        suite.Add("library: a merge moves library membership, queued and downloaded chapters to the surviving work", () =>
+        {
+            using var setup = new Setup();
+            var target = setup.Work("Harbor Lights", [Chapter(701, 0, 1, "1")]);
+            var absorbed = setup.Work("Harbor Lights (alt)", [Chapter(702, 0, 1, "1"), Chapter(703, 0, 2, "1")]);
+            setup.Store.SetMembership(absorbed, true, "Harbor Lights (alt)");
+            setup.Store.Enqueue(absorbed, [Chapter(703, 0, 2, "1")]);
+            setup.Database.Write(DatabaseFile.Catalog, c => c.Execute(
+                "INSERT INTO library_downloads(chapter_id,entry_id,file,pages,bytes,candidate_id,source_id,downloaded_at) VALUES(702,$e,'Harbor Lights (alt)/Ch.001.cbz',3,10,0,'1','now')",
+                ("$e", absorbed)));
+            setup.Database.Write(DatabaseFile.Catalog, c =>
+            {
+                AutoSourcarr.Core.Catalogue.Structure.CataloguePreferenceLineage.Reparent(c, target, absorbed, "now", (_, _, _, _) => { });
+                return 0;
+            });
+            // The surviving work is in the library with the absorbed folder (it had none), its queue and its download.
+            Check.True(setup.Store.Series(target) is { InLibrary: true, Folder: "Harbor Lights (alt)" }, "membership follows the merge");
+            Check.True(setup.Store.Series(absorbed) is null, "no membership left on the absorbed work");
+            Check.Equal(target, setup.Store.Queued(703)!.EntryId);
+            Check.True(setup.Store.Downloaded(target).ContainsKey(702), "download row follows the merge");
+
+            // Both in the library: the surviving work keeps its own folder.
+            var third = setup.Work("Harbor Lights (third)", [Chapter(704, 0, 3, "1")]);
+            setup.Store.SetMembership(third, true, "Harbor Lights (third)");
+            setup.Database.Write(DatabaseFile.Catalog, c =>
+            {
+                AutoSourcarr.Core.Catalogue.Structure.CataloguePreferenceLineage.Reparent(c, target, third, "now", (_, _, _, _) => { });
+                return 0;
+            });
+            Check.Equal("Harbor Lights (alt)", setup.Store.Series(target)!.Folder);
+            Check.True(setup.Store.Series(third) is null, "the absorbed membership row is removed");
+        });
+
         suite.Add("library: a fake two-chapter series downloads through the full pipeline into a library Mihon and Kavita read (CHAP-7)", () =>
         {
             using var setup = new Setup();

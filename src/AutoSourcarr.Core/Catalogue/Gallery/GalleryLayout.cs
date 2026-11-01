@@ -15,6 +15,8 @@ namespace AutoSourcarr.Core.Catalogue.Gallery;
 /// </summary>
 public sealed class GalleryLayout(SqliteDatabase database, GalleryPolicyRepository policies, Func<long, CancellationToken, GalleryReconciliationResult> reconcile)
 {
+    private const int MaximumPasses = 5;
+
     public static readonly JobType LayoutJob = new("gallery-layout", "Apply gallery source rules", JobPriority.Normal, JobFlags.LongRunning,
         RunLimit: 1, StallTimeout: TimeSpan.FromMinutes(15));
 
@@ -25,10 +27,16 @@ public sealed class GalleryLayout(SqliteDatabase database, GalleryPolicyReposito
         var handle = jobs.Enqueue(LayoutJob, "gallery-layout:" + sourceId, async job =>
         {
             await Task.Yield();
-            var result = Apply(sourceId, job, job.CancellationToken);
-            job.Result(result["splits"]!.GetValue<int>().ToString(CultureInfo.InvariantCulture) + " gallery records separated");
-            // A policy saved while this ran: apply the newer rules next.
-            if (policies.Pending().Contains(sourceId, StringComparer.Ordinal)) Schedule(jobs, sourceId, origin);
+            // A policy saved while this runs merges into this job (same key), so the job itself applies the newer rules:
+            // a changed revision restarts the pass, and a policy still pending after a pass runs one more (at most five).
+            var splits = 0;
+            for (var pass = 1; ; pass++)
+            {
+                try { splits += Apply(sourceId, job, job.CancellationToken)["splits"]!.GetValue<int>(); }
+                catch (GalleryPolicyChangedException) when (pass < MaximumPasses) { continue; }
+                if (pass >= MaximumPasses || !policies.Pending().Contains(sourceId, StringComparer.Ordinal)) break;
+            }
+            job.Result(splits.ToString(CultureInfo.InvariantCulture) + " gallery records separated");
         }, origin: origin, context: sourceId);
         return new JsonObject { ["queued"] = !handle.Merged, ["already_running"] = handle.Merged, ["task_id"] = handle.Id, ["source_id"] = sourceId };
     }
@@ -46,7 +54,7 @@ public sealed class GalleryLayout(SqliteDatabase database, GalleryPolicyReposito
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (GalleryStorage.Integer(policies.Read(sourceId)["revision"]) != revision)
-                throw new InvalidOperationException("Gallery policy changed during layout; apply the newest rules");
+                throw new GalleryPolicyChangedException();
             var exists = database.Read(DatabaseFile.Catalog, session => session.Scalar("SELECT 1 FROM entries WHERE id=$id", ("$id", id)) is not null);
             if (exists)
             {
@@ -64,3 +72,6 @@ public sealed class GalleryLayout(SqliteDatabase database, GalleryPolicyReposito
         return summary;
     }
 }
+
+/// <summary>The source's gallery policy changed while a layout pass ran; the pass stops before applying old rules.</summary>
+public sealed class GalleryPolicyChangedException() : InvalidOperationException("Gallery policy changed during layout; apply the newest rules");

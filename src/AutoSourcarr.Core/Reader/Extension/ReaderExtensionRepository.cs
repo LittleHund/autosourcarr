@@ -87,7 +87,7 @@ public sealed partial class ReaderExtensionRepository(string root)
             {
                 ["slot"] = index + 1,
                 ["name"] = Text(sources[index]["name"]),
-                ["source_id"] = sources[index]["id"]?.ToJsonString() ?? ""
+                ["source_id"] = Text(sources[index]["id"])
             });
         var apk = Text(extension["apk"]);
         var jar = Text(extension["jar"]);
@@ -95,7 +95,7 @@ public sealed partial class ReaderExtensionRepository(string root)
         {
             ["available"] = true,
             ["version_name"] = Text(extension["version"]),
-            ["version_code"] = extension["code"]?.ToJsonString() ?? "",
+            ["version_code"] = Text(extension["code"]),
             ["slots"] = sources.Count == 0 ? DefaultSlots : sources.Count,
             ["sources"] = slots,
             ["apk"] = apk.Length == 0 ? null : RoutePrefix + "/apk/" + apk,

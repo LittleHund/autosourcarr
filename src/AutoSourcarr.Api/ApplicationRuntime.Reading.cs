@@ -94,7 +94,12 @@ internal sealed partial class ApplicationRuntime
             refresh: (id, token) => refresh.RefreshEntryAsync(id, null, token), display: catalogue.Display);
         var downloads = new LibraryDownloads(libraryStore, libraryCatalogue, new ReaderLibraryPageSource(catalogue.Pages, catalogue.Covers), owner.Jobs,
             LibraryOptions.For(owner.Settings));
-        var manager = new LibraryManager(database, libraryStore, libraryCatalogue, downloads, owner.Jobs, decisions) { Display = catalogue.Display };
+        var manager = new LibraryManager(database, libraryStore, libraryCatalogue, downloads, owner.Jobs, decisions)
+        {
+            Display = catalogue.Display,
+            // The "duplicates" filter: works in the last duplicate review snapshot (cached; never starts a scan).
+            Duplicates = () => DuplicateEntryIds(owner._duplicates?.GroupsCached()),
+        };
         owner._libraryManager = manager;
         manager.Start();
 
@@ -131,6 +136,15 @@ internal sealed partial class ApplicationRuntime
         };
         return new ReadingWiring(chapters, serving, new LibraryDownloadsV1Services { Manager = manager }, views,
             new TagsV1Services { Tags = tagCatalogue, Store = tagStore });
+    }
+
+    private static IReadOnlyCollection<long> DuplicateEntryIds(JsonArray? groups)
+    {
+        var ids = new HashSet<long>();
+        foreach (var pair in (groups ?? []).OfType<JsonObject>().SelectMany(group => group["pairs"] as JsonArray ?? []).OfType<JsonObject>())
+            foreach (var key in new[] { "left_id", "right_id" })
+                if (pair[key] is JsonValue value && value.TryGetValue<long>(out var id) && id > 0) ids.Add(id);
+        return ids;
     }
 
     /// <summary>

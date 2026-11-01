@@ -33,7 +33,8 @@ public sealed class TranslationClient : IDisposable
         ArgumentNullException.ThrowIfNull(database); ArgumentNullException.ThrowIfNull(settings);
         _database = database; _settings = settings; _clock = clock ?? TimeProvider.System;
         _http = new HttpClient(handler ?? new SocketsHttpHandler { AllowAutoRedirect = false, PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30) }, disposeHandler: true)
-        { Timeout = System.Threading.Timeout.InfiniteTimeSpan };
+        // A translation or the language list is small; a larger answer is refused instead of buffered.
+        { Timeout = System.Threading.Timeout.InfiniteTimeSpan, MaxResponseContentBufferSize = 1024 * 1024 };
         var slots = Math.Max(1, settings().TranslationConcurrency);
         _slots = new SemaphoreSlim(slots, slots);
     }
@@ -123,7 +124,9 @@ public sealed class TranslationClient : IDisposable
         catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException or NotSupportedException or InvalidOperationException)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return new JsonObject { ["ok"] = false, ["configured"] = true, ["url"] = url, ["error"] = error is OperationCanceledException ? "Timed out" : error.Message };
+            return new JsonObject { ["ok"] = false, ["configured"] = true, ["url"] = url, ["error"] = error is OperationCanceledException ? "Timed out"
+                // /api/v1/health is a guest read: the error kind only, not the remote message.
+                : "Request failed (" + error.GetType().Name + ")" };
         }
     }
 
