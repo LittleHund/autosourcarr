@@ -1,0 +1,149 @@
+// Mihon / Tachiyomi library backup (.tachibk and the older Tachiyomi .proto.gz), hand-maintained (PIPE-9).
+//
+// Mihon publishes no .proto: this schema is derived from the kotlinx.serialization @ProtoNumber annotations of
+// mihonapp/mihon app/src/main/java/eu/kanade/tachiyomi/data/backup/models/*.kt, checked against the tags
+// v0.16.5, v0.17.1, v0.18.0, v0.19.0, v0.19.1, v0.20.0, v0.21.0, v0.21.1 and main (2026-11-01). When the backup-format
+// watch (PIPE-9) reports a model change, add the new field numbers here, add a sample backup for the new version under
+// tests/AutoSourcarr.Tests/Fixtures/backups/ (generate-backups.py) and extend MihonBackupReader.DetectVersion.
+//
+// Compatibility rules this file keeps:
+// - Every field number any supported release wrote is declared with its wire type, including numbers Mihon later
+//   retired (106 lastModifiedAt, 109 version, chapter 11/12): older backups still carry them and they date the backup.
+// - Tachiyomi's "non-compliant" models used field number 0 (BrokenBackupSource at Backup 100, BrokenBackupHistory at
+//   BackupManga 102). Field 0 is not valid protobuf, so those messages are kept as raw bytes and read by hand.
+// - Forks (TachiyomiSY, J2K, Komikku, ...) add fields at other numbers; they land in the unknown fields and are ignored.
+//   A known number written with another wire type is also kept as unknown, never an error.
+// - BackupManga.url is bytes: the reader decodes it strictly (an identity must not be silently altered), every other
+//   text uses the replacement character for invalid UTF-8 like the Python reader did.
+syntax = "proto3";
+
+package autosourcarr.imports;
+
+option csharp_namespace = "AutoSourcarr.Core.Imports.Backup.Generated";
+
+message Backup {
+  repeated BackupManga manga = 1;
+  repeated BackupCategory categories = 2;
+  // Tachiyomi BrokenBackupSource { 0: name, 1: sourceId } (field 0: read by hand).
+  repeated bytes legacy_broken_sources = 100;
+  repeated BackupSource sources = 101;
+  repeated BackupPreference preferences = 104;
+  repeated BackupSourcePreferences source_preferences = 105;
+  // Mihon 0.17-0.19 BackupExtensionRepos and Mihon 0.20+ BackupExtensionStore share numbers 1-5 with the same wire types.
+  repeated BackupExtensionRepo extension_repos = 106;
+}
+
+message BackupManga {
+  int64 source = 1;
+  bytes url = 2;
+  string title = 3;
+  optional string artist = 4;
+  optional string author = 5;
+  optional string description = 6;
+  repeated string genre = 7;
+  int32 status = 8;
+  optional string thumbnail_url = 9;
+  int64 date_added = 13;
+  int32 viewer = 14;
+  repeated BackupChapter chapters = 16;
+  repeated int64 categories = 17;
+  repeated BackupTracking tracking = 18;
+  // Mihon defaults favorite to true when the field is absent.
+  optional bool favorite = 100;
+  int32 chapter_flags = 101;
+  // Tachiyomi BrokenBackupHistory { 0: url, 1: lastRead, 2: readDuration } (field 0: read by hand).
+  repeated bytes legacy_broken_history = 102;
+  optional int32 viewer_flags = 103;
+  repeated BackupHistory history = 104;
+  int32 update_strategy = 105;
+  // Mihon 0.16-0.20 (abandoned sync attempt).
+  optional int64 last_modified_at = 106;
+  optional int64 favorite_modified_at = 107;
+  repeated string excluded_scanlators = 108;
+  // Mihon 0.17-0.20 (abandoned sync attempt).
+  optional int64 version = 109;
+  // Mihon 0.19+.
+  optional string notes = 110;
+  optional bool initialized = 111;
+  // Mihon 0.20+: JSON object bytes.
+  optional bytes memo = 112;
+  // Mihon 0.21+.
+  optional int64 next_update = 113;
+}
+
+message BackupChapter {
+  string url = 1;
+  string name = 2;
+  optional string scanlator = 3;
+  bool read = 4;
+  bool bookmark = 5;
+  int64 last_page_read = 6;
+  int64 date_fetch = 7;
+  int64 date_upload = 8;
+  float chapter_number = 9;
+  int64 source_order = 10;
+  optional int64 last_modified_at = 11;
+  optional int64 version = 12;
+  optional bytes memo = 13;
+}
+
+message BackupCategory {
+  string name = 1;
+  int64 order = 2;
+  int64 id = 3;
+  int64 flags = 100;
+}
+
+message BackupSource {
+  string name = 1;
+  int64 source_id = 2;
+}
+
+message BackupTracking {
+  int32 sync_id = 1;
+  int64 library_id = 2;
+  int32 media_id_int = 3;
+  string tracking_url = 4;
+  string title = 5;
+  float last_chapter_read = 6;
+  int32 total_chapters = 7;
+  float score = 8;
+  int32 status = 9;
+  int64 started_reading_date = 10;
+  int64 finished_reading_date = 11;
+  bool is_private = 12;
+  int64 media_id = 100;
+}
+
+message BackupHistory {
+  string url = 1;
+  int64 last_read = 2;
+  int64 read_duration = 3;
+}
+
+message BackupPreference {
+  string key = 1;
+  // kotlinx polymorphic PreferenceValue (type name + value); AutoSourcarr never restores preferences.
+  bytes value = 2;
+}
+
+message BackupSourcePreferences {
+  string source_key = 1;
+  repeated BackupPreference prefs = 2;
+}
+
+message BackupExtensionRepo {
+  // 0.17-0.19 baseUrl / 0.20+ indexUrl
+  string base_url = 1;
+  string name = 2;
+  // 0.17-0.19 shortName / 0.20+ badgeLabel
+  optional string short_name = 3;
+  // 0.17-0.19 website / 0.20+ contactWebsite
+  string website = 4;
+  // 0.17-0.19 signingKeyFingerprint / 0.20+ signingKey
+  string signing_key = 5;
+  // 0.20+ only
+  optional string contact_discord = 6;
+  optional bool is_legacy = 7;
+  optional string extension_list_url = 8;
+}

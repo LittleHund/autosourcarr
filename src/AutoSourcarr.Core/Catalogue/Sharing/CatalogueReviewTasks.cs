@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Catalogue.Sharing;
 using AutoSourcarr.Core.Concurrency;
 using AutoSourcarr.Core.Jobs;
+using AutoSourcarr.Core.Matching.Decisions;
 
 namespace AutoSourcarr.Core.Catalogue.Sharing;
 
@@ -13,7 +14,7 @@ public sealed class CatalogueReviewTasks(CatalogueExchange exchange, TaskRegistr
     private readonly CancellationTokenSource _stopping = new();
     private bool _closed;
     private Task? _stop;
-    public JsonObject Schedule(string uid, string digest, string revision, string action = "apply")
+    public JsonObject Schedule(string uid, string digest, string revision, string action = "apply", DecisionActor? actor = null)
     {
         CatalogueFormat.CheckUid(uid, "decision"); if (action is not ("apply" or "ignore")) throw new ArgumentException("Choose Apply or Keep local");
         var key = uid + ":" + digest;
@@ -24,17 +25,17 @@ public sealed class CatalogueReviewTasks(CatalogueExchange exchange, TaskRegistr
             var id = tasks.Create("Review shared catalogue choice", total: 1, origin: "manual", context: uid, kind: "catalogue-choice");
             var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_stopping.Token);
             var begin = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            var runtime = RunAsync(key, id, uid, digest, revision, action, begin.Task, cancellation);
+            var runtime = RunAsync(key, id, uid, digest, revision, action, actor, begin.Task, cancellation);
             _running[key] = runtime; _ = tasks.BindRuntimeAsync(id, runtime, cancellation); begin.SetResult();
             return new() { ["queued"] = true, ["task_id"] = id };
         }
     }
-    private async Task RunAsync(string key, string id, string uid, string digest, string revision, string action, Task begin, CancellationTokenSource cancellation)
+    private async Task RunAsync(string key, string id, string uid, string digest, string revision, string action, DecisionActor? actor, Task begin, CancellationTokenSource cancellation)
     {
         await begin.ConfigureAwait(false);
         try
         {
-            var result = await lanes.RunManualAsync(token => io.RunAsync(() => exchange.ApplyDecision(uid, digest, revision, action, id, token), token), id, cancellation.Token).ConfigureAwait(false);
+            var result = await lanes.RunManualAsync(token => io.RunAsync(() => exchange.ApplyDecision(uid, digest, revision, action, taskId: id, actor: actor, cancellationToken: token), token), id, cancellation.Token).ConfigureAwait(false);
             var state = result["state"]?.GetValue<string>();
             if (state is "applied" or "ignored") tasks.Complete(id, result["message"]?.GetValue<string>() ?? "Shared choice reviewed");
             else tasks.Fail(id, result["message"]?.GetValue<string>() ?? "The shared choice remains pending local review");

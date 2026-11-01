@@ -69,6 +69,10 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private CatalogueRuntime? _catalogue;
     /// <summary>Phase 8 duplicate review: kept for the status counts (read lazily) and the matching cache invalidations.</summary>
     private AutoSourcarr.Core.Matching.Duplicates.DuplicateMatching? _duplicates;
+    /// <summary>Phase 9: the visible tasks of reviewed shared choices, the metadata identity lookups and the provider clients (disposed at shutdown).</summary>
+    private AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks? _catalogueReviews;
+    private AutoSourcarr.Core.Catalogue.Metadata.MetadataIdentityResolver? _metadataIdentity;
+    private AutoSourcarr.Core.Catalogue.Metadata.MetadataProviderSet? _metadataProviders;
     private string? _dataDirectory;
     private SuwayomiClient? _main;
     private SourceEngineCapabilityContract? _mainCapabilities;
@@ -323,6 +327,14 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._library = new AutoSourcarr.Core.Sources.Library.SuwayomiLibrary(owner.Database, owner.Preferences, () => owner.Settings,
                 () => owner._main, owner.Io, error => owner.Logs.Record("Main library", error.Message));
             var matching = OpenMatching(owner, owner._library);
+            // Phase 9B: catalogue sharing and portable identities record on the same decision log as matching.
+            var sharingGallery = new AutoSourcarr.Core.Catalogue.Gallery.GalleryEvidenceService(owner.Database, owner._catalogueWriteGate);
+            var sharingExchange = new AutoSourcarr.Core.Catalogue.Sharing.CatalogueExchange(owner.Database, owner._catalogueWriteGate, owner.Privacy,
+                galleryEvidence: sharingGallery.CatalogueAdapter, structure: owner.Catalogue.Structure, invalidate: () => owner._duplicates?.Invalidate())
+            { Log = matching.Decisions };
+            var identities = new AutoSourcarr.Core.Catalogue.Sharing.PortableIdentityResolver(owner.Database);
+            var catalogueReviews = new AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks(sharingExchange, owner.Tasks, owner.Lanes, owner.Io);
+            owner._catalogueReviews = catalogueReviews;
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings,
                     duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }),
@@ -346,6 +358,13 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 Library = new LibraryV1Services { Library = owner._library },
                 MatchingTitles = matching.Titles, ManualDecisions = matching.Manual, Maintenance = matching.Maintenance,
                 Duplicates = matching.Duplicates, MixedEntries = matching.Mixed, TagSynonyms = matching.TagSynonyms, Review = matching.Review,
+                CatalogueSharing = new CatalogueSharingV1Services
+                {
+                    Exchange = sharingExchange, Identities = identities, Reviews = catalogueReviews,
+                    IdentityReview = new AutoSourcarr.Core.Catalogue.Sharing.IdentityReview(owner.Database, owner._catalogueWriteGate, identities) { Log = matching.Decisions },
+                    AdminLock = owner._admin, Io = owner.Io,
+                },
+                Metadata = matching.Metadata, Discovery = matching.Discovery, Imports = matching.Imports,
                 Connections = new ConnectionsV1Services
                 {
                     Store = owner._connections,
@@ -816,6 +835,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         if (_baselines is not null) await Attempt("Source baselines", () => _baselines.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_rawInstalled is not null) await Attempt("Installed source observations", () => _rawInstalled.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_rawRepositories is not null) await Attempt("Source code downloads", () => _rawRepositories.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_catalogueReviews is not null) await Attempt("Catalogue review tasks", () => _catalogueReviews.DisposeAsync().AsTask()).ConfigureAwait(false);
+        // Background identity lookups finish (or stop) before the provider clients and the database close.
+        if (_metadataIdentity is not null) await Attempt("Metadata identity", () => _metadataIdentity.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Task lanes", () => Lanes.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_catalogue is not null) await Attempt("Catalogue lifetime", () => _catalogue.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_attention is not null) await Attempt("Source attention", () => _attention.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -844,6 +866,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             { await _healthIo.RunAsync(() => { _database.Dispose(); return 0; }, CancellationToken.None).ConfigureAwait(false); }).ConfigureAwait(false);
         await Attempt("Health physical I/O", () => _healthIo.DisposeAsync().AsTask()).ConfigureAwait(false);
         _integrationHttp?.Dispose();
+        try { _metadataProviders?.Dispose(); } catch (Exception error) { errors.Add(error); }
         await Attempt("Log writer cancellation", () => _logStop.CancelAsync()).ConfigureAwait(false);
         if (_writer is not null) await Attempt("Log writer", () => _writer).ConfigureAwait(false);
         if (_logs is not null) await Attempt("Diagnostic store", () => _logs.DisposeAsync().AsTask()).ConfigureAwait(false);

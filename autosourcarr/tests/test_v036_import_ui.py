@@ -35,7 +35,7 @@ def test_pre_ack_poll_cannot_finish_manual_action(kind):
       assert.equal(pendingImportActions.size,1,'Older decision cannot finish accepted action');
       const done=refreshPendingImportActions();requests[2].resolve({item:{id:1,state:'added',decision_revision:1,suggestion_checked:1},run:{id:'run',added:1,unresolved:0}});await done;
       assert.equal(pendingImportActions.size,0);assert.equal(importsState.items[0].state,'added');assert.equal(run.unresolved,0);
-      assert(requests[3].url.includes('/items?'),'Completion fetches a fresh filtered page');
+      assert(requests[3].url.endsWith('/api/v1/imports/run/items')&&JSON.parse(requests[3].opts.body).state==='unresolved','Completion fetches a fresh filtered page');
       requests[3].resolve({items:[],total:0});await tick();assert.equal(importsState.items.length,0);
     })().then(()=>{completed=true}).catch(error=>{console.error(error);process.exitCode=1});
     '''.replace('INVOKE', invoke))

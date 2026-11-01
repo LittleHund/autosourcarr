@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Catalogue.Sharing;
+using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Persistence;
 using static AutoSourcarr.Core.Catalogue.Sharing.SharingJson;
 
@@ -38,7 +39,10 @@ public sealed partial class CatalogueExchange
             ["entry_ids"] = Numbers(mapped.SelectMany(values => values).Distinct().Order()), ["local_records"] = Objects(resolved.SelectMany(values => values).Select(record => new JsonObject { ["entry_id"] = record.EntryId, ["title"] = record.Row.Text("source_title"), ["source"] = Nonempty(record.Row.Text("source_name"), record.SourceId) })), ["revision"] = revision };
         foreach (var pair in status) view[pair.Key] = pair.Value?.DeepClone(); return view;
     }
-    public JsonObject ApplyDecision(string uid, string digest, string revision, string action = "apply", string? taskId = null, CancellationToken cancellationToken = default)
+    /// <summary>Applies or ignores one retained shared choice. Structural choices go through the journalled
+    /// <see cref="ICatalogueReviewedStructure"/> merge/split owner; a local manual binding, manual separate record or
+    /// Separate review is never overridden by an imported choice.</summary>
+    public JsonObject ApplyDecision(string uid, string digest, string revision, string action = "apply", string? taskId = null, DecisionActor? actor = null, CancellationToken cancellationToken = default)
     {
         CatalogueFormat.CheckUid(uid, "decision"); if (action is not ("apply" or "ignore")) throw new ArgumentException("Choose Apply or Keep local");
         lock (_sourceWriteGate)
@@ -58,7 +62,13 @@ public sealed partial class CatalogueExchange
                 else if (view.S("state") == "conflict") throw new ArgumentException(view.S("message"));
                 else if (view.S("state") == "ready") status = CatalogueDecisions.ApplyReady(c, choice, native);
                 if (status is not null)
-                { c.Execute("UPDATE catalogue_decisions SET state=$p0,message=$p1,applied_revision=$p2 WHERE uid=$p3 AND digest=$p4", P(status.S("state"), status.S("message"), revision, uid, digest)); foreach (var pair in status) view[pair.Key] = pair.Value?.DeepClone(); return view; }
+                {
+                    c.Execute("UPDATE catalogue_decisions SET state=$p0,message=$p1,applied_revision=$p2 WHERE uid=$p3 AND digest=$p4", P(status.S("state"), status.S("message"), revision, uid, digest)); foreach (var pair in status) view[pair.Key] = pair.Value?.DeepClone();
+                    if (status.S("state") is "applied" or "ignored")
+                        Record(action == "ignore" ? "catalogue.decision.ignore" : "catalogue.decision." + choice.S("kind"), actor, view.A("entry_ids").Select(value => value!.GetValue<long>()), [],
+                            status.S("message"), new JsonObject { ["uid"] = uid, ["digest"] = digest, ["state"] = status.S("state") });
+                    return view;
+                }
                 var resolved = choice.A("records").Select(fact => CatalogueNativeRecords.Resolve(native, fact!.AsObject())).ToList();
                 if (resolved.Count == 0 || resolved.Any(values => values.Count != 1)) throw new ArgumentException("Resolve each public source reference to exactly one local record before applying this choice");
                 records = resolved.Select(values => values[0]).ToList(); targets = CatalogueIdentity.Targets(c, choice.A("entries").Select(item => item!.GetValue<string>()));
@@ -66,6 +76,7 @@ public sealed partial class CatalogueExchange
                 if (owners.Count > 32 || kind == "group" && records.Count > 64) throw new ArgumentException("Review this large group in smaller local groups before applying it");
                 if (kind is not ("group" or "source-match" or "separate")) throw new ArgumentException(view.S("message"));
                 if (kind == "group" && records.Any(record => c.Scalar("SELECT 1 FROM manual_match_bindings WHERE source_id=$p0 AND source_manga_id=$p1", P(record.SourceId, record.MangaId)) is not null)) throw new ArgumentException("A local manual source binding is retained; review it before combining imported members");
+                Protect(c, kind, records, targets);
                 if (_structure is null || string.IsNullOrEmpty(taskId)) throw new InvalidOperationException("A visible reviewed task and the journalled merge/split domain owner are required for this structural choice");
                 structural = choice.Copy(); c.Execute("UPDATE catalogue_decisions SET state='pending',message='Applying the reviewed local record mapping',applied_revision=$p0 WHERE uid=$p1 AND digest=$p2", P(revision, uid, digest)); return null;
             });
@@ -96,9 +107,35 @@ public sealed partial class CatalogueExchange
                         }
                     }
                 }
-                c.Execute("UPDATE catalogue_decisions SET state=$p0,message=$p1,applied_revision=$p2 WHERE uid=$p3 AND digest=$p4", P(status.S("state"), status.S("message"), revision, uid, digest)); return status;
+                c.Execute("UPDATE catalogue_decisions SET state=$p0,message=$p1,applied_revision=$p2 WHERE uid=$p3 AND digest=$p4", P(status.S("state"), status.S("message"), revision, uid, digest));
+                if (status.S("state") == "applied")
+                    Record("catalogue.decision." + structural!.S("kind"), actor, CatalogueIdentity.Targets(c, structural.A("entries").Select(item => item!.GetValue<string>())),
+                        records!.Select(record => record.SourceId + ":" + record.MangaId), status.S("message"), new JsonObject { ["uid"] = uid, ["digest"] = digest, ["state"] = "applied" });
+                return status;
             });
             _invalidate?.Invoke(); return result;
+        }
+    }
+    /// <summary>
+    /// Phase-8 manual decisions win over an imported structural choice: a Separate review between any two involved
+    /// entries, a manual separate record for an involved target, or a manual binding that keeps a record on another entry
+    /// (or, for a split, on this one) refuses the choice before the structure owner is called.
+    /// </summary>
+    private static void Protect(DatabaseSession c, string kind, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targets)
+    {
+        var involved = targets.Concat(records.Select(record => record.EntryId)).Distinct().Order().ToArray();
+        if (kind is "group" or "source-match")
+            for (var i = 0; i < involved.Length; i++) for (var j = i + 1; j < involved.Length; j++)
+                if (c.Scalar("SELECT 1 FROM duplicate_reviews WHERE left_entry_id=$p0 AND right_entry_id=$p1 AND decision='not_duplicate'", P(involved[i], involved[j])) is not null)
+                    throw new ArgumentException("A local Separate decision is retained; an imported choice cannot combine these entries");
+        foreach (var record in records)
+        {
+            if (kind is "group" or "source-match" && targets.Any(target => c.Scalar("SELECT 1 FROM manual_separate_records WHERE target_entry_id=$p0 AND source_id=$p1 AND source_manga_id=$p2", P(target, record.SourceId, record.MangaId)) is not null))
+                throw new ArgumentException("A local manual separate record is retained; an imported choice cannot attach it");
+            var hint = c.Scalar("SELECT entry_id_hint FROM manual_match_bindings WHERE source_id=$p0 AND source_manga_id=$p1", P(record.SourceId, record.MangaId));
+            if (hint is null) continue;
+            if (kind == "source-match" && targets.Count == 1 && targets[0] != record.EntryId) throw new ArgumentException("A local manual match keeps this source record on its entry; an imported choice cannot move it");
+            if (kind == "separate") throw new ArgumentException("A local manual match keeps this source record on its entry; an imported choice cannot split it");
         }
     }
     private static void Page(int offset, int limit) { if (offset < 0 || limit is < 1 or > 100) throw new ArgumentException("Invalid catalogue review page"); }
@@ -115,7 +152,7 @@ public sealed partial class CatalogueExchange
         view["local_candidates"] = Objects(candidates.Select(id => new JsonObject { ["id"] = id, ["title"] = c.Scalar("SELECT preferred_title FROM entries WHERE id=$p0", P(id)) as string }));
         view["can_link"] = targets.Count == 1 && CatalogueIdentity.Unverified(c, targets[0]); view["revision"] = CatalogueFormat.Digest(new JsonArray(Row(row), Numbers(targets), resolution?.DeepClone(), CatalogueNativeRecords.Policies(c), Numbers(candidates))); return view;
     }
-    public JsonObject ReviewRecord(string uid, string digest, string revision, string action = "separate")
+    public JsonObject ReviewRecord(string uid, string digest, string revision, string action = "separate", DecisionActor? actor = null)
     {
         if (action is not ("separate" or "ignore")) throw new ArgumentException("Choose Add separately or Keep local"); JsonObject result;
         lock (_sourceWriteGate) result = _database.Write(DatabaseFile.Catalog, c =>
@@ -139,11 +176,12 @@ public sealed partial class CatalogueExchange
                 state = "imported"; message = "Added separately under a new portable identity; original IDs and local records are unchanged.";
             }
             if (resolution is not null) c.Execute("INSERT OR REPLACE INTO catalogue_record_resolutions VALUES($p0,$p1,$p2)", P(uid, digest, CatalogueFormat.Canonical(resolution)));
+            Record(action == "ignore" ? "catalogue.record.ignore" : "catalogue.record.separate", actor, created, [], message, new JsonObject { ["uid"] = uid, ["digest"] = digest });
             c.Execute("UPDATE catalogue_import_records SET state=$p0,message=$p1 WHERE uid=$p2 AND digest=$p3", P(state, message, uid, digest)); return new JsonObject { ["added"] = created.Count, ["state"] = state, ["entry_ids"] = Numbers(created) };
         });
         _invalidate?.Invoke(); return result;
     }
-    public JsonObject PrepareLink(string uid, string digest, string revision, long target)
+    public JsonObject PrepareLink(string uid, string digest, string revision, long target, DecisionActor? actor = null)
     {
         lock (_sourceWriteGate) return _database.Write(DatabaseFile.Catalog, c =>
         {
@@ -156,7 +194,8 @@ public sealed partial class CatalogueExchange
             if (local is not null && imported is not null && local != imported) throw new ArgumentException("The two manual titles differ; retain the native local title and review the imported override before linking");
             var fact = current.A("sources").First(fact => CatalogueNativeRecords.Resolve(native, fact!.AsObject()).Any(record => record.EntryId == target));
             var choice = CatalogueFormat.Decision(new JsonObject { ["uid"] = CatalogueFormat.Uid("decision"), ["kind"] = "source-match", ["entries"] = new JsonArray(current.S("uid")), ["records"] = new JsonArray(fact!.DeepClone()), ["value"] = new JsonObject { ["note"] = "Verified local counterpart explicitly selected in Database sharing" } });
-            var key = CatalogueFormat.Digest(choice); c.Execute("INSERT INTO catalogue_decisions(uid,digest,decision_json,state,message) VALUES($p0,$p1,$p2,'pending','Verified local source link requested')", P(choice.S("uid"), key, CatalogueFormat.Canonical(choice))); return DecisionView(c, FindDecision(c, choice.S("uid"), key), native);
+            var key = CatalogueFormat.Digest(choice); c.Execute("INSERT INTO catalogue_decisions(uid,digest,decision_json,state,message) VALUES($p0,$p1,$p2,'pending','Verified local source link requested')", P(choice.S("uid"), key, CatalogueFormat.Canonical(choice)));
+            Record("catalogue.record.link", actor, [target, targets[0]], [], "Verified local counterpart selected for an imported entry", new JsonObject { ["uid"] = choice.S("uid"), ["digest"] = key, ["record_uid"] = uid }); return DecisionView(c, FindDecision(c, choice.S("uid"), key), native);
         });
     }
 }

@@ -152,7 +152,7 @@ test('backup deadline covers response JSON and reconciles an accepted upload',as
   h.context.fetch=async(_url,options)=>{sent=options;options.signal.addEventListener('abort',()=>body.reject(new DOMException('Aborted','AbortError')));return {ok:true,status:200,json:()=>body.promise};};
   const uploading=h.context.uploadMihonBackup();await tick();
   const deadline=h.timers.find(timer=>timer.ms===120000);assert.equal(deadline.cancelled,false,'Response headers retain the body deadline');assert.equal(h.$('#importBackup').disabled,true);
-  deadline.fn();await tick();assert.equal(h.requests.length,1);assert.equal(h.requests[0].url,'/api/admin/imports/'+sent.headers['X-Import-ID']+'/receipt');assert.equal(h.requests[0].options.timeoutMs,10000);
+  deadline.fn();await tick();assert.equal(h.requests.length,1);assert.equal(h.requests[0].url,'/api/v1/imports/'+sent.headers['X-Import-ID']+'/receipt');assert.equal(h.requests[0].options.timeoutMs,10000);
   h.requests[0].resolve({queued:true,import_id:sent.headers['X-Import-ID'],filename:'日本語 100%.tachibk'});await uploading;
   assert.equal(h.$('#importBackup').disabled,false);assert.equal(h.$('#backupImportFile').value,'');assert.equal(h.context.importsState.runId,sent.headers['X-Import-ID']);
 });
@@ -312,7 +312,7 @@ const ledgerWrites=[
   ['explicit duplicate split','POST','/api/admin/entries/1/unmatch-duplicates'],
   ['unbind automatic attachments','POST','/api/admin/entries/1/unbind-auto-matches'],
   ['redo automation','POST','/api/admin/entries/1/redo-automation'],
-  ['import manual Match anchor','POST','/api/admin/imports/import-id/items/1/match/2?background=true'],
+  ['import manual Match anchor','POST','/api/v1/imports/import-id/items/1/match/2'],
   ['reset groups','POST','/api/admin/maintenance/reset-manual-groups'],
   ['reset matches','POST','/api/admin/maintenance/reset-manual-matches'],
   ['reset all decisions','POST','/api/admin/maintenance/reset-all-manual-actions'],

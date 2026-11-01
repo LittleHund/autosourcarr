@@ -939,11 +939,12 @@ function loadImportItems(){
   $('#importRunSummary').textContent=`${run.filename||'backup'} · ${run.state||''} · ${Number(run.total||0)} items · added ${Number(run.added||0)} · existing ${Number(run.existing||0)} · unresolved ${Number(run.unresolved||0)} · failed ${Number(run.failed||0)}`;
   importsState.loading=true;importsState.error='';
   if(importsState.loadedKey!==key)renderImportItems();else{$('#importItemsStatus').textContent='Refreshing import page…';renderImportPagination();}
-  const state=importsState.filter==='all'?'':`&state=${encodeURIComponent(importsState.filter)}`;
-  const url=`/api/admin/imports/${encodeURIComponent(run.id)}/items?limit=50&offset=${importsState.offset}&review=${encodeURIComponent(importsState.review)}${state}`;
+  // /api/v1 takes the page and filters in the body (the generated client has no query parameters).
+  const filters={limit:50,offset:importsState.offset,review:importsState.review,state:importsState.filter==='all'?'':importsState.filter};
+  const url=`/api/v1/imports/${encodeURIComponent(run.id)}/items`;
   const request=(async()=>{
     try{
-      const data=await api(url,{timeoutMs:15000});
+      const data=await api(url,{method:'POST',body:JSON.stringify(filters),timeoutMs:15000,noMutationRefresh:true});
       if(importViewKey()!==key)return data;
       importsState.items=(data.items||[]).map(item=>{
         const action=pendingImportActions.get(importActionKey(run.id,item.id));
@@ -970,7 +971,7 @@ function loadImports(){
   const revision=importsState.revision;
   importsListRequest=(async()=>{
     try{
-      const data=await api('/api/admin/imports?limit=50',{timeoutMs:12000});
+      const data=await api('/api/v1/imports',{timeoutMs:12000});
       if(revision!==importsState.revision)return;
       importsState.runs=data.runs||[];
       if(!importsState.runId||!importsState.runs.some(r=>String(r.id)===String(importsState.runId))){importsState.runId=String(importsState.runs[0]?.id||'');importsState.offset=0;}
@@ -1047,7 +1048,7 @@ async function refreshPendingImportActions(){
   const pending=[...pendingImportActions.values()].filter(action=>action.accepted);
   const results=await Promise.all(pending.map(async action=>{
     try{
-      const data=await api(`/api/admin/imports/${encodeURIComponent(action.runId)}/items/${action.itemId}`,{timeoutMs:5000,suppressClientError:true});
+      const data=await api(`/api/v1/imports/${encodeURIComponent(action.runId)}/items/${action.itemId}`,{timeoutMs:5000,suppressClientError:true});
       return {action,data};
     }catch(error){return {action,error};}
   }));
@@ -1106,7 +1107,7 @@ window.matchImportItem=(runId,itemId,entryId,button)=>{
   // the lightweight queue request is sent. The network work is never on the click path.
   setTimeout(async()=>{
     try{
-      const r=await api(`/api/admin/imports/${encodeURIComponent(runId)}/items/${itemId}/match/${entryId}?background=true`,{method:'POST',body:'{}',timeoutMs:5000});
+      const r=await api(`/api/v1/imports/${encodeURIComponent(runId)}/items/${itemId}/match/${entryId}`,{method:'POST',body:'{}',timeoutMs:5000});
       if(r.error){const failure=new Error(r.error);failure.status_code=409;throw failure;}
       if(!acceptImportAction(key,action,r))return;
       if(item&&String(item.state)==='resolving')item.reason=r.already_running?'This import match is already running.':'Match accepted; adding to the library…';
@@ -1133,7 +1134,7 @@ window.retryImportItem=(runId,itemId,button)=>{
   schedulePendingImportPoll(250);
   setTimeout(async()=>{
     try{
-      const r=await api(`/api/admin/imports/${encodeURIComponent(runId)}/items/${itemId}/retry?background=true`,{method:'POST',body:'{}',timeoutMs:5000});
+      const r=await api(`/api/v1/imports/${encodeURIComponent(runId)}/items/${itemId}/retry`,{method:'POST',body:'{}',timeoutMs:5000});
       if(r.error){const failure=new Error(r.error);failure.status_code=409;throw failure;}
       if(!acceptImportAction(key,action,r))return;
       if(item&&String(item.state)==='retrying')item.reason=r.already_running?'This retry is already running.':'Retrying in the background…';
@@ -1173,7 +1174,7 @@ window.rejectImportMatch=(runId,itemId,button)=>{
   schedulePendingImportPoll(250);
   setTimeout(async()=>{
     try{
-      const r=await api(`/api/admin/imports/${encodeURIComponent(runId)}/items/${itemId}/reject`,{method:'POST',body:'{}',timeoutMs:5000});
+      const r=await api(`/api/v1/imports/${encodeURIComponent(runId)}/items/${itemId}/reject`,{method:'POST',body:'{}',timeoutMs:5000});
       if(r.error){const failure=new Error(r.error);failure.status_code=409;throw failure;}
       if(!acceptImportAction(key,action,r))return;
       loadTasks().catch(()=>{});
@@ -1198,7 +1199,7 @@ window.skipImportItem=(runId,itemId,button)=>{
   toast('Import item skipped');
   setTimeout(async()=>{
     try{
-      const r=await api(`/api/admin/imports/${encodeURIComponent(runId)}/items/${itemId}/skip`,{method:'POST',body:'{}',timeoutMs:5000});
+      const r=await api(`/api/v1/imports/${encodeURIComponent(runId)}/items/${itemId}/skip`,{method:'POST',body:'{}',timeoutMs:5000});
       if(r.error){const failure=new Error(r.error);failure.status_code=409;throw failure;}
       if(!acceptImportAction(key,action,r))return;
       if(item){item.reason=r.reason||'Skipped by user';if(importsState.filter==='all')patchImportItemDom(item);}
@@ -1230,13 +1231,13 @@ window.searchImportCandidates=async(runId,itemId,button)=>{
     // Phase 1 is SQLite-only and should render almost immediately. Phase 2 then
     // checks the original/enabled live sources so a work does not need to have been
     // catalogued by some unrelated AutoSourcarr action before Imports can find it.
-    const local=await api(`/api/admin/imports/${encodeURIComponent(runId)}/items/${itemId}/suggestions?q=${encodeURIComponent(q)}`,{timeoutMs:5000,signal:controller.signal});
+    const local=await api(`/api/v1/imports/${encodeURIComponent(runId)}/items/${itemId}/suggestions`,{method:'POST',body:JSON.stringify({q}),timeoutMs:5000,signal:controller.signal,noMutationRefresh:true});
     if(!current())return;
     item.suggestions=local.suggestions||[];
     box.innerHTML=item.suggestions.length?importCandidateChoices(runId,item):'<div class="muted">No local catalog match yet. Searching enabled sources…</div>';
     updateImportReviewCounts();
     if(button)button.textContent='Searching sources…';
-    const live=await api(`/api/admin/imports/${encodeURIComponent(runId)}/items/${itemId}/suggestions/live?q=${encodeURIComponent(q)}`,{timeoutMs:25000,suppressClientError:true,signal:controller.signal});
+    const live=await api(`/api/v1/imports/${encodeURIComponent(runId)}/items/${itemId}/suggestions/live`,{method:'POST',body:JSON.stringify({q}),timeoutMs:25000,suppressClientError:true,signal:controller.signal,noMutationRefresh:true});
     if(!current())return;
     item.suggestions=live.suggestions||item.suggestions||[];
     if(Number(live.reference_entry_id||0)>0)item.reference_entry_id=Number(live.reference_entry_id);
@@ -1340,7 +1341,7 @@ function manualActionsMutationRoute(url,method){
   if(verb==='POST'&&/^\/api\/(?:admin|v1)\/manual-groups\/[^/]+\/members$/.test(path))return true;
   if(verb==='DELETE'&&/^\/api\/(?:admin|v1)\/manual-groups\/[^/]+\/members\/[^/]+\/\d+$/.test(path))return true;
   // Import Match persists its source anchor before slow library reconciliation.
-  if(verb==='POST'&&/^\/api\/admin\/imports\/[^/]+\/items\/\d+\/match\/\d+$/.test(path))return true;
+  if(verb==='POST'&&/^\/api\/(?:admin|v1)\/imports\/[^/]+\/items\/\d+\/match\/\d+$/.test(path))return true;
   if(verb==='POST')return /^\/api\/(?:admin|v1)\/entries\/\d+\/(preferred-title|aliases|manual-match|separate-source|unmatch-duplicates|unbind-auto-matches|redo-automation)$/.test(path)
     ||/^\/api\/(?:admin|v1)\/entries\/\d+\/variants\/[^/]+\/\d+\/promote$/.test(path);
   if(verb==='DELETE')return /^\/api\/(?:admin|v1)\/entries\/\d+(\/manual-titles|\/matches\/[^/]+|\/(variants|separate-source)\/[^/]+\/\d+)?$/.test(path);
@@ -2429,7 +2430,7 @@ window.refreshBrowseEntryAll=async(id,button)=>{
 };
 async function repairMissingMetadata(button){
   if(button)button.disabled=true;
-  try{const r=await api('/api/admin/maintenance/refresh-metadata?limit=5000',{method:'POST'});toast(`Metadata repair queued: ${r.queued||0} of ${r.candidates||0} incomplete entries`);loadTasks().catch(()=>{});}
+  try{const r=await api('/api/v1/maintenance/refresh-metadata',{method:'POST',body:JSON.stringify({limit:5000})});toast(`Metadata repair queued: ${r.queued||0} of ${r.candidates||0} incomplete entries`);loadTasks().catch(()=>{});}
   catch(e){toast('Metadata repair failed: '+e.message);}finally{if(button)button.disabled=false;}
 }
 document.querySelectorAll('.browseMode').forEach(b=>b.onclick=()=>{setBrowseMode(b.dataset.mode);loadBrowse(1).catch(e=>toast(e.message));});
@@ -2819,12 +2820,12 @@ async function refreshBothMatrices(){await Promise.allSettled([loadMatrix(),load
 $('#loadMatrix').onclick=()=>loadMatrix().catch(e=>toast(e.message)); $('#loadSubbed').onclick=()=>loadSubbed().catch(e=>toast(e.message));
 if($('#repairUnmatchedSubbed'))$('#repairUnmatchedSubbed').onclick=async()=>{
   const b=$('#repairUnmatchedSubbed');b.disabled=true;
-  try{const r=await api('/api/admin/subbed/repair-unmatched',{method:'POST',timeoutMs:12000});toast(r.already_running?'A Subbed discovery task is already running':`Repair queued for ${Number(r.entries||0)} source-less subscribed entries`);loadTasks().catch(()=>{});}
+  try{const r=await api('/api/v1/subbed/repair-unmatched',{method:'POST',timeoutMs:12000});toast(r.already_running?'A Subbed discovery task is already running':`Repair queued for ${Number(r.entries||0)} source-less subscribed entries`);loadTasks().catch(()=>{});}
   catch(e){toast('Unable to queue repair: '+e.message);}finally{b.disabled=false;}
 };
 if($('#searchAllSubbed'))$('#searchAllSubbed').onclick=async()=>{
   const b=$('#searchAllSubbed');b.disabled=true;
-  try{const r=await api('/api/admin/subbed/search-all',{method:'POST',timeoutMs:12000});toast(r.already_running?'A Subbed discovery task is already running; this request was not queued again':`Search all queued for ${Number(r.entries||0).toLocaleString()} subscribed entr${Number(r.entries||0)===1?'y':'ies'}`);loadTasks().catch(()=>{});}
+  try{const r=await api('/api/v1/subbed/search-all',{method:'POST',timeoutMs:12000});toast(r.already_running?'A Subbed discovery task is already running; this request was not queued again':`Search all queued for ${Number(r.entries||0).toLocaleString()} subscribed entr${Number(r.entries||0)===1?'y':'ies'}`);loadTasks().catch(()=>{});}
   catch(e){toast('Unable to search all Subbed entries: '+e.message);}
   finally{b.disabled=false;}
 };
@@ -3793,8 +3794,8 @@ if($('#fullReset'))$('#fullReset').onclick=async()=>{
 
 if($('#moveDatabaseStorage'))$('#moveDatabaseStorage').onclick=()=>moveDatabaseStorage();
 $('#refreshStatus').onclick=()=>{health().catch(e=>toast(e.message));loadApkDownload();loadSourceEngine();};
-$('#refreshFeeds').onclick=async()=>{const b=$('#refreshFeeds');b.disabled=true;try{const r=await api('/api/admin/maintenance/refresh-feeds',{method:'POST'});toast(`Browse refresh scheduled (${r.scheduled||0} feed jobs)`);setTimeout(()=>health().catch(()=>{}),1000);}catch(e){toast('Unable to schedule feed refresh: '+e.message);}finally{b.disabled=false;}};
-$('#scanAdditionalRecords').onclick=async()=>{const b=$('#scanAdditionalRecords');b.disabled=true;try{const r=await api('/api/admin/maintenance/discover-additional?limit=5000',{method:'POST'});toast(r.already_running?'Additional-record scan is already running':`Background scan queued for ${r.entries||0} entries`);loadTasks().catch(()=>{});setTimeout(()=>health().catch(()=>{}),1000);}catch(e){toast('Unable to start additional-record scan: '+e.message);}finally{b.disabled=false;}};
+$('#refreshFeeds').onclick=async()=>{const b=$('#refreshFeeds');b.disabled=true;try{const r=await api('/api/v1/maintenance/refresh-feeds',{method:'POST'});toast(`Browse refresh scheduled (${r.scheduled||0} feed jobs)`);setTimeout(()=>health().catch(()=>{}),1000);}catch(e){toast('Unable to schedule feed refresh: '+e.message);}finally{b.disabled=false;}};
+$('#scanAdditionalRecords').onclick=async()=>{const b=$('#scanAdditionalRecords');b.disabled=true;try{const r=await api('/api/v1/maintenance/discover-additional',{method:'POST',body:JSON.stringify({limit:5000})});toast(r.already_running?'Additional-record scan is already running':`Background scan queued for ${r.entries||0} entries`);loadTasks().catch(()=>{});setTimeout(()=>health().catch(()=>{}),1000);}catch(e){toast('Unable to start additional-record scan: '+e.message);}finally{b.disabled=false;}};
 
 document.querySelectorAll('.themeChoice').forEach(b=>b.onclick=()=>{const theme=b.dataset.theme||'blue';applyTheme(theme,readLocalUiPreference('customColor')||DEFAULT_CUSTOM_COLOR);queueUiPreferenceSave('theme',theme);});
 function commitCustomThemeColor(hex){const normalized=normalizeHexColor(hex);if(!normalized){toast('Enter a valid HEX color such as #FF2D78');return false;}applyCustomPalette(normalized);applyTheme('custom',normalized);queueUiPreferenceSave('customColor',normalized);queueUiPreferenceSave('theme','custom');return true;}
@@ -3830,7 +3831,7 @@ if($('#refreshImports'))$('#refreshImports').onclick=()=>loadImports().catch(e=>
 if($('#clearImportHistory'))$('#clearImportHistory').onclick=async()=>{
   if(!confirm('Clear finished import history? Active imports will be kept. This removes only AutoSourcarr import audit/history rows; it does not remove anything from the Suwayomi library or reset manual matches.'))return;
   const b=$('#clearImportHistory');b.disabled=true;
-  try{const r=await api('/api/admin/imports/clear-history',{method:'POST',body:'{}'});importsState.revision++;importsState.offset=0;importsState.loadedKey='';importsState.runId='';importsState.runs=[];importsState.items=[];await loadImports();toast(`Cleared ${Number(r.runs_cleared||0)} import run${Number(r.runs_cleared||0)===1?'':'s'} (${Number(r.items_cleared||0)} item${Number(r.items_cleared||0)===1?'':'s'})`);}
+  try{const r=await api('/api/v1/imports/clear-history',{method:'POST',body:'{}'});importsState.revision++;importsState.offset=0;importsState.loadedKey='';importsState.runId='';importsState.runs=[];importsState.items=[];await loadImports();toast(`Cleared ${Number(r.runs_cleared||0)} import run${Number(r.runs_cleared||0)===1?'':'s'} (${Number(r.items_cleared||0)} item${Number(r.items_cleared||0)===1?'':'s'})`);}
   catch(e){toast('Unable to clear import history: '+e.message);}
   finally{b.disabled=false;}
 };
@@ -3838,7 +3839,7 @@ if($('#resetImportManualAutoresolve'))$('#resetImportManualAutoresolve').onclick
   if(!confirm('Reset all learned manual import autoresolve mappings? Future backup imports will no longer automatically reuse your previous manual import Match decisions. Ordinary manual source matches/groups are kept.'))return;
   const b=$('#resetImportManualAutoresolve');b.disabled=true;
   try{
-    const r=await api('/api/admin/imports/reset-manual-autoresolve',{method:'POST',body:'{}'});
+    const r=await api('/api/v1/imports/reset-manual-autoresolve',{method:'POST',body:'{}'});
     toast(`Reset ${Number(r.autoresolve_mappings_removed||0)} manual import autoresolve mapping${Number(r.autoresolve_mappings_removed||0)===1?'':'s'}`);
   }catch(e){toast('Unable to reset import manual autoresolve: '+e.message);}
   finally{b.disabled=false;}
@@ -3847,7 +3848,7 @@ if($('#resetImportRejections'))$('#resetImportRejections').onclick=async()=>{
   if(!confirm('Reset all semi-permanent rejected import matches? Previously rejected candidates may become suggestions again. Import history and Suwayomi library entries are not deleted.'))return;
   const b=$('#resetImportRejections');b.disabled=true;
   try{
-    const r=await api('/api/admin/imports/reset-rejections',{method:'POST',body:'{}'});
+    const r=await api('/api/v1/imports/reset-rejections',{method:'POST',body:'{}'});
     await loadImports();
     toast(`Reset ${Number(r.rejections_cleared||0)} rejected import match${Number(r.rejections_cleared||0)===1?'':'es'}`);
   }catch(e){toast('Unable to reset rejected import matches: '+e.message);}
@@ -3889,7 +3890,7 @@ async function uploadMihonBackup(){
     let result;
     try{
       requestStarted=true;
-      const response=await fetch('/api/admin/import/mihon-backup',{method:'POST',headers,body:file,signal:controller.signal});
+      const response=await fetch('/api/v1/imports/mihon-backup',{method:'POST',headers,body:file,signal:controller.signal});
       if(response.status===401){knownRejected=true;throw new Error('Admin token required. Configure/open AutoSourcarr with the admin token and retry.');}
       if(!response.ok){
         knownRejected=response.status>=400&&response.status<500&&response.status!==409;
@@ -3906,7 +3907,7 @@ async function uploadMihonBackup(){
       // its stable identity once; never automatically replay the POST.
       if(status)status.textContent='Checking whether the server accepted this import…';
       try{
-        const receipt=await api(`/api/admin/imports/${encodeURIComponent(importId)}/receipt`,{timeoutMs:10000,suppressClientError:true});
+        const receipt=await api(`/api/v1/imports/${encodeURIComponent(importId)}/receipt`,{timeoutMs:10000,suppressClientError:true});
         if(receipt.queued===true&&String(receipt.import_id)===importId){await confirmBackupImport(receipt,input,status);return;}
       }catch(_error){}
       if(status)status.textContent=`Upload acknowledgment unavailable: ${message}. Check Tasks and Imports for ${importId} before retrying. Retrying this selected file uses the same import identity.`;

@@ -14,6 +14,13 @@ namespace AutoSourcarr.Core.Catalogue;
 /// Display ownership is deliberately absent from this evidence-producing module.</summary>
 public sealed partial class CatalogueMetadata(Func<double> minimumColorConfidence)
 {
+    /// <summary>
+    /// Optional per-field choice (phase 9 Catalogue/Metadata MetadataChooser): runs inside the same write after the native
+    /// columns were rebuilt and may replace description, cover, creators, genre and status with the highest-ranked source's
+    /// values. Null keeps the released choice unchanged.
+    /// </summary>
+    public AutoSourcarr.Core.Catalogue.Metadata.IMetadataFieldPolicy? FieldPolicy { get; set; }
+
     public void Recompute(DatabaseSession c, long entryId, string timestamp)
     {
         RecomputeColor(c, entryId); ChooseMetadata(c, entryId, timestamp);
@@ -82,6 +89,7 @@ public sealed partial class CatalogueMetadata(Func<double> minimumColorConfidenc
             """, ("$manual", entry.Integer("manual_preferred_title")), ("$old", entry.Text("preferred_title")), ("$preferred", preferred),
             ("$description", description), ("$cover", CanonicalValue("thumbnail_url")), ("$status", status), ("$author", CanonicalValue("author")),
             ("$artist", CanonicalValue("artist")), ("$genre", string.Join(", ", genres)), ("$stamp", timestamp), ("$id", entryId));
+        FieldPolicy?.Apply(c, entryId, timestamp);
         SyncColoredTitle(c, entryId, timestamp); RecomputeMedia(c, entryId); SyncRelatedMediaTitles(c, entryId, timestamp);
     }
 

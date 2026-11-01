@@ -159,7 +159,7 @@ if command -v node >/dev/null 2>&1; then
   grep -q "defer_hydration:true" autosourcarr/app/static/app.js
   grep -q "refresh-metadata?background=true" autosourcarr/app/static/app.js
   grep -q "discover-additional?background=true" autosourcarr/app/static/app.js
-  grep -q 'match/${entryId}?background=true' autosourcarr/app/static/app.js
+  grep -q '/api/v1/imports/${encodeURIComponent(runId)}/items/${itemId}/match/${entryId}' autosourcarr/app/static/app.js
   if grep -q "await refreshBothMatrices();await renderInlineEntry" autosourcarr/app/static/app.js; then
     echo 'ERROR: simple entry mutation again waits for both 500-row matrices' >&2
     exit 1
@@ -170,7 +170,7 @@ if command -v node >/dev/null 2>&1; then
   grep -q "rejectImportMatch" autosourcarr/app/static/app.js
   grep -q "resetImportRejections" autosourcarr/app/static/index.html
   grep -q "resetImportManualAutoresolve" autosourcarr/app/static/index.html
-  grep -q "/api/admin/imports/reset-manual-autoresolve" autosourcarr/app/static/app.js
+  grep -q "/api/v1/imports/reset-manual-autoresolve" autosourcarr/app/static/app.js
   grep -q "h.errors?.items" autosourcarr/app/static/app.js
   if grep -q "duplicate-candidates?ids=" autosourcarr/app/static/app.js; then
     echo 'ERROR: giant duplicate-candidate query-string regression returned' >&2
@@ -431,7 +431,7 @@ assert 'Has possible match' in imports_block and 'No possible match' in imports_
 assert 'Source reference found' in imports_block and 'Has English hint' in imports_block, 'Imports source/translation review filters are missing'
 js = Path('autosourcarr/app/static/app.js').read_text()
 assert 'importPassesReviewFilter' in js and 'importReviewFilter' in js, 'Imports review-filter behavior is missing'
-for required in ('/api/admin/browse','/api/v1/maintenance/unmatch-duplicates','/api/v1/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/admin/maintenance/refresh-metadata','/api/v1/maintenance/reset-covers','/api/admin/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','apiV1().getSettings()','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','.getErrors()','runLiveEvents()','openErrors','loadErrors'):
+for required in ('/api/admin/browse','/api/v1/maintenance/unmatch-duplicates','/api/v1/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/v1/maintenance/refresh-metadata','/api/v1/maintenance/reset-covers','/api/admin/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','apiV1().getSettings()','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','.getErrors()','runLiveEvents()','openErrors','loadErrors'):
     assert required in js, required
 assert '<h3>All known titles</h3>' not in js, 'Inspector should separate canonical main title from alternate titles'
 assert 'refreshAfterManualEdit' not in js, 'manual matching must update the open browser in-place instead of reloading both matrices after every click'

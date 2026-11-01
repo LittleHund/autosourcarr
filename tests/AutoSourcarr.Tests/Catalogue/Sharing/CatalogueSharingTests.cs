@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using System.Net;
 using AutoSourcarr.Api.Endpoints;
 using AutoSourcarr.Api.Http;
+using AutoSourcarr.Api.Security;
 using AutoSourcarr.Core.Catalogue.Sharing;
 using AutoSourcarr.Core.Concurrency;
 using AutoSourcarr.Core.Settings;
@@ -214,7 +215,7 @@ public static class CatalogueSharingTests
             var stage = Body(setup.Send(HttpMethod.Get, HttpRoot + "/stages/" + stageId + "?limit=200")); Check.Equal("preview", S(stage, "state")); Check.Equal(200, stage["limit"]!.GetValue<int>());
             Check.Equal(HttpStatusCode.UnprocessableEntity, setup.Send(HttpMethod.Get, HttpRoot + "/stages/" + stageId + "?limit=201").StatusCode);
             var added = Body(setup.Send(HttpMethod.Post, HttpRoot + "/apply", new() { ["id"] = stageId, ["revision"] = revision })); Check.Equal(1, added["added"]!.GetValue<int>()); Check.Equal(9007199254740994L, added["entry_ids"]![0]!.GetValue<long>());
-            var resolved = Body(setup.Send(HttpMethod.Get, "/api/admin/portable-identities/resolve?reference=" + Uri.EscapeDataString(uid))); Check.Equal(9007199254740994L, resolved["items"]![0]!["id"]!.GetValue<long>());
+            var resolved = Body(setup.Send(HttpMethod.Post, "/api/v1/portable-identities/resolve", new() { ["reference"] = uid })); Check.Equal(9007199254740994L, resolved["items"]![0]!["id"]!.GetValue<long>());
             Check.Equal(HttpStatusCode.OK, setup.Send(HttpMethod.Get, HttpRoot + "/records").StatusCode); Check.Equal(HttpStatusCode.OK, setup.Send(HttpMethod.Get, HttpRoot + "/decisions").StatusCode);
             Check.Equal(HttpStatusCode.UnprocessableEntity, setup.SendBytes(HttpRoot + "/export", Encoding.UTF8.GetBytes("{\"after\":9007199254740993.0}")).StatusCode);
             var exported = setup.Send(HttpMethod.Post, HttpRoot + "/export", new() { ["after"] = 9007199254740993L, ["limit"] = 1 }); Check.Equal(HttpStatusCode.OK, exported.StatusCode); Check.Equal("application/json", exported.Content.Headers.ContentType!.MediaType);
@@ -255,9 +256,10 @@ public static class CatalogueSharingTests
             finally { structure.Release.Set(); (stopped ?? reviews.StopAsync()).GetAwaiter().GetResult(); reviews.DisposeAsync().AsTask().GetAwaiter().GetResult(); lanes.DisposeAsync().AsTask().GetAwaiter().GetResult(); io.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
             Check.Equal(2L, world.Count()); Check.Equal(0L, world.Scalar("SELECT COUNT(*) FROM manual_match_groups"));
         });
+        CatalogueSharingVersionTests.Register(suite);
     }
-    private static string S(JsonNode node, string key) => node[key]!.GetValue<string>();
-    private static JsonObject Add(World world, byte[] raw) { var preview = world.Exchange.Preview(raw); return world.Exchange.Apply(S(preview, "id"), S(preview, "revision")); }
+    internal static string S(JsonNode node, string key) => node[key]!.GetValue<string>();
+    internal static JsonObject Add(World world, byte[] raw) { var preview = world.Exchange.Preview(raw); return world.Exchange.Apply(S(preview, "id"), S(preview, "revision")); }
     private static void Oracle()
     {
         using var document = JsonDocument.Parse(File.ReadAllText(ConfigurationTests.Fixture("catalogue-sharing.json"))); var fixture = document.RootElement; var count = 0;
@@ -286,10 +288,10 @@ public static class CatalogueSharingTests
         foreach (var row in fixture.GetProperty("uuid").EnumerateArray()) { count++; Check.Equal(row.GetProperty("expected").GetString(), PortableUuid.V5(Guid.Parse(row.GetProperty("namespace").GetString()!), row.GetProperty("name").GetString()!).ToString("D")); }
         Check.Equal(150, count); Console.WriteLine("Catalogue sharing released oracle cases " + count);
     }
-    private sealed class World : IDisposable
+    internal sealed class World : IDisposable
     {
-        private readonly Sandbox _sandbox = new(); public SqliteDatabase Database { get; } public CatalogueExchange Exchange { get; } public string Root => _sandbox.Path;
-        public World(ICatalogueReviewedStructure? structure = null) { Database = new(new AutoSourcarrSettings { DataDir = Root }); new SchemaMigrator(Database).Initialize(); Exchange = new(Database, new object(), new SupportPrivacy(), structure: structure); Exchange.Initialize(); }
+        private readonly Sandbox _sandbox = new(); public SqliteDatabase Database { get; } public CatalogueExchange Exchange { get; } public string Root => _sandbox.Path; public object Gate { get; } = new();
+        public World(ICatalogueReviewedStructure? structure = null) { Database = new(new AutoSourcarrSettings { DataDir = Root }); new SchemaMigrator(Database).Initialize(); Exchange = new(Database, Gate, new SupportPrivacy(), structure: structure); Exchange.Initialize(); }
         public void Write(Func<DatabaseSession, int> action) => Database.Write(DatabaseFile.Catalog, action);
         public object? Scalar(string sql) => Database.Read(DatabaseFile.Catalog, c => c.Scalar(sql));
         public long Count() => (long)Scalar("SELECT COUNT(*) FROM entries")!;
@@ -305,15 +307,15 @@ public static class CatalogueSharingTests
         public void Policy(bool enabled) => Write(c => c.Execute("INSERT INTO gallery_policies(source_id,revision,policy_json,updated_at) VALUES('17',1,$p0,'now') ON CONFLICT(source_id) DO UPDATE SET revision=revision+1,policy_json=excluded.policy_json", ("$p0", CatalogueFormat.Canonical(new JsonObject { ["profile"] = "auto", ["enabled"] = enabled, ["criteria"] = new JsonArray(), ["title_minimum"] = .94, ["tag_similarity"] = .5, ["tag_overlap"] = 2 }))));
         public void Dispose() { Database.Dispose(); _sandbox.Dispose(); }
     }
-    private const string HttpRoot = "/api/admin/catalog-sharing";
-    private static JsonObject Body(HttpResponseMessage response) => JsonNode.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())!.AsObject();
-    private static JsonObject PendingGroup(World world)
+    private const string HttpRoot = "/api/v1/catalog-sharing";
+    internal static JsonObject Body(HttpResponseMessage response) => JsonNode.Parse(response.Content.ReadAsStringAsync().GetAwaiter().GetResult())!.AsObject();
+    internal static JsonObject PendingGroup(World world)
     {
         var bundle = CatalogueFormat.Decode(world.Dump()); var entries = bundle["entries"]!.AsArray(); var uid = CatalogueFormat.Uid("decision");
         bundle["decisions"]!.AsArray().Add(new JsonObject { ["uid"] = uid, ["kind"] = "group", ["entries"] = new JsonArray(S(entries[0]!, "uid")), ["records"] = new JsonArray(entries[0]!["sources"]![0]!.DeepClone(), entries[1]!["sources"]![0]!.DeepClone()), ["value"] = new JsonObject() });
         Add(world, Encoding.UTF8.GetBytes(CatalogueFormat.Canonical(bundle))); return world.Exchange.Decisions()["items"]!.AsArray().Single(item => S(item!, "uid") == uid)!.AsObject();
     }
-    private sealed class HttpSetup : IDisposable
+    internal sealed class HttpSetup : IDisposable
     {
         private readonly SemaphoreSlim _admin = new(1, 1); private readonly BoundedWorkScheduler _io = new(2, 8); private readonly WholeTaskCoordinator _lanes; private readonly CatalogueReviewTasks _reviews; private readonly IHost _host;
         public World World { get; } public TaskRegistry Tasks { get; } = new(); public TestServer Server { get; } public HttpClient Client { get; } public int Unexpected;
@@ -322,7 +324,12 @@ public static class CatalogueSharingTests
             World = new(structure); var settings = new AutoSourcarrSettings { AdminToken = "admin", AutosourcarrReaderApiToken = "reader" }; var privacy = new SupportPrivacy();
             _lanes = new(settings, Tasks); _reviews = new(World.Exchange, Tasks, _lanes, _io);
             _host = new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services => services.AddRouting()).Configure(app =>
-            { app.UseAutoSourcarrHttp("0.4.3-migration", () => settings, (_, _) => { Unexpected++; return "unexpected"; }, new RequestAdmissionGate(), _lanes, Tasks, privacy, _ => { }); app.UseEndpoints(endpoints => endpoints.MapCatalogueSharing(World.Exchange, new PortableIdentityResolver(World.Database), _reviews, () => settings, _admin, _io)); })).Build();
+            {
+                app.UseAutoSourcarrHttp("0.4.3-migration", () => settings, (_, _) => { Unexpected++; return "unexpected"; }, new RequestAdmissionGate(), _lanes, Tasks, privacy, _ => { });
+                var identities = new PortableIdentityResolver(World.Database);
+                var services = new CatalogueSharingV1Services { Exchange = World.Exchange, Identities = identities, Reviews = _reviews, IdentityReview = new IdentityReview(World.Database, World.Gate, identities), AdminLock = _admin, Io = _io };
+                app.UseEndpoints(endpoints => CatalogueSharingV1Endpoints.Map(endpoints.MapGroup("/api/v1").AddEndpointFilter(new AdminAuthorizationFilter(() => settings)), ApiJsonContext.Default, services));
+            })).Build();
             _host.StartAsync().GetAwaiter().GetResult(); Server = _host.GetTestServer(); Client = Server.CreateClient();
         }
         public HttpResponseMessage Send(HttpMethod method, string path, JsonObject? body = null)

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Catalogue.Sharing;
+using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Persistence;
 using static AutoSourcarr.Core.Catalogue.Sharing.SharingJson;
 
@@ -82,14 +83,16 @@ public sealed partial class CatalogueExchange
         var previous = JsonNode.Parse(raw)!.AsObject(); previous["added"] = 0; previous["decisions_applied"] = 0; previous["already_applied"] = true;
         previous["entry_ids"] = Numbers(plan.A("items").SelectMany(item => CatalogueIdentity.Targets(c, [item.S("uid")])).Distinct().Order()); return previous;
     }
+    /// <summary>Stages a catalogue file. A file needing a newer reader is refused before anything is written
+    /// (<see cref="CatalogueVersionMismatchException"/>: "Version mismatch: version X required").</summary>
     public JsonObject Preview(ReadOnlySpan<byte> raw)
     {
-        var bundle = CatalogueFormat.Decode(raw); lock (_sourceWriteGate) return _database.Write(DatabaseFile.Catalog, c =>
+        var decoded = CatalogueFormat.DecodeFile(raw); var bundle = decoded.Body; lock (_sourceWriteGate) return _database.Write(DatabaseFile.Catalog, c =>
         {
             var plan = Plan(c, bundle); var id = Guid.NewGuid().ToString("N"); c.Execute("DELETE FROM catalogue_exchange_stages WHERE created_at<$p0", P(Now - 86400));
             foreach (var stage in c.Query("SELECT id FROM catalogue_exchange_stages ORDER BY created_at DESC").Skip(3)) c.Execute("DELETE FROM catalogue_exchange_stages WHERE id=$p0", P(stage.Text("id")));
             c.Execute("INSERT INTO catalogue_exchange_stages(id,payload_json,revision,created_at) VALUES($p0,$p1,$p2,$p3)", P(id, CatalogueFormat.Canonical(bundle), plan.S("revision"), Now));
-            var result = PublicPlan(plan); result["id"] = id; result["already_applied"] = AlreadyAdded(c, bundle, plan) is not null; return result;
+            var result = PublicPlan(plan); result["id"] = id; result["already_applied"] = AlreadyAdded(c, bundle, plan) is not null; result["file"] = decoded.Header.DeepClone(); return result;
         });
     }
     private (DatabaseRow Row, JsonObject Bundle) StageData(DatabaseSession c, string id)
@@ -107,7 +110,9 @@ public sealed partial class CatalogueExchange
             var plan = Plan(c, bundle); var result = PublicPlan(plan, offset, limit); result["id"] = id; result["state"] = row.Text("revision") == plan.S("revision") ? "preview" : "stale"; return result;
         });
     }
-    public JsonObject Apply(string id, string revision, bool includeDecisions = true)
+    /// <summary>Adds a staged file in one catalogue write; a failure rolls back every row, alias, decision and the receipt.
+    /// Never merges or splits: structural choices stay pending for their own reviewed task.</summary>
+    public JsonObject Apply(string id, string revision, bool includeDecisions = true, DecisionActor? actor = null)
     {
         JsonObject result;
         lock (_sourceWriteGate) result = _database.Write(DatabaseFile.Catalog, c =>
@@ -136,10 +141,20 @@ public sealed partial class CatalogueExchange
             {
                 var choice = node!.AsObject(); var digest = CatalogueFormat.Digest(choice); var old = c.Scalar("SELECT state FROM catalogue_decisions WHERE uid=$p0 AND digest=$p1", P(choice.S("uid"), digest)) as string;
                 var status = old is "applied" or "ignored" ? CatalogueDecisions.Status(old, "Previously retained local result.") : CatalogueDecisions.Inspect(c, choice, native);
-                if (includeDecisions && status.S("state") == "ready") status = CatalogueDecisions.ApplyReady(c, choice, native);
+                if (includeDecisions && status.S("state") == "ready")
+                {
+                    status = CatalogueDecisions.ApplyReady(c, choice, native);
+                    if (status.S("state") == "applied")
+                        Record("catalogue.decision." + choice.S("kind"), actor, CatalogueIdentity.Targets(c, choice.A("entries").Select(uid => uid!.GetValue<string>())),
+                            choice.A("records").SelectMany(fact => CatalogueNativeRecords.Resolve(native, fact!.AsObject())).Select(record => record.SourceId + ":" + record.MangaId),
+                            "Shared catalogue choice applied while adding a catalogue file", new JsonObject { ["uid"] = choice.S("uid"), ["digest"] = digest });
+                }
                 Increment(status.S("state") == "applied" ? "decisions_applied" : "decisions_pending");
                 c.Execute("INSERT INTO catalogue_decisions(uid,digest,decision_json,state,message) VALUES($p0,$p1,$p2,$p3,$p4) ON CONFLICT(uid,digest) DO UPDATE SET state=excluded.state,message=excluded.message", P(choice.S("uid"), digest, CatalogueFormat.Canonical(choice), status.S("state"), status.S("message")));
             }
+            Record("catalogue.import", actor, counts.A("entry_ids").Select(value => value!.GetValue<long>()), [],
+                "Catalogue file added: " + counts["added"]!.ToJsonString() + " new, " + counts["reused"]!.ToJsonString() + " reused, " + counts["retained"]!.ToJsonString() + " retained for review, " + counts["decisions_applied"]!.ToJsonString() + " choices applied",
+                (JsonObject)counts.DeepClone());
             var encoded = CatalogueFormat.Canonical(counts); c.Execute("UPDATE catalogue_exchange_stages SET result_json=$p0 WHERE id=$p1", P(encoded, id)); c.Execute("INSERT OR REPLACE INTO catalogue_exchange_receipts VALUES($p0,$p1,$p2)", P(CatalogueFormat.Digest(bundle), encoded, Stamp())); return counts;
         });
         _invalidate?.Invoke(); return result;

@@ -4,7 +4,9 @@ namespace AutoSourcarr.Api.Http;
 
 public static class RequestPolicy
 {
-    private static readonly HashSet<string> Polls = ["/api/admin/imports", "/api/admin/matrix", "/api/admin/source-health", "/api/admin/source-maintenance", "/api/admin/source-maintenance/control", "/api/v1/source-maintenance"];
+    private static readonly HashSet<string> Polls = ["/api/admin/imports", "/api/admin/matrix", "/api/admin/source-health", "/api/admin/source-maintenance", "/api/admin/source-maintenance/control", "/api/v1/source-maintenance",
+        // Phase 9 moved the import list to /api/v1 (same polling as /api/admin/imports).
+        "/api/v1/imports"];
     private static readonly HashSet<string> NonInteractive = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events", "/api/admin/duplicates", "/api/admin/duplicate-candidates", "/api/v1/duplicates", "/api/v1/duplicate-candidates", "/api/admin/entries/summaries", "/api/admin/matrix/chapter-stats",
         // The WebView WebSocket stays open up to 15 minutes: it must not hold the interactive lane or catalogue admission.
         "/api/v1/source-webview/socket"];
@@ -15,7 +17,9 @@ public static class RequestPolicy
         "/api/v1/maintenance/reset-database", "/api/v1/maintenance/full-reset", "/api/v1/maintenance/reset-all-manual-actions"];
     private static readonly HashSet<string> Monitoring = ["/api/v1/live", "/api/v1/health", "/api/admin/tasks", "/api/admin/errors", "/api/v1/tasks", "/api/v1/errors", "/api/v1/jobs", "/api/v1/events", "/api/v1/source-webview/socket"];
 
-    public static bool Interactive(string method, string path) => !(method == "GET" && (Polls.Contains(path) || Match(path, @"^/api/admin/imports/[^/]+/items(?:/[0-9]+)?$"))
+    public static bool Interactive(string method, string path) => !(method == "GET" && (Polls.Contains(path) || Match(path, @"^/api/(?:admin|v1)/imports/[^/]+/items(?:/[0-9]+)?$"))
+        // The /api/v1 import page is a POST read (filters in the body); it polls like the /api/admin GET it replaced.
+        || method == "POST" && Match(path, @"^/api/v1/imports/[^/]+/items$")
         || Starts(path, "/static/", "/api/v1/covers/", "/api/v1/source-covers/", "/api/v1/source-icon/", "/api/v1/source-extension-icon/") || NonInteractive.Contains(path));
 
     public static bool CatalogAdmission(string method, string path)

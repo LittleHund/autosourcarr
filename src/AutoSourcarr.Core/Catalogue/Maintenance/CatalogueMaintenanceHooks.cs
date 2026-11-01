@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using AutoSourcarr.Core.Matching.Decisions;
 
 namespace AutoSourcarr.Core.Catalogue.Maintenance;
 
@@ -31,6 +32,12 @@ public sealed class CatalogueMaintenanceHooks
     public Func<long, JsonArray, CancellationToken, Task<long>>? RebuildSubscribedEntry { get; init; }
     /// <summary>Drops in-memory caches after a reset (alias, source, cover hints, search, duplicate snapshot, subbed, page info).</summary>
     public Action? ResetCaches { get; init; }
+    /// <summary>
+    /// After a reset's rebuild finished (the subscribed rebuild job, or at once when none was queued): the imports recheck
+    /// their accepted rows whose entry is gone against the current rules (ImportRuns.RecheckAfterReset, IMP-9), with the
+    /// reset's actor.
+    /// </summary>
+    public Func<DecisionActor, JsonObject>? AfterResetRebuild { get; init; }
 
     // ---- startup repairs (run_startup_catalog_maintenance)
     public Func<JsonObject>? RepairEntryAliasIntegrity { get; init; }
