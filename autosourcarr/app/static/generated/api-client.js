@@ -253,6 +253,14 @@
        */
       allowSourceRecordMatch(entryId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/separate-source/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
       /**
+       * Add a staged catalogue file in one transaction (all or nothing). Never merges or splits; existing manual choices win. Body: id, revision (from the preview), include_decisions.
+       * POST /api/v1/catalog-sharing/apply
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      applyCatalogue(body, options) { return call('POST', '/api/v1/catalog-sharing/apply', body, options); },
+      /**
        * Save the previewed policy when rules and evidence are unchanged; nothing is merged or split now. Logged with the signed-in actor.
        * POST /api/v1/policy-simulator/apply
        * @param {JsonObject} body
@@ -341,6 +349,15 @@
        */
       checkSourceChallenges(options) { return call('POST', '/api/v1/source-engine/challenges', undefined, options); },
       /**
+       * Clear one field's override; the field returns to the ranked choice. Clearing the title keeps manual alternate titles.
+       * DELETE /api/v1/entries/{entryId}/metadata/{field}
+       * @param {string} entryId
+       * @param {string} field
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      clearEntryMetadataOverride(entryId, field, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/metadata/${encodeURIComponent(field)}`, undefined, options); },
+      /**
        * Remove resolved errors (or all errors with resolved_only=false).
        * POST /api/v1/errors/clear
        * @param {ErrorsClearRequest} body
@@ -348,6 +365,13 @@
        * @returns {Promise<ErrorsClearResponse>}
        */
       clearErrors(body, options) { return call('POST', '/api/v1/errors/clear', body, options); },
+      /**
+       * Delete finished import runs and their rows; running imports, remembered matches and rejections stay.
+       * POST /api/v1/imports/clear-history
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      clearImportHistory(options) { return call('POST', '/api/v1/imports/clear-history', undefined, options); },
       /**
        * Remove the manual main title and manual alternate titles of an entry (owner or admin); its main title returns to the most-used title of its records.
        * DELETE /api/v1/entries/{entryId}/manual-titles
@@ -503,6 +527,14 @@
        */
       discardSourceRepairJob(jobId, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/discard`, undefined, options); },
       /**
+       * Scan matched entries for missing sources and further records on their sources (body {limit}, default 200, at most 5000), as one cancellable job; found records are re-proved before they attach.
+       * POST /api/v1/maintenance/discover-additional
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      discoverAdditionalRecords(body, options) { return call('POST', '/api/v1/maintenance/discover-additional', body, options); },
+      /**
        * Look up the source's repository in the configured indexes (body: revision); runs in the background.
        * POST /api/v1/source-maintenance/raws/{package}/discover
        * @param {string} package_
@@ -543,6 +575,14 @@
        */
       downloadSourceRepairInputs(jobId, options) { return call('GET', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/inputs`, undefined, options); },
       /**
+       * One catalogue file (versioned header, engine-neutral JSON, portable IDs) of up to limit entries after the cursor, with saved manual decisions. Body: after, limit (1-5000), include_decisions. next_cursor names the next part.
+       * POST /api/v1/catalog-sharing/export
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      exportCatalogue(body, options) { return call('POST', '/api/v1/catalog-sharing/export', body, options); },
+      /**
        * Save the wizard's changes to config.json in one step; a repeated request id returns the first result.
        * POST /api/v1/setup/finish
        * @param {SetupFinishRequest} body
@@ -579,6 +619,28 @@
        * @returns {Promise<JsonObject>}
        */
       getAuthStatus(options) { return call('GET', '/api/v1/auth/status', undefined, options); },
+      /**
+       * Database sharing overview: origin ID, local entries, catalogue files added, retained incoming versions and pending shared choices.
+       * GET /api/v1/catalog-sharing/status
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getCatalogueSharingStatus(options) { return call('GET', '/api/v1/catalog-sharing/status', undefined, options); },
+      /**
+       * A staged preview page (state preview, stale or applied with its result). Optional query for the UI: offset, limit (1-200).
+       * GET /api/v1/catalog-sharing/stages/{stageId}
+       * @param {string} stageId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getCatalogueStage(stageId, options) { return call('GET', `/api/v1/catalog-sharing/stages/${encodeURIComponent(stageId)}`, undefined, options); },
+      /**
+       * PIPE-4 compatibility list of this build: app version, database schema (latest migration of each database), share format with its reader table, extension API (libVersion) and profile format.
+       * GET /api/v1/compatibility
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getCompatibility(options) { return call('GET', '/api/v1/compatibility', undefined, options); },
       /**
        * The running values the UI needs to describe this instance.
        * GET /api/v1/config
@@ -646,6 +708,14 @@
        */
       getEntryManualSearch(entryId, options) { return call('GET', `/api/v1/entries/${encodeURIComponent(entryId)}/manual-search`, undefined, options); },
       /**
+       * Every metadata field (title, description, authors, artists, genres, status, year, cover) with the chosen value, where it came from, whether it is overridden, and the alternatives in rank order.
+       * GET /api/v1/entries/{entryId}/metadata
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getEntryMetadata(entryId, options) { return call('GET', `/api/v1/entries/${encodeURIComponent(entryId)}/metadata`, undefined, options); },
+      /**
        * Recent errors grouped by cause with counts, newest first (resolved ones included).
        * GET /api/v1/errors
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -659,6 +729,41 @@
        * @returns {Promise<JsonObject>}
        */
       getHealth(options) { return call('GET', '/api/v1/health', undefined, options); },
+      /**
+       * One entry's portable references with local review decisions, the entries sharing each reference, recent review history and the revision to save against.
+       * GET /api/v1/identity-review/{entryId}
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getIdentityReview(entryId, options) { return call('GET', `/api/v1/identity-review/${encodeURIComponent(entryId)}`, undefined, options); },
+      /**
+       * One import row with its run.
+       * GET /api/v1/imports/{importId}/items/{itemId}
+       * @param {string} importId
+       * @param {string} itemId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getImportItem(importId, itemId, options) { return call('GET', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}`, undefined, options); },
+      /**
+       * Local catalogue suggestions for a row ({q} in the body; without q the stored candidates are refreshed).
+       * POST /api/v1/imports/{importId}/items/{itemId}/suggestions
+       * @param {string} importId
+       * @param {string} itemId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getImportItemSuggestions(importId, itemId, body, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}/suggestions`, body, options); },
+      /**
+       * The accepted upload of an import id (to resume a client that lost the upload answer).
+       * GET /api/v1/imports/{importId}/receipt
+       * @param {string} importId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getImportReceipt(importId, options) { return call('GET', `/api/v1/imports/${encodeURIComponent(importId)}/receipt`, undefined, options); },
       /**
        * Installed source extensions with their package, version, repository and source identities.
        * GET /api/v1/source-maintenance/installed
@@ -957,6 +1062,13 @@
        */
       importSuwayomiLibrary(connectionId, body, options) { return call('POST', `/api/v1/connections/${encodeURIComponent(connectionId)}/import`, body, options); },
       /**
+       * Create catalogue entries for the stored Suwayomi library plan (Connections → Suwayomi import) through the import pipeline; the plan becomes "imported".
+       * POST /api/v1/imports/suwayomi-plan
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      importSuwayomiPlan(options) { return call('POST', '/api/v1/imports/suwayomi-plan', undefined, options); },
+      /**
        * Install the original archived package of a removed source (digest and package identity checked; never replaces an installed source).
        * POST /api/v1/source-orphans/{pkgName}/install
        * @param {string} pkgName
@@ -973,6 +1085,28 @@
        */
       installSourceRepairJob(jobId, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/install`, undefined, options); },
       /**
+       * Link an unverified imported entry to its verified local counterpart as a reviewed task. Body: uid, digest, revision, target (local entry id).
+       * POST /api/v1/catalog-sharing/records/link
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      linkCatalogueRecord(body, options) { return call('POST', '/api/v1/catalog-sharing/records/link', body, options); },
+      /**
+       * Retained shared choices with their local state, mapped entries and revision. Optional query for the UI: offset, limit (1-50).
+       * GET /api/v1/catalog-sharing/decisions
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listCatalogueDecisions(options) { return call('GET', '/api/v1/catalog-sharing/decisions', undefined, options); },
+      /**
+       * Incoming entry versions retained for review, with local candidates. Optional query for the UI: offset, limit (1-50).
+       * GET /api/v1/catalog-sharing/records
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listCatalogueRecords(options) { return call('GET', '/api/v1/catalog-sharing/records', undefined, options); },
+      /**
        * Recorded automatic merges, newest first (offset, limit, q); older merges that kept only a reason are listed as legacy.
        * GET /api/v1/duplicates/history
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -986,6 +1120,29 @@
        * @returns {Promise<JsonObject>}
        */
       listDuplicates(options) { return call('GET', '/api/v1/duplicates', undefined, options); },
+      /**
+       * Saved entries with their provider link and saved identity review counts. Optional query for the UI: search, offset, limit (1-50).
+       * GET /api/v1/identity-review
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listIdentityReviews(options) { return call('GET', '/api/v1/identity-review', undefined, options); },
+      /**
+       * One page of a run's rows ({state, review, limit, offset} in the body) with hydrated suggestions and review counts over the whole run.
+       * POST /api/v1/imports/{importId}/items
+       * @param {string} importId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listImportItems(importId, body, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items`, body, options); },
+      /**
+       * The 50 newest import runs with their added / existing / unresolved / failed / skipped counts.
+       * GET /api/v1/imports
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listImportRuns(options) { return call('GET', '/api/v1/imports', undefined, options); },
       /**
        * Entries whose source records may be different works (different formats, color editions, titles with unrelated detailed summaries), from the saved findings of the last mixed-entry check, with counts and the check's progress. Optional query: state, q, offset, limit.
        * GET /api/v1/mixed-entries
@@ -1033,6 +1190,16 @@
        */
       markSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/mark`, undefined, options); },
       /**
+       * Match a row to an entry: remembered for this backup identity at once, then bound and added to the main library in the background.
+       * POST /api/v1/imports/{importId}/items/{itemId}/match/{entryId}
+       * @param {string} importId
+       * @param {string} itemId
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      matchImportItem(importId, itemId, entryId, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}/match/${encodeURIComponent(entryId)}`, undefined, options); },
+      /**
        * Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.
        * POST /api/v1/storage/database/move
        * @param {DatabaseMoveRequest} body
@@ -1040,6 +1207,16 @@
        * @returns {Promise<DatabaseMoveResponse>}
        */
       moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
+      /**
+       * Override one field: body {value} (status as a word or 0-6, year as a number, names as text or a list), or {source_id, source_manga_id} to follow an attached record (description, cover, authors, artists). The title override is the entry's main title. Recorded with the caller as actor.
+       * PUT /api/v1/entries/{entryId}/metadata/{field}
+       * @param {string} entryId
+       * @param {string} field
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      overrideEntryMetadataField(entryId, field, body, options) { return call('PUT', `/api/v1/entries/${encodeURIComponent(entryId)}/metadata/${encodeURIComponent(field)}`, body, options); },
       /**
        * Duplicate review badges for the entries in {"ids": [...]} (at most 500) from the completed snapshot, never rescoring.
        * POST /api/v1/duplicate-candidates
@@ -1055,6 +1232,14 @@
        * @returns {Promise<JsonObject>}
        */
       previewAllManualActionsReset(options) { return call('GET', '/api/v1/maintenance/reset-all-manual-actions', undefined, options); },
+      /**
+       * Stage a catalogue file (the body is the file, up to 64 MiB) and show what adding it would do. A file needing a newer reader answers 409 "Version mismatch: version X required"; nothing is staged.
+       * POST /api/v1/catalog-sharing/preview
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewCatalogue(body, options) { return call('POST', '/api/v1/catalog-sharing/preview', body, options); },
       /**
        * Exactly which duplicate pairs the automatic gate would merge now (evidence only; the merge re-checks every pair).
        * GET /api/v1/maintenance/consolidate-preview
@@ -1118,6 +1303,13 @@
        */
       queryDecisions(body, options) { return call('POST', '/api/v1/decisions', body, options); },
       /**
+       * Recheck accepted imports whose entry is gone (after a catalogue reset) through the kept decision log: manual matches are restored, automatic ones kept only if they still pass the current rules, otherwise reopened.
+       * POST /api/v1/imports/recheck-after-reset
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      recheckImportsAfterReset(options) { return call('POST', '/api/v1/imports/recheck-after-reset', undefined, options); },
+      /**
        * The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider; 409 until Connections.
        * POST /api/v1/source-maintenance/raws/{package}/unavailable
        * @param {string} package_
@@ -1135,6 +1327,13 @@
        */
       redoEntryAutomation(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/redo-automation`, undefined, options); },
       /**
+       * Crawl every enabled source's Popular and Latest pages (BROWSE_PREFETCH_PAGES each) into the catalogue and the saved browse feeds, as one cancellable job.
+       * POST /api/v1/maintenance/refresh-feeds
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      refreshBrowseFeeds(options) { return call('POST', '/api/v1/maintenance/refresh-feeds', undefined, options); },
+      /**
        * Collect removed sources from sampled original Keiyoushi history (two years) in the background; at most once a minute.
        * POST /api/v1/source-orphans/refresh
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1149,6 +1348,15 @@
        */
       regenerateAdminToken(options) { return call('POST', '/api/v1/keys/admin-token/regenerate', undefined, options); },
       /**
+       * Reject an accepted Added/Existing match: remembered for this backup identity; a verified import addition is removed from the main library and alternatives are searched.
+       * POST /api/v1/imports/{importId}/items/{itemId}/reject
+       * @param {string} importId
+       * @param {string} itemId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      rejectImportItem(importId, itemId, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}/reject`, undefined, options); },
+      /**
        * Take a record out of its manual group; it stays attached but later rebuilds no longer keep it in the group.
        * DELETE /api/v1/manual-groups/{groupId}/members/{sourceId}/{sourceMangaId}
        * @param {string} groupId
@@ -1158,6 +1366,14 @@
        * @returns {Promise<JsonObject>}
        */
       removeManualGroupMember(groupId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
+      /**
+       * Repair entries missing a cover, summary, creators, genres or status (body {limit}, default 500, at most 5000): provider identity first, then the detail of their best source records, paced, as one cancellable job.
+       * POST /api/v1/maintenance/refresh-metadata
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      repairMissingMetadata(body, options) { return call('POST', '/api/v1/maintenance/refresh-metadata', body, options); },
       /**
        * Repair an installed source whose website moved: keep its jar, rewrite the old host in its compiled strings (new_host, or the observed redirect), check the structure, install, check content, and roll back when the check fails. Runs as a job.
        * POST /api/v1/source-repairs/{pkgName}/domain
@@ -1208,6 +1424,20 @@
        */
       resetDatabase(body, options) { return call('POST', '/api/v1/maintenance/reset-database', body, options); },
       /**
+       * Forget the remembered manual import matches (explicit reset); ordinary manual matches and groups stay.
+       * POST /api/v1/imports/reset-manual-autoresolve
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resetImportManualAutoresolve(options) { return call('POST', '/api/v1/imports/reset-manual-autoresolve', undefined, options); },
+      /**
+       * Forget every remembered import Reject (explicit reset); unresolved rows search for candidates again.
+       * POST /api/v1/imports/reset-rejections
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resetImportRejections(options) { return call('POST', '/api/v1/imports/reset-rejections', undefined, options); },
+      /**
        * Forget the manual groups (matches stay attached and bound) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when the decisions changed since the preview.
        * POST /api/v1/maintenance/reset-manual-groups
        * @param {JsonObject} body
@@ -1223,6 +1453,14 @@
        * @returns {Promise<JsonObject>}
        */
       resetManualMatches(body, options) { return call('POST', '/api/v1/maintenance/reset-manual-matches', body, options); },
+      /**
+       * Local entries associated with an ASC Media ID (local associations only; never merges or asks a source). Body: reference.
+       * POST /api/v1/portable-identities/resolve
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resolvePortableIdentity(body, options) { return call('POST', '/api/v1/portable-identities/resolve', body, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
@@ -1246,6 +1484,15 @@
        */
       retryAttention(attentionId, options) { return call('POST', `/api/v1/attention/${encodeURIComponent(attentionId)}/retry`, undefined, options); },
       /**
+       * Retry a row in the background (remembered match, full resolution with metadata, live sources); the newest decision of the row wins.
+       * POST /api/v1/imports/{importId}/items/{itemId}/retry
+       * @param {string} importId
+       * @param {string} itemId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      retryImportItem(importId, itemId, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}/retry`, undefined, options); },
+      /**
        * Replay an interrupted task only when replaying it cannot change data twice (read-only observations).
        * POST /api/v1/tasks/{taskId}/retry-safe
        * @param {string} taskId
@@ -1253,6 +1500,22 @@
        * @returns {Promise<JsonObject>}
        */
       retryTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/retry-safe`, undefined, options); },
+      /**
+       * Apply or keep local one retained shared choice as a task (structural choices use the journalled merge/split owner and never override a local manual decision). Body: uid, digest, revision, action (apply|ignore).
+       * POST /api/v1/catalog-sharing/decisions/review
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      reviewCatalogueDecision(body, options) { return call('POST', '/api/v1/catalog-sharing/decisions/review', body, options); },
+      /**
+       * Add a retained incoming version as a separate entry (action separate) or keep the local record (ignore). Body: uid, digest, revision, action.
+       * POST /api/v1/catalog-sharing/records/review
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      reviewCatalogueRecord(body, options) { return call('POST', '/api/v1/catalog-sharing/records/review', body, options); },
       /**
        * Review a duplicate pair (left_entry_id, right_entry_id, decision): duplicate merges them and keeps the records together as a manual group, not_duplicate keeps them apart permanently, clear forgets the decision.
        * POST /api/v1/duplicates/review
@@ -1317,6 +1580,15 @@
        */
       runSourceAutoRepair(options) { return call('POST', '/api/v1/source-maintenance/auto-repair/run', undefined, options); },
       /**
+       * Save a local identity review: confirmed, excluded, needs-review, reset (inherited) or restore (restore_id). Source bindings, merges and chapters are unchanged. Body: reference, decision, revision, note, restore_id.
+       * POST /api/v1/identity-review/{entryId}
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveIdentityReview(entryId, body, options) { return call('POST', `/api/v1/identity-review/${encodeURIComponent(entryId)}`, body, options); },
+      /**
        * Save the matching rule of one source or group and direction: {revision, rule: {enabled, checks} | null (inherit), reason?}. Title checks stay at 94% or more; identity and edition safeguards always apply.
        * PUT /api/v1/matching-policies/{scope}/{subject}/{direction}
        * @param {string} scope
@@ -1352,6 +1624,16 @@
        * @returns {Promise<JsonObject>}
        */
       searchEntryManual(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/manual-search`, body, options); },
+      /**
+       * Search: the local catalogue, the backup's own source and the enabled sources for a row ({q} in the body). A Search is a decision: it replaces a queued Match or Retry of the row.
+       * POST /api/v1/imports/{importId}/items/{itemId}/suggestions/live
+       * @param {string} importId
+       * @param {string} itemId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      searchImportItemLive(importId, itemId, body, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}/suggestions/live`, body, options); },
       /**
        * Catalogue records that could join a manual group: body {q, limit (1-100, default 60)}; best title match first.
        * POST /api/v1/manual-groups/{groupId}/candidates
@@ -1429,6 +1711,29 @@
        * @returns {Promise<JsonObject>}
        */
       setSourceUserAgent(body, options) { return call('PUT', '/api/v1/source-browser/user-agent', body, options); },
+      /**
+       * Skip a row; a queued Match or Retry of it then changes nothing.
+       * POST /api/v1/imports/{importId}/items/{itemId}/skip
+       * @param {string} importId
+       * @param {string} itemId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      skipImportItem(importId, itemId, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}/skip`, undefined, options); },
+      /**
+       * Search every enabled source for the subscribed entries that have no source record yet (stops per entry at the first verified record), as one cancellable job; a retry visits the sources not reached first.
+       * POST /api/v1/subbed/repair-unmatched
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      subbedRepairUnmatched(options) { return call('POST', '/api/v1/subbed/repair-unmatched', undefined, options); },
+      /**
+       * Search every enabled source for every subscribed entry (source-less entries first) for missing and additional records, as one cancellable job; a retry visits the sources not reached first.
+       * POST /api/v1/subbed/search-all
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      subbedSearchAll(options) { return call('POST', '/api/v1/subbed/search-all', undefined, options); },
       /**
        * Read the installed sources from the engine and store them (new sources get the default choices; empty engine lists keep existing ones).
        * POST /api/v1/source-settings/sync
@@ -1535,6 +1840,13 @@
        * @returns {Promise<JsonObject>}
        */
       updateSourceGroup(groupId, body, options) { return call('PUT', `/api/v1/source-groups/${encodeURIComponent(groupId)}`, body, options); },
+      /**
+       * Upload a Mihon .tachibk or Tachiyomi .proto.gz backup (raw body with X-Filename / X-Filename-Utf8 and optional X-Import-Id, or multipart field "file") and queue the add-only library import. Answers the run id, detected backup version and counts.
+       * POST /api/v1/imports/mihon-backup
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      uploadMihonBackup(options) { return call('POST', '/api/v1/imports/mihon-backup', undefined, options); },
       /**
        * Check a source APK (archive structure, manifest and entry point, no native code) and list its permissions, web addresses and warnings; nothing is installed. The file waits 10 minutes for POST /source-extensions/upload/confirm with its sha256.
        * POST /api/v1/source-extensions/upload

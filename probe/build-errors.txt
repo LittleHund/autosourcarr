@@ -1,1 +1,1 @@
-src/AutoSourcarr.Core/Imports/Backup/MihonBackupReader.cs(11,86): error CS0509: 'BackupDecodeException': cannot derive from sealed type 'InvalidDataException' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]

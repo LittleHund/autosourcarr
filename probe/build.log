@@ -1,9 +1,13 @@
-/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Imports/Backup/MihonBackupReader.cs(11,86): error CS0509: 'BackupDecodeException': cannot derive from sealed type 'InvalidDataException' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+  AutoSourcarr.Core -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/bin/Release/net10.0/AutoSourcarr.Core.dll
+  AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
+CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
+  AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
+  AutoSourcarr.Tests -> /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/bin/Release/net10.0/AutoSourcarr.Tests.dll
 
-Build FAILED.
+Build succeeded.
 
-/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Imports/Backup/MihonBackupReader.cs(11,86): error CS0509: 'BackupDecodeException': cannot derive from sealed type 'InvalidDataException' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
-    0 Warning(s)
-    1 Error(s)
+CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
+    1 Warning(s)
+    0 Error(s)
 
-Time Elapsed 00:00:05.17
+Time Elapsed 00:00:42.15
