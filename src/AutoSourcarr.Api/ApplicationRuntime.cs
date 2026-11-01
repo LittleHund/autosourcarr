@@ -20,7 +20,7 @@ namespace AutoSourcarr.Api;
 
 /// <summary>One app owner for the existing storage, source and HTTP components.
 /// Additional domain routes remain migration work; this is not default-runtime promotion.</summary>
-internal sealed class ApplicationRuntime : IAsyncDisposable
+internal sealed partial class ApplicationRuntime : IAsyncDisposable
 {
     internal const string Version = "0.4.3-migration";
     private readonly object _closeGate = new();
@@ -67,6 +67,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private readonly CancellationTokenSource _healthStop = new();
     internal AutoSourcarr.Api.Security.AccessControlServices? Access => _access;
     private CatalogueRuntime? _catalogue;
+    /// <summary>Phase 8 duplicate review: kept for the status counts (read lazily) and the matching cache invalidations.</summary>
+    private AutoSourcarr.Core.Matching.Duplicates.DuplicateMatching? _duplicates;
     private string? _dataDirectory;
     private SuwayomiClient? _main;
     private SourceEngineCapabilityContract? _mainCapabilities;
@@ -320,8 +322,10 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                 owner._healthStop.Token));
             owner._library = new AutoSourcarr.Core.Sources.Library.SuwayomiLibrary(owner.Database, owner.Preferences, () => owner.Settings,
                 () => owner._main, owner.Io, error => owner.Logs.Record("Main library", error.Message));
+            var matching = OpenMatching(owner, owner._library);
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
-                values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
+                values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings,
+                    duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
                 moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory),
                     claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))))
@@ -340,6 +344,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     RecordError = error => owner.Errors.Record("Source repair", error.Message, "source-repair|" + error.GetType().Name)
                 },
                 Library = new LibraryV1Services { Library = owner._library },
+                MatchingTitles = matching.Titles, ManualDecisions = matching.Manual, Maintenance = matching.Maintenance,
+                Duplicates = matching.Duplicates, MixedEntries = matching.Mixed, TagSynonyms = matching.TagSynonyms, Review = matching.Review,
                 Connections = new ConnectionsV1Services
                 {
                     Store = owner._connections,

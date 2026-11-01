@@ -14,7 +14,7 @@ def test_manual_actions_ui_and_version():
     assert 'data-tab="manual-actions"' in html
     for name in ("matches", "titles", "separate", "chapters", "duplicates"):
         assert f'data-manual-action-subtab="{name}"' in html
-    assert "/api/admin/manual-actions" in js
+    assert "/api/v1/manual-actions" in js
     assert "Frozen match scope when title was set" in js
 
 

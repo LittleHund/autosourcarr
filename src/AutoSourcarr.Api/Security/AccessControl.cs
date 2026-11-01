@@ -37,6 +37,9 @@ public static class AccessPolicy
         "/api/v1/status/stats", "/api/v1/health"
     ];
 
+    /// <summary>Entry reads that are matching work, not catalogue reads: the manual source search queries every source (phase 8).</summary>
+    private static readonly string[] AdminEntryReads = ["/manual-search"];
+
     /// <summary>Routing ignores case and a trailing slash, so the policy compares the same canonical form.</summary>
     public static string Canonical(string path)
     {
@@ -51,7 +54,8 @@ public static class AccessPolicy
         if (path == "/api/v1/auth/me" || path == "/api/v1/auth/password") return AccessLevel.Guest;
         if (path.StartsWith("/api/v1/accounts", StringComparison.Ordinal) || path == "/api/v1/keys/admin-token/regenerate") return AccessLevel.Owner;
         if (!path.StartsWith("/api/", StringComparison.Ordinal)) return AccessLevel.Guest;
-        if (method is "GET" or "HEAD" && GuestReadPrefixes.Any(prefix => prefix.EndsWith('/') ? path.StartsWith(prefix, StringComparison.Ordinal) : path == prefix))
+        if (method is "GET" or "HEAD" && GuestReadPrefixes.Any(prefix => prefix.EndsWith('/') ? path.StartsWith(prefix, StringComparison.Ordinal) : path == prefix)
+            && !AdminEntryReads.Any(suffix => path.StartsWith("/api/v1/entries/", StringComparison.Ordinal) && path.EndsWith(suffix, StringComparison.Ordinal)))
             return AccessLevel.Guest;
         return AccessLevel.Admin;
     }

@@ -704,7 +704,7 @@ function scheduleDuplicateHeartbeat(delay=4500){
 }
 function scheduleMutationRefresh(url,method){
   const path=String(url||'').split('?')[0];if(String(method||'GET').toUpperCase()==='GET')return;
-  if(['/api/admin/entries/summaries','/api/admin/duplicate-candidates','/api/admin/matrix/chapter-stats'].includes(path))return;
+  if(['/api/admin/entries/summaries','/api/v1/duplicate-candidates','/api/admin/matrix/chapter-stats'].includes(path))return;
   if(path!=='/api/admin/ui-preferences')catalogViewRevision++;
   if(path.includes('/entries/')||path.includes('/duplicates')||(path.includes('/manual-groups')||path.includes('/manual-actions'))||path.includes('/sources/'))scheduleDuplicateLiveRefresh();
   if(path.includes('/entries/')||path.includes('/imports/'))setTimeout(()=>refreshSparseEntryMetadata().catch(()=>{}),500);
@@ -1334,16 +1334,16 @@ function setManualActionsStatus(message=''){
 function manualActionsMutationRoute(url,method){
   const path=String(url||'').split('?')[0],verb=String(method||'GET').toUpperCase();
   if(!['POST','PUT','PATCH','DELETE'].includes(verb))return false;
-  if(verb==='POST'&&/^\/api\/admin\/maintenance\/(reset-manual-groups|reset-manual-matches|reset-all-manual-actions|reset-database|full-reset)$/.test(path))return true;
-  if(verb==='POST'&&path==='/api/admin/duplicates/review')return true;
+  if(verb==='POST'&&/^\/api\/(?:admin|v1)\/maintenance\/(reset-manual-groups|reset-manual-matches|reset-all-manual-actions|reset-database|full-reset)$/.test(path))return true;
+  if(verb==='POST'&&path==='/api/v1/duplicates/review')return true;
   if(verb==='POST'&&/^\/api\/admin\/candidates\/\d+\/(reject|restore)$/.test(path))return true;
-  if(verb==='POST'&&/^\/api\/admin\/manual-groups\/[^/]+\/members$/.test(path))return true;
-  if(verb==='DELETE'&&/^\/api\/admin\/manual-groups\/[^/]+\/members\/[^/]+\/\d+$/.test(path))return true;
+  if(verb==='POST'&&/^\/api\/(?:admin|v1)\/manual-groups\/[^/]+\/members$/.test(path))return true;
+  if(verb==='DELETE'&&/^\/api\/(?:admin|v1)\/manual-groups\/[^/]+\/members\/[^/]+\/\d+$/.test(path))return true;
   // Import Match persists its source anchor before slow library reconciliation.
   if(verb==='POST'&&/^\/api\/admin\/imports\/[^/]+\/items\/\d+\/match\/\d+$/.test(path))return true;
-  if(verb==='POST')return /^\/api\/admin\/entries\/\d+\/(preferred-title|aliases|manual-match|separate-source|unmatch-duplicates|unbind-auto-matches|redo-automation)$/.test(path)
-    ||/^\/api\/admin\/entries\/\d+\/variants\/[^/]+\/\d+\/promote$/.test(path);
-  if(verb==='DELETE')return /^\/api\/admin\/entries\/\d+(\/manual-titles|\/matches\/[^/]+|\/(variants|separate-source)\/[^/]+\/\d+)?$/.test(path);
+  if(verb==='POST')return /^\/api\/(?:admin|v1)\/entries\/\d+\/(preferred-title|aliases|manual-match|separate-source|unmatch-duplicates|unbind-auto-matches|redo-automation)$/.test(path)
+    ||/^\/api\/(?:admin|v1)\/entries\/\d+\/variants\/[^/]+\/\d+\/promote$/.test(path);
+  if(verb==='DELETE')return /^\/api\/(?:admin|v1)\/entries\/\d+(\/manual-titles|\/matches\/[^/]+|\/(variants|separate-source)\/[^/]+\/\d+)?$/.test(path);
   return false;
 }
 function scheduleManualActionsReconcile(){
@@ -1382,7 +1382,7 @@ async function loadManualActions(){
   const current=()=>manualActionsRequest===request&&request.generation===manualActionsGeneration&&!manualActionsMutationPending&&manualActionsSubtab!=='tags';
   setManualActionsStatus('Refreshing saved manual decisions…');
   try{
-    const data=await api('/api/admin/manual-actions',{timeoutMs:15000,cache:'no-store'});
+    const data=await api('/api/v1/manual-actions',{timeoutMs:15000,cache:'no-store'});
     if(!current())return manualActionsState;
     manualActionsState=data;
     manualGroupsState=data.matches||{groups:[],individual:[],group_count:0,manual_match_count:0};
@@ -1395,30 +1395,30 @@ async function loadManualActions(){
   }finally{if(manualActionsRequest===request)manualActionsRequest=null;}
 }
 async function loadManualGroups(){return loadManualActions();}
-window.removeManualTitleAction=async(entryId,button)=>{if(!confirm('Remove the manual main title and manual alternate titles from this entry?'))return;if(button)button.disabled=true;try{await api(`/api/admin/entries/${Number(entryId)}/manual-titles`,{method:'DELETE'});toast('Manual titles removed');await Promise.allSettled([loadManualActions(),refreshBothMatrices()]);}catch(e){toast('Unable to remove manual titles: '+e.message);}finally{if(button)button.disabled=false;}};
-window.allowManualSeparateAction=async(entryId,sourceId,mangaId,button)=>{if(button)button.disabled=true;try{await api(`/api/admin/entries/${Number(entryId)}/separate-source/${encodeURIComponent(sourceId)}/${Number(mangaId)}`,{method:'DELETE'});toast('Separate-entry decision removed');await Promise.allSettled([loadManualActions(),refreshBothMatrices()]);}catch(e){toast('Unable to remove separate-entry decision: '+e.message);}finally{if(button)button.disabled=false;}};
+window.removeManualTitleAction=async(entryId,button)=>{if(!confirm('Remove the manual main title and manual alternate titles from this entry?'))return;if(button)button.disabled=true;try{await api(`/api/v1/entries/${Number(entryId)}/manual-titles`,{method:'DELETE'});toast('Manual titles removed');await Promise.allSettled([loadManualActions(),refreshBothMatrices()]);}catch(e){toast('Unable to remove manual titles: '+e.message);}finally{if(button)button.disabled=false;}};
+window.allowManualSeparateAction=async(entryId,sourceId,mangaId,button)=>{if(button)button.disabled=true;try{await api(`/api/v1/entries/${Number(entryId)}/separate-source/${encodeURIComponent(sourceId)}/${Number(mangaId)}`,{method:'DELETE'});toast('Separate-entry decision removed');await Promise.allSettled([loadManualActions(),refreshBothMatrices()]);}catch(e){toast('Unable to remove separate-entry decision: '+e.message);}finally{if(button)button.disabled=false;}};
 window.restoreManualRejectedChapter=async(candidateId,button)=>{if(button)button.disabled=true;try{await api(`/api/admin/candidates/${Number(candidateId)}/restore`,{method:'POST'});toast('Chapter candidate restored');await loadManualActions();}catch(e){toast('Unable to restore chapter: '+e.message);}finally{if(button)button.disabled=false;}};
-window.clearManualDuplicateDecision=async(left,right,button)=>{if(button)button.disabled=true;try{await api('/api/admin/duplicates/review',{method:'POST',body:JSON.stringify({left_entry_id:Number(left),right_entry_id:Number(right),decision:'clear'})});duplicateConfirmedReviews.delete([Math.min(left,right),Math.max(left,right)].join(':'));duplicateViewRevision++;toast('Duplicate decision cleared');await Promise.allSettled([loadManualActions(),loadDuplicates(null,{render:$('#duplicates')?.classList.contains('active'),quiet:true})]);}catch(e){toast('Unable to clear duplicate decision: '+e.message);}finally{if(button)button.disabled=false;}};
+window.clearManualDuplicateDecision=async(left,right,button)=>{if(button)button.disabled=true;try{await api('/api/v1/duplicates/review',{method:'POST',body:JSON.stringify({left_entry_id:Number(left),right_entry_id:Number(right),decision:'clear'})});duplicateConfirmedReviews.delete([Math.min(left,right),Math.max(left,right)].join(':'));duplicateViewRevision++;toast('Duplicate decision cleared');await Promise.allSettled([loadManualActions(),loadDuplicates(null,{render:$('#duplicates')?.classList.contains('active'),quiet:true})]);}catch(e){toast('Unable to clear duplicate decision: '+e.message);}finally{if(button)button.disabled=false;}};
 
 window.searchManualGroupCandidates=async(groupId,button)=>{
   const input=document.getElementById(`manualGroupSearch-${groupId}`),out=document.getElementById(`manualGroupResults-${groupId}`);
   const q=String(input?.value||'').trim(); if(!q){if(out)out.innerHTML='<span class="muted">Enter a title first.</span>';return;}
   if(button)button.disabled=true;if(out)out.innerHTML='<span class="muted">Searching catalog…</span>';
   try{
-    const data=await api(`/api/admin/manual-groups/${encodeURIComponent(groupId)}/candidates?q=${encodeURIComponent(q)}&limit=60`,{timeoutMs:20000});
+    const data=await api(`/api/v1/manual-groups/${encodeURIComponent(groupId)}/candidates`,{method:'POST',body:JSON.stringify({q,limit:60}),noMutationRefresh:true,timeoutMs:20000});
     const items=data.items||[];
     if(out)out.innerHTML=items.length?items.map(x=>`<div class="manualCandidateCard"><img src="${esc(x.cover_url||'')}" alt="" loading="lazy" decoding="async"><div><strong>${esc(x.source_title||x.preferred_title)}</strong><span>${esc(x.source_name)} · ${esc(x.preferred_title||'')}</span></div><button class="goodAction" onclick="addManualGroupMember('${jsq(groupId)}','${jsq(x.source_id)}',${Number(x.source_manga_id)},this)">Add</button></div>`).join(''):'<span class="muted">No matching source records found.</span>';
   }catch(e){if(out)out.innerHTML=`<span class="badText">${esc(e.message)}</span>`;}finally{if(button)button.disabled=false;}
 };
 window.addManualGroupMember=async(groupId,sourceId,mangaId,button)=>{
   if(button)button.disabled=true;
-  try{await api(`/api/admin/manual-groups/${encodeURIComponent(groupId)}/members`,{method:'POST',body:JSON.stringify({source_id:String(sourceId),source_manga_id:Number(mangaId)}),timeoutMs:10000});toast('Added to persistent manual group');await loadManualGroups();refreshBothMatrices().catch(()=>{});}
+  try{await api(`/api/v1/manual-groups/${encodeURIComponent(groupId)}/members`,{method:'POST',body:JSON.stringify({source_id:String(sourceId),source_manga_id:Number(mangaId)}),timeoutMs:10000});toast('Added to persistent manual group');await loadManualGroups();refreshBothMatrices().catch(()=>{});}
   catch(e){toast('Unable to add group member: '+e.message);if(button)button.disabled=false;}
 };
 window.removeManualGroupMember=async(groupId,sourceId,mangaId,button)=>{
   if(!confirm('Remove this source record from the persistent group? The current source match will stay attached, but it will no longer be forced to stay in this group after future rebuilds.'))return;
   if(button)button.disabled=true;
-  try{await api(`/api/admin/manual-groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(sourceId)}/${Number(mangaId)}`,{method:'DELETE'});toast('Removed from persistent group');await loadManualGroups();}
+  try{await api(`/api/v1/manual-groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(sourceId)}/${Number(mangaId)}`,{method:'DELETE'});toast('Removed from persistent group');await loadManualGroups();}
   catch(e){toast('Unable to remove group member: '+e.message);if(button)button.disabled=false;}
 };
 
@@ -2412,10 +2412,10 @@ window.refreshBrowseEntryMetadata=async(id,button)=>{
 window.setBrowseMainTitle=async(id)=>{const input=$('#browseMainTitle');const v=input?.value.trim();if(!v)return;try{
   // Update the visible title before the round-trip; the endpoint itself is local DB work.
   patchOpenInspectorTitle(id,v);
-  const entry=await api('/api/admin/entries/'+id+'/preferred-title',{method:'POST',body:JSON.stringify({title:v}),timeoutMs:8000});
+  const entry=await api('/api/v1/entries/'+id+'/preferred-title',{method:'POST',body:JSON.stringify({title:v}),timeoutMs:8000});
   applyEntrySnapshotEverywhere(entry);patchOpenInspectorTitle(id,entry.preferred_title||v);toast('Main title updated');
 }catch(e){toast('Unable to change main title: '+e.message);syncEntrySnapshot(id,{refreshInspector:false});}};
-window.clearBrowseManualTitles=async(id,button)=>{if(!confirm('Remove the manual main-title override and all manually added alternate titles for this entry? The main title will return to the most-used title among its bound source records.'))return;const oldText=button?.textContent;if(button){button.disabled=true;button.textContent='Removing…';}try{const entry=await api('/api/admin/entries/'+id+'/manual-titles',{method:'DELETE',timeoutMs:8000});applyEntrySnapshotEverywhere(entry);toast('Manual titles removed');if(browseInspectorIsOpen()&&Number(browseState.selectedEntryId)===Number(id))patchOpenInspectorSnapshot(entry);}catch(e){toast('Unable to remove manual titles: '+e.message);}finally{if(button&&button.isConnected){button.disabled=false;button.textContent=oldText||'Remove manual titles';}}};
+window.clearBrowseManualTitles=async(id,button)=>{if(!confirm('Remove the manual main-title override and all manually added alternate titles for this entry? The main title will return to the most-used title among its bound source records.'))return;const oldText=button?.textContent;if(button){button.disabled=true;button.textContent='Removing…';}try{const entry=await api('/api/v1/entries/'+id+'/manual-titles',{method:'DELETE',timeoutMs:8000});applyEntrySnapshotEverywhere(entry);toast('Manual titles removed');if(browseInspectorIsOpen()&&Number(browseState.selectedEntryId)===Number(id))patchOpenInspectorSnapshot(entry);}catch(e){toast('Unable to remove manual titles: '+e.message);}finally{if(button&&button.isConnected){button.disabled=false;button.textContent=oldText||'Remove manual titles';}}};
 window.refreshBrowseEntryAll=async(id,button)=>{
   if(button){button.disabled=true;button.textContent='Queued…';}
   toast('Entry refresh queued');
@@ -2723,7 +2723,7 @@ async function hydrateMatrixDuplicates(kind,d,{render=true}={}){
     // request is cheap and never starts the full scorer itself.
     const key=ids.slice().sort((a,b)=>a-b).join(',');
     let request=duplicateSnapshotRequests.get(key);
-    if(!request){request=api('/api/admin/duplicate-candidates',{method:'POST',body:JSON.stringify({ids}),timeoutMs:6000,suppressClientError:true,noMutationRefresh:true}).finally(()=>{if(duplicateSnapshotRequests.get(key)===request)duplicateSnapshotRequests.delete(key);});duplicateSnapshotRequests.set(key,request);}
+    if(!request){request=api('/api/v1/duplicate-candidates',{method:'POST',body:JSON.stringify({ids}),timeoutMs:6000,suppressClientError:true,noMutationRefresh:true}).finally(()=>{if(duplicateSnapshotRequests.get(key)===request)duplicateSnapshotRequests.delete(key);});duplicateSnapshotRequests.set(key,request);}
     const r=await request;
     if(matrixDataset(kind)!==d)return;
     const changed=JSON.stringify(d.duplicates||{})!==JSON.stringify(r.duplicates||{});
@@ -3020,7 +3020,7 @@ window.redoEntryAutomation=async(id,kind,button=null)=>{
   if(!confirm('Redo automatic matching for this entry and every automation-owned attachment? Manual/locked matches are preserved. Automatic source and duplicate relationships are rebuilt from clean evidence using the current rules.'))return;
   if(button){button.disabled=true;button.textContent='Queued…';}
   try{
-    const r=await api(`/api/admin/entries/${id}/redo-automation`,{method:'POST',timeoutMs:8000});
+    const r=await api(`/api/v1/entries/${id}/redo-automation`,{method:'POST',timeoutMs:8000});
     toast(r.already_running?'Automation redo is already running':'Automation redo queued');
     scheduleEntrySnapshotSync(id,[2500,7000,15000,30000],true);
     loadTasks().catch(()=>{});
@@ -3029,7 +3029,7 @@ window.redoEntryAutomation=async(id,kind,button=null)=>{
 };
 window.addAlias=async(id,kind)=>{const input=$('#newAlias-'+kind);const v=input?.value.trim();if(!v)return;try{
   if(input){input.value='';input.placeholder='Saving…';}
-  const entry=await api('/api/admin/entries/'+id+'/aliases',{method:'POST',body:JSON.stringify({title:v}),timeoutMs:8000});
+  const entry=await api('/api/v1/entries/'+id+'/aliases',{method:'POST',body:JSON.stringify({title:v}),timeoutMs:8000});
   applyEntrySnapshotEverywhere(entry);
   const root=matrixControls(kind).inspector;const chips=root?.querySelector('[data-detail-section="titles"] .chipList');
   if(chips)chips.insertAdjacentHTML('beforeend',`<span class="titleChip">${esc(v)} <small>manual</small></span>`);
@@ -3037,10 +3037,10 @@ window.addAlias=async(id,kind)=>{const input=$('#newAlias-'+kind);const v=input?
 }catch(e){toast('Unable to add title: '+e.message);}finally{if(input)input.placeholder='Add alternate title';}};
 window.setMainTitle=async(id,kind)=>{const input=$('#mainTitle-'+kind);const v=input?.value.trim();if(!v)return;try{
   patchOpenInspectorTitle(id,v);
-  const entry=await api('/api/admin/entries/'+id+'/preferred-title',{method:'POST',body:JSON.stringify({title:v}),timeoutMs:8000});
+  const entry=await api('/api/v1/entries/'+id+'/preferred-title',{method:'POST',body:JSON.stringify({title:v}),timeoutMs:8000});
   applyEntrySnapshotEverywhere(entry);patchOpenInspectorTitle(id,entry.preferred_title||v);toast('Main title updated');
 }catch(e){toast('Unable to change main title: '+e.message);syncEntrySnapshot(id,{refreshInspector:false});}};
-window.clearManualTitles=async(id,kind,button)=>{if(!confirm('Remove the manual main-title override and all manually added alternate titles for this entry? The main title will return to the most-used title among its bound source records.'))return;const oldText=button?.textContent;if(button){button.disabled=true;button.textContent='Removing…';}try{const entry=await api('/api/admin/entries/'+id+'/manual-titles',{method:'DELETE',timeoutMs:8000});applyEntrySnapshotEverywhere(entry);toast('Manual titles removed');if(activeInspector[kind]===Number(id))await refreshInlineEntryStable(kind,id);}catch(e){toast('Unable to remove manual titles: '+e.message);}finally{if(button&&button.isConnected){button.disabled=false;button.textContent=oldText||'Remove manual titles';}}};
+window.clearManualTitles=async(id,kind,button)=>{if(!confirm('Remove the manual main-title override and all manually added alternate titles for this entry? The main title will return to the most-used title among its bound source records.'))return;const oldText=button?.textContent;if(button){button.disabled=true;button.textContent='Removing…';}try{const entry=await api('/api/v1/entries/'+id+'/manual-titles',{method:'DELETE',timeoutMs:8000});applyEntrySnapshotEverywhere(entry);toast('Manual titles removed');if(activeInspector[kind]===Number(id))await refreshInlineEntryStable(kind,id);}catch(e){toast('Unable to remove manual titles: '+e.message);}finally{if(button&&button.isConnected){button.disabled=false;button.textContent=oldText||'Remove manual titles';}}};
 window.loadHistory=async(id,kind)=>{
   const target=$('#historyBox-'+kind),generation=inspectorGeneration(kind);
   if(!target||Number(inspectorEntryId(kind))!==Number(id))return;
@@ -3069,7 +3069,7 @@ window.rejectChapterCandidate=async(candidateId,chapterId,kind)=>{if(!confirm('R
 window.restoreChapterCandidate=async(candidateId,chapterId,kind)=>{try{await api(`/api/admin/candidates/${Number(candidateId)}/restore`,{method:'POST'});toast('Episode candidate restored');await openChapter(chapterId,null,kind);if(activeInspector[kind]!=null)refreshInlineEntryStable(kind,activeInspector[kind]).catch(()=>{});}catch(e){toast('Unable to restore episode: '+e.message);}};
 window.clearMatch=async(id,sourceId,kind)=>{if(!confirm('Clear this source match? Existing served-history records are kept.'))return;try{
   toast('Clearing match…');
-  const entry=await api(`/api/admin/entries/${id}/matches/${encodeURIComponent(sourceId)}`,{method:'DELETE',timeoutMs:8000});
+  const entry=await api(`/api/v1/entries/${id}/matches/${encodeURIComponent(sourceId)}`,{method:'DELETE',timeoutMs:8000});
   applyEntrySnapshotEverywhere(entry);
   if(activeInspector[kind]===Number(id))refreshInlineEntryStable(kind,id).catch(()=>{});
   toast('Match cleared');
@@ -3192,7 +3192,7 @@ function patchOpenInspectorTitle(id,title){
 window.promoteVariantPrimary=async(id,sourceId,sourceMangaId,button)=>{
   if(button)button.disabled=true;
   try{
-    const entry=await api(`/api/admin/entries/${id}/variants/${encodeURIComponent(sourceId)}/${sourceMangaId}/promote`,{method:'POST'});
+    const entry=await api(`/api/v1/entries/${id}/variants/${encodeURIComponent(sourceId)}/${sourceMangaId}/promote`,{method:'POST'});
     applyEntrySnapshotEverywhere(entry);
     for(const openKind of ['subbed','matrix']){
       if(activeInspector[openKind]===Number(id))refreshInlineEntryStable(openKind,Number(id)).catch(()=>{});
@@ -3204,7 +3204,7 @@ window.promoteVariantPrimary=async(id,sourceId,sourceMangaId,button)=>{
 
 window.clearVariant=async(id,sourceId,sourceMangaId,kind)=>{if(!confirm('Remove this additional source match? Chapter history is kept.'))return;try{
   toast('Removing additional match…');
-  const entry=await api(`/api/admin/entries/${id}/variants/${encodeURIComponent(sourceId)}/${sourceMangaId}`,{method:'DELETE',timeoutMs:8000});
+  const entry=await api(`/api/v1/entries/${id}/variants/${encodeURIComponent(sourceId)}/${sourceMangaId}`,{method:'DELETE',timeoutMs:8000});
   applyEntrySnapshotEverywhere(entry);
   if(activeInspector[kind]===Number(id))refreshInlineEntryStable(kind,id).catch(()=>{});
   toast('Additional match removed');
@@ -3212,11 +3212,11 @@ window.clearVariant=async(id,sourceId,sourceMangaId,kind)=>{if(!confirm('Remove 
 window.deleteEntry=async(id,kind)=>{
   if(!confirm('Delete this AutoSourcarr entry from the catalog? Its current source records will be suppressed so it does not immediately reappear.'))return;
   try{
-    await api(`/api/admin/entries/${id}`,{method:'DELETE'});
+    await api(`/api/v1/entries/${id}`,{method:'DELETE'});
   }catch(e){
     if(String(e.message).includes('main Suwayomi library')){
       if(!confirm('This entry is added to your main Suwayomi library. Deleting it can break that library item. Delete it anyway?'))return;
-      await api(`/api/admin/entries/${id}?force=true`,{method:'DELETE'});
+      await api(`/api/v1/entries/${id}`,{method:'DELETE',body:JSON.stringify({force:true})});
     }else{throw e;}
   }
   if(activeInspector[kind]===id){activeInspector[kind]=null;matrixControls(kind).inspector.hidden=true;}
@@ -3363,7 +3363,7 @@ window.openDuplicateManager=id=>{
 async function loadDuplicates(focusId=null,{render=true,quiet=false}={}){
   const serial=++duplicateLoadSerial,revision=duplicateViewRevision;
   if(render&&!duplicateData?.groups?.length)$('#duplicateGroups').innerHTML='<div class="muted">Loading duplicate candidates…</div>';
-  let incoming=await api('/api/admin/duplicates',{timeoutMs:8000,suppressClientError:true});
+  let incoming=await api('/api/v1/duplicates',{timeoutMs:8000,suppressClientError:true});
   if(serial!==duplicateLoadSerial||revision!==duplicateViewRevision)return duplicateData;
   if(incoming.pending||incoming.stale){
     let groups=incoming.groups||[];
@@ -3423,7 +3423,7 @@ window.reviewDuplicate=async(left,right,decision)=>{
   updateDuplicateReviewButtons();
   const selected=duplicateManagerEntryId;
   try{
-    const r=await api('/api/admin/duplicates/review',{method:'POST',body:JSON.stringify({left_entry_id:left,right_entry_id:right,decision})});
+    const r=await api('/api/v1/duplicates/review',{method:'POST',body:JSON.stringify({left_entry_id:left,right_entry_id:right,decision})});
     duplicateViewRevision++;
     if(r.decision!=='stale'){
       duplicateConfirmedReviews.set(key,{left,right,decision:r.decision});
@@ -3445,7 +3445,7 @@ $('#runAutomaticDuplicates').onclick=async()=>{
   if(duplicateData?.automatic_matching?.paused){toast('Automatic duplicate matching stays paused until Redo/reset rebuild work finishes');return;}
   button.disabled=true;button.textContent='Queued…';
   try{
-    const r=await api('/api/admin/duplicates/automatic',{method:'POST',timeoutMs:8000});
+    const r=await api('/api/v1/duplicates/automatic',{method:'POST',timeoutMs:8000});
     if(r.status?.paused)toast('Automatic duplicate matching is paused until the current rebuild finishes');
     else toast(r.already_running?'Automatic duplicate matching is already running':'Automatic duplicate sweep queued');
     loadTasks().catch(()=>{});setTimeout(()=>loadDuplicates(null,{render:true,quiet:true}).catch(()=>{}),700);
@@ -3458,7 +3458,7 @@ async function openAutoMergePreview(){
   const modal=$('#autoMergePreviewModal'),body=$('#autoMergePreviewBody'),confirmButton=$('#confirmAutoMergePreview');
   modal.hidden=false;document.body.classList.add('modalOpen');body.innerHTML='<div class="muted">Calculating current auto-merge candidates…</div>';confirmButton.disabled=true;
   try{
-    const d=await api('/api/admin/maintenance/consolidate-preview',{timeoutMs:30000});
+    const d=await api('/api/v1/maintenance/consolidate-preview',{timeoutMs:30000});
     window.autoMergePreviewData=d;
     const groups=d.groups||[];
     if(!groups.length){body.innerHTML='<div class="emptyDuplicateState"><strong>Nothing qualifies for automatic merge.</strong><span>Possible duplicates that do not meet the exact-title/summary rules remain available for manual review.</span></div>';return;}
@@ -3469,7 +3469,7 @@ async function openAutoMergePreview(){
 async function confirmAutoMergePreview(){
   const d=window.autoMergePreviewData||{};if(!(d.groups||[]).length)return;
   const button=$('#confirmAutoMergePreview');button.disabled=true;button.textContent='Merging…';
-  try{const r=await api('/api/admin/maintenance/consolidate',{method:'POST',timeoutMs:8000});closeAutoMergePreview();toast(r.queued?'Auto-merge queued; it will yield to interactive work':'Auto-merge started');loadTasks().catch(()=>{});}
+  try{const r=await api('/api/v1/maintenance/consolidate',{method:'POST',timeoutMs:8000});closeAutoMergePreview();toast(r.queued?'Auto-merge queued; it will yield to interactive work':'Auto-merge started');loadTasks().catch(()=>{});}
   catch(e){toast('Auto-merge failed: '+e.message);}
   finally{button.disabled=false;button.textContent='Confirm and merge';}
 }
@@ -3610,7 +3610,7 @@ $('#clearCurrentMatch').onclick=async()=>{
   const owner=beginMatchBrowserMutation();
   try{
     toast('Clearing source matches…');
-    const entry=await api(`/api/admin/entries/${owner.entryId}/matches/${encodeURIComponent(owner.sourceId)}`,{method:'DELETE',timeoutMs:8000});
+    const entry=await api(`/api/v1/entries/${owner.entryId}/matches/${encodeURIComponent(owner.sourceId)}`,{method:'DELETE',timeoutMs:8000});
     applyMatchBrowserMutationEntry(owner,entry);toast('Source matches cleared');
   }catch(e){toast('Unable to clear source matches: '+e.message);}
   finally{finishMatchBrowserMutation(owner);}
@@ -3626,7 +3626,7 @@ async function runMatchSearch(page=1){
   const requestedSource=String(matchBrowserState.sourceId),requestedEntry=Number(matchBrowserState.entryId),generation=matchBrowserGeneration;
   matchBrowserState.page=page; $('#matchSearchStatus').textContent='Searching all known names…'; $('#matchResults').innerHTML='<div class="muted">Searching aliases and ranking candidates…</div>';
   try{
-    const d=await api(`/api/admin/entries/${requestedEntry}/manual-search?source_id=${encodeURIComponent(requestedSource)}&q=${encodeURIComponent(q)}&page=${page}&all_names=true`,{signal});
+    const d=await api(`/api/v1/entries/${requestedEntry}/manual-search`,{method:'POST',body:JSON.stringify({source_id:requestedSource,query:q,page,all_names:true}),noMutationRefresh:true,signal});
     if(signal.aborted||generation!==matchBrowserGeneration||!matchBrowserState||String(matchBrowserState.sourceId)!==requestedSource||Number(matchBrowserState.entryId)!==requestedEntry)return;
     const results=d.mangas||[]; matchBrowserState.results=results; matchBrowserState.hasNext=!!d.hasNextPage; $('#matchPage').textContent=`Page ${page}`; $('#matchPrev').disabled=page<=1; $('#matchNext').disabled=!matchBrowserState.hasNext;
     if(d.error){$('#matchResults').innerHTML=`<div class="emptyBrowserResult"><strong>Source search unavailable.</strong><span>${esc(d.error)}</span></div>`;$('#matchSearchStatus').textContent='Source error';return;}
@@ -3712,7 +3712,7 @@ window.separateManualCandidate=async(sourceMangaId)=>{
   const owner=beginMatchBrowserMutation(),submitted=manualCandidateRequest(candidate);
   const card=$('#candidate-'+sourceMangaId);if(card)card.classList.add('savingMatch');
   try{
-    const result=await api(`/api/admin/entries/${owner.entryId}/separate-source`,{method:'POST',timeoutMs:10000,body:JSON.stringify({source_id:owner.sourceId,source_manga_id:Number(sourceMangaId),candidate:submitted,defer_hydration:true})});
+    const result=await api(`/api/v1/entries/${owner.entryId}/separate-source`,{method:'POST',timeoutMs:10000,body:JSON.stringify({source_id:owner.sourceId,source_manga_id:Number(sourceMangaId),candidate:submitted,defer_hydration:true})});
     const owns=ownsMatchBrowserMutation(owner);
     if(owns){candidate.manual_separate=true;owner.state.dirty=true;}
     if(result.entry)applyMatchBrowserMutationEntry(owner,result.entry);
@@ -3725,7 +3725,7 @@ window.allowManualCandidate=async(sourceMangaId)=>{
   if(!matchBrowserState)return;
   const owner=beginMatchBrowserMutation(),candidate=(owner.state.results||[]).find(x=>Number(x.id)===Number(sourceMangaId));
   try{
-    await api(`/api/admin/entries/${owner.entryId}/separate-source/${encodeURIComponent(owner.sourceId)}/${Number(sourceMangaId)}`,{method:'DELETE',timeoutMs:8000});
+    await api(`/api/v1/entries/${owner.entryId}/separate-source/${encodeURIComponent(owner.sourceId)}/${Number(sourceMangaId)}`,{method:'DELETE',timeoutMs:8000});
     if(ownsMatchBrowserMutation(owner)){
       if(candidate)candidate.manual_separate=false;
       owner.state.dirty=true;renderMatchResults(owner.state.results||[]);
@@ -3745,7 +3745,7 @@ window.useManualMatch=async(sourceMangaId,mode='replace')=>{
   applyMatchBrowserMutationEntry(owner,optimistic);
   toast(mode==='add'?'Source record added; fetching chapters in background…':'Primary match saved; fetching chapters in background…');
   try{
-    const entry=await api(`/api/admin/entries/${owner.entryId}/manual-match`,{method:'POST',timeoutMs:8000,body:JSON.stringify({source_id:owner.sourceId,source_manga_id:Number(sourceMangaId),mode,candidate:submitted,defer_hydration:true})});
+    const entry=await api(`/api/v1/entries/${owner.entryId}/manual-match`,{method:'POST',timeoutMs:8000,body:JSON.stringify({source_id:owner.sourceId,source_manga_id:Number(sourceMangaId),mode,candidate:submitted,defer_hydration:true})});
     if(ownsMatchBrowserMutation(owner))candidate.manual_separate=false;
     applyMatchBrowserMutationEntry(owner,entry);
     if(entry.background_hydration)scheduleEntrySnapshotSync(entry.canonical_id||entry.id,[1500,5000,10000],true);
@@ -3763,7 +3763,7 @@ function renderUnmatchDuplicates(){
   const items=(duplicateSplitData||[]).filter(x=>!q||String(x.entry_id)===q||String(x.preferred_title||'').toLowerCase().includes(q)||(x.records||[]).some(r=>String(r.title||'').toLowerCase().includes(q)||String(r.source_name||'').toLowerCase().includes(q)));
   $('#unmatchDuplicateList').innerHTML=items.length?items.map(x=>`<section class="duplicateSplitEntry" data-split-entry="${x.entry_id}"><div class="duplicateSplitEntryHead"><img src="${esc(x.cover_url)}" class="duplicateCover"><div><span class="entryIdPill">ID ${x.entry_id}</span><h3>${esc(x.preferred_title)}</h3><div class="muted">${x.merge_count} recorded merge${x.merge_count===1?'':'s'} · select the record(s) that belong to the other work</div></div></div><div class="duplicateSplitRecords">${(x.records||[]).map((r,i)=>`<label class="duplicateSplitRecord"><input type="checkbox" data-split-source="${esc(r.source_id)}" data-split-manga="${Number(r.source_manga_id)}"><span><strong>${esc(r.title||`Manga ${r.source_manga_id}`)}</strong><small>${esc(r.source_name||r.source_id)} · ${r.kind==='additional'?'additional record':'primary record'} · source manga ${r.source_manga_id}</small></span></label>`).join('')}</div><div class="duplicateSplitActions"><button class="dangerAction" onclick="splitDuplicateRecords(${x.entry_id})">Split selected into a new entry</button></div></section>`).join(''):'<div class="emptyDuplicateState"><strong>No recorded merged entries found.</strong><span>Only entries with merge history appear here.</span></div>';
 }
-async function loadUnmatchDuplicates(){ $('#unmatchDuplicateList').innerHTML='<div class="muted">Loading merged entries…</div>';const d=await api('/api/admin/maintenance/unmatch-duplicates');duplicateSplitData=d.items||[];renderUnmatchDuplicates(); }
+async function loadUnmatchDuplicates(){ $('#unmatchDuplicateList').innerHTML='<div class="muted">Loading merged entries…</div>';const d=await api('/api/v1/maintenance/unmatch-duplicates');duplicateSplitData=d.items||[];renderUnmatchDuplicates(); }
 window.openUnmatchDuplicatesForEntry=async(entryId)=>{
   $('#unmatchDuplicatesModal').hidden=false;document.body.classList.add('modalOpen');
   $('#unmatchDuplicateSearch').value='';
@@ -3774,18 +3774,18 @@ window.openUnmatchDuplicatesForEntry=async(entryId)=>{
     duplicateSplitData=[item];renderUnmatchDuplicates();
   }catch(e){toast('Unable to load duplicate records: '+e.message);}
 };
-window.splitDuplicateRecords=async(entryId)=>{const box=document.querySelector(`[data-split-entry="${entryId}"]`);const records=[...box.querySelectorAll('input[type=checkbox]:checked')].map(i=>({source_id:i.dataset.splitSource,source_manga_id:Number(i.dataset.splitManga)}));if(!records.length){toast('Select at least one source record to split');return;}if(!confirm(`Split ${records.length} selected source record(s) out of this entry? Associated source-provided titles will be removed from the original entry.`))return;try{const r=await api(`/api/admin/entries/${entryId}/unmatch-duplicates`,{method:'POST',body:JSON.stringify({records})});toast(`Created separate entry ${r.new_entry_id}`);await loadUnmatchDuplicates();await Promise.allSettled([refreshBothMatrices(),loadDuplicates(),health()]);}catch(e){toast('Unable to split duplicate: '+e.message);}};
+window.splitDuplicateRecords=async(entryId)=>{const box=document.querySelector(`[data-split-entry="${entryId}"]`);const records=[...box.querySelectorAll('input[type=checkbox]:checked')].map(i=>({source_id:i.dataset.splitSource,source_manga_id:Number(i.dataset.splitManga)}));if(!records.length){toast('Select at least one source record to split');return;}if(!confirm(`Split ${records.length} selected source record(s) out of this entry? Associated source-provided titles will be removed from the original entry.`))return;try{const r=await api(`/api/v1/entries/${entryId}/unmatch-duplicates`,{method:'POST',body:JSON.stringify({records})});toast(`Created separate entry ${r.new_entry_id}`);await loadUnmatchDuplicates();await Promise.allSettled([refreshBothMatrices(),loadDuplicates(),health()]);}catch(e){toast('Unable to split duplicate: '+e.message);}};
 $('#unmatchDuplicates').onclick=async()=>{$('#unmatchDuplicatesModal').hidden=false;document.body.classList.add('modalOpen');await loadUnmatchDuplicates().catch(e=>toast(e.message));};
 $('#closeUnmatchDuplicates').onclick=closeUnmatchDuplicates;
 $('#reloadUnmatchDuplicates').onclick=()=>loadUnmatchDuplicates().catch(e=>toast(e.message));
 $('#unmatchDuplicateSearch').addEventListener('input',renderUnmatchDuplicates);
-$('#resetCovers').onclick=async()=>{if(!confirm('Reset every cached cover? Covers will be downloaded again from matched sources as they are viewed.'))return;const b=$('#resetCovers');b.disabled=true;try{const r=await api('/api/admin/maintenance/reset-covers',{method:'POST'});renewCoverEpoch();browseState.renderNonce++;await Promise.allSettled([loadBrowse(browseState.page,false),refreshBothMatrices()]);toast(`Cover cache reset · ${r.removed_files||0} cached file(s) removed`);}catch(e){toast('Cover reset failed: '+e.message);}finally{b.disabled=false;}};
-$('#resetDatabase').onclick=async()=>{const first=confirm('Reset the AutoSourcarr database? This deletes rebuildable catalog matches, duplicate decisions, browse/translation caches, cached covers and chapter-origin data. Your env settings, main-Suwayomi library items, persistent manual matches, and manual entry groups are kept. Before deletion AutoSourcarr records the old source IDs only as UNTRUSTED rebuild hints. Subbed entries are restored first and those exact source records are re-fetched and re-checked with the current matcher; nothing is rebound merely because it matched before. The remaining previous catalog is then replayed by exact source ID under the current rules, avoiding most expensive source-wide searches, while low-priority source browsing continues afterward. The reset is aborted if the main-Suwayomi subscription snapshot cannot be read.');if(!first)return;const typed=prompt('Type RESET DATABASE to continue');if(typed!=='RESET DATABASE'){toast('Database reset cancelled');return;}const b=$('#resetDatabase');b.disabled=true;try{const r=await api('/api/admin/maintenance/reset-database',{method:'POST'});duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([loadSources(),loadBrowse(1),loadMatrix(),health(),loadTasks(),loadManualGroups()]);const n=Number(r.subbed_restored||0),m=Number(r.manual_matches?.restored||0),h=Number(r.rebuild_hint_records||0);toast(`Database reset · ${n} subscribed entr${n===1?'y':'ies'} restored · ${m} persistent manual match${m===1?'':'es'} restored · ${h.toLocaleString()} old source IDs queued for fresh validation${r.subbed_rebrowse_queued?' · Subbed rebuild running':''}`);}catch(e){toast('Database reset failed: '+e.message);}finally{b.disabled=false;}};
+$('#resetCovers').onclick=async()=>{if(!confirm('Reset every cached cover? Covers will be downloaded again from matched sources as they are viewed.'))return;const b=$('#resetCovers');b.disabled=true;try{const r=await api('/api/v1/maintenance/reset-covers',{method:'POST'});renewCoverEpoch();browseState.renderNonce++;await Promise.allSettled([loadBrowse(browseState.page,false),refreshBothMatrices()]);toast(`Cover cache reset · ${r.removed_files||0} cached file(s) removed`);}catch(e){toast('Cover reset failed: '+e.message);}finally{b.disabled=false;}};
+$('#resetDatabase').onclick=async()=>{const first=confirm('Reset the AutoSourcarr database? This deletes rebuildable catalog matches, duplicate decisions, browse/translation caches, cached covers and chapter-origin data. Your env settings, main-Suwayomi library items, persistent manual matches, and manual entry groups are kept. Before deletion AutoSourcarr records the old source IDs only as UNTRUSTED rebuild hints. Subbed entries are restored first and those exact source records are re-fetched and re-checked with the current matcher; nothing is rebound merely because it matched before. The remaining previous catalog is then replayed by exact source ID under the current rules, avoiding most expensive source-wide searches, while low-priority source browsing continues afterward. The reset is aborted if the main-Suwayomi subscription snapshot cannot be read.');if(!first)return;const typed=prompt('Type RESET DATABASE to continue');if(typed!=='RESET DATABASE'){toast('Database reset cancelled');return;}const b=$('#resetDatabase');b.disabled=true;try{const r=await api('/api/v1/maintenance/reset-database',{method:'POST',body:JSON.stringify({confirm:true})});duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([health(),loadTasks()]);toast(r.merged?'A database reset is already queued or running; follow it in Tasks.':'Database reset queued · it runs alone, then subscribed entries and persistent manual matches are restored · follow it in Tasks');}catch(e){toast('Database reset failed: '+e.message);}finally{b.disabled=false;}};
 if($('#fullReset'))$('#fullReset').onclick=async()=>{
   const first=confirm('Full reset AutoSourcarr data? This clears the catalog, matches, duplicate decisions, manual matches/groups, manual titles/separate-entry decisions, import history/decisions, chapter rejections, caches and chapter-origin history. Configuration is kept: persistent env/API/signing settings, UI preferences, source groups/priorities/language/search settings, database location, and your main-Suwayomi library are not reset. Subbed entries are recreated from the main library and searched again from scratch.');if(!first)return;
   const typed=prompt('Type FULL RESET to continue');if(typed!=='FULL RESET'){toast('Full reset cancelled');return;}
   const b=$('#fullReset');b.disabled=true;
-  try{const r=await api('/api/admin/maintenance/full-reset',{method:'POST',timeoutMs:30000});duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([loadSources(),loadBrowse(1),loadMatrix(),loadSubbed(),health(),loadTasks(),loadManualGroups()]);const n=Number(r.subbed_restored||0);toast(`Full reset complete · configuration kept · ${n} subscribed entr${n===1?'y':'ies'} restored${r.subbed_rebrowse_queued?' · fresh Subbed search running':''}`);}
+  try{const r=await api('/api/v1/maintenance/full-reset',{method:'POST',timeoutMs:30000,body:JSON.stringify({confirm:true})});duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([health(),loadTasks()]);toast(r.merged?'A full reset is already queued or running; follow it in Tasks.':'Full reset queued · configuration is kept and subscribed entries are recreated · follow it in Tasks');}
   catch(e){toast('Full reset failed: '+e.message);}
   finally{b.disabled=false;}
 };
@@ -3811,12 +3811,12 @@ document.querySelectorAll('.manualActionSubtab').forEach(b=>b.onclick=()=>setMan
 if($('#resetManualGroups'))$('#resetManualGroups').onclick=async()=>{
   if(!confirm('Reset all persistent manual entry groups? Individual manual matches will remain persistent, but their grouping will be forgotten.'))return;
   const typed=prompt('Type RESET GROUPS to continue');if(typed!=='RESET GROUPS'){toast('Group reset cancelled');return;}
-  const b=$('#resetManualGroups');b.disabled=true;try{const r=await api('/api/admin/maintenance/reset-manual-groups',{method:'POST'});toast(`Reset ${Number(r.groups_removed||0)} manual group${Number(r.groups_removed||0)===1?'':'s'}`);await loadManualGroups();}catch(e){toast('Manual group reset failed: '+e.message);}finally{b.disabled=false;}
+  const b=$('#resetManualGroups');b.disabled=true;try{const preview=await api('/api/v1/maintenance/reset-manual-groups',{cache:'no-store',timeoutMs:20000});const r=await api('/api/v1/maintenance/reset-manual-groups',{method:'POST',body:JSON.stringify({confirm:true,preview_token:preview.preview_token})});toast(`Reset ${Number(r.groups_removed||0)} manual group${Number(r.groups_removed||0)===1?'':'s'}`);await loadManualGroups();}catch(e){toast('Manual group reset failed: '+e.message);}finally{b.disabled=false;}
 };
 if($('#resetManualMatches'))$('#resetManualMatches').onclick=async()=>{
   if(!confirm('Reset every persistent manual match? Current matches stay in the catalog but become ordinary unlocked automatic matches. They will NOT survive a later database reset unless manually matched again.'))return;
   const typed=prompt('Type RESET MANUAL MATCHES to continue');if(typed!=='RESET MANUAL MATCHES'){toast('Manual-match reset cancelled');return;}
-  const b=$('#resetManualMatches');b.disabled=true;try{const r=await api('/api/admin/maintenance/reset-manual-matches',{method:'POST'});toast(`Reset ${Number(r.manual_matches_removed||0)} persistent manual match${Number(r.manual_matches_removed||0)===1?'':'es'}`);await Promise.allSettled([loadManualGroups(),refreshBothMatrices()]);}catch(e){toast('Manual-match reset failed: '+e.message);}finally{b.disabled=false;}
+  const b=$('#resetManualMatches');b.disabled=true;try{const preview=await api('/api/v1/maintenance/reset-manual-matches',{cache:'no-store',timeoutMs:20000});const r=await api('/api/v1/maintenance/reset-manual-matches',{method:'POST',body:JSON.stringify({confirm:true,preview_token:preview.preview_token})});toast(`Reset ${Number(r.manual_matches_removed||0)} persistent manual match${Number(r.manual_matches_removed||0)===1?'':'es'}`);await Promise.allSettled([loadManualGroups(),refreshBothMatrices()]);}catch(e){toast('Manual-match reset failed: '+e.message);}finally{b.disabled=false;}
 };
 if($('#refreshTasks'))$('#refreshTasks').onclick=()=>loadTasks().catch(e=>toast(e.message));
 if($('#clearTaskHistory'))$('#clearTaskHistory').onclick=async()=>{
@@ -3976,11 +3976,11 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 if($('#resetAllManualActions'))$('#resetAllManualActions').onclick=async()=>{
   const button=$('#resetAllManualActions');button.disabled=true;
   try{
-    const preview=await api('/api/admin/maintenance/reset-all-manual-actions',{cache:'no-store',suppressClientError:true,timeoutMs:20000});
+    const preview=await api('/api/v1/maintenance/reset-all-manual-actions',{cache:'no-store',suppressClientError:true,timeoutMs:20000});
     if(typeof globalThis.AutoSourcarrConfirm?.request!=='function')throw new Error('Confirmation controls did not load. Refresh this page before trying again.');
     const typed=await globalThis.AutoSourcarrConfirm.request({title:'Reset all manual actions',rows:preview.counts.map(row=>`${row.label}: ${row.count}`),details:[preview.retained,preview.effect],phrase:'RESET ALL MANUAL ACTIONS',acceptLabel:'Reset manual actions'});
     if(typed!=='RESET ALL MANUAL ACTIONS')return;
-    await api('/api/admin/maintenance/reset-all-manual-actions',{method:'POST',timeoutMs:120000,noMutationRefresh:true,suppressClientError:true,body:JSON.stringify({revision:preview.revision,confirmation:typed})});
+    await api('/api/v1/maintenance/reset-all-manual-actions',{method:'POST',timeoutMs:120000,noMutationRefresh:true,suppressClientError:true,body:JSON.stringify({confirm:true,preview_token:preview.preview_token||preview.revision,revision:preview.revision,confirmation:typed})});
     toast('Manual decisions reset. Library and history retained.');
     // Reopen the remembered tab with fresh snapshots; old in-flight responses
     // belong to the previous document and cannot repaint reset decisions.

@@ -163,6 +163,20 @@ public sealed class ApiV1Services
     public LibraryV1Services? Library { get; init; }
     /// <summary>The Connections menu: external services, their tests and last results (phase 7); null answers 503.</summary>
     public ConnectionsV1Services? Connections { get; init; }
+    /// <summary>Phase 8 matching: titles, manual search, presets and policies (8A); null answers 503.</summary>
+    public MatchingTitlesV1Services? MatchingTitles { get; init; }
+    /// <summary>Phase 8 manual decisions and the decision log (8B); null answers 503.</summary>
+    public ManualDecisionsV1Services? ManualDecisions { get; init; }
+    /// <summary>Phase 8 catalogue maintenance: resets, entry deletion, record detach/promote (8B); null answers 503.</summary>
+    public MaintenanceV1Services? Maintenance { get; init; }
+    /// <summary>Phase 8 duplicate review and automatic merging (8C); null answers 503.</summary>
+    public AutoSourcarr.Core.Matching.Duplicates.DuplicateMatching? Duplicates { get; init; }
+    /// <summary>Phase 8 mixed entries and editions (8D); null answers 503.</summary>
+    public MixedEntriesV1Services? MixedEntries { get; init; }
+    /// <summary>Phase 8 tag synonyms (8D); null answers 503.</summary>
+    public TagSynonymsV1Services? TagSynonyms { get; init; }
+    /// <summary>Phase 8 review workbench and policy simulator (8E); null answers 503.</summary>
+    public ReviewV1Services? Review { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -531,6 +545,14 @@ public static class ApiV1Endpoints
         RepairV1Endpoints.Map(group, services, json);
         LibraryV1Endpoints.Map(group, services, json);
         ConnectionsV1Endpoints.Map(group, services, json);
+        // Phase 8 "Matching" (port-map MatchingEndpoints + MaintenanceEndpoints).
+        MatchingTitlesV1Endpoints.Map(group, services.MatchingTitles, json);
+        ManualDecisionsV1Endpoints.Map(group, services, json, services.ManualDecisions);
+        MaintenanceV1Endpoints.Map(group, services, json, services.Maintenance);
+        DuplicatesV1Endpoints.Map(group, services, json, services.Duplicates);
+        MixedEntriesV1Endpoints.Map(group, services, json, services.MixedEntries);
+        TagSynonymsV1Endpoints.Map(group, json, services.TagSynonyms);
+        ReviewV1Endpoints.Map(group, json, services.Review);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

@@ -116,7 +116,7 @@ test('Declining merge confirmation sends no request and acquires no review owner
 test('Failed POST keeps a failure visible and releases its controls after reconciling with the server',async()=>{
   const {ctx,requests,buttons,toasts}=harness();
   const job=ctx.reviewDuplicate(1,2,'not_duplicate');requests[0].reject(new Error('Request timed out'));await tick();
-  assert.equal(requests.length,2);assert.equal(requests[1].url,'/api/admin/duplicates');
+  assert.equal(requests.length,2);assert.equal(requests[1].url,'/api/v1/duplicates');
   requests[1].resolve(snapshot());await job;
   assert(toasts.some(x=>x.includes('Duplicate review failed: Request timed out')));
   assert(!toasts.some(x=>x==='Marked as different works'));

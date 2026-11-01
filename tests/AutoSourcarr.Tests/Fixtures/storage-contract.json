@@ -601,6 +601,96 @@
           "pk": 0
         }
       ],
+      "decision_log": [
+        {
+          "cid": 0,
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "kind",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "actor_kind",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "actor_name",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "entries_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "records_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "reason",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "before_json",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "after_json",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "undo_of",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
       "deleted_entries_history": [
         {
           "cid": 0,
@@ -2499,6 +2589,96 @@
           "pk": 0
         }
       ],
+      "mixed_entry_findings": [
+        {
+          "cid": 0,
+          "name": "entry_id",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "fingerprint",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "evidence_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "record_count",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "partial",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": "0",
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "preferred_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 7,
+          "name": "sort_title",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 8,
+          "name": "search_text",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "''",
+          "pk": 0
+        },
+        {
+          "cid": 9,
+          "name": "evidence_json",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": "'[]'",
+          "pk": 0
+        },
+        {
+          "cid": 10,
+          "name": "checked_at",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
       "mixed_entry_reviews": [
         {
           "cid": 0,
@@ -4198,6 +4378,7 @@
       "catalogue_source_facts": [],
       "catalogue_uid_records": [],
       "crawl_pending": [],
+      "decision_log": [],
       "deleted_entries_history": [],
       "deleted_source_records": [],
       "display_metadata": [],
@@ -4381,6 +4562,7 @@
       "matching_presets": [],
       "matching_review_actions": [],
       "metadata_query_cache": [],
+      "mixed_entry_findings": [],
       "mixed_entry_reviews": [],
       "pending_entry_merges": [],
       "pending_entry_splits": [],
@@ -4819,6 +5001,14 @@
         "tbl_name": "source_color_profiles"
       },
       {
+        "name": "idx_decision_log_actor",
+        "tbl_name": "decision_log"
+      },
+      {
+        "name": "idx_decision_log_kind",
+        "tbl_name": "decision_log"
+      },
+      {
         "name": "idx_display_metadata_history",
         "tbl_name": "display_metadata_history"
       },
@@ -4933,6 +5123,10 @@
       {
         "name": "idx_metadata_query_cache_updated",
         "tbl_name": "metadata_query_cache"
+      },
+      {
+        "name": "idx_mixed_entry_findings_state",
+        "tbl_name": "mixed_entry_findings"
       },
       {
         "name": "idx_portable_review_history",
@@ -5232,6 +5426,7 @@
       "catalogue_source_facts": [],
       "catalogue_uid_records": [],
       "crawl_pending": [],
+      "decision_log": [],
       "deleted_entries_history": [],
       "deleted_source_records": [],
       "display_metadata": [],
@@ -5309,6 +5504,7 @@
       "matching_presets": [],
       "matching_review_actions": [],
       "metadata_query_cache": [],
+      "mixed_entry_findings": [],
       "mixed_entry_reviews": [],
       "pending_entry_merges": [],
       "pending_entry_splits": [],

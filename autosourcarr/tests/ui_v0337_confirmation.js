@@ -41,7 +41,7 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  input.value='RESET ALL MANUAL ACTIONS';input.fire('input');assert(!confirm.disabled);
  confirm.fire('click');await action;
  assert.equal(requests.length,2);const post=requests[1];assert.equal(post.options.method,'POST');
- assert.deepEqual(JSON.parse(post.options.body),{revision:'reviewed-revision',confirmation:'RESET ALL MANUAL ACTIONS'});
+ assert.deepEqual(JSON.parse(post.options.body),{confirm:true,preview_token:'reviewed-revision',revision:'reviewed-revision',confirmation:'RESET ALL MANUAL ACTIONS'});
  assert.equal(reloads,1);assert.equal(button.disabled,false);assert.equal(document.body.children.length,0);
  requests.length=0;reloads=0;action=button.onclick();await tick();document.body.children[0].fire('cancel');await action;
  assert.equal(requests.length,1);assert.equal(reloads,0);assert.equal(button.disabled,false);

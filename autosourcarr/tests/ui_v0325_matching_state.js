@@ -40,8 +40,8 @@ const context={console,Number,String,Date,JSON,Promise,encodeURIComponent,docume
  openBrowseEntry:(id,event)=>{assert(event?.isTrusted,'Current app requires a trusted click event');inspected.push(id);},openUnmatchDuplicatesForEntry:id=>splits.push(id),
  api:async(path,options)=>{
   calls.push([path,options]);if(options?.method==='PUT'){const body=JSON.parse(options.body);assert.equal(body.revision,config.revision);if(pendingSave)await pendingSave;config.revision+='x';return structuredClone(config);}
-  if(path==='/api/admin/matching-policies')return structuredClone(config);
-  if(path.startsWith('/api/admin/duplicates/history?')){if(pendingHistory)return pendingHistory;return {items:[{id:9,left_title:'<img src=x>',right_title:'Second title',merged_at:'2026-10-04T12:00:00Z',state:'Recorded merge',reason:'Saved proof',target_entry_id:3,duplicate_entry_id:4,current_entry_id:5}],total:51};}
+  if(path==='/api/v1/matching-policies')return structuredClone(config);
+  if(path.startsWith('/api/v1/duplicates/history?')){if(pendingHistory)return pendingHistory;return {items:[{id:9,left_title:'<img src=x>',right_title:'Second title',merged_at:'2026-10-04T12:00:00Z',state:'Recorded merge',reason:'Saved proof',target_entry_id:3,duplicate_entry_id:4,current_entry_id:5}],total:51};}
   return {before:[{role:'Surviving entry',available:true,entry:{id:3,preferred_title:'Original title',description:'<script>bad()</script>'},titles:['Alias'],records:[]}],evidence:{reason:'Saved evidence',direct_pairs:2}};
  }};context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(staticRoot,'matching-review.js'),'utf8'),context);
 
@@ -109,7 +109,7 @@ test('restored rules load only on Sources and replace obsolete GET ownership',as
  const h=harness({version:1,tab:'duplicates',matching:{target:'source:a',open:true}}),c=h.context,r=c.AutoSourcarrMatchingReview;
  c.AutoSourcarrNavigation.initialize();h.nodes.get('matchingPoliciesPanel').events.toggle();await tick();assert.equal(h.calls.length,0);
  h.activeTab.id='sources';const old=deferred(),fresh=deferred();let ruleRequests=0;
- c.api=(p,o)=>{h.calls.push([p,o]);assert.equal(p,'/api/admin/matching-policies');return ++ruleRequests===1?old.promise:fresh.promise;};
+ c.api=(p,o)=>{h.calls.push([p,o]);assert.equal(p,'/api/v1/matching-policies');return ++ruleRequests===1?old.promise:fresh.promise;};
  const first=r.activateRules();r.restoreViewState({target:'source:a',open:true});const second=r.activateRules();assert.equal(ruleRequests,2,'Restore cannot leave loading stuck on an obsolete GET');
  fresh.resolve({...structuredClone(h.config),revision:'new',groups:[{id:7,name:'New rules'}]});await second;
  old.resolve({...structuredClone(h.config),revision:'old',groups:[{id:7,name:'Old rules'}]});await first;
@@ -119,7 +119,7 @@ test('actual Refresh button dispatches to the displayed duplicate view',async()=
  const h=harness(),c=h.context;c.AutoSourcarrNavigation.initialize();c.$=selector=>h.nodes.get(selector.slice(1));h.nodes.set('refreshDuplicates',{onclick:null});
  const refreshLine=app.split('\n').find(line=>line.startsWith("$('#refreshDuplicates').onclick="));assert(refreshLine);vm.runInContext(refreshLine,c);
  h.nodes.get('duplicateHistoryView').events.click();await tick();const before=h.calls.length;h.nodes.get('refreshDuplicates').onclick();await tick();
- assert.equal(h.calls.length,before+1);assert(h.calls.at(-1)[0].startsWith('/api/admin/duplicates/history?'));assert(!h.calls.some(([p])=>p==='loadDuplicates'));
+ assert.equal(h.calls.length,before+1);assert(h.calls.at(-1)[0].startsWith('/api/v1/duplicates/history?'));assert(!h.calls.some(([p])=>p==='loadDuplicates'));
  c.AutoSourcarrMatchingReview.showCandidates();h.nodes.get('refreshDuplicates').onclick();await tick();assert.equal(h.calls.at(-1)[0],'loadDuplicates');
 });
 test('identity reset clears matching state without requests or draft restoration',async()=>{

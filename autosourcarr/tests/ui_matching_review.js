@@ -30,8 +30,8 @@ const context={console,Number,String,Date,JSON,Promise,encodeURIComponent,docume
  openBrowseEntry:(id,event)=>{assert(event?.isTrusted,'Current app requires a trusted click event');inspected.push(id);},openUnmatchDuplicatesForEntry:id=>splits.push(id),
  api:async(path,options)=>{
   calls.push([path,options]);if(options?.method==='PUT'){const body=JSON.parse(options.body);assert.equal(body.revision,config.revision);if(pendingSave)await pendingSave;config.revision+='x';return structuredClone(config);}
-  if(path==='/api/admin/matching-policies')return structuredClone(config);
-  if(path.startsWith('/api/admin/duplicates/history?')){if(pendingHistory)return pendingHistory;return {items:[{id:9,left_title:'<img src=x>',right_title:'Second title',merged_at:'2026-10-04T12:00:00Z',state:'Recorded merge',reason:'Saved proof',target_entry_id:3,duplicate_entry_id:4,current_entry_id:5}],total:51};}
+  if(path==='/api/v1/matching-policies')return structuredClone(config);
+  if(path.startsWith('/api/v1/duplicates/history?')){if(pendingHistory)return pendingHistory;return {items:[{id:9,left_title:'<img src=x>',right_title:'Second title',merged_at:'2026-10-04T12:00:00Z',state:'Recorded merge',reason:'Saved proof',target_entry_id:3,duplicate_entry_id:4,current_entry_id:5}],total:51};}
   return {before:[{role:'Surviving entry',available:true,entry:{id:3,preferred_title:'Original title',description:'<script>bad()</script>'},titles:['Alias'],records:[]}],evidence:{reason:'Saved evidence',direct_pairs:2}};
  }};context.window=context;vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../app/static/matching-review.js','utf8'),context);
 (async()=>{
@@ -41,7 +41,7 @@ const context={console,Number,String,Date,JSON,Promise,encodeURIComponent,docume
  internal.elements.mode.value='custom';internal.elements.mode.events.change();assert(!internal.fieldset.disabled);
  internal.events.submit({preventDefault(){}});await tick();assert(internal.status.textContent.includes('Select at least'));assert.equal(calls.length,1);
  internal.elements.title.checked=true;internal.elements.titlePercent.value='99';external.elements.summaryPercent.value='88';
- internal.events.submit({preventDefault(){}});await tick();const saved=JSON.parse(calls.at(-1)[1].body);assert.equal(saved.rule.checks.title,.99);assert.equal(calls.at(-1)[0],'/api/admin/matching-policies/source/a/internal');assert.equal(external.elements.summaryPercent.value,'88','Other direction draft preserved');
+ internal.events.submit({preventDefault(){}});await tick();const saved=JSON.parse(calls.at(-1)[1].body);assert.equal(saved.rule.checks.title,.99);assert.equal(calls.at(-1)[0],'/api/v1/matching-policies/source/a/internal');assert.equal(external.elements.summaryPercent.value,'88','Other direction draft preserved');
  external.events.submit({preventDefault(){}});await tick();assert.equal(JSON.parse(calls.at(-1)[1].body).rule,null);assert(!nodes.get('matchingPolicyTarget').disabled);
  let finishSave;pendingSave=new Promise(resolve=>finishSave=resolve);
  internal.events.submit({preventDefault(){}});await tick();
