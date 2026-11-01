@@ -13,6 +13,12 @@ public sealed class RasterImage : IDisposable
     internal RasterImage(MagickImage image) => _image = image;
     public int Width => checked((int)_image.Width);
     public int Height => checked((int)_image.Height);
+    /// <summary>The decoded pixels as RGBA bytes (alpha is opaque for images without one), for exact identity only.</summary>
+    internal byte[] RgbaPixels()
+    {
+        using var pixels = _image.GetPixels();
+        return pixels.ToByteArray("RGBA") ?? throw new InvalidDataException("Decoded pixels are not available");
+    }
     public void Dispose() => _image.Dispose();
 }
 

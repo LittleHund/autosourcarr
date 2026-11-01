@@ -145,9 +145,18 @@ public sealed class NativeChapterWriter(SqliteDatabase database, object sourceWr
         var stamp = _clock.GetUtcNow().ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
         var galleryMetadata = context.Gallery; var isGallery = galleryMetadata.Count != 0; var sort = new ReplaySort(files, cancellationToken);
         var allKeys = true; (string Key, double Number) first = ("t:", -1); NativeChapter? single = null;
+        // CHAP-2: a record that starts counting again at a new season keeps counting on from the previous season.
+        var seasons = SeasonContinuation.Plan(batch.Read().Select(item => { Validate(item.Chapter); return (ChapterNumbers.Key(item.Chapter.Number, item.Chapter.Name).Number, item.Chapter.Name); }));
+        (string Key, double Number) Numbered(NativeChapter chapter)
+        {
+            var key = ChapterNumbers.Key(chapter.Number, chapter.Name);
+            if (!seasons.Continues || !key.Key.StartsWith("n:", StringComparison.Ordinal)) return key;
+            var continued = seasons.Apply(key.Number, chapter.Name);
+            return continued == key.Number ? key : ("n:" + ChapterNumbers.Format(continued), continued);
+        }
         foreach (var item in batch.Read())
         {
-            cancellationToken.ThrowIfCancellationRequested(); Validate(item.Chapter); var key = ChapterNumbers.Key(item.Chapter.Number, item.Chapter.Name);
+            cancellationToken.ThrowIfCancellationRequested(); Validate(item.Chapter); var key = Numbered(item.Chapter);
             if (single is null) { single = item.Chapter; first = key; }
             allKeys &= key.Key.Length != 0 && key.Key != "t:"; sort.Add(Encoding.UTF8.GetBytes(key.Key));
         }
@@ -163,7 +172,7 @@ public sealed class NativeChapterWriter(SqliteDatabase database, object sourceWr
             cancellationToken.ThrowIfCancellationRequested(); var ch = item.Chapter; var old = item.Old;
             if (isGallery && !nativeList) ch = ch with { Name = Text(galleryMetadata, "raw_title").Length != 0 ? Text(galleryMetadata, "raw_title") : ch.Name.Length != 0 ? ch.Name : "Gallery" };
             var rejected = o.Scalar("SELECT 1 FROM chapter_candidate_rejections WHERE source_id=$p0 AND source_chapter_id=$p1", P(context.SourceId, ch.Id)) is not null;
-            var (key, number) = ChapterNumbers.Key(ch.Number, ch.Name);
+            var (key, number) = Numbered(ch);
             if (isGallery && old is not null)
             { var actual = o.Scalar("SELECT virtual_chapter_id FROM chapter_candidates WHERE id=$p0", P(old.Id)); if (actual is not null) old = old with { VirtualId = Convert.ToInt64(actual, CultureInfo.InvariantCulture) }; }
             if (isGallery && !nativeList)

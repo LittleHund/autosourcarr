@@ -101,7 +101,7 @@ def test_external_android_build_uses_public_url_and_suwayomi_uses_internal_url()
     assert "AUTOSOURCARR_PUBLIC_URL" in builder
     assert "AUTOSOURCARR_ALLOW_DOCKER_ANDROID_URL" in builder and "exit 11" in builder
     assert "Suwayomi release JAR" in builder and "Tachiyomi/Mihon release APK" in builder
-    assert "absolute(baseUrl, url)" in kotlin
+    assert "absolute(baseUrl, url, apiPrefix)" in kotlin
     assert 'f"/api/v1/pages/{candidate_id}/' in service
     assert 'f"{public}/api/v1/pages/' not in service
     assert "request_base = str(request.base_url).rstrip" in main

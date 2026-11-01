@@ -44,7 +44,10 @@ public static class ChapterNumbers
     public static (string Key, double Number) Key(double number, string name)
     {
         if (!double.IsFinite(number)) throw new InvalidDataException("Native chapter number is not finite");
-        if (number >= 0) return ("n:" + Format(number), number);
+        // CHAP-1: an explicit part of the same number files apart (10.1, 10.2); a label without a source number is
+        // read from its numbering word (Chapter, Episode, Act, Stage, No., Part, Vol., 第…話 …) before any bare number.
+        var resolved = ChapterNumbering.Resolve(number, name);
+        if (resolved >= 0) return ("n:" + Format(resolved), resolved);
         var match = Number.Match(RegexText(name));
         if (match.Success && double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) && parsed >= 0 && double.IsFinite(parsed)) return ("n:" + Format(parsed), parsed);
         return ("t:" + TextMatcher.NormalizeTitle(name), -1);

@@ -306,8 +306,8 @@ const ledgerWrites=[
   ['remove variant','DELETE','/api/admin/entries/1/variants/source%2Fname/11'],
   ['promote variant','POST','/api/admin/entries/1/variants/source%2Fname/11/promote'],
   ['remove entry','DELETE','/api/admin/entries/1?force=true'],
-  ['chapter reject','POST','/api/admin/candidates/1/reject'],
-  ['chapter restore','POST','/api/admin/candidates/1/restore'],
+  ['chapter reject','POST','/api/v1/candidates/1/reject'],
+  ['chapter restore','POST','/api/v1/candidates/1/restore'],
   ['duplicate review or clear','POST','/api/v1/duplicates/review'],
   ['explicit duplicate split','POST','/api/admin/entries/1/unmatch-duplicates'],
   ['unbind automatic attachments','POST','/api/admin/entries/1/unbind-auto-matches'],
@@ -334,7 +334,7 @@ for(const [name,method,url] of ledgerWrites)test('manual ledger ownership starts
 test('overlapping manual writes reconcile only after the last outcome settles',async()=>{
   const h=manualLedgerHarness();await seedManualLedger(h);
   const first=h.context.api('/api/admin/entries/1/aliases',{method:'POST'}),old=h.requests.at(-1);
-  const second=h.context.api('/api/admin/candidates/1/reject',{method:'POST'}),current=h.requests.at(-1);
+  const second=h.context.api('/api/v1/candidates/1/reject',{method:'POST'}),current=h.requests.at(-1);
   h.reply(current);await second;await h.flushReconcile();assert.equal(h.requests.length,3);
   const before=h.requests.length,waiting=h.context.loadManualActions();assert.equal(h.requests.length,before);await waiting;
   h.reply(old);await first;await h.flushReconcile();assert.equal(h.requests.length,4);
@@ -342,7 +342,7 @@ test('overlapping manual writes reconcile only after the last outcome settles',a
 });
 test('manual write ownership covers the response body and lost acknowledgement',async()=>{
   const h=manualLedgerHarness();await seedManualLedger(h);const body=deferred();
-  const writing=h.context.api('/api/admin/candidates/1/restore',{method:'POST'}),write=h.requests.at(-1);
+  const writing=h.context.api('/api/v1/candidates/1/restore',{method:'POST'}),write=h.requests.at(-1);
   write.resolve({ok:true,status:200,json:()=>body.promise});await tick();
   const before=h.requests.length,waiting=h.context.loadManualActions();assert.equal(h.requests.length,before);await waiting;
   const rejected=assert.rejects(writing,/Lost acknowledgement/);body.reject(Error('Lost acknowledgement'));await rejected;
@@ -391,7 +391,7 @@ test('credential replacement holds manual write ownership until both attempts se
   await h.flushReconcile();h.reply(h.requests.at(-1),ledgerSnapshot('Removed',false));await tick();assertEmptyLedger(h);
 });
 test('read-only POSTs and unrelated actions do not invalidate a manual ledger GET',async()=>{
-  for(const [method,url] of [['POST','/api/admin/entries/summaries'],['POST','/api/v1/duplicate-candidates'],['POST','/api/admin/matrix/chapter-stats'],['POST','/api/admin/source-repositories/preview'],['POST','/api/admin/tags/review'],['POST','/api/admin/candidates/1/quality'],['GET','/api/admin/maintenance/reset-all-manual-actions'],['GET','/api/admin/manual-groups/group/candidates?q=test']]){
+  for(const [method,url] of [['POST','/api/v1/catalogue/entries/summaries'],['POST','/api/v1/duplicate-candidates'],['POST','/api/v1/matrix/chapter-stats'],['POST','/api/admin/source-repositories/preview'],['POST','/api/v1/tags/review'],['POST','/api/v1/candidates/1/quality'],['GET','/api/admin/maintenance/reset-all-manual-actions'],['GET','/api/admin/manual-groups/group/candidates?q=test']]){
     const h=manualLedgerHarness(),loading=h.context.loadManualActions(),read=h.requests.at(-1),operation=h.context.api(url,{method});
     h.reply(h.requests.at(-1));await operation;h.reply(read,ledgerSnapshot('Saved'));await loading;
     assert.match(h.$('#manualGroupsList').innerHTML,/Saved/);assert.equal(h.$('#manualActionsStatus').hidden,true,url);

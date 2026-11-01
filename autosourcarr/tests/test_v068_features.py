@@ -33,10 +33,13 @@ def test_android_extension_uses_reader_prefix_and_api_key_for_all_requests():
     auth = (src / "BuildAuth.kt").read_text(encoding="utf-8")
     builder = (root / "extension/build-in-container.sh").read_text(encoding="utf-8")
 
-    assert 'set("X-AutoSourcarr-API-Key", AUTOSOURCARR_READER_API_KEY)' in source
+    # Phase 10 (READ-1): the key is the server slot's own setting (slot 1 defaults to a baked legacy key) and is
+    # added per request for that slot's server only.
+    assert 'request.newBuilder().header("X-AutoSourcarr-API-Key", key)' in source
+    assert 'preferences.getString(PREF_READER_KEY, if (slot == 1) AUTOSOURCARR_READER_API_KEY else "")' in source
     assert 'private fun endpoint(path: String)' in source
     assert 'override fun imageRequest(page: Page): Request = GET(requireNotNull(page.imageUrl), headers)' in source
-    assert 'AUTOSOURCARR_API_PREFIX != "/api/v1"' in dto
+    assert 'apiPrefix != "/api/v1"' in dto
     assert 'AUTOSOURCARR_API_PREFIX = "/api/v1"' in auth
     assert 'AUTOSOURCARR_READER_API_KEY = ""' in auth
     assert 'write_auth_config "/api/v1" ""' in builder

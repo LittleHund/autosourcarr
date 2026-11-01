@@ -68,7 +68,7 @@ def test_v069_reader_source_reports_authelia_interception_instead_of_empty_catal
     assert "readerJsonBody(response)" in source
     assert "reader API was intercepted by Authelia" in source
     assert "Bypass only /api/reader/v1/" in source
-    assert 'set("X-AutoSourcarr-API-Key", AUTOSOURCARR_READER_API_KEY)' in source
+    assert 'header("X-AutoSourcarr-API-Key", key)' in source
 
 
 def test_v069_subbed_and_matrix_have_same_filter_controls_and_entry_unbind_actions():

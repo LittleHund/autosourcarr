@@ -21,10 +21,10 @@ class EntryDto(
     val matchCount: Int = 1,
     val metadataComplete: Boolean = true,
 ) {
-    fun toSManga(baseUrl: String) = SManga.create().apply {
+    fun toSManga(baseUrl: String, apiPrefix: String = AUTOSOURCARR_API_PREFIX) = SManga.create().apply {
         url = id.toString()
         title = preferredTitle
-        thumbnail_url = absolute(baseUrl, coverUrl)
+        thumbnail_url = absolute(baseUrl, coverUrl, apiPrefix)
         val renderedDescription = descriptionForExtension.ifEmpty { this@EntryDto.description }
         if (renderedDescription.isNotEmpty()) {
             description = renderedDescription
@@ -149,9 +149,10 @@ fun parseSourcesDto(text: String): SourcesDto {
     return SourcesDto(root["items"].jsonArrayOrEmpty().mapNotNull { it.jsonObjectOrNull()?.toSourceDtoOrNull() })
 }
 
-fun absolute(baseUrl: String, value: String): String {
-    val routed = if (AUTOSOURCARR_API_PREFIX != "/api/v1" && value.startsWith("/api/v1/")) {
-        AUTOSOURCARR_API_PREFIX + value.removePrefix("/api/v1")
+// Each server slot picks its own prefix: /api/reader/v1 when a reader key is set, /api/v1 otherwise.
+fun absolute(baseUrl: String, value: String, apiPrefix: String = AUTOSOURCARR_API_PREFIX): String {
+    val routed = if (apiPrefix != "/api/v1" && value.startsWith("/api/v1/")) {
+        apiPrefix + value.removePrefix("/api/v1")
     } else {
         value
     }

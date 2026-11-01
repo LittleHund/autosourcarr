@@ -18,9 +18,9 @@ async function scenario(kind){
     querySelectorAll:selector=>selector==='.appNav [data-instance-tool]'?[nav]:[],addEventListener(){}};
   const api=async url=>{
     calls.push(url);
-    if(url.startsWith('/api/admin/activity/history'))return {items:[{name:'Retained task',state:'completed',updated_at:'2026-10-18T12:00:00Z'}],total:1,note:'Saved history'};
+    if(url.startsWith('/api/v1/activity/history'))return {items:[{name:'Retained task',state:'completed',updated_at:'2026-10-18T12:00:00Z'}],total:1,note:'Saved history'};
     if(url==='/api/admin/instance/backups')return {items:[],pending_restore:false};
-    if(url==='/api/admin/downloads')return {state:'STOPPED',queue:[],revision:'fixture'};
+    if(url==='/api/v1/downloads')return {state:'STOPPED',queue:[],revision:'fixture'};
     throw Error('Unexpected source/network action '+url);
   };
   const window={AutoSourcarrReimagined:{closeNavigation:()=>closedNavigation++}};
@@ -32,6 +32,6 @@ async function scenario(kind){
   assert.equal(closedNavigation,1,'Close mobile navigation through the shell without changing the selected page');
   assert.equal(node('riInstanceDialog').open,true);
   assert.equal(calls.length,1,'Opening a tool performs only its read endpoint');
-  assert.equal(calls[0],{history:'/api/admin/activity/history?offset=0&limit=50',queue:'/api/admin/downloads',backups:'/api/admin/instance/backups'}[kind]);
+  assert.equal(calls[0],{history:'/api/v1/activity/history?offset=0&limit=50',queue:'/api/v1/downloads',backups:'/api/admin/instance/backups'}[kind]);
 }
 (async()=>{for(const kind of ['history','queue','backups'])await scenario(kind);console.log('Reimagined tools: no legacy Browse side effect; correct read, modal and navigation ownership');})().catch(error=>{console.error(error);process.exitCode=1;});

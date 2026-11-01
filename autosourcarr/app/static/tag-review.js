@@ -27,7 +27,7 @@
     state.selected[side]=null;state.pickers[side]=[];select.replaceChildren();
     byId(`tag${side}Selection`).textContent='Searching saved tags…';updateButtons();
     try{
-      const result=await api(`/api/admin/tags?search=${encodeURIComponent(byId(`tag${side}Search`).value.trim())}&limit=100&offset=0`,{timeoutMs:15000});
+      const result=await api(`/api/v1/tags?search=${encodeURIComponent(byId(`tag${side}Search`).value.trim())}&limit=100&offset=0`,{timeoutMs:15000});
       if(generation!==state.pickerGeneration[side])return;
       state.pickers[side]=result.items||[];
       for(const tag of state.pickers[side]){const option=document.createElement('option');option.value=String(tag.id);option.textContent=label(tag);select.append(option);}
@@ -39,7 +39,7 @@
     if(state.busy||!left||!right||Number(left.id)===Number(right.id))return;
     state.busy=true;++state.generation;updateButtons();
     try{
-      await api('/api/admin/tags/review',{method:'POST',body:JSON.stringify({left_id:Number(left.id),right_id:Number(right.id),decision}),noMutationRefresh:true});
+      await api('/api/v1/tags/review',{method:'POST',body:JSON.stringify({left_id:Number(left.id),right_id:Number(right.id),decision}),noMutationRefresh:true});
       toast(decision==='same'?'Tag meanings matched':decision==='different'?'Tags will stay separate':'Tag decision cleared');
       await load();await loadCatalog();
     }catch(error){toast('Unable to save tag decision: '+error.message);}
@@ -81,8 +81,8 @@
     // Paint durable manual decisions as soon as they arrive, independently of
     // the more expensive suggestions request. Both retain the same generation.
     await Promise.all([
-      loadList('/api/admin/tags/reviews','tagDecisions',true),
-      loadList('/api/admin/tags/suggestions','tagSuggestions',false)
+      loadList('/api/v1/tags/reviews','tagDecisions',true),
+      loadList('/api/v1/tags/suggestions','tagSuggestions',false)
     ]);
   }
   async function loadCatalog(reset=false){
@@ -90,7 +90,7 @@
     const generation=++state.catalogGeneration,query=byId('tagCatalogSearch').value.trim(),offset=state.offset;
     byId('tagCatalogStatus').textContent='Loading tags…';
     try{
-      const result=await api(`/api/admin/tags?search=${encodeURIComponent(query)}&limit=50&offset=${offset}`,{timeoutMs:15000});
+      const result=await api(`/api/v1/tags?search=${encodeURIComponent(query)}&limit=50&offset=${offset}`,{timeoutMs:15000});
       if(generation!==state.catalogGeneration)return;
       const rows=result.items||[];state.total=Number(result.total||0);
       if(state.total>0&&offset>=state.total){state.offset=Math.floor((state.total-1)/50)*50;return loadCatalog();}
@@ -122,7 +122,7 @@
   for(const [id,decision] of [['tagSame','same'],['tagDifferent','different'],['tagClear','clear']])byId(id).onclick=()=>decide(state.selected.Left,state.selected.Right,decision);
   byId('reindexTags').onclick=async event=>{
     const el=event.currentTarget;el.disabled=true;
-    try{const result=await api('/api/admin/tags/reindex',{method:'POST',noMutationRefresh:true,timeoutMs:15000});toast(result.already_running?'Tag indexing is already running':'Tag indexing queued. Progress is available in Tasks.');window.loadTasks?.().catch(()=>{});}
+    try{const result=await api('/api/v1/tags/reindex',{method:'POST',noMutationRefresh:true,timeoutMs:15000});toast(result.already_running?'Tag indexing is already running':'Tag indexing queued. Progress is available in Tasks.');window.loadTasks?.().catch(()=>{});}
     catch(error){toast('Unable to queue tag indexing: '+error.message);}finally{el.disabled=false;}
   };
 
@@ -133,7 +133,7 @@
     const request={id:Number(id)};entryLoads.set(target,request);
     const current=()=>!signal?.aborted&&target.isConnected&&entryLoads.get(target)===request&&Number(target.dataset.entryTags)===Number(id);
     try{
-      const result=await api(`/api/admin/entries/${Number(id)}/tags`,{signal,timeoutMs:10000,suppressClientError:true});
+      const result=await api(`/api/v1/entries/${Number(id)}/tags`,{signal,timeoutMs:10000,suppressClientError:true});
       if(!current())return;
       const title=document.createElement('h3');title.textContent=metadataTarget?'Tags':'Tags & gallery metadata';target.replaceChildren(title);
       const basis=document.createElement('p');basis.className='muted';basis.textContent=result.metadata_basis==='source'?'Metadata from saved source records and parsed gallery titles. An external database match is not required.':'Saved tags and gallery details from matched source records.';target.append(basis);

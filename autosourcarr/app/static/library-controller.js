@@ -22,7 +22,7 @@
     const own=++generation;request?.abort();const controller=new AbortController();request=controller;
     byId('subbedCount').textContent='Loading library…';byId('riLibraryNext').disabled=true;
     try{
-      const result=await api('/api/admin/library?'+new URLSearchParams({...values,cursor}),{signal:controller.signal,timeoutMs:15000,suppressClientError:true});
+      const result=await api('/api/v1/library?'+new URLSearchParams({...values,cursor}),{signal:controller.signal,timeoutMs:15000,suppressClientError:true});
       if(own!==generation||controller.signal.aborted)return;
       payload=result;
       const stats=Object.fromEntries(result.entries.map(row=>[String(row.id),row.library_stats||{}]));

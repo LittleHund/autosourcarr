@@ -30,9 +30,9 @@
     if(!show('Library & serving profile'))return;
     const own=generation;
     try{
-      const entry=await api('/api/admin/entries/'+id,{signal:read.signal,suppressClientError:true});
-      const controls=await api('/api/admin/library/'+id+'/controls',{signal:read.signal,suppressClientError:true});
-      const saved=await api('/api/admin/profiles/'+id,{signal:read.signal,suppressClientError:true});
+      const entry=await api('/api/v1/catalogue/entries/'+id,{signal:read.signal,suppressClientError:true});
+      const controls=await api('/api/v1/library/'+id+'/controls',{signal:read.signal,suppressClientError:true});
+      const saved=await api('/api/v1/profiles/'+id,{signal:read.signal,suppressClientError:true});
       if(own!==generation||!dialog.open)return;managed={...controls,id};profile=saved;
       renderManage(entry);
     }catch(error){if(own===generation&&!read.signal.aborted)status(error.message);}
@@ -63,13 +63,13 @@
   async function openQueue(){
     if(!show('Download queue'))return;
     const own=generation;
-    try{const result=await api('/api/admin/downloads',{signal:read.signal,suppressClientError:true});if(own===generation){queue=result;renderQueue();}}
+    try{const result=await api('/api/v1/downloads',{signal:read.signal,suppressClientError:true});if(own===generation){queue=result;renderQueue();}}
     catch(error){if(own===generation&&!read.signal.aborted)status(error.message);}
   }
   async function openHistory(){
     if(!show('Activity history'))return;
     async function load(offset=0){
-      const own=generation,result=await api('/api/admin/activity/history?offset='+offset+'&limit=50',{signal:read.signal,suppressClientError:true});
+      const own=generation,result=await api('/api/v1/activity/history?offset='+offset+'&limit=50',{signal:read.signal,suppressClientError:true});
       if(own!==generation)return;
       body.innerHTML='<p class="muted">'+esc(result.note)+'</p><div class="riTableScroll"><table><thead><tr><th>Task</th><th>Outcome</th><th>Updated</th></tr></thead><tbody>'+result.items.map(row=>`<tr><td><strong>${esc(row.name)}</strong><br>${esc(row.message||row.error||'')}</td><td>${esc(row.interrupted?'Interrupted':row.cancel_requested?'Cancelled':row.state)}</td><td>${esc(new Date(row.updated_at).toLocaleString())}</td></tr>`).join('')+'</tbody></table></div><div id="riHistoryPager" class="riToolActions"></div>';
       if(offset>0)byId('riHistoryPager').append(action('Previous history',async()=>load(Math.max(0,offset-50))));
@@ -79,15 +79,16 @@
     await load();
   }
   function renderQueue(){
-    body.innerHTML='<p class="muted">This is the main Suwayomi download queue. Pause and resume affect its whole downloader. Removing a queued chapter keeps any downloaded files.</p><div class="riToolActions" id="riQueueActions"></div><div class="riTableScroll"><table><thead><tr><th>Manga / chapter</th><th>State</th><th>Progress</th><th>Queue controls</th></tr></thead><tbody id="riQueueRows"></tbody></table></div>';
+    body.innerHTML='<p class="muted">This is AutoSourcarr\'s own download queue: chapters are saved as CBZ files in the library folder'+(queue.library_root?' ('+esc(queue.library_root)+')':'')+'. Each source downloads one chapter at a time. Pause and resume affect the whole downloader; removing a queued chapter keeps any downloaded files.</p><div class="riToolActions" id="riQueueActions"></div><div class="riTableScroll"><table><thead><tr><th>Manga / chapter</th><th>State</th><th>Progress</th><th>Queue controls</th></tr></thead><tbody id="riQueueRows"></tbody></table></div>';
     const update=async result=>{queue=result;renderQueue();};
-    byId('riQueueActions').append(action(queue.state==='STARTED'?'Pause all downloads':'Resume downloads',()=>api('/api/admin/downloads',{method:'POST',body:JSON.stringify({action:queue.state==='STARTED'?'stop':'start',revision:queue.revision}),timeoutMs:45000}),{after:update}));
-    byId('riQueueActions').append(action('Refresh queue',()=>api('/api/admin/downloads'),{after:update}));
+    byId('riQueueActions').append(action(queue.state==='STARTED'?'Pause all downloads':'Resume downloads',()=>api('/api/v1/downloads',{method:'POST',body:JSON.stringify({action:queue.state==='STARTED'?'stop':'start',revision:queue.revision}),timeoutMs:45000}),{after:update}));
+    byId('riQueueActions').append(action('Refresh queue',()=>api('/api/v1/downloads'),{after:update}));
     for(const row of queue.queue){
-      const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${esc(row.manga?.title||'Unknown manga')}</strong><br>${esc(row.chapter?.name||'Chapter')}</td><td>${esc(row.state)}</td><td>${Math.round(Number(row.progress||0)*100)}%</td><td></td>`;
+      const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${esc(row.manga?.title||'Unknown manga')}</strong><br>${esc(row.chapter?.name||'Chapter')}${row.source?.name?' · '+esc(row.source.name):''}</td><td>${esc(row.state)}${row.error?'<br><span class="muted">'+esc(row.error)+'</span>':''}</td><td>${Math.round(Number(row.progress||0)*100)}%</td><td></td>`;
       const controls=tr.lastElementChild;
-      if(Number(row.position)>0)controls.append(action('Move to top',()=>api('/api/admin/downloads',{method:'POST',body:JSON.stringify({action:'move',revision:queue.revision,chapter_id:row.chapter.id,to:0}),timeoutMs:45000}),{after:update}));
-      controls.append(action('Remove',()=>api('/api/admin/downloads',{method:'POST',body:JSON.stringify({action:'remove',revision:queue.revision,chapter_id:row.chapter.id}),timeoutMs:45000}),{after:update}));
+      if(row.state==='ERROR')controls.append(action('Retry',()=>api('/api/v1/downloads',{method:'POST',body:JSON.stringify({action:'retry',revision:queue.revision,chapter_id:row.chapter.id}),timeoutMs:45000}),{after:update}));
+      if(Number(row.position)>0)controls.append(action('Move to top',()=>api('/api/v1/downloads',{method:'POST',body:JSON.stringify({action:'move',revision:queue.revision,chapter_id:row.chapter.id,to:0}),timeoutMs:45000}),{after:update}));
+      controls.append(action('Remove',()=>api('/api/v1/downloads',{method:'POST',body:JSON.stringify({action:'remove',revision:queue.revision,chapter_id:row.chapter.id}),timeoutMs:45000}),{after:update}));
       byId('riQueueRows').append(tr);
     }
     status(`${queue.queue.length} queued chapters · ${queue.state==='STARTED'?'Downloader running':'Downloader paused'}`);
