@@ -43,8 +43,13 @@ message BackupManga {
   repeated string genre = 7;
   int32 status = 8;
   optional string thumbnail_url = 9;
+  // Present in the Mihon model (v0.21.3 per the backup-format watch); read but not used by the import.
+  optional string custom_cover = 10;
+  optional int64 last_update = 11;
+  optional int64 last_init = 12;
   int64 date_added = 13;
   int32 viewer = 14;
+  optional int32 flags = 15;
   repeated BackupChapter chapters = 16;
   repeated int64 categories = 17;
   repeated BackupTracking tracking = 18;
