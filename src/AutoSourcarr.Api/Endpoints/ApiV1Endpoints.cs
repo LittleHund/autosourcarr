@@ -159,6 +159,8 @@ public sealed class ApiV1Services
     public SourceRepairServices? SourceRepair { get; init; }
     /// <summary>The /source-maintenance repair routes: raw-code storage, runner check, feedback folder (phase 6); null answers 503 where needed.</summary>
     public RepairV1Services? Repair { get; init; }
+    /// <summary>The main-library (Subbed) route (phase 6); null answers 503.</summary>
+    public LibraryV1Services? Library { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -525,6 +527,7 @@ public static class ApiV1Endpoints
         SourceInventoryV1Endpoints.Map(group, services, json);
         SourceRepairV1Endpoints.Map(group, services, json, services.SourceRepair);
         RepairV1Endpoints.Map(group, services, json);
+        LibraryV1Endpoints.Map(group, services, json);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

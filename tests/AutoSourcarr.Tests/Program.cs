@@ -38,6 +38,7 @@ AutoSourcarr.Tests.Api.RepairV1EndpointsTests.Register(suite);
 AutoSourcarr.Tests.ExtensionIndexTests.Register(suite);
 AutoSourcarr.Tests.SourceOrphanTests.Register(suite);
 AutoSourcarr.Tests.Sources.HostRawInstalledSourcesTests.Register(suite);
+AutoSourcarr.Tests.Sources.SuwayomiLibraryTests.Register(suite);
 SchemaStampTests.Register(suite);
 DatabaseBlobTests.Register(suite);
 RepairIsolationTests.Register(suite);

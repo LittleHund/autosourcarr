@@ -51,6 +51,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
     private Task? _healthMonitor;
     private AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher? _autoRepair;
     private Task? _autoRepairLoop;
+    private AutoSourcarr.Core.Sources.Library.SuwayomiLibrary? _library;
     private AutoSourcarr.Core.Sources.Inventory.HostRawInstalledSources? _rawInstalled;
     private AutoSourcarr.Core.Repair.SourceRawService? _raws;
     private AutoSourcarr.Core.Repair.RawRepositoryCache? _rawRepositories;
@@ -293,6 +294,8 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             }
             owner._healthMonitor = Task.Run(() => owner._health.RunMonitorAsync(error => owner.Errors.Record("Source health", error.Message, "source-health-monitor"),
                 owner._healthStop.Token));
+            owner._library = new AutoSourcarr.Core.Sources.Library.SuwayomiLibrary(owner.Database, owner.Preferences, () => owner.Settings,
+                () => owner._main, owner.Io, error => owner.Logs.Record("Main library", error.Message));
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
@@ -312,6 +315,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     Domain = domainRepair,
                     RecordError = error => owner.Errors.Record("Source repair", error.Message, "source-repair|" + error.GetType().Name)
                 },
+                Library = new LibraryV1Services { Library = owner._library },
                 Repair = new RepairV1Services
                 {
                     MaintenanceRoot = maintenanceRoot,
@@ -339,6 +343,9 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
                     SourceEngineCapabilityIdentity.ConfiguredExternal(startup.Settings.MainSuwayomiUrl,
                         startup.Settings.MainSuwayomiUsername, startup.Settings.MainSuwayomiPassword), owner.Privacy, "main");
             }
+            try { await owner._library.RestoreDisplaySnapshotAsync(cancellationToken).ConfigureAwait(false); }
+            catch (Exception error) when (error is not OperationCanceledException)
+            { owner.Logs.Record("Main library", "Saved library snapshot could not be read (" + error.GetType().Name + ")."); }
             cancellationToken.ThrowIfCancellationRequested();
             owner._writer = owner.WriteLogsAsync();
             owner._sourceWatch = owner.WatchSourceAsync();
@@ -411,6 +418,15 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         }
     }
 
+    /// <summary>0.4.5 library_status: cache only (health never waits on main Suwayomi or the disk walk); refreshed in the background.</summary>
+    private JsonObject LibraryStatus()
+    {
+        if (_library is not { } library) return new JsonObject { ["ok"] = null, ["checked"] = false };
+        var result = library.CachedLibraryStatus();
+        library.ScheduleStatusRefresh();
+        return result;
+    }
+
     /// <summary>
     /// /api/v1/health for the Status page (port of main.py health). Databases, counts and errors are real; the
     /// source engine is checked (phase 4); main Suwayomi and translation checks belong to phase 7, so they are reported
@@ -439,7 +455,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
             ["source_host"] = source,
             ["main_suwayomi"] = NotChecked(settings.MainSuwayomiUrl, !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl), "7"),
             ["translation"] = NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "7"),
-            ["library"] = new JsonObject { ["ok"] = null, ["checked"] = false },
+            ["library"] = LibraryStatus(),
             ["stats"] = stats,
             ["errors"] = new JsonObject
             {
@@ -595,6 +611,7 @@ internal sealed class ApplicationRuntime : IAsyncDisposable
         if (_health is not null) await Attempt("Source health", () => _health.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_sourcePreferences is not null) await Attempt("Source preferences", () => _sourcePreferences.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_publicFetcher is not null) await Attempt("Public fetcher", () => _publicFetcher.DisposeAsync().AsTask()).ConfigureAwait(false);
+        if (_library is not null) await Attempt("Main library", () => _library.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_mainCapabilities is not null) await Attempt("Main observations", () => _mainCapabilities.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_main is not null) await Attempt("Main transport", () => _main.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_source is not null) await Attempt("Source lifetime", () => _source.DisposeAsync().AsTask()).ConfigureAwait(false);
