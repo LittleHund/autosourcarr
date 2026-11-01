@@ -171,6 +171,28 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | UI pages of this phase | done: matching review, duplicates, manual groups, mixed entries, instance tools (workbench, history with actor), policy simulator; `scripts/check-v1-matching-paths.sh` strict |
 | Audit fixes (fresh-agent audit) | 4 high, 4 medium, 5 low: all fixed except split-path atomicity (merges only) |
 
+### Phase 9 (imports, metadata, sharing), ticked 2026-11-01
+
+| Row | Result |
+| --- | --- |
+| Backup parser (PIPE-9) | done: hand-maintained `Imports/Backup/MihonBackup.proto` (Google.Protobuf, field numbers from Mihon `@ProtoNumber`), MihonBackupReader (gzip or raw, 64 MiB caps, one decode at a time, unknown/fork fields ignored, version detection tachiyomi-legacy … mihon-0.21); `scripts/mihon-backup-watch.py` compares the latest Mihon release with the .proto (probe step; v0.21.3 added BackupManga 10–12, 15, now covered) |
+| `backup_import.py` → Imports | done |
+| Imports → ImportRuns / ImportResolution (97 methods) | done except the exact-thumbnail tie-break (Imaging, phase 10), machine translation (10) and the import diagnostic context (per-row diagnostics instead); a found record owned by another entry is left for duplicate review instead of merged |
+| Latest click wins, fallback search | done: decision revisions guard every write; Match claim + remembered match + rejection lift in one transaction; label-free fallback queries |
+| Crash safety | done: interrupted resolving/retrying rows and running runs resume at startup; shutdown keeps runs resumable, a person's Cancel ends them |
+| Merge-log recheck after reset | done: after the reset rebuild, remembered manual matches are restored, other targets re-proven or reopened (never merged) |
+| ImportEndpoints (14 routes) | done under `/api/v1` (+ recheck-after-reset job, suwayomi-plan); import resets need preview + confirm token |
+| Suwayomi import plan → entries (from phase 7) | done: import kind "suwayomi" through the same pipeline |
+| Per-field official-first metadata with overrides | done: MetadataChooser (official sources → AniList/MangaUpdates/MangaDex → others by health/priority), overrides win and are logged with the actor; `/api/v1/entries/{entryId}/metadata`; entry page uses it |
+| Provider identity in matching (from phase 8) | done: MetadataIdentityResolver (cached, bounded, failures not cached) feeds identity_links; different ids from one provider block automatic merges and imports |
+| Sharing (portable identity, merge/split) | done: versioned header (format_version 2, min_reader_version, min_reader_app_version, app_version, schema_version), exact "Version mismatch: version X required", legacy files read; imported choices never override local Separate/manual decisions (explicit admin review may split a manual match, as 0.4.5) |
+| CatalogueSharingEndpoints (14 routes) | done under `/api/v1` (+ identity review list/read/save, `/api/v1/compatibility`) |
+| Compatibility list (PIPE-4) | done: `Compatibility/compatibility.json` (share format, extension API, profile format; schema versions computed), `scripts/print-compatibility.py --check` |
+| MaintenanceEndpoints refresh-feeds, refresh-metadata, discover-additional; subbed search-all, repair-unmatched (moved) | done as jobs under `/api/v1` |
+| Done when | sample backups of every supported version (9 fixtures: tachiyomi-legacy, tachiyomi, mihon 0.16, 0.17, 0.19, 0.20, 0.21, next-format probe, fork) import end to end; crash tests leave no stuck rows (C# tests, CI) |
+| UI pages of this phase | done: imports, sharing, identity review, entry metadata, Connections "Create entries" |
+| Audit fixes (fresh-agent audit) | 16 findings: all fixed |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
