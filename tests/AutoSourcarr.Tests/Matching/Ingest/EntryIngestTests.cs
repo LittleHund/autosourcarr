@@ -126,10 +126,12 @@ public static class EntryIngestTests
             policies.Write(new MatchingRuleKey("source", "2", "external"), new JsonObject { ["enabled"] = false, ["checks"] = new JsonObject() }, revision,
                 DecisionActor.User("owner"), "no automatic matching from Beta");
             Check.Equal("policy.write", setup.Log.Kinds[^1]);
-            var blocked = setup.Ingest.IngestManga("2", MatchingFixtures.Manga(22, "Kaguya-sama: Love Is War", "Aka Akasaka"));
-            Check.True(blocked.EntryId != anchor, blocked.Reason);
+            // Allowed first: once the blocked record has its own same-titled entry, two equal candidates are ambiguous and
+            // automation correctly refuses to choose.
             var allowed = setup.Ingest.IngestManga("3", MatchingFixtures.Manga(33, "Kaguya-sama - Love is War", "Akasaka Aka"));
             Check.Equal(anchor, allowed.EntryId ?? 0);
+            var blocked = setup.Ingest.IngestManga("2", MatchingFixtures.Manga(22, "Kaguya-sama: Love Is War", "Aka Akasaka"));
+            Check.True(blocked.EntryId != anchor, blocked.Reason);
         });
 
         suite.Add("matching profiles: presets keep the 0.4.5 revision rules and record changes", () =>
