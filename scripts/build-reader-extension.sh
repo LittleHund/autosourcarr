@@ -80,6 +80,8 @@ fi
 (
   cd "$work"
   export AUTOSOURCARR_VERSION="$version" AUTOSOURCARR_EXTENSION_BASE_URL="https://autosourcarr.invalid"
+  # Keiyoushi's spotless check formats module sources its own way; format the staged copy (not our sources) first.
+  ./gradlew --no-daemon -q src:all:autosourcarr:spotlessApply
   ./gradlew --no-daemon -q src:all:autosourcarr:assembleRelease
 )
 cleanup
