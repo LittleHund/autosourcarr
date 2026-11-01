@@ -3,7 +3,7 @@ ProGuard, version 7.10.0
 Validated Tachiyomi/Mihon extension APK: /home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build/outputs/apk/release/tachiyomi-all.autosourcarr-v1.4.4005.apk
 OK: JVM extension JAR structure checks passed
 File: tachiyomi-all.autosourcarr-v1.4.4005.jar
-Size: 100780 bytes
+Size: 100832 bytes
 JVM classes: 33
-SHA-256: 15777ef35ea85621f26f2a10d0979b158983d9cc9f3b4d530ab33b7d4bd5627c
+SHA-256: b45ace4430fbce765fad80c589ec2b59705c31a856f5ae7f8abf834824ed9be2
 Could not read the APK signing fingerprint.

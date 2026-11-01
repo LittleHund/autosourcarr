@@ -1,0 +1,26 @@
+FAIL catalogue host: background cache fill holds storage until physical completion
+System.InvalidOperationException: Condition failed
+   at AutoSourcarr.Tests.Check.True(Boolean value, String message) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 61
+   at AutoSourcarr.Tests.CatalogueHostTests.CacheStop() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs:line 166
+   at AutoSourcarr.Tests.CatalogueHostTests.CacheStop() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs:line 166
+   at AutoSourcarr.Tests.CatalogueHostTests.<>c.<Register>b__5_5() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs:line 34
+   at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 29
+::error title=catalogue host%3A background cache fill holds storage until physical completion::System.InvalidOperationException%3A Condition failed | at AutoSourcarr.Tests.Check.True(Boolean value%2C String message) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 61 | at AutoSourcarr.Tests.CatalogueHostTests.CacheStop() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs%3Aline 166 | at AutoSourcarr.Tests.CatalogueHostTests.CacheStop() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs%3Aline 166 | at AutoSourcarr.Tests.CatalogueHostTests.<>c.<Register>b__5_5() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Catalogue/CatalogueHostTests.cs%3Aline 34 | at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 29
+PASS catalogue host: failed cache construction releases app resources without replacing data
+PASS native media lifecycle:34 original selections use the actual app structural owner
+PASS native media lifecycle:split retains pages history and scan provenance
+PASS native media lifecycle:current manual change and cancellation are rechecked at writer admission
+PASS native media lifecycle:post-commit cache error retains exact recoverable journal
+PASS native media lifecycle:cancelled admitted split finishes its physical cross-file work
+PASS native media lifecycle:ambiguous native rows and nested sessions cannot grant mutation
+PASS native media lifecycle:owner construction never runs automatic changes
+PASS native gallery lifecycle:animation separates from still with real cached chapter replay
+PASS native gallery lifecycle:all manual authority fences retain current owners
+PASS native gallery lifecycle:explicit profiles and disabled combining keep animation identity
+PASS native gallery lifecycle:optimistic metadata conflict defers instead of splitting
+PASS native gallery lifecycle:committed split cancellation drains physical replay
+PASS native gallery lifecycle:post-commit error retains exact journal recovery
+PASS native gallery lifecycle:paged native replay retains every candidate and rejection
+PASS native hydration:actual HTTP detail and current manual title native tags and hints persist
+PASS native hydration:idle request promotes in place without duplicate source work
+PASS native hydration:source capacity is shared while whole-task capacity stays independent
