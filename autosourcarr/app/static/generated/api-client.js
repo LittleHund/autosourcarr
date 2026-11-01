@@ -349,7 +349,7 @@
        */
       clearErrors(body, options) { return call('POST', '/api/v1/errors/clear', body, options); },
       /**
-       * Remove the manual main title and manual alternate titles of an entry; its main title returns to the most-used title of its records.
+       * Remove the manual main title and manual alternate titles of an entry (owner or admin); its main title returns to the most-used title of its records.
        * DELETE /api/v1/entries/{entryId}/manual-titles
        * @param {string} entryId
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -461,7 +461,7 @@
        */
       deleteAccount(accountId, options) { return call('DELETE', `/api/v1/accounts/${encodeURIComponent(accountId)}`, undefined, options); },
       /**
-       * Delete an entry and suppress its source records so a refresh does not bring it back. Refused for main-library subscriptions unless the body says {force: true}.
+       * Delete an entry and suppress its source records so a refresh does not bring it back (owner or admin). Refused for main-library subscriptions unless the body says {force: true}.
        * DELETE /api/v1/entries/{entryId}
        * @param {string} entryId
        * @param {JsonObject} body
@@ -1200,7 +1200,7 @@
        */
       resetCovers(options) { return call('POST', '/api/v1/maintenance/reset-covers', undefined, options); },
       /**
-       * Database reset as an exclusive job (body {confirm: true}): clears the rebuildable catalogue, keeps manual decisions and subscriptions, and restores manual matches.
+       * Database reset as an exclusive job (body {confirm: true}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.
        * POST /api/v1/maintenance/reset-database
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1460,7 +1460,7 @@
        */
       testRepairProvider(options) { return call('POST', '/api/v1/source-maintenance/provider/test', undefined, options); },
       /**
-       * Split every automatic source attachment off an entry (each to its own entry) and keep them apart; manual, imported, split and locked records stay.
+       * Split every automatic source attachment off an entry (each to its own entry) and keep them apart (owner or admin); manual, imported, split and locked records stay.
        * POST /api/v1/entries/{entryId}/unbind-auto-matches
        * @param {string} entryId
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`

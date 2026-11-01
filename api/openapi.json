@@ -1259,7 +1259,7 @@
     "/api/v1/entries/{entryId}": {
       "delete": {
         "operationId": "deleteCatalogueEntry",
-        "summary": "Delete an entry and suppress its source records so a refresh does not bring it back. Refused for main-library subscriptions unless the body says {force: true}.",
+        "summary": "Delete an entry and suppress its source records so a refresh does not bring it back (owner or admin). Refused for main-library subscriptions unless the body says {force: true}.",
         "parameters": [
           {
             "name": "entryId",
@@ -1287,6 +1287,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
                 }
               }
             }
@@ -1552,7 +1562,7 @@
     "/api/v1/entries/{entryId}/manual-titles": {
       "delete": {
         "operationId": "clearManualTitles",
-        "summary": "Remove the manual main title and manual alternate titles of an entry; its main title returns to the most-used title of its records.",
+        "summary": "Remove the manual main title and manual alternate titles of an entry (owner or admin); its main title returns to the most-used title of its records.",
         "parameters": [
           {
             "name": "entryId",
@@ -1570,6 +1580,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
                 }
               }
             }
@@ -1725,6 +1745,16 @@
               }
             }
           },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Error",
             "content": {
@@ -1872,7 +1902,7 @@
     "/api/v1/entries/{entryId}/unbind-auto-matches": {
       "post": {
         "operationId": "unbindAutomaticMatches",
-        "summary": "Split every automatic source attachment off an entry (each to its own entry) and keep them apart; manual, imported, split and locked records stay.",
+        "summary": "Split every automatic source attachment off an entry (each to its own entry) and keep them apart (owner or admin); manual, imported, split and locked records stay.",
         "parameters": [
           {
             "name": "entryId",
@@ -1890,6 +1920,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
                 }
               }
             }
@@ -2528,7 +2568,7 @@
     "/api/v1/maintenance/reset-database": {
       "post": {
         "operationId": "resetDatabase",
-        "summary": "Database reset as an exclusive job (body {confirm: true}): clears the rebuildable catalogue, keeps manual decisions and subscriptions, and restores manual matches.",
+        "summary": "Database reset as an exclusive job (body {confirm: true}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.",
         "requestBody": {
           "required": true,
           "content": {
