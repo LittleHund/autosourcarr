@@ -26,7 +26,7 @@ public static class CatalogueMaintenanceTests
             var log = new InMemoryDecisionLog();
             var manual = new ManualDecisions(database, new object(), log, new ManualFakeCatalogueOperations(database));
             manual.CaptureExistingManualMatches();
-            database.Write(DatabaseFile.Catalog, c => c.Execute("INSERT INTO browse_cache(cache_key,mode,page,entry_ids_json,updated_at) VALUES('k','POPULAR',1,$ids,'x')",
+            database.Write(DatabaseFile.Catalog, c => c.Execute("INSERT INTO browse_cache(cache_key,mode,page,entry_ids_json,updated_at,last_accessed) VALUES('k','POPULAR',1,$ids,'x','x')",
                 ("$ids", "[" + entry + "," + entry + "]")));
             var maintenance = new CatalogueMaintenance(database, new object(), log, manual);
             var result = maintenance.DeleteEntry(entry, Owner);
