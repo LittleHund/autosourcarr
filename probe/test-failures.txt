@@ -1,0 +1,26 @@
+FAIL connections integration: Suwayomi one-time import stores a plan awaiting matching and does not run twice
+System.InvalidOperationException: Read 3 manga from 2 sources; Stored; creating catalogue entries waits for matching and ingest (conversion phase 8).
+   at AutoSourcarr.Tests.Check.True(Boolean value, String message) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 61
+   at AutoSourcarr.Tests.Connections.IntegrationConnectionTests.<>c.<Register>b__1_13() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Connections/IntegrationConnectionTests.cs:line 426
+   at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs:line 29
+::error title=connections integration%3A Suwayomi one-time import stores a plan awaiting matching and does not run twice::System.InvalidOperationException%3A Read 3 manga from 2 sources; Stored; creating catalogue entries waits for matching and ingest (conversion phase 8). | at AutoSourcarr.Tests.Check.True(Boolean value%2C String message) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 61 | at AutoSourcarr.Tests.Connections.IntegrationConnectionTests.<>c.<Register>b__1_13() in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Connections/IntegrationConnectionTests.cs%3Aline 426 | at AutoSourcarr.Tests.TestSuite.Run(IReadOnlyList`1 filters) in /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/TestSuite.cs%3Aline 29
+PASS suwayomi change feed: live subscriptions deliver download and chapter changes, answer pings and reconnect
+PASS suwayomi change feed: polls the library when subscriptions are unavailable and reports membership, chapter and download changes
+PASS solver connection: FlareSolverr and Byparr pass against stub /health and / answers; wrong body, 5xx, bad address and no answer fail
+PASS solver connection: the host's AUTOSOURCARR_SOLVERS lists enabled solver connections only (valid address, clamped timeout, no duplicates)
+PASS source webview: the session route is admin-only, checks addresses and the source's website; the socket needs Origin and a one-time ticket
+PASS source webview: the WebSocket relays host frames and events, forwards checked input only, and closes the host session
+PASS source webview: an idle session is closed with a reason and the host session is closed
+NOTE source host jar not set; the source host WebView checks run in the CI probe.
+PASS source host: interactive webview streams frames, takes a click and a navigation, and the page's cookie lands in the host cookie jar
+NOTE source host jar not set; the source host WebView checks run in the CI probe.
+PASS source host: external solver fallback (built-in WebView off) uses only the stub solver's cookies and user agent, then its per-domain cache
+PASS schema stamp: new files get application_id ASC1 and user_version 1; reopen keeps them
+PASS schema stamp: a newer revision or a foreign application_id is refused unchanged
+PASS storage blobs: TEXT and BLOB stream exact UTF8 bytes with Int64 row IDs
+PASS storage blobs: read-only identifiers are not SQL and writes never change bytes
+PASS storage blobs: escaped stream and callback failure close the actual handle
+PASS storage blobs: async callbacks and boxed awaitables cannot escape a lease
+PASS storage blobs: cross-thread and asynchronous stream IO are refused
+PASS storage blobs: same-row mutation expires the handle and outer write rolls back
+PASS storage blobs: missing/non-streamable cells fail without blocking later work
