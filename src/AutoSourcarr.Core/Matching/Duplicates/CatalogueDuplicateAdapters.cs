@@ -16,7 +16,19 @@ namespace AutoSourcarr.Core.Catalogue.Structure
             {
                 if (_database.HasCurrentThreadSession(DatabaseFile.Catalog) || _database.HasCurrentThreadSession(DatabaseFile.Origins))
                     throw new InvalidOperationException("Entry merges require standalone catalogue work.");
-                return Merge(left, right, reason);
+                // A person's merge (duplicate review, manual group, workbench): manual titles move to the survivor.
+                return Merge(left, right, reason, keepManualTitles: true);
+            }
+        }
+
+        long IDuplicateStructure.MergeEntries(long left, long right, string reason, bool automatic, Action<DatabaseSession, long, long> commit)
+        {
+            ArgumentNullException.ThrowIfNull(commit);
+            lock (_gate)
+            {
+                if (_database.HasCurrentThreadSession(DatabaseFile.Catalog) || _database.HasCurrentThreadSession(DatabaseFile.Origins))
+                    throw new InvalidOperationException("Entry merges require standalone catalogue work.");
+                return Merge(left, right, reason, automatic, commit, keepManualTitles: !automatic);
             }
         }
 

@@ -130,5 +130,47 @@ public static class CatalogueMaintenanceTests
             Check.Equal("unknown", CatalogueMaintenance.MediaMode("Alpha", "Manga; Webtoon"));
             Check.Equal("skipped", maintenance.RepairUnsafeAutomaticSourceAttachments()["skipped"] is null ? "ran" : "skipped");
         });
+
+        suite.Add("catalogue maintenance: a normal reset keeps different-works reviews and manual titles and re-keys them to the restored works", () =>
+        {
+            using var temp = new Sandbox();
+            using var database = ManualFixture.Open(temp);
+            var alpha = ManualFixture.Entry(database, "Alpha"); ManualFixture.Record(database, alpha, "a", 10, "Alpha");
+            var beta = ManualFixture.Entry(database, "Beta"); ManualFixture.Record(database, beta, "b", 20, "Beta");
+            var gone = ManualFixture.Entry(database, "Gone"); ManualFixture.Record(database, gone, "c", 30, "Gone");
+            database.Write(DatabaseFile.Catalog, c =>
+            {
+                c.Execute("INSERT INTO duplicate_reviews(left_entry_id,right_entry_id,decision,reviewed_at) VALUES($a,$b,'not_duplicate','t'),($a,$g,'not_duplicate','t'),($b,$g,'duplicate','t')",
+                    ("$a", alpha), ("$b", beta), ("$g", gone));
+                c.Execute("INSERT INTO titles(entry_id,title,normalized,title_type) VALUES($a,'Alpha Alias','alpha alias','manual')", ("$a", alpha));
+                c.Execute("INSERT INTO preferred_title_overrides(entry_id,title,updated_at) VALUES($a,'Alpha Prime','t')", ("$a", alpha));
+                c.Execute("INSERT INTO manual_separate_records(target_entry_id,source_id,source_manga_id,separate_entry_id_hint,created_at,updated_at) VALUES($a,'b',20,$b,'t','t'),($g,'a',10,NULL,'t','t')",
+                    ("$a", alpha), ("$b", beta), ("$g", gone));
+                return c.Execute("INSERT INTO deleted_source_records(source_id,source_manga_id,deleted_at) VALUES('d',40,'t')");
+            });
+            var log = new InMemoryDecisionLog();
+            var manual = new ManualDecisions(database, new object(), log);
+            var maintenance = new CatalogueMaintenance(database, new object(), log, manual);
+            var cleared = maintenance.ClearTables(full: false, Owner);
+            Check.True(cleared["summary"]!.GetValue<string>().Contains("dropped", StringComparison.Ordinal), "the summary states what a normal reset drops");
+            Check.Equal(0L, ManualFixture.Count(database, "SELECT COUNT(*) FROM entries"));
+            Check.Equal(2L, ManualFixture.Count(database, "SELECT COUNT(*) FROM duplicate_reviews WHERE decision='not_duplicate'"));
+            Check.Equal(0L, ManualFixture.Count(database, "SELECT COUNT(*) FROM duplicate_reviews WHERE decision='duplicate'"));
+            Check.Equal(1L, ManualFixture.Count(database, "SELECT COUNT(*) FROM deleted_source_records"));
+            // The rebuild brings Alpha and Beta back (their records reattach); Gone does not come back.
+            var alpha2 = ManualFixture.Entry(database, "Alpha"); ManualFixture.Record(database, alpha2, "a", 10, "Alpha");
+            var beta2 = ManualFixture.Entry(database, "Beta"); ManualFixture.Record(database, beta2, "b", 20, "Beta");
+            var rekeyed = maintenance.RekeyKeptDecisions();
+            Check.Equal(1, rekeyed["different_works_reviews"]!["kept"]!.GetValue<int>());
+            Check.Equal(1, rekeyed["different_works_reviews"]!["dropped"]!.GetValue<int>());
+            Check.Equal(1, rekeyed["separate_rules"]!["dropped"]!.GetValue<int>());
+            Check.True(manual.IsRejected(alpha2, beta2), "the different-works review follows the restored works");
+            Check.True(manual.IsSeparatedFrom(alpha2, "b", 20), "the separate rule follows the restored work");
+            Check.Equal(0L, ManualFixture.Count(database, "SELECT COUNT(*) FROM manual_separate_records r WHERE NOT EXISTS(SELECT 1 FROM entries e WHERE e.id=r.target_entry_id)"));
+            Check.Equal(1L, ManualFixture.Count(database, "SELECT COUNT(*) FROM titles WHERE title_type='manual' AND title='Alpha Alias' AND entry_id=" + alpha2.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            Check.Equal("Alpha Prime", database.Read(DatabaseFile.Catalog, c => c.Scalar("SELECT preferred_title FROM entries WHERE manual_preferred_title=1") as string));
+            Check.Equal(0L, ManualFixture.Count(database, "SELECT COUNT(*) FROM settings WHERE key='" + CatalogueMaintenance.CarrySetting + "'"));
+            Check.True(maintenance.RekeyKeptDecisions()["pending"]!.GetValue<bool>() == false, "re-keying runs once per reset");
+        });
     }
 }

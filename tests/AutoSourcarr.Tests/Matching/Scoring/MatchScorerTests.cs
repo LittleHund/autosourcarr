@@ -138,6 +138,16 @@ public static class MatchScorerTests
             Check.Equal("agree", MatchScorer.AuthorEvidence(["Koyoharu Gotouge"], ["Gotōge Koyoharu"]).State);
             Check.Equal("neutral", MatchScorer.AuthorEvidence(["Gege Akutami"], ["芥見下々"]).State);
             Check.Equal("conflict", MatchScorer.AuthorEvidence(["Naoki Urasawa"], ["Kim Carnby"]).State);
+            // MAT-2 on every scorer path: each side naming someone the other does not is a different work (adaptations with
+            // other artists, or two different writers who share name parts), never a missing creator or a romanisation.
+            MatchCandidate Named(string title, params string[] creators) => new() { Titles = [title], Authors = creators };
+            Check.True(MatchScorer.Score(Named("The Villainess Is a Marionette", "Fictional Writer Lee"), Named("The Villainess Is a Marionette", "Fictional Writer Park"))
+                .Blockers.Any(item => item.Kind == "author"), "two writers sharing name parts are different people");
+            Check.True(MatchScorer.Score(Named("The Apothecary Diaries", "Natsu Hyuuga", "Nekokurage"), Named("The Apothecary Diaries", "Natsu Hyuuga", "Minoji Kurata"))
+                .Blockers.Any(item => item.Kind == "author"), "adaptations with different artists");
+            Check.True(MatchScorer.Score(Named("The Apothecary Diaries", "Natsu Hyuuga", "Nekokurage"), Named("The Apothecary Diaries", "Hyuuga Natsu")).AutomaticMatch, "fewer creators is not a conflict");
+            Check.True(MatchScorer.SamePerson("Nekokurage", "Neko Kurage") && MatchScorer.SamePerson("Endou Tatsuya", "Tatsuya Endo") && !MatchScorer.SamePerson("Writer Lee", "Writer Park"));
+            Check.True(!MatchScorer.CreatorsDiverge(["Gege Akutami", "Someone"], ["芥見下々"]), "non-Latin names are not judged");
             var json = agreed.ToJson();
             Check.True(json["floor_passed"]!.GetValue<bool>() && json["evidence"] is JsonArray && json["blockers"] is JsonArray);
         });

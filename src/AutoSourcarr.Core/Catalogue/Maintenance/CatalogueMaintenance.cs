@@ -22,17 +22,19 @@ public sealed partial class CatalogueMaintenance
     /// <summary>Settings rows a reset keeps (source attention state, not catalogue data).</summary>
     public static readonly string[] KeptSettings = ["source_human_attention_v1", "source_solver_gate_v1", "source_solver_probe_v1"];
 
-    /// <summary>reset_database: rebuildable catalogue state. Manual decisions, configuration and import history stay.</summary>
+    /// <summary>reset_database: rebuildable catalogue state (see <see cref="NormalResetSummary"/>). duplicate_reviews keeps its
+    /// "different works" rows (re-keyed by <see cref="RekeyKeptDecisions"/>); deleted-record suppression, configuration and import history stay.</summary>
     public static readonly string[] ResetCatalogTables =
     [
         "quality_attempts", "crawl_pending", "due_work", "library_complete_observations", "serving_choices",
-        "duplicate_split_history", "duplicate_review_history", "duplicate_reviews",
+        "duplicate_split_history", "duplicate_review_history",
         "browse_cache", "translation_cache", "metadata_query_cache", "match_history",
-        "deleted_source_records", "deleted_entries_history", "entry_aliases",
+        "deleted_entries_history", "entry_aliases",
         "source_record_tags", "gallery_records",
         "source_variants", "source_matches", "identity_links",
         "source_color_profiles", "titles", "entries", "settings",
         "gallery_layout_candidates", "pending_entry_splits", "pending_entry_merges", "automatic_merge_lineage", "automatic_merge_events",
+        "mixed_entry_findings",
     ];
 
     /// <summary>full_reset_database: everything learned or decided; source_config, source_groups and user_ui_preferences stay.</summary>
@@ -46,7 +48,7 @@ public sealed partial class CatalogueMaintenance
         "display_metadata", "display_metadata_history", "serving_upgrade_policies", "serving_upgrade_history",
         "policy_preview_history", "serving_policy_history",
         "serving_profiles", "library_tracking", "entry_preference_history", "matching_review_actions",
-        "mixed_entry_reviews", "duplicate_split_history", "duplicate_review_history", "duplicate_reviews",
+        "mixed_entry_reviews", "mixed_entry_findings", "duplicate_split_history", "duplicate_review_history", "duplicate_reviews",
         "gallery_layout_candidates", "pending_entry_splits", "pending_entry_merges", "automatic_merge_lineage", "automatic_merge_events",
         "browse_cache", "translation_cache", "metadata_query_cache", "match_history",
         "deleted_source_records", "deleted_entries_history", "entry_aliases",
@@ -111,16 +113,19 @@ public sealed partial class CatalogueMaintenance
         var existing = Read(c => c.QueryAs<string>("SELECT name FROM sqlite_master WHERE type='table'").ToHashSet(StringComparer.Ordinal));
         Write(c =>
         {
+            // A normal reset keeps the id-based manual decisions: remember which records their entries held, for the re-key.
+            if (!full) CaptureKeptDecisions(c);
+            if (!full && existing.Contains("duplicate_reviews")) c.Execute("DELETE FROM duplicate_reviews WHERE decision<>'not_duplicate'");
             foreach (var table in catalog.Where(existing.Contains))
             {
                 if (table == "settings")
-                    c.Execute("DELETE FROM settings WHERE key NOT IN (SELECT value FROM json_each($p0))", P(JsonSerializer.Serialize(KeptSettings)));
+                    c.Execute("DELETE FROM settings WHERE key NOT IN (SELECT value FROM json_each($p0))", P(JsonSerializer.Serialize(full ? KeptSettings : KeptSettings.Append(CarrySetting).ToArray())));
                 else
                     c.Execute("DELETE FROM \"" + table + "\"");
             }
             // AUTOINCREMENT state stays: reader and main-library URLs carry entry and chapter ids, which must never be reused.
             Log(full ? "reset.full" : "reset.database", actor, [], [], full ? "Full reset: catalogue and decisions cleared, configuration kept"
-                : "Database reset: rebuildable catalogue cleared, manual decisions kept");
+                : NormalResetSummary);
             return 0;
         });
         _database.Write(DatabaseFile.Origins, o => { foreach (var table in origins) o.Execute("DELETE FROM \"" + table + "\""); return 0; });
@@ -132,6 +137,7 @@ public sealed partial class CatalogueMaintenance
         _hooks.ResetCaches?.Invoke();
         var result = new JsonObject { ["reset"] = true, ["catalog_tables"] = catalog.Length, ["origin_tables"] = origins.Length };
         if (full) { result["full_reset"] = true; result["configuration_kept"] = true; }
+        else result["summary"] = NormalResetSummary;
         return result;
     }
 
@@ -205,6 +211,8 @@ public sealed partial class CatalogueMaintenance
         {
             report?.Invoke("Restoring manual matches");
             result["manual_matches"] = _manual.RestorePersistentManualMatches(actor);
+            report?.Invoke("Re-attaching kept manual decisions");
+            result["kept_decisions"] = RekeyKeptDecisions();
             result["rebuild_hint_records"] = Integer(hints?["records"]);
         }
         result["subbed_rebrowse_queued"] = seeds.Count > 0 && ScheduleSubscribedRebuild(seeds);

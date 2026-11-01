@@ -13,16 +13,25 @@ public sealed class ScoredAutomaticMatchGate(IAutomaticMatchGate inner, MatchSco
 {
     private static readonly HashSet<string> IdentityBlockers = new(StringComparer.Ordinal) { "edition-colour", "edition-media", "edition-animated", "author", "year", "cover" };
 
+    /// <summary>
+    /// The matching-profile options for one snapshot pair (the profile behind the sources' matching rules: identity-evidence
+    /// requirement, year tolerance, cover distances, weights); null uses the constructor options.
+    /// </summary>
+    public Func<JsonObject, JsonObject, MatchScoringOptions?>? OptionsFor { get; init; }
+
     public AutomaticMatchDecision Decide(JsonObject left, JsonObject right)
     {
         ArgumentNullException.ThrowIfNull(left); ArgumentNullException.ThrowIfNull(right);
         var decision = inner.Decide(left, right);
         if (!decision.Eligible) return decision;
         var (a, b) = Candidates(left, right);
-        var scored = MatchScorer.Score(a, b, options);
+        var effective = OptionsFor?.Invoke(left, right) ?? options;
+        var scored = MatchScorer.Score(a, b, effective);
         var evidence = (JsonObject)decision.Evidence.DeepClone();
         evidence["scorer"] = scored.ToJson();
-        var blocker = scored.Blockers.FirstOrDefault(item => IdentityBlockers.Contains(item.Kind));
+        // A profile that always asks for identity evidence refuses a pair without agreeing creator, year, cover or summary.
+        var blocker = scored.Blockers.FirstOrDefault(item => IdentityBlockers.Contains(item.Kind)
+            || item.Kind == "identity-evidence" && effective?.AlwaysRequireIdentityEvidence == true);
         if (blocker is null) return new(true, decision.Reason, evidence);
         var reason = "scorer: " + blocker.Kind + " (" + blocker.Detail + ")";
         evidence["eligible"] = false; evidence["reason"] = reason;

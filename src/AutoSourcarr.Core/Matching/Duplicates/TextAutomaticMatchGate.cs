@@ -102,7 +102,10 @@ public sealed partial class TextAutomaticMatchGate(Func<AutoSourcarrSettings>? s
         }
 
         var identityOk = trusted.Length != 0 || shared.Length != 0 && distinctive.Length >= 1;
-        var titleOk = exact.Length >= minimumExact && distinctive.Length >= 1;
+        // Exact titles alone may prove a merge only when both sides name creators, or when one exact title is specific
+        // (four or more words / 24+ characters): two short exact titles with a creator missing are not proof.
+        var creatorsKnown = CreatorScore(left, right) is not null;
+        var titleOk = exact.Length >= minimumExact && distinctive.Length >= 1 && (creatorsKnown || exact.Any(Specific));
         var summaryOk = summary >= summaryThreshold && distinctive.Length >= 1;
         var thumbnailOk = thumbs && distinctive.Length >= 1;
         var creatorsAgree = CreatorScore(left, right) is { } agree && agree >= 0.92;
@@ -119,6 +122,9 @@ public sealed partial class TextAutomaticMatchGate(Func<AutoSourcarrSettings>? s
         evidence2["eligible"] = eligible; evidence2["reason"] = reason;
         return new(eligible, reason, evidence2);
     }
+
+    /// <summary>A title specific enough to prove a merge without creators: four or more words, or at least 24 characters.</summary>
+    public static bool Specific(string normalized) => normalized.Length != 0 && (normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= 4 || normalized.Length >= 24);
 
     /// <summary>Released _automatic_title_is_distinctive: three or more words, or at least 18 characters.</summary>
     public static bool Distinctive(string normalized) => normalized.Length != 0 && (normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= 3 || normalized.Length >= 18);

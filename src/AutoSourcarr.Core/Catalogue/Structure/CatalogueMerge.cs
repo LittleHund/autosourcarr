@@ -20,14 +20,42 @@ public sealed partial class CatalogueStructure
         var row = c.Query("SELECT SUM(CASE WHEN locked=1 THEN 1 ELSE 0 END) locked_count,COUNT(*) match_count FROM source_matches WHERE entry_id=$p0 AND active=1", P(id)).Single();
         return (row.Integer("locked_count"), row.Integer("match_count"), Length(c.Scalar("SELECT description FROM entries WHERE id=$p0", P(id)) as string ?? ""), Convert.ToInt64(c.Scalar("SELECT COUNT(*) FROM titles WHERE entry_id=$p0", P(id)), System.Globalization.CultureInfo.InvariantCulture), -id);
     }
-    private long Merge(long left, long right, string reason)
+    /// <summary>The entry a merge of the pair keeps (the more reliable one; ties keep the lower id).</summary>
+    internal static long MergeSurvivor(DatabaseSession c, long left, long right) => Reliability(c, left).CompareTo(Reliability(c, right)) >= 0 ? left : right;
+
+    /// <summary>True when the entry holds manual titles (aliases, a main-title override or title scopes) an automatic merge would drop.</summary>
+    public static bool HasManualTitles(DatabaseSession c, long entryId)
+    {
+        ArgumentNullException.ThrowIfNull(c);
+        return c.Scalar("SELECT 1 FROM titles WHERE entry_id=$p0 AND title_type='manual' LIMIT 1", P(entryId)) is not null
+            || c.Scalar("SELECT 1 FROM preferred_title_overrides WHERE entry_id=$p0", P(entryId)) is not null
+            || c.Scalar("SELECT 1 FROM manual_title_scopes WHERE entry_id=$p0 LIMIT 1", P(entryId)) is not null
+            || c.Scalar("SELECT 1 FROM entries WHERE id=$p0 AND manual_preferred_title=1", P(entryId)) is not null;
+    }
+
+    /// <summary>An automatic merge of the pair would lose manual titles: the entry it merges away holds some.</summary>
+    public static bool AutomaticMergeLosesManualTitles(DatabaseSession c, long left, long right)
+    {
+        ArgumentNullException.ThrowIfNull(c);
+        left = Canonical(c, left); right = Canonical(c, right);
+        if (left == right || !Exists(c, left) || !Exists(c, right)) return false;
+        return HasManualTitles(c, MergeSurvivor(c, left, right) == left ? right : left);
+    }
+
+    /// <summary>Merges two entries in one catalogue transaction. <paramref name="automatic"/> refuses to merge away an entry
+    /// with manual titles (they would be lost); <paramref name="keepManualTitles"/> (a person's merge in matching) moves the
+    /// merged-away entry's manual aliases, main-title override and title scopes to the survivor instead of dropping them
+    /// (a reviewed catalogue import keeps them entry-local). <paramref name="commit"/> runs inside that same transaction
+    /// with (survivor, merged-away) so the caller's bookkeeping commits with the merge.</summary>
+    private long Merge(long left, long right, string reason, bool automatic = false, Action<DatabaseSession, long, long>? commit = null, bool keepManualTitles = false)
     {
         var pair = _database.Read(DatabaseFile.Catalog, c => (Left: Canonical(c, left), Right: Canonical(c, right))); left = pair.Left; right = pair.Right; if (left == right) return left;
         var payloads = _database.Read(DatabaseFile.Catalog, c => Records(c, left).Concat(Records(c, right)).Select(row => _gallery.CleanNative(row.Key.SourceId, GalleryPayload(row.Row))).ToArray()); GalleryPolicy.GroupingGate(payloads, _policies.Effective);
         var target = _database.Write(DatabaseFile.Catalog, c =>
         {
-            var chosen = Reliability(c, left).CompareTo(Reliability(c, right)) >= 0 ? left : right; var duplicate = chosen == left ? right : left;
+            var chosen = MergeSurvivor(c, left, right); var duplicate = chosen == left ? right : left;
             if (!Exists(c, chosen) || !Exists(c, duplicate)) throw new KeyNotFoundException("Merge entry no longer exists");
+            if (automatic && HasManualTitles(c, duplicate)) throw new InvalidOperationException("manual-titles: the entry an automatic merge would remove has manual titles");
             var lineage = c.Scalar("SELECT 1 FROM automatic_merge_lineage WHERE canonical_entry_id IN ($p0,$p1) LIMIT 1", P(left, right)) is null ? [] : MemberSnapshots(c, left).Concat(MemberSnapshots(c, right)).ToList();
             var retained = new List<DatabaseRow>();
             foreach (var match in c.Query("SELECT * FROM source_matches WHERE entry_id=$p0 AND active=1 ORDER BY id", P(duplicate)))
@@ -47,9 +75,19 @@ public sealed partial class CatalogueStructure
                 if (c.Scalar("SELECT 1 FROM source_matches WHERE entry_id=$p0 AND source_id=$p1 AND source_manga_id=$p2 AND active=1", P(chosen, row.Text("source_id"), row.Integer("source_manga_id"))) is null) InsertSource(c, "source_variants", chosen, row, upsert: true);
             }
             PersistEdition(c, chosen); MoveProviderIdentities(c, chosen, duplicate);
+            // Automatic merges never reach here with manual titles on the merged-away entry; a person's merge keeps them on the survivor.
             foreach (var title in c.Query("SELECT * FROM titles WHERE entry_id=$p0", P(duplicate)))
-                if (title.Text("title_type") != "manual") c.Execute("INSERT OR IGNORE INTO titles(entry_id,title,normalized,language,title_type,source_id,source_manga_id) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p6)", P(chosen, title.Text("title"), title.Text("normalized"), title.Text("language"), title.Text("title_type"), title.Text("source_id"), title.Integer("source_manga_id")));
+                if (keepManualTitles || title.Text("title_type") != "manual") c.Execute("INSERT OR IGNORE INTO titles(entry_id,title,normalized,language,title_type,source_id,source_manga_id) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p6)", P(chosen, title.Text("title"), title.Text("normalized"), title.Text("language"), title.Text("title_type"), title.Text("source_id"), title.Integer("source_manga_id")));
+            if (keepManualTitles && c.Scalar("SELECT 1 FROM preferred_title_overrides WHERE entry_id=$p0", P(chosen)) is null
+                && c.Query("SELECT o.title,o.updated_at,e.preferred_title,e.manual_preferred_title FROM preferred_title_overrides o JOIN entries e ON e.id=o.entry_id WHERE o.entry_id=$p0", P(duplicate)).FirstOrDefault() is { } moved)
+            {
+                c.Execute("INSERT INTO preferred_title_overrides(entry_id,title,updated_at) VALUES($p0,$p1,$p2)", P(chosen, moved.Text("title"), moved.Text("updated_at")));
+                if (moved.Flag("manual_preferred_title") && c.Scalar("SELECT manual_preferred_title FROM entries WHERE id=$p0", P(chosen)) is long flag && flag == 0)
+                    c.Execute("UPDATE entries SET preferred_title=$p0,manual_preferred_title=1 WHERE id=$p1", P(moved.Text("preferred_title"), chosen));
+            }
+            if (keepManualTitles) c.Execute("INSERT OR IGNORE INTO manual_title_scopes(entry_id,source_id,source_manga_id,title,captured_at) SELECT $p0,source_id,source_manga_id,title,captured_at FROM manual_title_scopes WHERE entry_id=$p1", P(chosen, duplicate));
             c.Execute("DELETE FROM preferred_title_overrides WHERE entry_id=$p0", P(duplicate)); c.Execute("DELETE FROM manual_title_scopes WHERE entry_id=$p0", P(duplicate));
+            if (c.Scalar("SELECT 1 FROM sqlite_master WHERE type='table' AND name='mixed_entry_findings'") is not null) c.Execute("DELETE FROM mixed_entry_findings WHERE entry_id=$p0", P(duplicate));
             var stamp = Stamp(); c.Execute("UPDATE manual_match_bindings SET entry_id_hint=$p0,updated_at=$p1 WHERE entry_id_hint=$p2", P(chosen, stamp, duplicate));
             c.Execute("INSERT INTO match_history(entry_id,source_id,old_source_manga_id,new_source_manga_id,change_type,changed_at) VALUES($p0,'*',$p1,$p0,$p2,$p3)", P(chosen, duplicate, "merge:" + reason, stamp));
             if (lineage.Count != 0)
@@ -60,7 +98,9 @@ public sealed partial class CatalogueStructure
             }
             Alias(c, duplicate, chosen, "merge:" + reason, stamp); RemapReviews(c, duplicate, chosen);
             c.Execute("INSERT INTO pending_entry_merges VALUES($p0,$p1,$p2,'')", P(duplicate, chosen, stamp));
-            CataloguePreferenceLineage.Reparent(c, chosen, duplicate, stamp, _display); c.Execute("DELETE FROM entries WHERE id=$p0", P(duplicate)); return (Target: chosen, Duplicate: duplicate);
+            CataloguePreferenceLineage.Reparent(c, chosen, duplicate, stamp, _display); c.Execute("DELETE FROM entries WHERE id=$p0", P(duplicate));
+            commit?.Invoke(c, chosen, duplicate);
+            return (Target: chosen, Duplicate: duplicate);
         });
         FinishMerge(target.Duplicate); return target.Target;
     }

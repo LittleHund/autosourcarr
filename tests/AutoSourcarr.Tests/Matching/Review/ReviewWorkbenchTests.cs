@@ -104,6 +104,59 @@ public static class ReviewWorkbenchTests
             Check.Equal("a:1,a:3", string.Join(",", workbench.Audit(1)["entry"]!["records"]!.AsArray().Select(Str)));
         });
 
+        suite.Add("review: a failing item rolls the batch back and logs no batch; a failing undo re-applies and keeps the batch", () =>
+        {
+            var (log, actions, workbench) = Fixture();
+            actions.Add(1, "One", "a:1");
+            actions.Add(2, "Two", "a:2");
+            actions.Add(3, "Three", "a:3", "a:4");
+            const string Items = """{"actions":[{"kind":"merge","target":1,"source":2},{"kind":"split","entry":3,"records":["a:4"]}]""";
+            var preview = workbench.Preview(Body(Items + "}"));
+            actions.RefuseOnce.Add("split");
+            var refused = Check.Throws<ReviewException>(() => workbench.Apply(Body(Items + ",\"revision\":\"" + Str(preview["revision"]) + "\"}"), Alice));
+            Check.Equal(409, refused.StatusCode);
+            Check.True(refused.Message.Contains("rolled back", StringComparison.Ordinal), refused.Message);
+            Check.Equal("a:1", string.Join(",", actions.Entry(1)!.Records));
+            Check.True(actions.RecordEntry("a:2") is { } back && back != 1, "The applied merge was undone again");
+            Check.True(!log.Rows.Any(row => row.Decision.Kind == ReviewWorkbench.BatchKind), "No batch is logged for a rolled-back apply");
+
+            actions.Add(4, "Four", "b:1");
+            actions.Add(5, "Five", "b:2");
+            const string Two = """{"actions":[{"kind":"title","entry":4,"title":"Fourth"},{"kind":"title","entry":5,"title":"Fifth"}]""";
+            var second = workbench.Preview(Body(Two + "}"));
+            var batch = workbench.Apply(Body(Two + ",\"revision\":\"" + Str(second["revision"]) + "\"}"), Alice)["id"]!.GetValue<long>();
+            // Undo runs in reverse: entry 5 is undone first, then entry 4 refuses; entry 5 is applied again.
+            actions.BeforeTitle = id => { if (id == 4) throw new InvalidOperationException("title refused"); };
+            Check.Equal(409, Check.Throws<ReviewException>(() => workbench.Undo(batch, Alice)).StatusCode);
+            Check.Equal("Fifth", actions.Entry(5)!.Title);
+            Check.Equal("Fourth", actions.Entry(4)!.Title);
+            Check.True(workbench.Audit(null)["bulk_actions"]!.AsArray().Any(row => row!["id"]!.GetValue<long>() == batch && row["undone_at"] is null), "A failed undo does not mark the batch undone");
+            actions.BeforeTitle = null;
+            Check.Equal(2, workbench.Undo(batch, Alice)["undone"]!.GetValue<int>());
+        });
+
+        suite.Add("review: undo restores an automatic binding as automatic and refuses a separate whose work is gone", () =>
+        {
+            var (_, actions, workbench) = Fixture();
+            actions.Add(1, "One", "a:1");
+            actions.Add(2, "Two", "a:2", "c:9");
+            const string Match = """{"actions":[{"kind":"manual.match","entry":1,"record":"c:9"}]""";
+            var preview = workbench.Preview(Body(Match + "}"));
+            Check.Equal("automatic", Str(preview["items"]![0]!["before"]!["binding"]));
+            var batch = workbench.Apply(Body(Match + ",\"revision\":\"" + Str(preview["revision"]) + "\"}"), Alice)["id"]!.GetValue<long>();
+            Check.True(actions.IsManual("c:9"), "Applied as a manual match");
+            workbench.Undo(batch, Alice);
+            Check.Equal(2L, actions.RecordEntry("c:9")!.Value);
+            Check.True(!actions.IsManual("c:9"), "Undo puts the record back as an automatic attachment");
+
+            actions.Add(3, "Three", "s:3");
+            actions.Add(4, "Four", "s:4");
+            var pairs = workbench.Preview(Body("""{"pairs":[[3,4]]}"""));
+            var separate = workbench.Apply(Body("""{"pairs":[[3,4]],"revision":"REV"}""".Replace("REV", Str(pairs["revision"]), StringComparison.Ordinal)), Alice)["id"]!.GetValue<long>();
+            actions.Remove(4);
+            Check.Equal(409, Check.Throws<ReviewException>(() => workbench.Undo(separate, Alice)).StatusCode);
+        });
+
         suite.Add("policy simulator: pairs, sample and scan over a small catalogue; apply saves the policy with the actor", () =>
         {
             var log = new MemoryDecisionLog();
@@ -191,7 +244,7 @@ public static class ReviewWorkbenchTests
             return row.Id;
         }
         public RecordedDecision? Find(long id) => Rows.FirstOrDefault(row => row.Id == id);
-        public long? UndoneBy(long id) => Rows.LastOrDefault(row => row.Decision.UndoOf == id.ToString(CultureInfo.InvariantCulture))?.Id;
+        public long? UndoneBy(long id) => Rows.LastOrDefault(row => row.Decision.UndoOf == id.ToString(CultureInfo.InvariantCulture) && row.Decision.Kind == ReviewWorkbench.UndoKind)?.Id;
         public IReadOnlyList<RecordedDecision> Recent(long? entryId, string? kind, int limit) => Rows.AsEnumerable().Reverse()
             .Where(row => (entryId is null || row.Decision.Entries.Contains(entryId.Value)) && (kind is null || row.Decision.Kind == kind)).Take(limit).ToList();
     }
@@ -203,7 +256,13 @@ public static class ReviewWorkbenchTests
         private readonly Dictionary<long, Item> _entries = [];
         private readonly Dictionary<(long, long), string> _reviews = [];
         private long _next = 100;
+        private readonly HashSet<string> _manual = new(StringComparer.Ordinal);
         public List<ReviewContext> Calls { get; } = [];
+        /// <summary>Kinds of action ("split", "merge", ...) whose next call refuses with InvalidOperationException (failure injection).</summary>
+        public HashSet<string> RefuseOnce { get; } = new(StringComparer.Ordinal);
+        public bool IsManual(string record) => _manual.Contains(record);
+        public bool Exists(long id) => _entries.ContainsKey(id);
+        public Action<long>? BeforeTitle { get; set; }
 
         public void Add(long id, string title, params string[] records)
         {
@@ -223,6 +282,15 @@ public static class ReviewWorkbenchTests
         }
         public string? PairDecision(long left, long right) => _reviews.GetValueOrDefault((left, right));
         public long? RecordEntry(string record) => _entries.Where(pair => pair.Value.MergedInto == 0 && pair.Value.Records.Contains(record)).Select(pair => (long?)pair.Key).FirstOrDefault();
+        public string? RecordBinding(string record) => RecordEntry(record) is null ? null : _manual.Contains(record) ? "manual" : "automatic";
+        public long RestoreAutomaticMatch(long entryId, string record, ReviewContext context)
+        {
+            if (RecordEntry(record) is { } holder) _entries[holder].Records.Remove(record);
+            _entries[entryId].Records.Add(record);
+            _manual.Remove(record);
+            return Log("manual.match.restore", context, [entryId], [record]);
+        }
+        public void Remove(long id) => _entries.Remove(id);
 
         private long Log(string kind, ReviewContext context, long[] entries, string[] records)
         {
@@ -237,6 +305,7 @@ public static class ReviewWorkbenchTests
         }
         public long Merge(long target, long source, ReviewContext context)
         {
+            if (RefuseOnce.Remove("merge")) throw new InvalidOperationException("merge refused");
             var records = _entries[source].Records.ToArray();
             foreach (var record in records) _entries[target].Records.Add(record);
             _entries[source].Records.Clear();
@@ -245,6 +314,7 @@ public static class ReviewWorkbenchTests
         }
         public ReviewSplitResult Split(long entryId, IReadOnlyList<string> records, ReviewContext context)
         {
+            if (RefuseOnce.Remove("split")) throw new InvalidOperationException("split refused");
             var id = ++_next;
             Add(id, _entries[entryId].Title + " (split)", [.. records]);
             foreach (var record in records) _entries[entryId].Records.Remove(record);
@@ -252,8 +322,10 @@ public static class ReviewWorkbenchTests
         }
         public long ManualMatch(long entryId, string record, ReviewContext context)
         {
+            if (RefuseOnce.Remove("manual.match")) throw new InvalidOperationException("manual match refused");
             if (RecordEntry(record) is { } holder) _entries[holder].Records.Remove(record);
             _entries[entryId].Records.Add(record);
+            _manual.Add(record);
             return Log("manual.match", context, [entryId], [record]);
         }
         public long ClearManualMatch(long entryId, string record, ReviewContext context)
@@ -264,6 +336,8 @@ public static class ReviewWorkbenchTests
         }
         public long SetPreferredTitle(long entryId, string? title, ReviewContext context)
         {
+            if (RefuseOnce.Remove("title")) throw new InvalidOperationException("title refused");
+            BeforeTitle?.Invoke(entryId);
             _entries[entryId].Title = title ?? "Automatic " + entryId.ToString(CultureInfo.InvariantCulture);
             _entries[entryId].Manual = title is not null;
             return Log("title.preferred", context, [entryId], []);

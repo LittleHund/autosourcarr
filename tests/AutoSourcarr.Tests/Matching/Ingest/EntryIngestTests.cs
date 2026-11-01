@@ -162,6 +162,51 @@ public static class EntryIngestTests
             Check.True(after["source_ranking"] is JsonArray { Count: 3 });
         });
 
+        suite.Add("matching ingest: a tags rule compares genres through the tag synonyms instead of blocking automation", () =>
+        {
+            using var setup = new Setup(s => new EntryIngest(s.Database, s.Gate, s.Log)
+            {
+                Policies = new MatchingPolicyStore(s.Database, s.Gate, s.Log), Presets = new MatchingPresetStore(s.Database, s.Gate, s.Log),
+            });
+            var policies = new MatchingPolicyStore(setup.Database, setup.Gate, setup.Log);
+            policies.Write(new MatchingRuleKey("source", "2", "external"), new JsonObject { ["enabled"] = true, ["checks"] = new JsonObject { ["title"] = .94, ["tags"] = .5 } },
+                MatchingRuleConfiguration.Revision(policies.Rules()), DecisionActor.User("owner"), "tags must overlap");
+            var first = MatchingFixtures.Manga(11, "The Clockwork Orchard", "Ren Aoki"); first["genre"] = "Sci-Fi, Action";
+            var entry = setup.Ingest.IngestManga("1", first).EntryId!.Value;
+            // "Sci-Fi" and "Science Fiction" are one tag through the built-in synonyms: full overlap, the record attaches.
+            var synonym = MatchingFixtures.Manga(22, "The Clockwork Orchard", "Ren Aoki"); synonym["genre"] = "Science Fiction, Action";
+            Check.Equal(entry, setup.Ingest.IngestManga("2", synonym).EntryId ?? 0);
+            var other = MatchingFixtures.Manga(23, "The Clockwork Orchard", "Ren Aoki"); other["genre"] = "Romance";
+            Check.True(setup.Ingest.IngestManga("2", other).EntryId != entry, "tags below the threshold refuse");
+            var missing = MatchingFixtures.Manga(24, "The Clockwork Orchard", "Ren Aoki");
+            var refused = setup.Ingest.LocalMatchCandidates(missing, "2");
+            Check.True(refused.All(match => match.EntryId != entry), "missing tags refuse");
+        });
+
+        suite.Add("matching ingest: a rule set from a matching profile scores with that profile's options", () =>
+        {
+            using var setup = new Setup(s => new EntryIngest(s.Database, s.Gate, s.Log)
+            {
+                Policies = new MatchingPolicyStore(s.Database, s.Gate, s.Log), Presets = new MatchingPresetStore(s.Database, s.Gate, s.Log),
+            });
+            var presets = new MatchingPresetStore(setup.Database, setup.Gate, setup.Log);
+            var saved = presets.Save(new JsonObject
+            {
+                ["revision"] = presets.Configuration()["preset_revision"]!.GetValue<string>(), ["name"] = "Evidence", ["kind"] = "simple",
+                ["settings"] = new JsonObject { ["require_identity_evidence"] = true },
+            }, null, DecisionActor.User("owner"));
+            var profile = (saved["presets"] as JsonArray)!.OfType<JsonObject>().Single(preset => preset["name"]!.GetValue<string>() == "Evidence");
+            var policies = new MatchingPolicyStore(setup.Database, setup.Gate, setup.Log);
+            policies.Write(new MatchingRuleKey("source", "2", "external"), (JsonObject)profile["rule"]!.DeepClone(), MatchingRuleConfiguration.Revision(policies.Rules()),
+                DecisionActor.User("owner"), "use the Evidence profile");
+            var entry = setup.Ingest.IngestManga("1", MatchingFixtures.Manga(11, "The Clockwork Orchard")).EntryId!.Value;
+            // Without a rule a distinctive title alone attaches ...
+            Check.Equal(entry, setup.Ingest.IngestManga("3", MatchingFixtures.Manga(33, "The Clockwork Orchard")).EntryId ?? 0);
+            // ... the profile behind source 2's rule asks for agreeing creator, year, cover or summary evidence.
+            var strict = setup.Ingest.IngestManga("2", MatchingFixtures.Manga(22, "The Clockwork Orchard"));
+            Check.True(strict.EntryId != entry, strict.Reason);
+        });
+
         suite.Add("matching titles: description aliases of attached records keep whole titles", () =>
         {
             using var setup = new Setup();

@@ -122,6 +122,7 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
             var reason = "Reviewed " + list.Count.ToString(CultureInfo.InvariantCulture) + " matching decision" + (list.Count == 1 ? "" : "s") + " in the review workbench";
             var context = new ReviewContext(actor, reason);
             var applied = new JsonArray();
+            var done = new List<(ReviewAction Action, JsonObject Item, long? Created)>();
             string? failure = null;
             for (var index = 0; index < list.Count; index++)
             {
@@ -132,23 +133,46 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
                     var item = items[index]!.DeepClone().AsObject();
                     item["decision"] = decision;
                     if (created is { } newEntry) item["new_entry"] = newEntry;
+                    done.Add((action, item, created));
                     item["after"] = State(action, created);
                     applied.Add(item);
                 }
-                catch (Exception error) when (error is ReviewException or ArgumentException or InvalidOperationException or KeyNotFoundException)
+                catch (Exception error) when (Refusal(error))
                 {
                     failure = error.Message;
                     break;
                 }
             }
-            if (applied.Count == 0) throw new ReviewException(409, failure ?? "Nothing was applied");
+            if (failure is not null)
+            {
+                // All or nothing: the items applied before the failure are undone again and no batch is logged.
+                var stopped = "Item " + (done.Count + 1).ToString(CultureInfo.InvariantCulture) + " failed: " + failure;
+                if (done.Count == 0) throw new ReviewException(409, "Nothing was applied. " + stopped);
+                var rollback = new ReviewContext(actor, "Rolled back: " + reason + " (" + stopped + ")");
+                var remaining = done.ToList();
+                string? rollbackFailure = null;
+                for (var index = done.Count - 1; index >= 0; index--)
+                {
+                    var (action, item, created) = done[index];
+                    try { _ = Inverse(action, item["before"] as JsonObject ?? new JsonObject(), created, rollback); remaining.RemoveAt(index); }
+                    catch (Exception error) when (Refusal(error)) { rollbackFailure = error.Message; break; }
+                }
+                if (rollbackFailure is null)
+                    throw new ReviewException(409, "Nothing was applied. " + stopped + "; the " + done.Count.ToString(CultureInfo.InvariantCulture) + " item(s) applied before it were rolled back");
+                // The rollback itself was refused: the items still applied stay undoable as one logged batch.
+                var kept = new JsonArray(remaining.Select(entry => (JsonNode?)entry.Item.DeepClone()).ToArray());
+                var partialBatch = log.Record(new DecisionEvent(BatchKind, actor, TouchedEntries(kept), TouchedRecords(kept), reason,
+                    Before: new JsonObject { ["items"] = items.DeepClone() },
+                    After: new JsonObject { ["items"] = kept, ["total"] = list.Count, ["failure"] = stopped + "; rollback stopped: " + rollbackFailure }));
+                throw new ReviewException(409, stopped + ". Rolling back the applied items stopped (" + rollbackFailure + "); "
+                    + remaining.Count.ToString(CultureInfo.InvariantCulture) + " item(s) stay applied as reviewed batch #" + partialBatch.ToString(CultureInfo.InvariantCulture) + ", which can be undone");
+            }
             var id = log.Record(new DecisionEvent(BatchKind, actor, TouchedEntries(applied), TouchedRecords(applied), reason,
                 Before: new JsonObject { ["items"] = items.DeepClone() },
-                After: new JsonObject { ["items"] = applied, ["total"] = list.Count, ["failure"] = failure }));
+                After: new JsonObject { ["items"] = applied, ["total"] = list.Count, ["failure"] = null }));
             return new JsonObject
             {
-                ["id"] = id, ["applied"] = applied.Count, ["total"] = list.Count, ["complete"] = failure is null,
-                ["failure"] = failure is null ? null : "Stopped after " + applied.Count.ToString(CultureInfo.InvariantCulture) + " item(s): " + failure,
+                ["id"] = id, ["applied"] = applied.Count, ["total"] = list.Count, ["complete"] = true, ["failure"] = null,
                 ["undo_available"] = true,
             };
         }
@@ -181,25 +205,43 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
             var reason = "Undo of reviewed batch #" + key;
             var context = new ReviewContext(actor, reason, key);
             var undone = new JsonArray();
+            var reverted = new List<(int Index, JsonObject Result)>();
             string? failure = null;
             for (var index = parsed.Count - 1; index >= 0; index--)
             {
                 var (action, item, created) = parsed[index];
-                try { undone.Add(Inverse(action, item["before"] as JsonObject ?? new JsonObject(), created, context)); }
-                catch (Exception error) when (error is ReviewException or ArgumentException or InvalidOperationException or KeyNotFoundException)
+                try
+                {
+                    var result = Inverse(action, item["before"] as JsonObject ?? new JsonObject(), created, context);
+                    undone.Add(result);
+                    reverted.Add((index, result));
+                }
+                catch (Exception error) when (Refusal(error))
                 {
                     failure = error.Message;
                     break;
                 }
             }
-            if (undone.Count == 0) throw new ReviewException(409, failure ?? "Nothing was undone");
+            if (failure is not null)
+            {
+                // All or nothing: what was already undone is applied again; the batch is not logged as undone.
+                var restore = new ReviewContext(actor, "Restored after a failed undo of reviewed batch #" + key + ": " + failure);
+                string? restoreFailure = null;
+                for (var index = reverted.Count - 1; index >= 0; index--)
+                {
+                    try { Redo(parsed[reverted[index].Index].Action, reverted[index].Result, restore); }
+                    catch (Exception error) when (Refusal(error)) { restoreFailure = error.Message; break; }
+                }
+                throw new ReviewException(409, restoreFailure is null
+                    ? "Nothing was undone: " + failure + (reverted.Count == 0 ? "" : "; the " + reverted.Count.ToString(CultureInfo.InvariantCulture) + " item(s) already undone were applied again")
+                    : "Undo stopped (" + failure + ") and re-applying the undone items also stopped (" + restoreFailure + "); the batch is not marked undone, review its works");
+            }
             var id = log.Record(new DecisionEvent(UndoKind, actor, row.Decision.Entries, row.Decision.Records, reason,
                 Before: new JsonObject { ["items"] = items.DeepClone() },
-                After: new JsonObject { ["items"] = undone, ["total"] = parsed.Count, ["failure"] = failure }, UndoOf: key));
+                After: new JsonObject { ["items"] = undone, ["total"] = parsed.Count, ["failure"] = null }, UndoOf: key));
             return new JsonObject
             {
-                ["id"] = id, ["undone"] = undone.Count, ["total"] = parsed.Count, ["complete"] = failure is null,
-                ["failure"] = failure is null ? null : "Stopped after " + undone.Count.ToString(CultureInfo.InvariantCulture) + " item(s); the rest stay applied: " + failure,
+                ["id"] = id, ["undone"] = undone.Count, ["total"] = parsed.Count, ["complete"] = true, ["failure"] = null,
             };
         }
     }
@@ -210,6 +252,8 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
         switch (action.Kind)
         {
             case Separate:
+                // Both works must still be current: a merged-away or deleted work refuses (409) instead of reviewing its survivor.
+                _ = Canonical(action.Entry); _ = Canonical(action.Other);
                 result["decision"] = actions.ReviewPair(action.Entry, action.Other, Text(before["decision"]), context);
                 break;
             case MergeKind:
@@ -224,8 +268,10 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
             case ManualMatchKind:
                 var record = action.Records[0];
                 long? previous = before["entry"] is null ? null : Id(before["entry"], "Previous binding is unreadable");
+                // The record goes back the way it was bound: an automatic attachment stays automatic.
+                var automatic = Text(before["binding"]) == "automatic";
                 result["decision"] = previous is { } entry && actions.Entry(entry) is { } snapshot && snapshot.CanonicalId == entry
-                    ? actions.ManualMatch(entry, record, context)
+                    ? automatic ? actions.RestoreAutomaticMatch(entry, record, context) : actions.ManualMatch(entry, record, context)
                     : actions.ClearManualMatch(action.Entry, record, context);
                 break;
             case TitleKind:
@@ -237,6 +283,22 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
         }
         return result;
     }
+
+    /// <summary>Re-applies an item after its undo was itself undone (the inverse's result names entries it created).</summary>
+    private void Redo(ReviewAction action, JsonObject inverse, ReviewContext context)
+    {
+        switch (action.Kind)
+        {
+            case Separate: _ = actions.ReviewPair(action.Entry, action.Other, "not_duplicate", context); break;
+            case MergeKind: _ = actions.Merge(action.Entry, Id(inverse["new_entry"], "The undone merge left no entry to merge back"), context); break;
+            case SplitKind: _ = actions.Split(action.Entry, action.Records, context); break;
+            case ManualMatchKind: _ = actions.ManualMatch(action.Entry, action.Records[0], context); break;
+            case TitleKind: _ = actions.SetPreferredTitle(action.Entry, action.Title, context); break;
+            default: throw new ReviewException(409, "Unknown review item");
+        }
+    }
+
+    private static bool Refusal(Exception error) => error is ReviewException or ArgumentException or InvalidOperationException or KeyNotFoundException;
 
     // ---------------------------------------------------------------- actions
 
@@ -277,7 +339,7 @@ public sealed class ReviewWorkbench(IReviewActions actions, IDecisionLog log, IR
             case ManualMatchKind:
                 var previous = actions.RecordEntry(action.Records[0]);
                 if (previous == action.Entry) throw new ReviewException(409, "Record " + action.Records[0] + " is already part of work #" + Number(action.Entry));
-                return new JsonObject { ["entry"] = previous };
+                return new JsonObject { ["entry"] = previous, ["binding"] = previous is null ? null : actions.RecordBinding(action.Records[0]) };
             case TitleKind:
                 var titled = Canonical(action.Entry);
                 return new JsonObject { ["title"] = titled.Title, ["manual"] = titled.TitleManual };

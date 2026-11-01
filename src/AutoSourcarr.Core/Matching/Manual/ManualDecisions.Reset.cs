@@ -74,10 +74,12 @@ public sealed partial class ManualDecisions
     private static (int Count, string[] Rows) Digest(DatabaseSession c, string sql)
     {
         // Each row is digested on its own and the digests are sorted, so row order and layout do not matter.
-        var rows = c.Query(sql).Select(row => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(row.Values.Select(Cell).ToArray()))))).ToList();
+        var rows = c.Query(sql).Select(RowDigest).ToList();
         rows.Sort(StringComparer.Ordinal);
         return (rows.Count, rows.ToArray());
     }
+
+    private static string RowDigest(DatabaseRow row) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(row.Values.Select(Cell).ToArray()))));
 
     private static string? Cell(object? value) => value switch
     {
@@ -143,6 +145,11 @@ public sealed partial class ManualDecisions
     /// <summary>reset_manual_groups: dissolves every manual group; bindings stay and are not regrouped.</summary>
     private JsonObject ResetGroups(string token, DecisionActor actor)
     {
+        lock (_gate) return ResetGroupsLocked(token, actor);
+    }
+
+    private JsonObject ResetGroupsLocked(string token, DecisionActor actor)
+    {
         var result = Write(c =>
         {
             var before = Snapshot(c, ManualResetScope.Groups, default);
@@ -159,6 +166,11 @@ public sealed partial class ManualDecisions
 
     /// <summary>reset_manual_matches: forgets bindings and groups; the records stay attached as automatic ones.</summary>
     private JsonObject ResetMatches(string token, DecisionActor actor)
+    {
+        lock (_gate) return ResetMatchesLocked(token, actor);
+    }
+
+    private JsonObject ResetMatchesLocked(string token, DecisionActor actor)
     {
         var result = Write(c =>
         {
@@ -222,10 +234,21 @@ public sealed partial class ManualDecisions
                 UNION ALL SELECT 1 FROM source_variants WHERE entry_id=$p0 AND source_id=$p1 AND source_manga_id=$p2 AND active=1 LIMIT 1
                 """, P(row.Integer("entry_id"), row.Text("source_id"), row.Integer("source_manga_id"))) is not null).ToList());
             // The catalogue commit owns the decision; the origins file follows (a failure here keeps the rejections, never loses them).
+            // The rejections are re-read and deleted in one origins write, and only the ones the confirmed preview showed:
+            // a chapter rejected after the preview is kept.
+            var previewed = rejected.Rows.GroupBy(row => row, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
             _database.Write(DatabaseFile.Origins, o =>
             {
                 o.Execute("UPDATE chapter_candidates SET active=1 WHERE id IN (SELECT value FROM json_each($p0))", P(JsonSerializer.Serialize(active.Select(row => row.Integer("id")).ToArray())));
-                return o.Execute("DELETE FROM chapter_candidate_rejections");
+                var removed = 0;
+                foreach (var row in o.Query(RejectedChapters))
+                {
+                    var digest = RowDigest(row);
+                    if (!previewed.TryGetValue(digest, out var left) || left == 0) continue;
+                    previewed[digest] = left - 1;
+                    removed += o.Execute("DELETE FROM chapter_candidate_rejections WHERE source_id=$p0 AND source_chapter_id=$p1", P(row.Text("source_id"), row.Integer("source_chapter_id")));
+                }
+                return removed;
             });
             if (_operations is { } operations)
             {

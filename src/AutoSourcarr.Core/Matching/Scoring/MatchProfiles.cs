@@ -171,6 +171,33 @@ public static class MatchProfiles
         ["editions_separate"] = true,
     };
 
+    /// <summary>The stricter of two option sets (higher floors and requirements, smaller tolerances); weights come from <paramref name="first"/>.</summary>
+    public static MatchScoringOptions Stricter(MatchScoringOptions first, MatchScoringOptions second)
+    {
+        ArgumentNullException.ThrowIfNull(first); ArgumentNullException.ThrowIfNull(second);
+        static double? Max(double? a, double? b) => a is null ? b : b is null ? a : Math.Max(a.Value, b.Value);
+        return (first with
+        {
+            Floor = Math.Max(first.Floor, second.Floor), GenericFloor = Math.Max(first.GenericFloor, second.GenericFloor),
+            AlwaysRequireIdentityEvidence = first.AlwaysRequireIdentityEvidence || second.AlwaysRequireIdentityEvidence,
+            YearTolerance = Math.Min(first.YearTolerance, second.YearTolerance),
+            AuthorAgreement = Math.Max(first.AuthorAgreement, second.AuthorAgreement), AuthorConflict = Math.Max(first.AuthorConflict, second.AuthorConflict),
+            CoverAgreementDistance = Math.Min(first.CoverAgreementDistance, second.CoverAgreementDistance),
+            CoverConflictDistance = Math.Min(first.CoverConflictDistance, second.CoverConflictDistance),
+            SummaryCorroboration = Math.Max(first.SummaryCorroboration, second.SummaryCorroboration),
+            RequiredAuthor = Max(first.RequiredAuthor, second.RequiredAuthor), RequiredSummary = Max(first.RequiredSummary, second.RequiredSummary),
+        }).Normalized();
+    }
+
+    /// <summary>The stricter combination of several option sets, or null when there are none.</summary>
+    public static MatchScoringOptions? Combine(IEnumerable<MatchScoringOptions> options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        MatchScoringOptions? result = null;
+        foreach (var item in options) result = result is null ? item.Normalized() : Stricter(result, item);
+        return result;
+    }
+
     internal static double? Number(JsonNode? node) => node is JsonValue value && value.GetValueKind() == JsonValueKind.Number
         && double.TryParse(value.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number) ? number : null;
     internal static bool Flag(JsonNode? node) => node is JsonValue value && value.TryGetValue<bool>(out var flag) && flag;
@@ -232,6 +259,33 @@ public sealed class MatchingPresetStore(SqliteDatabase database, object sourceWr
     public const string SettingsKey = "matching_profile_settings_v1";
     private const int MaximumPresets = 205;
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
+    private readonly Lock _cacheGate = new();
+    private (long At, IReadOnlyList<MatchProfile> Profiles)? _cache;
+
+    /// <summary>
+    /// The scorer options a stored matching rule stands for: when the rule is the rule of a simple or advanced profile
+    /// (the policy was set from that profile), that profile's thresholds and weights (identity-evidence requirement, year
+    /// tolerance, cover distances, weights); several such profiles combine strictly. Otherwise the rule's own checks.
+    /// </summary>
+    public MatchScoringOptions OptionsForRule(JsonObject rule)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        IReadOnlyList<MatchProfile> profiles;
+        var now = _clock.GetTimestamp();
+        lock (_cacheGate) profiles = _cache is { } cached && _clock.GetElapsedTime(cached.At, now) < TimeSpan.FromSeconds(10) ? cached.Profiles : [];
+        if (profiles.Count == 0)
+        {
+            profiles = Profiles();
+            lock (_cacheGate) _cache = (now, profiles);
+        }
+        var key = SourceConfigurationJson.PythonJson(rule, sortKeys: true);
+        var matching = profiles.Where(profile => !profile.Builtin && profile.Kind is MatchProfiles.Simple or MatchProfiles.Advanced
+                && SourceConfigurationJson.PythonJson(profile.Rule, sortKeys: true) == key)
+            .Select(profile => profile.Options).ToArray();
+        return MatchProfiles.Combine(matching) ?? MatchProfiles.OptionsFor(rule, null);
+    }
+
+    private void Invalidate() { lock (_cacheGate) _cache = null; }
 
     public JsonObject Configuration()
     {
@@ -293,6 +347,7 @@ public sealed class MatchingPresetStore(SqliteDatabase database, object sourceWr
                 WriteSettings(session, stored);
                 decisions.Record(new("profile.write", actor, [], [], (selected is null ? "created " : "changed ") + "matching profile " + name,
                     selected?.ToJson(), new JsonObject { ["id"] = id, ["name"] = name, ["kind"] = kind, ["rule"] = rule.DeepClone(), ["settings"] = settings.DeepClone() }));
+                Invalidate();
                 return Configuration(session);
             });
         }
@@ -312,6 +367,7 @@ public sealed class MatchingPresetStore(SqliteDatabase database, object sourceWr
                 var stored = StoredSettings(session);
                 if (stored.Remove(presetId)) WriteSettings(session, stored);
                 decisions.Record(new("profile.delete", actor, [], [], "deleted matching profile " + selected.Name, selected.ToJson()));
+                Invalidate();
                 return Configuration(session);
             });
         }
