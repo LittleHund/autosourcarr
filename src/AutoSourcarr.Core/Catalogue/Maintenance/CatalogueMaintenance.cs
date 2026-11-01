@@ -215,14 +215,27 @@ public sealed partial class CatalogueMaintenance
             result["kept_decisions"] = RekeyKeptDecisions();
             result["rebuild_hint_records"] = Integer(hints?["records"]);
         }
-        result["subbed_rebrowse_queued"] = seeds.Count > 0 && ScheduleSubscribedRebuild(seeds);
+        var rebuildQueued = seeds.Count > 0 && ScheduleSubscribedRebuild(seeds, actor);
+        result["subbed_rebrowse_queued"] = rebuildQueued;
         if (!full) result["catalog_hint_replay_queued"] = hints is not null && _hooks.ScheduleHintReplay is { } replay && replay(Text(hints["path"]));
         result["continuous_catalog_queued"] = _hooks.ScheduleContinuousDiscovery?.Invoke() ?? false;
+        // IMP-9: with no rebuild job the accepted imports are rechecked now; otherwise when the rebuild job finished.
+        result["import_recheck"] = rebuildQueued ? JsonValue.Create("after-rebuild") : AfterRebuild(actor);
         return result;
     }
 
+    /// <summary>The after-reset hook (imports recheck); a failure there never fails the reset.</summary>
+    private JsonNode? AfterRebuild(DecisionActor actor)
+    {
+        if (_hooks.AfterResetRebuild is not { } after) return JsonValue.Create("unavailable");
+        try { return after(actor); }
+        catch (Exception error) when (error is not OperationCanceledException and not OutOfMemoryException)
+        { return new JsonObject { ["error"] = error.Message }; }
+    }
+
     /// <summary>schedule_subbed_reset_rebrowse: queues the subscribed rebuild as a job (false when it cannot run here).</summary>
-    public bool ScheduleSubscribedRebuild(IReadOnlyList<JsonObject> seeds)
+    /// <param name="resetActor">The reset that queued the rebuild: the after-reset hook runs with it once the rebuild finished.</param>
+    public bool ScheduleSubscribedRebuild(IReadOnlyList<JsonObject> seeds, DecisionActor? resetActor = null)
     {
         ArgumentNullException.ThrowIfNull(seeds);
         if (_library is not { } library || _hooks.RebuildSubscribedEntry is not { } rebuild || _jobs is not { } jobs) return false;
@@ -233,6 +246,7 @@ public sealed partial class CatalogueMaintenance
             {
                 var result = await library.RebrowseResetSeedsAsync(copy, rebuild, (done, total, message) => job.Report(done, total, message), job.CancellationToken).ConfigureAwait(false);
                 job.Result("Recovered " + Integer(result["recovered"]).ToString(CultureInfo.InvariantCulture) + " of " + Integer(result["searched"]).ToString(CultureInfo.InvariantCulture) + " subscribed entries");
+                if (resetActor is not null) _ = AfterRebuild(resetActor);
             }, origin: "automatic", context: "reset");
             return true;
         }

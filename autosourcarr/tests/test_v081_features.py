@@ -52,7 +52,7 @@ def test_v081_release_ui_contract():
     assert 'id="fullReset"' in html
     assert "taskFinishedText" in js
     assert ".sort(taskNewestFirst)" in js
-    assert "/api/admin/subbed/search-all" in js
+    assert "/api/v1/subbed/search-all" in js
     assert "/api/admin/maintenance/full-reset" in js
     assert "0.2.81 → 1.4.2081" in (r / "CHANGELOG.md").read_text()
 

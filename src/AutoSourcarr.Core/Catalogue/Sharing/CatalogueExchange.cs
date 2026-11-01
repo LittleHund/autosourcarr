@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Catalogue.Sharing;
 using AutoSourcarr.Core.Matching;
+using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Privacy;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Catalogue.Gallery;
@@ -22,6 +23,11 @@ public sealed partial class CatalogueExchange
     public CatalogueExchange(SqliteDatabase database, object sourceWriteGate, SupportPrivacy privacy, TimeProvider? clock = null,
         CatalogueGalleryEvidence? galleryEvidence = null, ICatalogueReviewedStructure? structure = null, Action? invalidate = null)
     { _database = database; _sourceWriteGate = sourceWriteGate; _native = new(privacy, new GalleryEvidenceService(database, sourceWriteGate)); _clock = clock ?? TimeProvider.System; _galleryEvidence = galleryEvidence; _structure = structure; _invalidate = invalidate; }
+    /// <summary>The phase-8 decision log. Imports, applied shared choices and record/identity reviews record here, with
+    /// their actor, inside the same catalogue write as the change (DecisionLog joins the open write).</summary>
+    public IDecisionLog? Log { get; init; }
+    private void Record(string kind, DecisionActor? actor, IEnumerable<long> entries, IEnumerable<string> records, string reason, JsonObject? after = null)
+        => Log?.Record(new DecisionEvent(kind, actor ?? DecisionActor.Automatic, entries.Distinct().ToArray(), records.Distinct(StringComparer.Ordinal).ToArray(), reason, After: after));
     public void Initialize() => InitializeSchema(_database);
     /// <summary>The shared native/portable catalogue schema prerequisite. Does not
     /// import facts, create a match or run structural decisions.</summary>
@@ -66,10 +72,11 @@ public sealed partial class CatalogueExchange
                 if (owners.Count != 0 && !owners.Any(selected.Contains) || owners.Count == 0 && after != 0) continue;
                 if (seen.Add((item.S("uid"), CatalogueFormat.Digest(item)))) entries.Add(item);
             }
-            var bundle = CatalogueFormat.Validate(new JsonObject { ["format"] = CatalogueFormat.Format, ["version"] = 1, ["origin"] = origin, ["entries"] = Objects(entries), ["decisions"] = decisions });
-            if (Encoding.UTF8.GetByteCount(CatalogueFormat.Canonical(bundle)) > CatalogueFormat.MaximumBytes) throw new ArgumentException("Export exceeds 64 MiB; choose a smaller entry batch");
+            var bundle = CatalogueFormat.Validate(new JsonObject { ["format"] = CatalogueFormat.Format, ["version"] = CatalogueFormat.LegacyVersion, ["origin"] = origin, ["entries"] = Objects(entries), ["decisions"] = decisions });
+            var file = CatalogueFormat.Wrap(bundle, _clock.GetUtcNow());
+            if (Encoding.UTF8.GetByteCount(CatalogueFormat.Canonical(file)) > CatalogueFormat.MaximumBytes) throw new ArgumentException("Export exceeds 64 MiB; choose a smaller entry batch");
             var cursor = selected.Count != 0 && all.Any(id => id > selected.Max()) ? (long?)selected.Max() : null;
-            return new JsonObject { ["catalogue"] = bundle, ["next_cursor"] = cursor, ["total"] = all.Count, ["entries"] = entries.Count, ["decisions"] = decisions.Count };
+            return new JsonObject { ["catalogue"] = file, ["next_cursor"] = cursor, ["total"] = all.Count, ["entries"] = entries.Count, ["decisions"] = decisions.Count };
         });
     }
     private static JsonArray SourceKeys(JsonObject record) => new(record.A("sources").Select(fact => (fact!.S("source_id"), fact.S("reference"))).OrderBy(pair => pair.Item1, StringComparer.Ordinal).ThenBy(pair => pair.Item2, StringComparer.Ordinal).Select(pair => (JsonNode?)new JsonArray(pair.Item1, pair.Item2)).ToArray());

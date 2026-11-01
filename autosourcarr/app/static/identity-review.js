@@ -13,7 +13,7 @@
     async function list(){
       const own=++listGeneration;listRead?.abort();listRead=new AbortController();get('[data-list-status]').textContent='Loading saved entries…';
       try{
-        const result=await api('/api/admin/identity-review?'+new URLSearchParams({search,offset,limit:20}),{signal:listRead.signal,suppressClientError:true});if(!alive()||own!==listGeneration)return;
+        const result=await api('/api/v1/identity-review?'+new URLSearchParams({search,offset,limit:20}),{signal:listRead.signal,suppressClientError:true});if(!alive()||own!==listGeneration)return;
         const host=get('[data-entry-list]');host.replaceChildren();
         for(const row of result.items){const button=document.createElement('button');button.type='button';button.className='riIdentityEntry';button.dataset.identityEntry=String(row.id);button.textContent=row.preferred_title+' · '+row.provider_count+' provider links · '+row.saved_decisions+' saved decisions';button.setAttribute('aria-pressed',String(row.id===selected));button.onclick=()=>choose(row.id);host.append(button);}
         get('[data-list-status]').textContent=result.total?`${offset+1}–${offset+result.items.length} of ${result.total} saved entries`:(search?'No saved entries match this search. Clear search to show the catalogue.':'No saved entries yet. Discover or import an entry first.');
@@ -24,13 +24,13 @@
       if(writing){status('Finish the current identity decision first.');return;}
       remember();snapshot=null;selected=Number(id);const own=++detailGeneration;detailRead?.abort();detailRead=new AbortController();detail.textContent='Loading identity evidence…';
       for(const button of root.querySelectorAll('[data-identity-entry]'))button.setAttribute('aria-pressed',String(Number(button.dataset.identityEntry)===selected));
-      try{const result=await api('/api/admin/identity-review/'+selected,{signal:detailRead.signal,suppressClientError:true});if(alive()&&own===detailGeneration){snapshot=result;render();detail.querySelector('h3').focus({preventScroll:true});status('Identity evidence loaded. Reviews stay private to this instance.');}}
+      try{const result=await api('/api/v1/identity-review/'+selected,{signal:detailRead.signal,suppressClientError:true});if(alive()&&own===detailGeneration){snapshot=result;render();detail.querySelector('h3').focus({preventScroll:true});status('Identity evidence loaded. Reviews stay private to this instance.');}}
       catch(error){if(alive()&&own===detailGeneration)detail.textContent='Identity review unavailable: '+error.message;}
     }
     async function decide(reference,decision,restoreId=null){
       if(writing||!snapshot)return;remember();writing=true;const own=detailGeneration,current=snapshot;
       const button=detail.querySelector('[data-refresh]');detail.inert=true;
-      try{await write(button,()=>api('/api/admin/identity-review/'+current.entry_id,{method:'POST',body:JSON.stringify({reference,decision,revision:current.revision,note:drafts.get(selected)?.note||'',restore_id:restoreId}),noMutationRefresh:true}),result=>{
+      try{await write(button,()=>api('/api/v1/identity-review/'+current.entry_id,{method:'POST',body:JSON.stringify({reference,decision,revision:current.revision,note:drafts.get(selected)?.note||'',restore_id:restoreId}),noMutationRefresh:true}),result=>{
         if(alive()&&own===detailGeneration){snapshot=result;render();status('Local identity review saved. Source matches and chapter bindings are unchanged.');}
       });}finally{writing=false;detail.inert=false;if(alive()&&own===detailGeneration&&document.activeElement===document.body)detail.querySelector('h3')?.focus({preventScroll:true});}
     }

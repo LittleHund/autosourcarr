@@ -1,0 +1,148 @@
+{
+  "fixtures": [
+    {
+      "file": "tachiyomi-legacy.proto.gz",
+      "version": "tachiyomi-legacy",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "tachiyomi.proto.gz",
+      "version": "tachiyomi",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "mihon-0.16.tachibk",
+      "version": "mihon-0.16",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "mihon-0.17.tachibk",
+      "version": "mihon-0.17",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "mihon-0.19.tachibk",
+      "version": "mihon-0.19",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "mihon-0.20.tachibk",
+      "version": "mihon-0.20",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "mihon-0.21.tachibk",
+      "version": "mihon-0.21",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "mihon-next-probe.tachibk",
+      "version": "mihon-0.21",
+      "compression": "none",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    },
+    {
+      "file": "fork-extra-fields.tachibk",
+      "version": "mihon-0.19",
+      "compression": "gzip",
+      "manga": 3,
+      "favorites": 2,
+      "titles": [
+        "Lantern Keeper of the Ninth Harbor",
+        "The Clockwork Orchard (Colored)",
+        "Salt and Ember Cartography"
+      ],
+      "source_names": {
+        "9101": "Harborlight (EN)",
+        "-4611686018427387904": "Quillfeed"
+      }
+    }
+  ]
+}

@@ -17,10 +17,14 @@
     <PackageReference Include="Grpc.Tools" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <!-- Mihon/Keiyoushi index.pb; message types stay internal behind ExtensionIndex. -->
     <Protobuf Include="Sources/Repositories/ExtensionIndex.proto" GrpcServices="None" Access="Internal" />
+    <!-- Mihon/Tachiyomi .tachibk/.proto.gz backups (hand-maintained schema, PIPE-9); message types stay internal behind MihonBackupReader. -->
+    <Protobuf Include="Imports/Backup/MihonBackup.proto" GrpcServices="None" Access="Internal" />
     <!-- Manifest resource names follow the folder path: AutoSourcarr.Core.<Folder>.<file> -->
     <EmbeddedResource Include="Matching/*.json" />
     <EmbeddedResource Include="Unicode/*.json" />
     <EmbeddedResource Include="Settings/*.json" />
+    <!-- PIPE-4 compatibility list (CompatibilityList.Resource = AutoSourcarr.Core.Compatibility.compatibility.json). -->
+    <EmbeddedResource Include="Compatibility/*.json" />
     <EmbeddedResource Include="Persistence/Schema/*.sql" />
     <EmbeddedResource Include="Persistence/Schema/*.json" />
     <None Update="Unicode/Notices/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

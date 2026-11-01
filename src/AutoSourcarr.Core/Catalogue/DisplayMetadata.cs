@@ -127,6 +127,39 @@ public sealed class DisplayMetadata(SqliteDatabase database, object sourceWriteG
         c.Execute("DELETE FROM display_metadata WHERE entry_id=$entry", ("$entry", duplicate));
     }
 
+    /// <summary>
+    /// Phase 9 per-field overrides (MetadataChooser) that only the locked mode supports and that 0.4.5 ignores on overlay:
+    /// genres, status and year. They live in the same fields_json so a merge reparents and history retains them.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> LockedOnlyFields = new Dictionary<string, string>(StringComparer.Ordinal)
+    { ["genres"] = "genre", ["status"] = "status", ["year"] = "year" };
+
+    /// <summary>The saved ownership fields of an entry (empty when none), inside the caller's session.</summary>
+    public static JsonObject OwnedFields(DatabaseSession c, long entryId)
+    {
+        ArgumentNullException.ThrowIfNull(c);
+        var json = c.Scalar("SELECT fields_json FROM display_metadata WHERE entry_id=$entry", ("$entry", entryId)) as string;
+        return json is null ? new JsonObject() : Parse(json);
+    }
+
+    /// <summary>
+    /// Sets (or with a null <paramref name="choice"/> removes) one ownership field inside the caller's write, retaining the
+    /// previous fields as a history snapshot and bumping the revision exactly like <see cref="Save"/>. Returns the previous choice.
+    /// </summary>
+    public static JsonObject? SetOwnedField(DatabaseSession c, long entryId, string name, JsonObject? choice, string reason, string timestamp)
+    {
+        ArgumentNullException.ThrowIfNull(c); ArgumentException.ThrowIfNullOrEmpty(name);
+        var row = c.Query("SELECT revision,fields_json FROM display_metadata WHERE entry_id=$entry", ("$entry", entryId)).SingleOrDefault();
+        var fields = row is null ? new JsonObject() : Parse(row.Text("fields_json"));
+        var before = fields[name]?.DeepClone() as JsonObject;
+        c.Execute("INSERT INTO display_metadata_history(entry_id,old_entry_id,fields_json,reason,created_at) VALUES($id,$id,$fields,$reason,$stamp)",
+            ("$id", entryId), ("$fields", DefaultJson(fields)), ("$reason", reason), ("$stamp", timestamp));
+        if (choice is null) fields.Remove(name); else fields[name] = choice.DeepClone();
+        c.Execute("INSERT OR REPLACE INTO display_metadata VALUES($id,$revision,$fields,$stamp)",
+            ("$id", entryId), ("$revision", checked((row?.Integer("revision") ?? 0) + 1)), ("$fields", DefaultJson(fields)), ("$stamp", timestamp));
+        return before;
+    }
+
     private static JsonObject Read(DatabaseSession c, long entryId)
     {
         if (c.Scalar("SELECT 1 FROM entries WHERE id=$entry", ("$entry", entryId)) is null) throw new KeyNotFoundException(entryId.ToString(CultureInfo.InvariantCulture));
@@ -144,6 +177,12 @@ public sealed class DisplayMetadata(SqliteDatabase database, object sourceWriteG
         var provenance = new JsonObject();
         foreach (var (name, node) in Parse(row.Text("fields_json")))
         {
+            if (LockedOnlyFields.TryGetValue(name, out var lockedColumn))
+            {
+                if (node is JsonObject lockedChoice && Text(lockedChoice["mode"]) == "locked")
+                { result[lockedColumn] = lockedChoice["value"]?.DeepClone(); provenance[name] = new JsonObject { ["mode"] = "locked" }; }
+                continue;
+            }
             if (!Fields.TryGetValue(name, out var column)) continue;
             if (node is not JsonObject choice) throw new InvalidDataException("Invalid saved display ownership");
             if (Text(choice["mode"]) == "locked")

@@ -25,8 +25,8 @@ public sealed record SuwayomiImportItem(long MangaId, string SourceId, string So
 
 /// <summary>
 /// CON-3 one-time import: a snapshot of the main Suwayomi library (manga with source, url and title) saved as JSON under
-/// &lt;data&gt;/suwayomi-import/plan.json. Creating catalogue entries from it needs the matching/ingest path of conversion
-/// phases 8/9, which the C# app does not have yet, so a stored plan has status <see cref="SuwayomiImport.AwaitingMatching"/>.
+/// &lt;data&gt;/suwayomi-import/plan.json. A stored plan has status <see cref="SuwayomiImport.AwaitingMatching"/> until the import
+/// pipeline (phase 9, ImportRuns.ImportSuwayomiPlan) created its catalogue entries; then <see cref="SuwayomiImport.Imported"/>.
 /// </summary>
 public sealed record SuwayomiImportPlan(string CreatedAt, string ServerUrl, string Status, IReadOnlyList<SuwayomiImportItem> Items)
 {
@@ -64,7 +64,10 @@ public sealed record SuwayomiImportPlan(string CreatedAt, string ServerUrl, stri
 public static class SuwayomiImport
 {
     public const string AwaitingMatching = "awaiting-matching";
-    public const string AwaitingMatchingNote = "Stored, awaiting matching: catalogue entries are created when matching and ingest arrive (conversion phase 8).";
+    public const string AwaitingMatchingNote = "Stored, awaiting matching: Imports → Suwayomi library (POST /api/v1/imports/suwayomi-plan) creates the catalogue entries through the import pipeline.";
+    /// <summary>The plan's status once the import pipeline created its catalogue entries (Imports/ImportRuns.ImportSuwayomiPlan).</summary>
+    public const string Imported = "imported";
+    public const string ImportedNote = "Importing: catalogue entries are created or matched through the import pipeline; the rows stay in the main library as they are.";
     public const string FolderName = "suwayomi-import";
     public static readonly JobType Job = new("suwayomi-import", "Import the main Suwayomi library", JobPriority.Low, StallTimeout: TimeSpan.FromMinutes(5));
     private const string ImportFields = "id sourceId url realUrl title thumbnailUrl source { id name lang }";

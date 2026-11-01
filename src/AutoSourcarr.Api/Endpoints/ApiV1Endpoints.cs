@@ -177,6 +177,14 @@ public sealed class ApiV1Services
     public TagSynonymsV1Services? TagSynonyms { get; init; }
     /// <summary>Phase 8 review workbench and policy simulator (8E); null answers 503.</summary>
     public ReviewV1Services? Review { get; init; }
+    /// <summary>Phase 9 catalogue sharing, portable identities and the compatibility list (9B); null answers 503.</summary>
+    public CatalogueSharingV1Services? CatalogueSharing { get; init; }
+    /// <summary>Phase 9 per-field metadata with overrides (9C); null answers 503.</summary>
+    public MetadataV1Services? Metadata { get; init; }
+    /// <summary>Phase 9 catalogue-wide discovery jobs: feeds, sparse metadata, additional records, Subbed search (9C); null answers 503.</summary>
+    public DiscoveryV1Services? Discovery { get; init; }
+    /// <summary>Phase 9 backup imports and the Suwayomi library plan import (9A); null answers 503.</summary>
+    public ImportsV1Services? Imports { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -553,6 +561,11 @@ public static class ApiV1Endpoints
         MixedEntriesV1Endpoints.Map(group, services, json, services.MixedEntries);
         TagSynonymsV1Endpoints.Map(group, json, services.TagSynonyms);
         ReviewV1Endpoints.Map(group, json, services.Review);
+        // Phase 9 "Imports, metadata, sharing".
+        CatalogueSharingV1Endpoints.Map(group, json, services.CatalogueSharing);
+        MetadataV1Endpoints.Map(group, json, services.Metadata);
+        DiscoveryV1Endpoints.Map(group, services, json, services.Discovery);
+        ImportsV1Endpoints.Map(group, json, services.Imports);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

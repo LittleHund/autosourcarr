@@ -137,4 +137,10 @@ AutoSourcarr.Tests.Matching.MixedEntriesTests.Register(suite);
 TagSynonymsTests.Register(suite);
 AutoSourcarr.Tests.Matching.ReviewWorkbenchTests.Register(suite);
 AutoSourcarr.Tests.Matching.MatchingWiringTests.Register(suite);
+// Phase 9 "Imports, metadata, sharing" (sharing registers through CatalogueSharingTests).
+AutoSourcarr.Tests.Imports.ImportsTests.Register(suite);
+AutoSourcarr.Tests.Catalogue.Metadata.MetadataChooserTests.Register(suite);
+AutoSourcarr.Tests.Catalogue.Metadata.MetadataIdentityTests.Register(suite);
+AutoSourcarr.Tests.Sources.Discovery.CatalogueDiscoveryTests.Register(suite);
+AutoSourcarr.Tests.Matching.Phase9WiringTests.Register(suite);
 return suite.Run(filters);
