@@ -17,7 +17,7 @@ concurrency:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 150
     services:
       postgres:
         image: postgres:17-alpine
@@ -68,12 +68,33 @@ jobs:
           if [ $b -eq 0 ]; then
             command -v nginx >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q nginx-light; } > probe/nginx.log 2>&1
             nginx -v >> probe/nginx.log 2>&1
-            AUTOSOURCARR_REQUIRE_NGINX=1 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build > probe/test.log 2>&1; t=$?
+            # Phase 10: the CBZ pipeline test copies its library here for the Kavita check below.
+            LIBRARY_EXPORT=$RUNNER_TEMP/library-export AUTOSOURCARR_REQUIRE_NGINX=1 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build > probe/test.log 2>&1; t=$?
             grep -E "^FAIL " -A 25 probe/test.log > probe/test-failures.txt
             tail -c 2000 probe/test.log | grep -o '"total":[0-9]*,"passed":[0-9]*,"failed":[0-9]*' > probe/test-summary.txt
             dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-openapi api/openapi.json > probe/openapi.log 2>&1; o=$?
             [ $o -eq 0 ] && { node scripts/generate-api-client.mjs >> probe/openapi.log 2>&1; c=$?; }
             dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --write-settings-docs docs/settings.md >> probe/openapi.log 2>&1
+          fi
+          # Phase 10: the whole user duplicate set (2,680 pairs; the regular suite runs a 300-pair sample).
+          du=skipped
+          if [ $b -eq 0 ] && [ -f tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json ]; then
+            AUTOSOURCARR_DUPLICATE_TEST_SET=$PWD/tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json               timeout 2700 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --filter "user duplicate" > probe/duplicate-user-set.log 2>&1; du=$?
+            grep -E "^(PASS|FAIL)|user duplicate set:|ingest wrong merge" probe/duplicate-user-set.log > probe/duplicate-user-set.txt; rm -f probe/duplicate-user-set.log
+          fi
+          # CHAP-7 (phase 10): the library the pipeline test wrote opens in Kavita (1 series, 2 chapters).
+          kv=skipped
+          if [ -d "$RUNNER_TEMP/library-export" ]; then
+            timeout 600 bash scripts/kavita-check.sh "$RUNNER_TEMP/library-export" 1 2 > probe/kavita-check.txt 2>&1; kv=$?
+          fi
+          # READ-1 (phase 10): the prebuilt reader extension (Keiyoushi build); its JAR feeds the two-server source-host test.
+          rx=skipped
+          if [ -f scripts/build-reader-extension.sh ]; then
+            timeout 1500 bash scripts/build-reader-extension.sh .build/reader-extension > probe/reader-extension-build.log 2>&1; rx=$?
+            tail -80 probe/reader-extension-build.log > probe/reader-extension-build.tail.log; rm -f probe/reader-extension-build.log
+            find .build/reader-extension -maxdepth 2 -type f | sort > probe/reader-extension-files.txt 2>/dev/null
+            reader_jar=$(find .build/reader-extension/jar -name '*.jar' 2>/dev/null | head -1)
+            [ -n "$reader_jar" ] && export AUTOSOURCARR_TEST_READER_EXTENSION_JAR=$PWD/$reader_jar
           fi
           # Source host (phase 4): build in a pinned Suwayomi checkout, start it, check real extensions.
           h=skipped; hc=skipped
@@ -104,7 +125,7 @@ jobs:
           # Repair runner isolation (phase 6e).
           { uname -r; python3 -c 'import ctypes; print("landlock abi", ctypes.CDLL(None).syscall(444, None, 0, 1))'; cat /proc/sys/kernel/yama/ptrace_scope; bash scripts/repair-runner-check.sh; echo "exit=$?"; } > probe/repair-runner-check.txt 2>&1
           rr=$(grep -o 'exit=[0-9]*' probe/repair-runner-check.txt | tail -1)
-          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" > probe/result.txt
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\nkavita=%s\nreader_extension_build=%s\nduplicate_user_set=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" "$kv" "$rx" "$du" > probe/result.txt
           cat probe/result.txt
       - name: Commit results
         if: always()
