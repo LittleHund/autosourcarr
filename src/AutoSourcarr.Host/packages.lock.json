@@ -103,6 +103,7 @@
           "FluentMigrator": "[8.0.1, )",
           "FluentMigrator.Runner.Core": "[8.0.1, )",
           "FluentMigrator.Runner.SQLite": "[8.0.1, )",
+          "Google.Protobuf": "[3.29.3, )",
           "Magick.NET-Q8-AnyCPU": "[15.0.0, )",
           "Microsoft.Data.Sqlite": "[10.0.13, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.0, )",
@@ -151,6 +152,12 @@
           "FluentMigrator": "8.0.1",
           "FluentMigrator.Runner.Core": "8.0.1"
         }
+      },
+      "Google.Protobuf": {
+        "type": "CentralTransitive",
+        "requested": "[3.29.3, )",
+        "resolved": "3.29.3",
+        "contentHash": "t7nZFFUFwigCwZ+nIXHDLweXvwIpsOXi+P7J7smPT/QjI3EKxnCzTQOhBqyEh6XEzc/pNH+bCFOOSjatrPt6Tw=="
       },
       "Magick.NET-Q8-AnyCPU": {
         "type": "CentralTransitive",

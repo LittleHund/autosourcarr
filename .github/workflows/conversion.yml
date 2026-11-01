@@ -53,6 +53,8 @@ jobs:
           AUTOSOURCARR_TEST_ROOT: ${{ runner.temp }}/autosourcarr-tests
           AUTOSOURCARR_REQUIRE_NGINX: "1"
         run: dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build
+      - name: Repair runner isolation (Landlock, connect and signal gates, egress proxy)
+        run: bash scripts/repair-runner-check.sh
       - name: OpenAPI document and UI client are current
         # The typed UI client is generated from the API; a stale committed copy fails the build.
         run: |

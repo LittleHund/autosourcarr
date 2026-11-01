@@ -1189,6 +1189,2155 @@
         }
       }
     },
+    "/api/v1/source-extensions": {
+      "get": {
+        "operationId": "getSourceExtensions",
+        "summary": "Installed and available extensions from the configured repositories (?refresh=true reloads the repositories).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-extensions/update-all": {
+      "post": {
+        "operationId": "updateAllSourceExtensions",
+        "summary": "Update every installed extension that has a newer version.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-extensions/upload": {
+      "post": {
+        "operationId": "uploadSourceExtension",
+        "summary": "Check a source APK (archive structure, manifest and entry point, no native code) and list its permissions, web addresses and warnings; nothing is installed. The file waits 10 minutes for POST /source-extensions/upload/confirm with its sha256.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-extensions/upload/confirm": {
+      "post": {
+        "operationId": "confirmSourceExtensionUpload",
+        "summary": "Install a source APK checked by POST /source-extensions/upload (body: sha256) within 10 minutes of its check.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-extensions/{pkgName}/action": {
+      "post": {
+        "operationId": "changeSourceExtension",
+        "summary": "Install, update or uninstall an extension; the source list refreshes in the background.",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-groups": {
+      "post": {
+        "operationId": "createSourceGroup",
+        "summary": "Create a source group (members share one priority; the member with the most chapters serves).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-groups/{groupId}": {
+      "delete": {
+        "operationId": "deleteSourceGroup",
+        "summary": "Delete a source group; its members become ungrouped.",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateSourceGroup",
+        "summary": "Rename a source group or change its priority.",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance": {
+      "get": {
+        "operationId": "getSourceMaintenance",
+        "summary": "Source repair status: worker configuration, the daily check switch and the last repair promotion and which repair kinds can run.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/auto-repair": {
+      "get": {
+        "operationId": "getSourceAutoRepair",
+        "summary": "Last automatic repair pass and the attempts per package.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/auto-repair/run": {
+      "post": {
+        "operationId": "runSourceAutoRepair",
+        "summary": "Start an automatic repair pass of moved sources now (REP-6).",
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/connection": {
+      "get": {
+        "operationId": "getRepairConnection",
+        "summary": "Where repairs run: always inside this instance (no external worker); which repair kinds are available.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      },
+      "put": {
+        "operationId": "setRepairConnection",
+        "summary": "Retired: external repair worker connections were removed (410).",
+        "responses": {
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/control": {
+      "get": {
+        "operationId": "getRepairControl",
+        "summary": "In-app repair state: domain repair availability, whether a repair is running, AI provider (not configured until Connections) and the runner check.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/control/{action}": {
+      "post": {
+        "operationId": "runRepairControl",
+        "summary": "Repair control actions: check (or prepare) runs the repair runner self-check; account actions answer 409 until an AI provider is configured.",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/host-setup": {
+      "get": {
+        "operationId": "getRepairHostSetup",
+        "summary": "Retired: the repair host-policy bundle was removed with the external worker (410).",
+        "responses": {
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/installed": {
+      "get": {
+        "operationId": "getInstalledSourceExtensions",
+        "summary": "Installed source extensions with their package, version, repository and source identities.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs": {
+      "post": {
+        "operationId": "createSourceRepairJob",
+        "summary": "Start a domain-move repair of an installed source (body: pkg_name, optional new_host, old_host, query, https) as a job; answers the job\u0027s task id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs/{jobId}": {
+      "get": {
+        "operationId": "getSourceRepairJob",
+        "summary": "A repair job: its task (state, progress, message) and the matching repair report (migration, structure and content checks, rollback).",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs/{jobId}/cancel": {
+      "post": {
+        "operationId": "cancelSourceRepairJob",
+        "summary": "Cancel a queued or running repair job; a repair that already changed the source rolls back itself.",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs/{jobId}/code": {
+      "get": {
+        "operationId": "downloadSourceRepairCode",
+        "summary": "Download the repaired jar a domain repair installed (kept copy, or the installed jar when its digest still matches); 404 otherwise.",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs/{jobId}/discard": {
+      "post": {
+        "operationId": "discardSourceRepairJob",
+        "summary": "Discard a repair: when it installed a repaired jar, the jar kept before it is installed again (a rollback job); otherwise nothing changes.",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs/{jobId}/feedback": {
+      "post": {
+        "operationId": "sendSourceRepairFeedback",
+        "summary": "Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Kept in feedback.jsonl (bounded); revert queues a rollback.",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs/{jobId}/inputs": {
+      "get": {
+        "operationId": "downloadSourceRepairInputs",
+        "summary": "Download the working jar that was kept before the repair (a JAR is a ZIP).",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/jobs/{jobId}/install": {
+      "post": {
+        "operationId": "installSourceRepairJob",
+        "summary": "Domain repairs install themselves: for a repaired job this answers 200 with its report and changes nothing; otherwise 409.",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/original-apk/{pkgName}": {
+      "post": {
+        "operationId": "attachOriginalSourceApk",
+        "summary": "Keep the original APK of an installed source as repair evidence (headers confirm the original and its version).",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/provider": {
+      "get": {
+        "operationId": "getRepairProvider",
+        "summary": "The repair AI provider; answers state not-configured until AI providers arrive with Connections.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/provider/test": {
+      "post": {
+        "operationId": "testRepairProvider",
+        "summary": "Test the repair AI provider (409 while none is configured).",
+        "responses": {
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/raws/{package}": {
+      "get": {
+        "operationId": "getSourceRaw",
+        "summary": "Raw-code state of an installed source (needs-input, acquiring, available, reconstructing); adopts retained repair code that matches the installed binary.",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/raws/{package}/code": {
+      "get": {
+        "operationId": "downloadSourceRawCode",
+        "summary": "Download the retained source code of an installed source as a portable ZIP.",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/raws/{package}/discover": {
+      "post": {
+        "operationId": "discoverSourceRawOrigin",
+        "summary": "Look up the source\u0027s repository in the configured indexes (body: revision); runs in the background.",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/raws/{package}/origin": {
+      "post": {
+        "operationId": "setSourceRawOrigin",
+        "summary": "Fetch the source code from its original public repository (body: revision, origin {repository, module, revision, ecosystem}).",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/raws/{package}/project": {
+      "post": {
+        "operationId": "uploadSourceRawProject",
+        "summary": "Upload the source project ZIP of an installed source (headers X-Raw-Revision, X-Source-Version, optional X-Source-Module; at most 32 MiB). Kept private.",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/raws/{package}/request-input": {
+      "post": {
+        "operationId": "requestSourceRawInput",
+        "summary": "Ask for new source code input again (body: revision).",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/raws/{package}/unavailable": {
+      "post": {
+        "operationId": "reconstructSourceRaw",
+        "summary": "The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider; 409 until Connections.",
+        "parameters": [
+          {
+            "name": "package",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/rollback": {
+      "post": {
+        "operationId": "rollbackSourceRepair",
+        "summary": "Install the working jar kept before the last repair of a package again, as a job (body pkg_name; without a body, the package of the last installed repair record).",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/setup-preview": {
+      "post": {
+        "operationId": "previewRepairSetup",
+        "summary": "Retired: Compose/SSH repair worker setup was removed (410).",
+        "responses": {
+          "410": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-maintenance/watch": {
+      "put": {
+        "operationId": "setSourceMaintenanceWatch",
+        "summary": "Turn automatic repair of moved sources on or off (domain repairs need no worker).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-manga/{mangaId}": {
+      "get": {
+        "operationId": "getSourceManga",
+        "summary": "Details of one title as its source reports them (refreshed from the source).",
+        "parameters": [
+          {
+            "name": "mangaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-orphans": {
+      "get": {
+        "operationId": "getSourceOrphans",
+        "summary": "Orphaned sources under two headers, Installed and Not installed, each with its own orphan group (SRC-3); items lists them all, with discovery and installation state.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-orphans/refresh": {
+      "post": {
+        "operationId": "refreshSourceOrphans",
+        "summary": "Collect removed sources from sampled original Keiyoushi history (two years) in the background; at most once a minute.",
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-orphans/{pkgName}/install": {
+      "post": {
+        "operationId": "installSourceOrphan",
+        "summary": "Install the original archived package of a removed source (digest and package identity checked; never replaces an installed source).",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-orphans/{pkgName}/mark": {
+      "post": {
+        "operationId": "markSourceOrphan",
+        "summary": "Mark an installed source as orphaned (only when it is missing from the configured repositories).",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-orphans/{pkgName}/repair": {
+      "post": {
+        "operationId": "repairSourceOrphan",
+        "summary": "Repair an installed orphan by moving it to its new web address (forwards to /api/v1/source-repairs/{pkgName}/domain).",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Error"
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-orphans/{pkgName}/unmark": {
+      "post": {
+        "operationId": "unmarkSourceOrphan",
+        "summary": "Return an installed orphan to the Installed list.",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-repairs/{pkgName}": {
+      "get": {
+        "operationId": "getSourceRepair",
+        "summary": "The last repair or rollback report of a package (state repaired, refused, failed, rolled_back or rollback_failed, with the migration, structure and content checks).",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-repairs/{pkgName}/domain": {
+      "post": {
+        "operationId": "repairSourceDomain",
+        "summary": "Repair an installed source whose website moved: keep its jar, rewrite the old host in its compiled strings (new_host, or the observed redirect), check the structure, install, check content, and roll back when the check fails. Runs as a job.",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-repairs/{pkgName}/rollback": {
+      "post": {
+        "operationId": "rollbackSourceDomainRepair",
+        "summary": "Install the last kept working jar of a package again (as a job).",
+        "parameters": [
+          {
+            "name": "pkgName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-settings": {
+      "get": {
+        "operationId": "getSources",
+        "summary": "Available sources with enabled, priority, group and language choices, and the source groups.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-settings/sync": {
+      "post": {
+        "operationId": "syncSources",
+        "summary": "Read the installed sources from the engine and store them (new sources get the default choices; empty engine lists keep existing ones).",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/source-settings/{sourceId}": {
+      "put": {
+        "operationId": "updateSource",
+        "summary": "Change a source\u0027s choices: enabled, priority, group, official, matching rules.",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/sources/{sourceId}/preferences": {
+      "get": {
+        "operationId": "getSourcePreferences",
+        "summary": "The extension\u0027s own settings for this source (as in Mihon), with current values.",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      },
+      "put": {
+        "operationId": "setSourcePreference",
+        "summary": "Change one extension setting of this source.",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/status/stats": {
       "get": {
         "operationId": "getStatusStats",
@@ -1292,10 +3441,41 @@
         }
       }
     },
+    "/api/v1/subbed": {
+      "get": {
+        "operationId": "getSubbedLibrary",
+        "summary": "Main Suwayomi library entries from the AutoSourcarr source, mapped to catalogue entries: entry_ids, items, stats_by_entry (chapter and downloaded counts), ok and error.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/tasks": {
       "get": {
         "operationId": "getTasks",
-        "summary": "Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work.",
+        "summary": "Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work; repair jobs are listed as kind source-repair with package and repair state.",
         "responses": {
           "200": {
             "description": "Success",

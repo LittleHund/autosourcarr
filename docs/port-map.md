@@ -99,6 +99,35 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | Later (phase 16) | two-factor (AUTH-7), owner transfer and recovery codes (AUTH-9) |
 | Audit fixes (fresh-agent audit) | 9 findings, all fixed: case-variant bypass, untrusted proxy headers, throttle lockout/bypass, sign-out not ending sessions, login open redirect, Basic first boot, guests blocked by the v1 filter, repeating owner reset open to visitors, smaller items (token redaction, Secure cookie, password-change slow-down) |
 
+### Phase 6 (sources and repair), ticked 2026-11-01
+
+| Row | Result |
+| --- | --- |
+| Repos and sources as indexers (SRC-1) | done: generated index.pb parser (Google.Protobuf + `.proto`, ExtensionIndex) and legacy index.min.json; repositories under `/api/v1/source-repositories` (Keiyoushi default) |
+| APK drag-and-drop (SRC-2) | done: ApkInspection (checked archive, binary manifest, entry point, permissions, web addresses, native code refused); upload shows the report first, install only after confirm (`/source-extensions/upload` → `/upload/confirm`) |
+| Orphans Installed / Not installed (SRC-3) | done: SourceOrphans (bundled seed, discovery, mark/unmark, archive install), `/api/v1/source-orphans` |
+| Source settings from Discover and Installed (SRC-4) | done: `/api/v1/source-settings`, `/sources/{id}/preferences`, groups, source manga |
+| Health checks (SRC-7) | done: SourceHealthCoordinator wired, `/api/v1/source-health` (daily + on demand) |
+| Official replacement first (SRC-8) | done: a repair is refused (`official_replacement`) when a configured repository lists a newer version; redirects to parking services are refused |
+| Paced source traffic (SRC-9) | done: per-host minimum interval in the source host (SOURCE_MIN_INTERVAL_MS, default 250 ms); a host queue deeper than 30 s fails fast instead of bursting. The AI benchmark part waits for Connections (7) |
+| Last working code (REP-1) | done: the installed jar is kept as last-working after a passed health check and before every repair (once per digest, 5 per package); source code and original-APK evidence via HostRawInstalledSources (`/api/v1/source-maintenance/raws/*`, `/original-apk/{pkg}`) |
+| Structure check (REP-2) | done: DomainMigration checks entry names/count, non-class entries byte-identical, every class re-parses with the same version, pool size and this_class |
+| Domain/API migration (REP-3) | done: ClassFileStrings rewrites the old host in Utf8 constants of the compiled code (no compiling); new address from the admin or from an observed redirect (FetcherObservationTransport) |
+| Content checks (REP-4) | done: ContentCheck (search → details → chapters → pages → image > 512 bytes, 5 min deadline); failure or cancel rolls back to the kept jar |
+| Landlock runner (REP-5) | done: native/repair-runner.c (Landlock ABI ≥ 6 required, fs read-only except the job dir, no /config or data access, connect only to the egress proxy through a seccomp connect gate, signal gate, no_new_privs, rlimits incl. NPROC and AS) and EgressProxy (domain allowlist, no Via, honest user agent, private addresses refused); IsolatedRunner checks the runner's proof line. Domain repairs do not run code, so they do not need the runner; code rebuilds use it when they arrive |
+| Opt-in automatic repair (REP-6) | done: asked in setup, switch in Sources → Repair; AutoRepairWatcher once a day, at most 5 sources, each once a week |
+| Repair jobs in Tasks (REP-7) | done: source-domain-repair, source-repair-rollback and source-auto-repair jobs projected into `/api/v1/tasks` |
+| No Compose edits (REP-8) | done: compose/SSH worker routes answer 410 |
+| RepairEndpoints (23 routes) | done: `/api/v1/source-maintenance/*` (connection/control/provider report the in-app state; jobs, code, inputs, feedback, raws) |
+| SourceInventoryEndpoints (11 routes) | done under `/api/v1` (+ auto-repair status and run) |
+| SourceEndpoints, SourceRepositoryEndpoints, SourceHealthEndpoints | done under `/api/v1` with OpenAPI names |
+| Main-library status (StatusEndpoints `cached_library_status`, `main_download_size_status`) | done: SuwayomiLibrary, cache-first `library` block in `/api/v1/health`, `GET /api/v1/subbed` |
+| Sources/Library → SuwayomiLibrary (15 methods) | 10 ported; moved to phase 8 (need CatalogueMaintenance / EntryIngest / SourceDiscovery): `_repair_subbed_orphan_aliases*`, `*_subbed_reset_seeds*`, `schedule_subbed_reset_rebrowse`, `schedule_subbed_search_all` (+ routes `subbed/search-all`, `subbed/repair-unmatched`) |
+| Done when | CI: the moved-domain orphan test (mangatown moved to a dead domain, repaired back, content check passes, rollback works) passes against the real source host; scripts/repair-runner-check.sh proves no /config read, no direct or non-allowed connection, no signal outside the run, ABI < 6 refused |
+| UI pages of this phase | done: source-repairs, repair-tasks, source-raws, repair-isolation, orphan-sources, source-controls, setup (auto-repair question), Sources pages on `/api/v1` |
+| Moved | source host as a separate low-rights user → phase 13 (needs the new image: a second uid cannot be created from an unprivileged app container); the runner binary in the image → phase 13 |
+| Audit fixes (fresh-agent audit) | 19 findings: 17 fixed (rollback on cancel, lock scope, orphan Repair button, auto repairs in Tasks, SRC-8 check, parking guard, APK preview, OpenAPI names, admission list, shutdown order, loop clamp, ABI 6 + signal gate, NPROC/AS limits, pacing burst, new-address field, raws/original-APK wiring, lock files); 2 as limitations (SNI not checked inside CONNECT tunnels; runner binary in the image with phase 13) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
