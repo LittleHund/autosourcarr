@@ -1,2 +1,3 @@
 PASS source host: supervised host serves install, search, details, chapters, pages and image to the client; restarts after a crash
-{"total":1,"passed":1,"failed":0,"registered":974,"filtered":true,"filters":["source host:"],"outcomes":[{"name":"source host: supervised host serves install, search, details, chapters, pages and image to the client; restarts after a crash","passed":true,"elapsedMs":14802}]}
+PASS source host: a moved-domain orphan is repaired by the domain repair, passes the content check and rolls back
+{"total":2,"passed":2,"failed":0,"registered":1021,"filtered":true,"filters":["source host:"],"outcomes":[{"name":"source host: supervised host serves install, search, details, chapters, pages and image to the client; restarts after a crash","passed":true,"elapsedMs":13184},{"name":"source host: a moved-domain orphan is repaired by the domain repair, passes the content check and rolls back","passed":true,"elapsedMs":5074}]}

@@ -2,13 +2,12 @@
   AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
 CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
   AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
-/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Sources/SuwayomiLibraryTests.cs(116,169): error CS9007: The interpolated raw string literal does not start with enough '$' characters to allow this many consecutive closing braces as content. [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
+  AutoSourcarr.Tests -> /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/bin/Release/net10.0/AutoSourcarr.Tests.dll
 
-Build FAILED.
+Build succeeded.
 
 CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
-/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/Sources/SuwayomiLibraryTests.cs(116,169): error CS9007: The interpolated raw string literal does not start with enough '$' characters to allow this many consecutive closing braces as content. [/home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj]
     1 Warning(s)
-    1 Error(s)
+    0 Error(s)
 
-Time Elapsed 00:00:18.90
+Time Elapsed 00:00:21.14

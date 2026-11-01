@@ -225,6 +225,14 @@
        */
       attachOriginalSourceApk(pkgName, options) { return call('POST', `/api/v1/source-maintenance/original-apk/${encodeURIComponent(pkgName)}`, undefined, options); },
       /**
+       * Cancel a queued or running repair job; a repair that already changed the source rolls back itself.
+       * POST /api/v1/source-maintenance/jobs/{jobId}/cancel
+       * @param {string} jobId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      cancelSourceRepairJob(jobId, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/cancel`, undefined, options); },
+      /**
        * Cancel a queued or running task. Work already done stays; the task is listed as failed with "Cancelled by user".
        * POST /api/v1/tasks/{taskId}/cancel
        * @param {string} taskId
@@ -295,6 +303,14 @@
        */
       clearTaskHistory(options) { return call('POST', '/api/v1/tasks/clear-history', undefined, options); },
       /**
+       * Install a source APK checked by POST /source-extensions/upload (body: sha256) within 10 minutes of its check.
+       * POST /api/v1/source-extensions/upload/confirm
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      confirmSourceExtensionUpload(body, options) { return call('POST', '/api/v1/source-extensions/upload/confirm', body, options); },
+      /**
        * Owner only: add an admin or guest account with a password.
        * POST /api/v1/accounts
        * @param {JsonObject} body
@@ -327,6 +343,14 @@
        */
       createSourceGroup(body, options) { return call('POST', '/api/v1/source-groups', body, options); },
       /**
+       * Start a domain-move repair of an installed source (body: pkg_name, optional new_host, old_host, query, https) as a job; answers the job's task id.
+       * POST /api/v1/source-maintenance/jobs
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      createSourceRepairJob(body, options) { return call('POST', '/api/v1/source-maintenance/jobs', body, options); },
+      /**
        * Owner only: remove an account (not the owner); its sessions end.
        * DELETE /api/v1/accounts/{accountId}
        * @param {string} accountId
@@ -343,12 +367,53 @@
        */
       deleteSourceGroup(groupId, options) { return call('DELETE', `/api/v1/source-groups/${encodeURIComponent(groupId)}`, undefined, options); },
       /**
+       * Discard a repair: when it installed a repaired jar, the jar kept before it is installed again (a rollback job); otherwise nothing changes.
+       * POST /api/v1/source-maintenance/jobs/{jobId}/discard
+       * @param {string} jobId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      discardSourceRepairJob(jobId, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/discard`, undefined, options); },
+      /**
+       * Look up the source's repository in the configured indexes (body: revision); runs in the background.
+       * POST /api/v1/source-maintenance/raws/{package}/discover
+       * @param {string} package
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      discoverSourceRawOrigin(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/discover`, body, options); },
+      /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<UpdateNoticeResponse>}
        */
       dismissUpdateNotice(options) { return call('POST', '/api/v1/settings/update-notice/dismiss', undefined, options); },
+      /**
+       * Download the retained source code of an installed source as a portable ZIP.
+       * GET /api/v1/source-maintenance/raws/{package}/code
+       * @param {string} package
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      downloadSourceRawCode(package, options) { return call('GET', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/code`, undefined, options); },
+      /**
+       * Download the repaired jar a domain repair installed (kept copy, or the installed jar when its digest still matches); 404 otherwise.
+       * GET /api/v1/source-maintenance/jobs/{jobId}/code
+       * @param {string} jobId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      downloadSourceRepairCode(jobId, options) { return call('GET', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/code`, undefined, options); },
+      /**
+       * Download the working jar that was kept before the repair (a JAR is a ZIP).
+       * GET /api/v1/source-maintenance/jobs/{jobId}/inputs
+       * @param {string} jobId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      downloadSourceRepairInputs(jobId, options) { return call('GET', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/inputs`, undefined, options); },
       /**
        * Save the wizard's changes to config.json in one step; a repeated request id returns the first result.
        * POST /api/v1/setup/finish
@@ -442,6 +507,34 @@
        */
       getMe(options) { return call('GET', '/api/v1/auth/me', undefined, options); },
       /**
+       * Where repairs run: always inside this instance (no external worker); which repair kinds are available.
+       * GET /api/v1/source-maintenance/connection
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getRepairConnection(options) { return call('GET', '/api/v1/source-maintenance/connection', undefined, options); },
+      /**
+       * In-app repair state: domain repair availability, whether a repair is running, AI provider (not configured until Connections) and the runner check.
+       * GET /api/v1/source-maintenance/control
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getRepairControl(options) { return call('GET', '/api/v1/source-maintenance/control', undefined, options); },
+      /**
+       * Retired: the repair host-policy bundle was removed with the external worker (410).
+       * GET /api/v1/source-maintenance/host-setup
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      getRepairHostSetup(options) { return call('GET', '/api/v1/source-maintenance/host-setup', undefined, options); },
+      /**
+       * The repair AI provider; answers state not-configured until AI providers arrive with Connections.
+       * GET /api/v1/source-maintenance/provider
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getRepairProvider(options) { return call('GET', '/api/v1/source-maintenance/provider', undefined, options); },
+      /**
        * Timing samples per work phase (no URLs, titles or keys).
        * GET /api/v1/diagnostics/metrics
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -484,6 +577,13 @@
        */
       getSetup(options) { return call('GET', '/api/v1/setup', undefined, options); },
       /**
+       * Last automatic repair pass and the attempts per package.
+       * GET /api/v1/source-maintenance/auto-repair
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceAutoRepair(options) { return call('GET', '/api/v1/source-maintenance/auto-repair', undefined, options); },
+      /**
        * Source browser identity (user-agent preset and value), presets, the identity the engine uses now and the WebView state.
        * GET /api/v1/source-browser
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -505,7 +605,7 @@
        */
       getSourceExtensions(options) { return call('GET', '/api/v1/source-extensions', undefined, options); },
       /**
-       * Source repair status: worker configuration, the daily check switch and the last repair promotion. Repair runs arrive in phase 6e.
+       * Source repair status: worker configuration, the daily check switch and the last repair promotion and which repair kinds can run.
        * GET /api/v1/source-maintenance
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -535,6 +635,30 @@
        */
       getSourcePreferences(sourceId, options) { return call('GET', `/api/v1/sources/${encodeURIComponent(sourceId)}/preferences`, undefined, options); },
       /**
+       * Raw-code state of an installed source (needs-input, acquiring, available, reconstructing); adopts retained repair code that matches the installed binary.
+       * GET /api/v1/source-maintenance/raws/{package}
+       * @param {string} package
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceRaw(package, options) { return call('GET', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}`, undefined, options); },
+      /**
+       * The last repair or rollback report of a package (state repaired, refused, failed, rolled_back or rollback_failed, with the migration, structure and content checks).
+       * GET /api/v1/source-repairs/{pkgName}
+       * @param {string} pkgName
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceRepair(pkgName, options) { return call('GET', `/api/v1/source-repairs/${encodeURIComponent(pkgName)}`, undefined, options); },
+      /**
+       * A repair job: its task (state, progress, message) and the matching repair report (migration, structure and content checks, rollback).
+       * GET /api/v1/source-maintenance/jobs/{jobId}
+       * @param {string} jobId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSourceRepairJob(jobId, options) { return call('GET', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}`, undefined, options); },
+      /**
        * Available sources with enabled, priority, group and language choices, and the source groups.
        * GET /api/v1/source-settings
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -549,7 +673,14 @@
        */
       getStatusStats(options) { return call('GET', '/api/v1/status/stats', undefined, options); },
       /**
-       * Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work.
+       * Main Suwayomi library entries from the AutoSourcarr source, mapped to catalogue entries: entry_ids, items, stats_by_entry (chapter and downloaded counts), ok and error.
+       * GET /api/v1/subbed
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSubbedLibrary(options) { return call('GET', '/api/v1/subbed', undefined, options); },
+      /**
+       * Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work; repair jobs are listed as kind source-repair with package and repair state.
        * GET /api/v1/tasks
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -570,6 +701,14 @@
        * @returns {Promise<JsonObject>}
        */
       installSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/install`, undefined, options); },
+      /**
+       * Domain repairs install themselves: for a repaired job this answers 200 with its report and changes nothing; otherwise 409.
+       * POST /api/v1/source-maintenance/jobs/{jobId}/install
+       * @param {string} jobId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      installSourceRepairJob(jobId, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/install`, undefined, options); },
       /**
        * Sign in with name and password (login page). Failed attempts slow down and are logged.
        * POST /api/v1/auth/login
@@ -602,6 +741,22 @@
        */
       moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
       /**
+       * Retired: Compose/SSH repair worker setup was removed (410).
+       * POST /api/v1/source-maintenance/setup-preview
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      previewRepairSetup(options) { return call('POST', '/api/v1/source-maintenance/setup-preview', undefined, options); },
+      /**
+       * The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider; 409 until Connections.
+       * POST /api/v1/source-maintenance/raws/{package}/unavailable
+       * @param {string} package
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      reconstructSourceRaw(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/unavailable`, body, options); },
+      /**
        * Collect removed sources from sampled original Keiyoushi history (two years) in the background; at most once a minute.
        * POST /api/v1/source-orphans/refresh
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -616,13 +771,31 @@
        */
       regenerateAdminToken(options) { return call('POST', '/api/v1/keys/admin-token/regenerate', undefined, options); },
       /**
-       * Build and check an orphan with the repair runner (phase 6e; answers 409 until then).
+       * Repair an installed source whose website moved: keep its jar, rewrite the old host in its compiled strings (new_host, or the observed redirect), check the structure, install, check content, and roll back when the check fails. Runs as a job.
+       * POST /api/v1/source-repairs/{pkgName}/domain
+       * @param {string} pkgName
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      repairSourceDomain(pkgName, body, options) { return call('POST', `/api/v1/source-repairs/${encodeURIComponent(pkgName)}/domain`, body, options); },
+      /**
+       * Repair an installed orphan by moving it to its new web address (forwards to /api/v1/source-repairs/{pkgName}/domain).
        * POST /api/v1/source-orphans/{pkgName}/repair
        * @param {string} pkgName
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<null>}
        */
       repairSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/repair`, undefined, options); },
+      /**
+       * Ask for new source code input again (body: revision).
+       * POST /api/v1/source-maintenance/raws/{package}/request-input
+       * @param {string} package
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      requestSourceRawInput(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/request-input`, body, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
@@ -662,12 +835,36 @@
        */
       revokeKey(keyId, options) { return call('DELETE', `/api/v1/keys/${encodeURIComponent(keyId)}`, undefined, options); },
       /**
-       * Restore the package installed before the last repair (arrives with the repair runner; answers 409 until then).
-       * POST /api/v1/source-maintenance/rollback
+       * Install the last kept working jar of a package again (as a job).
+       * POST /api/v1/source-repairs/{pkgName}/rollback
+       * @param {string} pkgName
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
-       * @returns {Promise<null>}
+       * @returns {Promise<JsonObject>}
        */
-      rollbackSourceRepair(options) { return call('POST', '/api/v1/source-maintenance/rollback', undefined, options); },
+      rollbackSourceDomainRepair(pkgName, options) { return call('POST', `/api/v1/source-repairs/${encodeURIComponent(pkgName)}/rollback`, undefined, options); },
+      /**
+       * Install the working jar kept before the last repair of a package again, as a job (body pkg_name; without a body, the package of the last installed repair record).
+       * POST /api/v1/source-maintenance/rollback
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      rollbackSourceRepair(body, options) { return call('POST', '/api/v1/source-maintenance/rollback', body, options); },
+      /**
+       * Repair control actions: check (or prepare) runs the repair runner self-check; account actions answer 409 until an AI provider is configured.
+       * POST /api/v1/source-maintenance/control/{action}
+       * @param {string} action
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      runRepairControl(action, options) { return call('POST', `/api/v1/source-maintenance/control/${encodeURIComponent(action)}`, undefined, options); },
+      /**
+       * Start an automatic repair pass of moved sources now (REP-6).
+       * POST /api/v1/source-maintenance/auto-repair/run
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      runSourceAutoRepair(options) { return call('POST', '/api/v1/source-maintenance/auto-repair/run', undefined, options); },
       /**
        * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
        * PUT /api/v1/settings
@@ -677,7 +874,23 @@
        */
       saveSettings(body, options) { return call('PUT', '/api/v1/settings', body, options); },
       /**
-       * Turn the daily maintained-source check on or off (requires a configured repair worker to turn on).
+       * Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Kept in feedback.jsonl (bounded); revert queues a rollback.
+       * POST /api/v1/source-maintenance/jobs/{jobId}/feedback
+       * @param {string} jobId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      sendSourceRepairFeedback(jobId, body, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/feedback`, body, options); },
+      /**
+       * Retired: external repair worker connections were removed (410).
+       * PUT /api/v1/source-maintenance/connection
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      setRepairConnection(options) { return call('PUT', '/api/v1/source-maintenance/connection', undefined, options); },
+      /**
+       * Turn automatic repair of moved sources on or off (domain repairs need no worker).
        * PUT /api/v1/source-maintenance/watch
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -694,6 +907,15 @@
        */
       setSourcePreference(sourceId, body, options) { return call('PUT', `/api/v1/sources/${encodeURIComponent(sourceId)}/preferences`, body, options); },
       /**
+       * Fetch the source code from its original public repository (body: revision, origin {repository, module, revision, ecosystem}).
+       * POST /api/v1/source-maintenance/raws/{package}/origin
+       * @param {string} package
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setSourceRawOrigin(package, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/origin`, body, options); },
+      /**
        * Save the source browser identity and apply it to the running engine (sources rebuild their headers).
        * PUT /api/v1/source-browser/user-agent
        * @param {JsonObject} body
@@ -708,6 +930,13 @@
        * @returns {Promise<JsonObject>}
        */
       syncSources(options) { return call('POST', '/api/v1/source-settings/sync', undefined, options); },
+      /**
+       * Test the repair AI provider (409 while none is configured).
+       * POST /api/v1/source-maintenance/provider/test
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      testRepairProvider(options) { return call('POST', '/api/v1/source-maintenance/provider/test', undefined, options); },
       /**
        * Return an installed orphan to the Installed list.
        * POST /api/v1/source-orphans/{pkgName}/unmark
@@ -742,12 +971,20 @@
        */
       updateSourceGroup(groupId, body, options) { return call('PUT', `/api/v1/source-groups/${encodeURIComponent(groupId)}`, body, options); },
       /**
-       * Install a source APK by drag and drop after the checks: archive structure, manifest and entry point, no native code; lists permissions and web addresses.
+       * Check a source APK (archive structure, manifest and entry point, no native code) and list its permissions, web addresses and warnings; nothing is installed. The file waits 10 minutes for POST /source-extensions/upload/confirm with its sha256.
        * POST /api/v1/source-extensions/upload
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       uploadSourceExtension(options) { return call('POST', '/api/v1/source-extensions/upload', undefined, options); },
+      /**
+       * Upload the source project ZIP of an installed source (headers X-Raw-Revision, X-Source-Version, optional X-Source-Module; at most 32 MiB). Kept private.
+       * POST /api/v1/source-maintenance/raws/{package}/project
+       * @param {string} package
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      uploadSourceRawProject(package, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package)}/project`, undefined, options); },
     };
   }
 
