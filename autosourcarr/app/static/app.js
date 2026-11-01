@@ -3835,20 +3835,34 @@ if($('#clearImportHistory'))$('#clearImportHistory').onclick=async()=>{
   catch(e){toast('Unable to clear import history: '+e.message);}
   finally{b.disabled=false;}
 };
+if($('#recheckImportsAfterReset'))$('#recheckImportsAfterReset').onclick=async()=>{
+  const b=$('#recheckImportsAfterReset');b.disabled=true;
+  try{
+    const r=await api('/api/v1/imports/recheck-after-reset',{method:'POST',body:'{}'});
+    toast(r.task_id?`Import recheck queued as task ${r.task_id}`:'Import recheck queued');
+    if(typeof loadTasks==='function')loadTasks().catch(()=>{});
+  }catch(e){toast('Unable to recheck imports: '+e.message);}
+  finally{b.disabled=false;}
+};
+// Explicit resets: GET the preview, confirm what it would forget, POST {confirm:true, preview_token} (409 when it changed meanwhile).
 if($('#resetImportManualAutoresolve'))$('#resetImportManualAutoresolve').onclick=async()=>{
-  if(!confirm('Reset all learned manual import autoresolve mappings? Future backup imports will no longer automatically reuse your previous manual import Match decisions. Ordinary manual source matches/groups are kept.'))return;
   const b=$('#resetImportManualAutoresolve');b.disabled=true;
   try{
-    const r=await api('/api/v1/imports/reset-manual-autoresolve',{method:'POST',body:'{}'});
+    const preview=await api('/api/v1/imports/reset-manual-autoresolve',{cache:'no-store',timeoutMs:20000});
+    const n=Number(preview.autoresolve_mappings||0);
+    if(!confirm(`Reset ${n} learned manual import autoresolve mapping${n===1?'':'s'}? Future backup imports will no longer automatically reuse your previous manual import Match decisions. Ordinary manual source matches/groups are kept.`))return;
+    const r=await api('/api/v1/imports/reset-manual-autoresolve',{method:'POST',body:JSON.stringify({confirm:true,preview_token:preview.preview_token})});
     toast(`Reset ${Number(r.autoresolve_mappings_removed||0)} manual import autoresolve mapping${Number(r.autoresolve_mappings_removed||0)===1?'':'s'}`);
   }catch(e){toast('Unable to reset import manual autoresolve: '+e.message);}
   finally{b.disabled=false;}
 };
 if($('#resetImportRejections'))$('#resetImportRejections').onclick=async()=>{
-  if(!confirm('Reset all semi-permanent rejected import matches? Previously rejected candidates may become suggestions again. Import history and Suwayomi library entries are not deleted.'))return;
   const b=$('#resetImportRejections');b.disabled=true;
   try{
-    const r=await api('/api/v1/imports/reset-rejections',{method:'POST',body:'{}'});
+    const preview=await api('/api/v1/imports/reset-rejections',{cache:'no-store',timeoutMs:20000});
+    const n=Number(preview.rejections||0);
+    if(!confirm(`Reset ${n} semi-permanent rejected import match${n===1?'':'es'}? Previously rejected candidates may become suggestions again. Import history and Suwayomi library entries are not deleted.`))return;
+    const r=await api('/api/v1/imports/reset-rejections',{method:'POST',body:JSON.stringify({confirm:true,preview_token:preview.preview_token})});
     await loadImports();
     toast(`Reset ${Number(r.rejections_cleared||0)} rejected import match${Number(r.rejections_cleared||0)===1?'':'es'}`);
   }catch(e){toast('Unable to reset rejected import matches: '+e.message);}

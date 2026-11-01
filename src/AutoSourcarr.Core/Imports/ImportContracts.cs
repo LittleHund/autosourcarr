@@ -166,5 +166,7 @@ public sealed class ImportProgress(JobContext? context)
     public CancellationToken CancellationToken => context?.CancellationToken ?? CancellationToken.None;
     public void Report(int? current = null, int? total = null, string? message = null) => context?.Report(current, total, message);
     public void Result(string message) => context?.Result(message);
+    /// <summary>A person cancelled this job (not a shutdown, pause or watchdog stop); see <see cref="JobContext.CancelledByUser"/>.</summary>
+    public bool CancelledByUser => context?.CancelledByUser ?? false;
     internal static string Count(int value, string noun) => value.ToString(CultureInfo.InvariantCulture) + " " + noun + (value == 1 ? "" : "s");
 }

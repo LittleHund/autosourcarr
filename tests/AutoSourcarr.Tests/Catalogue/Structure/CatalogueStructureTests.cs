@@ -155,7 +155,11 @@ public static class CatalogueStructureTests
             {
                 using var f = new Setup(); f.Native(1, "17", 111, "First native title"); f.Native(2, "18", 222, "Second native title");
                 if (edition) f.C(c => c.Execute("INSERT INTO source_color_profiles VALUES('17',111,'colored',.99,1,'fixture',1,'now'),('18',222,'monochrome',.99,1,'fixture',0,'now')")); else f.C(c => c.Execute("INSERT INTO duplicate_reviews VALUES(1,2,'not_duplicate','now')"));
-                Check.Throws<InvalidOperationException>(() => f.Apply(f.Choice("group", [1], [("17", 111), ("18", 222)]))); Check.Equal(2L, f.Count("entries")); Check.Equal(0L, f.Count("pending_entry_merges"));
+                // A local Separate is refused up front by CatalogueExchange.Protect (ArgumentException, decision stays pending);
+                // current native edition proof is refused by the structure owner (InvalidOperationException).
+                if (edition) Check.Throws<InvalidOperationException>(() => f.Apply(f.Choice("group", [1], [("17", 111), ("18", 222)])));
+                else Check.True(Check.Throws<ArgumentException>(() => f.Apply(f.Choice("group", [1], [("17", 111), ("18", 222)]))).Message.StartsWith("A local Separate decision is retained", StringComparison.Ordinal), "Separate refusal message");
+                Check.Equal(2L, f.Count("entries")); Check.Equal(0L, f.Count("pending_entry_merges"));
             }
         });
         suite.Add("catalogue structure: full native snapshot excludes shared/display aliases and retains exact lineage evidence", () =>

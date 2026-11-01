@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Imports.Backup;
+using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Persistence;
 
@@ -137,20 +138,47 @@ public sealed partial class ImportRuns
             var upload = DataDirectory is { Length: > 0 } uploadRoot ? Path.Combine(uploadRoot, RawFolder, importId, "upload.bin") : null;
             if (upload is not null && File.Exists(upload) && Library is not null)
             {
-                try
+                string kept = upload;
+                // The upload is decoded inside its own import job, never here: a restart with several interrupted runs keeps
+                // one decoded backup in memory at a time (ImportJob runs one at a time and MihonBackupReader decodes serially).
+                Launch(ImportJob, importId, "Resume Mihon/Tachiyomi backup import · " + run.Text("filename"), "automatic", RunKey(importId), progress =>
                 {
-                    var library = MihonBackupReader.Read(File.ReadAllBytes(upload));
-                    var rows = library.Manga.Select(manga => manga.ToJson()).ToList();
-                    Launch(ImportJob, importId, "Resume Mihon/Tachiyomi backup import · " + run.Text("filename"), "automatic", RunKey(importId),
-                        progress => RunImportJobAsync(importId, rows, alreadyInLibrary: false, upload, progress));
-                    resumed++;
-                    continue;
-                }
-                catch (Exception error) when (error is BackupDecodeException or IOException or UnauthorizedAccessException) { RemoveUpload(upload); }
+                    List<JsonObject> rows;
+                    try
+                    {
+                        using (var stream = File.OpenRead(kept)) rows = MihonBackupReader.Read(stream).Manga.Select(manga => manga.ToJson()).ToList();
+                    }
+                    catch (Exception error) when (error is BackupDecodeException or IOException or UnauthorizedAccessException)
+                    {
+                        RemoveUpload(kept);
+                        Recount(importId, "failed");
+                        progress.Result("The kept upload could not be read again: " + error.Message);
+                        return Task.CompletedTask;
+                    }
+                    return RunImportJobAsync(importId, rows, alreadyInLibrary: false, kept, progress);
+                });
+                resumed++;
+                continue;
             }
             Recount(importId, "failed");
         }
         return resumed;
+    }
+
+    public static readonly JobType RecheckJob = new("import-recheck", "Recheck imports after a reset", JobPriority.Normal, StallTimeout: TimeSpan.FromMinutes(30));
+
+    /// <summary>POST /api/v1/imports/recheck-after-reset: <see cref="RecheckAfterReset"/> as a visible job (Tasks).</summary>
+    public JsonObject ScheduleRecheckAfterReset(DecisionActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        var taskId = Launch(RecheckJob, "recheck", "Recheck imports after a reset", "manual", "recheck", progress =>
+        {
+            var result = RecheckAfterReset(actor);
+            progress.Result("Rechecked " + Str(result, "rechecked") + " imports: kept " + Str(result, "kept") + ", restored " + Str(result, "restored")
+                + ", reopened " + Str(result, "reopened"));
+            return Task.CompletedTask;
+        });
+        return new JsonObject { ["queued"] = true, ["task_id"] = taskId };
     }
 
     /// <summary>
@@ -165,7 +193,17 @@ public sealed partial class ImportRuns
         ArgumentNullException.ThrowIfNull(actor);
         var rows = Read(c => c.Query("SELECT * FROM import_items WHERE state IN ('added','existing') AND entry_id IS NOT NULL ORDER BY import_id,position"));
         var dangling = rows.Where(row => !_ingest.EntryExists(row.Integer("entry_id"))).ToList();
-        int kept = 0, restored = 0, reopened = 0, manualPending = 0;
+        int kept = 0, restored = 0, reopened = 0, manualReopened = 0;
+        int Reopen(string importId, long itemId, long revision, string reason) => Write(c =>
+        {
+            var count = c.Execute("""
+                UPDATE import_items SET state='unresolved',entry_id=NULL,reason=$reason,candidate_ids_json='[]',suggestion_checked=0,suggestion_state='queued',
+                  library_add_verified=0,decision_revision=decision_revision+1,updated_at=$now
+                WHERE import_id=$run AND id=$id AND decision_revision=$rev AND state IN ('added','existing')
+                """, ("$reason", reason), ("$now", Now()), ("$run", importId), ("$id", itemId), ("$rev", revision));
+            if (count > 0) RecountIn(c, importId, null);
+            return count;
+        });
         foreach (var row in dangling)
         {
             var importId = row.Text("import_id"); var itemId = row.Integer("id"); var oldEntry = row.Integer("entry_id");
@@ -174,7 +212,7 @@ public sealed partial class ImportRuns
             var hasManual = Read(c => c.Scalar("SELECT 1 FROM import_manual_autoresolve WHERE backup_key=$key", ("$key", RejectionKey(item))) is not null);
             if (hasManual)
             {
-                var (manualEntry, _) = ManualAutoresolveEntry(item, actor);
+                var (manualEntry, manualReason) = ManualAutoresolveEntry(item, actor);
                 if (manualEntry is { } target)
                 {
                     if (Repoint(importId, itemId, revision, target, "Remembered manual import match restored after a catalogue reset"))
@@ -184,7 +222,15 @@ public sealed partial class ImportRuns
                             before: new JsonObject { ["entry_id"] = oldEntry }, after: Decision(importId, itemId, revision, item));
                     }
                 }
-                else manualPending++;
+                // The remembered work is not back (its record and title are gone too): the row returns to review with the
+                // reason instead of waiting forever on an entry that no longer exists. The remembered match itself stays.
+                else if (Reopen(importId, itemId, revision, "Remembered manual import match could not be restored after a catalogue reset ("
+                    + (manualReason.Length > 0 ? manualReason : "its work is not catalogued") + "). Choose Match, Search or Skip.") > 0)
+                {
+                    reopened++; manualReopened++;
+                    Log("import.recheck.reopened", actor, [], "Remembered manual import match could not be restored: " + manualReason,
+                        before: new JsonObject { ["entry_id"] = oldEntry }, after: Decision(importId, itemId, revision + 1, item));
+                }
                 continue;
             }
             var (candidate, reason) = RecheckCandidate(item, oldEntry);
@@ -195,25 +241,15 @@ public sealed partial class ImportRuns
                     before: new JsonObject { ["entry_id"] = oldEntry }, after: Decision(importId, itemId, revision, item));
                 continue;
             }
-            var changed = Write(c =>
-            {
-                var count = c.Execute("""
-                    UPDATE import_items SET state='unresolved',entry_id=NULL,reason=$reason,candidate_ids_json='[]',suggestion_checked=0,suggestion_state='queued',
-                      library_add_verified=0,decision_revision=decision_revision+1,updated_at=$now
-                    WHERE import_id=$run AND id=$id AND decision_revision=$rev AND state IN ('added','existing')
-                    """, ("$reason", "Rechecked after a catalogue reset: the earlier match no longer passes the current rules (" + reason + "). Choose Match, Search or Skip."),
-                    ("$now", Now()), ("$run", importId), ("$id", itemId), ("$rev", revision));
-                if (count > 0) RecountIn(c, importId, null);
-                return count;
-            });
-            if (changed == 0) continue;
+            if (Reopen(importId, itemId, revision, "Rechecked after a catalogue reset: the earlier match no longer passes the current rules (" + reason + "). Choose Match, Search or Skip.") == 0)
+                continue;
             reopened++;
             Log("import.recheck.reopened", DecisionActor.Automatic, [], "Earlier import match no longer passes the current rules: " + reason,
                 before: new JsonObject { ["entry_id"] = oldEntry }, after: Decision(importId, itemId, revision + 1, item));
         }
         return new JsonObject
         {
-            ["rechecked"] = dangling.Count, ["kept"] = kept, ["restored"] = restored, ["reopened"] = reopened, ["manual_waiting"] = manualPending,
+            ["rechecked"] = dangling.Count, ["kept"] = kept, ["restored"] = restored, ["reopened"] = reopened, ["manual_reopened"] = manualReopened,
         };
     }
 
@@ -222,7 +258,11 @@ public sealed partial class ImportRuns
     {
         var sourceId = CurrentSourceId(item);
         List<long> byUrl = sourceId.Length > 0 ? FilterRejected(item, EntriesBySourceUrl(sourceId, Str(item, "url"))) : [];
-        if (byUrl.Count == 1) return (byUrl[0], "exact source URL");
+        if (byUrl.Count == 1)
+        {
+            if (IdentityConflict(item, byUrl[0]) is { } different) return (null, different);
+            return (byUrl[0], "exact source URL");
+        }
         var records = new HashSet<string>(StringComparer.Ordinal);
         if (History is { } history)
         {

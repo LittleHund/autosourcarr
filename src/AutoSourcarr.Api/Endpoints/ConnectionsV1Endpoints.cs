@@ -177,7 +177,7 @@ internal static class ConnectionsV1Endpoints
             }))
             .Accepts<JsonObject>("application/json")
             .WithName("importSuwayomiLibrary")
-            .WithSummary("One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; catalogue entries are created when matching arrives (conversion phase 8). With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.")
+            .WithSummary("One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; POST /api/v1/imports/suwayomi-plan then creates the catalogue entries through the import pipeline. With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.")
             .Produces<JsonObject>(StatusCodes.Status202Accepted)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)

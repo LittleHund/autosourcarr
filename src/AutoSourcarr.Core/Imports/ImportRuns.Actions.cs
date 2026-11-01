@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using AutoSourcarr.Core.Catalogue.Titles;
 using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Persistence;
@@ -82,22 +83,29 @@ public sealed partial class ImportRuns
         entryId = _ingest.CanonicalEntryId(entryId);
         var restore = RestorePoint(importId, itemId, row);
         var item = ItemPayload(row);
-        if (recoveryRevision is null)
-        {
-            ClearRejectionForEntry(item, entryId);
-            RememberManualAutoresolve(item, entryId, actor);
-        }
-        if (Claim(importId, itemId, recoveryRevision) is not { } revision)
-            return SupersededAnswer(importId, itemId);
         var snapshot = Snapshot(entryId);
-        Write(c =>
+        var memory = recoveryRevision is null ? PrepareManualMemory(item) : null;
+        // One transaction: the lifted rejection, the remembered match (with its manual binding), the new revision and the
+        // resolving row commit together, so two racing Match clicks can never leave the remembered match of one click on
+        // the row of the other: the last commit owns both.
+        var (claimed, bound) = Write(c =>
         {
+            (long EntryId, string Record)? binding = null;
+            if (memory is not null)
+            {
+                ClearRejectionIn(c, memory.Key, entryId);
+                binding = RememberManualAutoresolveIn(c, memory, entryId).Bound;
+            }
+            if (ClaimIn(c, importId, itemId, recoveryRevision) is not { } next) return ((long?)null, binding);
             c.Execute("""
                 UPDATE import_items SET state='resolving',reason='Selected match accepted; adding/binding in the background…',entry_id=$entry,
                   matched_snapshot_json=$snapshot,updated_at=$now WHERE import_id=$run AND id=$id AND decision_revision=$rev
-                """, ("$entry", entryId), ("$snapshot", snapshot.ToJsonString()), ("$now", Now()), ("$run", importId), ("$id", itemId), ("$rev", revision));
-            return RecountIn(c, importId, null);
+                """, ("$entry", entryId), ("$snapshot", snapshot.ToJsonString()), ("$now", Now()), ("$run", importId), ("$id", itemId), ("$rev", next));
+            RecountIn(c, importId, null);
+            return ((long?)next, binding);
         });
+        LogManualBinding(bound, actor);
+        if (claimed is not { } revision) return SupersededAnswer(importId, itemId);
         if (recoveryRevision is null)
             Log("import.match.manual", actor, [entryId], "Import matched by hand: " + Str(item, "title"), after: Decision(importId, itemId, revision, item));
         var title = Str(item, "title");
@@ -402,9 +410,14 @@ public sealed partial class ImportRuns
     private async Task<ImportLibraryOutcome> RemoveFromLibraryAsync(long entryId, long itemId, Func<bool> superseded, CancellationToken cancellationToken)
     {
         if (Library is not { } library) return new("preserved", "MAIN_SUWAYOMI_URL is not configured");
-        bool InUse() => Read(c => c.Scalar("""
-            SELECT 1 FROM import_items WHERE id<>$item AND entry_id=$entry AND state IN ('added','existing','resolving','retrying') LIMIT 1
-            """, ("$item", itemId), ("$entry", entryId)) is not null);
+        // Rows may still hold an entry id that was merged since: compare canonical ids, not the stored ones.
+        bool InUse() => Read(c =>
+        {
+            var target = CatalogueTitles.Canonical(c, entryId);
+            return c.Query("""
+                SELECT DISTINCT entry_id FROM import_items WHERE id<>$item AND entry_id IS NOT NULL AND state IN ('added','existing','resolving','retrying')
+                """, ("$item", itemId)).Any(row => CatalogueTitles.Canonical(c, row.Integer("entry_id")) == target);
+        });
         await _libraryLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {

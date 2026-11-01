@@ -30,7 +30,7 @@ namespace AutoSourcarr.Tests.Imports;
 /// without labels (IMP-7), crash recovery (IMP-4), the merge-log recheck after a reset (IMP-9), remembered decisions
 /// surviving history clears, the Suwayomi plan import and the admin-only routes.
 /// </summary>
-public static class ImportsTests
+public static partial class ImportsTests
 {
     private const string Harbor = "9101";
     private const string Quill = "-4611686018427387904";
@@ -394,7 +394,8 @@ public static class ImportsTests
             var recheck = setup.Runs.RecheckAfterReset(DecisionActor.Automatic);
             Check.Equal(1, recheck["restored"]!.GetValue<int>());
             var restoredRow = setup.Row(Id(32), again);
-            Check.True(restoredRow.Text("state") == "added" && setup.Ingest.EntryExists(restoredRow.Integer("entry_id")), restoredRow.Text("reason"));
+            // The second Match found the work already in the main library ("existing"); the recheck keeps the row's state.
+            Check.True(restoredRow.Text("state") == "existing" && setup.Ingest.EntryExists(restoredRow.Integer("entry_id")), restoredRow.Text("state") + " · " + restoredRow.Text("reason"));
             Check.True(setup.Ingest.FindExistingBySource(Harbor, 777) == restoredRow.Integer("entry_id"), "the anchored record is back on the restored entry");
 
             Check.Equal(1L, setup.Runs.ResetManualAutoresolve(Person)["autoresolve_mappings_removed"]!.GetValue<long>());
@@ -507,5 +508,7 @@ public static class ImportsTests
                 Check.Equal(HttpStatusCode.OK, receipt.StatusCode);
             host.StopAsync().GetAwaiter().GetResult();
         });
+
+        RegisterAudit(suite);
     }
 }

@@ -62,6 +62,11 @@ public sealed class JobContext
     public void Heartbeat() => _queue.Progress(_job, Attempt, null, null, null);
     /// <summary>The message the finished task keeps in the Completed list.</summary>
     public void Result(string message) => _job.ResultMessage = message;
+    /// <summary>
+    /// True when this job's cancellation came from a person (Cancel in Tasks): not a shutdown (DisposeAsync), a
+    /// maintenance pause (StopBackgroundAsync, which records its reason) or the watchdog stopping a frozen job.
+    /// </summary>
+    public bool CancelledByUser => _job.CancelRequested && _job.CancelReason is null && !_job.Frozen;
 }
 
 /// <summary>

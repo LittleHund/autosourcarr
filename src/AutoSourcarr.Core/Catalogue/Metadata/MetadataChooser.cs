@@ -379,8 +379,15 @@ public sealed class MetadataChooser : IMetadataFieldPolicy
     private static JsonObject Override() => new() { ["kind"] = "override", ["name"] = "Your override" };
     private static string Plain(JsonNode node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : node.ToJsonString();
     private static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
-    private static long Long(JsonNode? node) => node is JsonValue value && value.TryGetValue<long>(out var number) ? number
-        : node is JsonValue textValue && textValue.TryGetValue<string>(out var text) && long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
+    /// <summary>A whole number from a request value: parsed JSON, an in-memory int/long (JsonValue.Create(int) does not
+    /// convert through TryGetValue&lt;long&gt;) or a numeric string; anything else is 0.</summary>
+    private static long Long(JsonNode? node)
+    {
+        if (node is not JsonValue value) return 0;
+        if (value.TryGetValue<long>(out var number)) return number;
+        if (value.TryGetValue<int>(out var small)) return small;
+        return value.TryGetValue<string>(out var text) && long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) ? parsed : 0;
+    }
 
     private T Write<T>(Func<DatabaseSession, T> operation) { lock (_gate) return _database.Write(DatabaseFile.Catalog, operation); }
 

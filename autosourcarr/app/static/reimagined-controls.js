@@ -3,7 +3,7 @@
   'use strict';
   const request=(path,method,body)=>api('/api/admin/'+path,{method,body:JSON.stringify(body),suppressClientError:true});
   // Phase 8E: the policy simulator lives under /api/v1 (not yet in the generated client).
-  const requestV1=(path,method,body)=>api('/api/v1/'+path,{method,body:JSON.stringify(body),suppressClientError:true});
+  const requestV1=(path,method,body)=>api('/api/v1/'+path,body===undefined?{method,suppressClientError:true}:{method,body:JSON.stringify(body),suppressClientError:true});
   const date=value=>value?new Date(value).toLocaleString():'Not recorded';
   const panel=(parent,title)=>{const box=document.createElement('details');box.className='riImprovementPanel';const summary=document.createElement('summary');summary.textContent=title;box.append(summary);parent.append(box);return box;};
   const message=(parent,text)=>{const p=document.createElement('p');p.className='muted';p.textContent=text;parent.append(p);};
@@ -15,43 +15,51 @@
     const {body,entry,id,action,write,status,signal}=ctx;
     const owner=document.createElement('section');(ctx.metadataBody||body).append(owner);
     const upgradeOwner=document.createElement('section');(ctx.servingBody||owner).append(upgradeOwner);
-    const metadata=await api('/api/admin/metadata-fields/'+id,{signal,suppressClientError:true});
+    // Phase 9: one write path for metadata overrides, /api/v1/entries/{id}/metadata[/field] (MetadataChooser).
+    const metadata=await api('/api/v1/entries/'+id+'/metadata',{signal,suppressClientError:true});
     const upgrades=await api('/api/admin/serving-upgrades/'+id,{signal,suppressClientError:true});
     if(!owner.isConnected||signal.aborted)return;
     renderMetadata(metadata);renderUpgrades(upgrades);
     function renderMetadata(saved){
       owner.querySelector('[data-metadata]')?.remove();const box=panel(owner,'Display metadata ownership');box.open=!!ctx.metadataBody;box.dataset.metadata='true';
-      message(box,'Ownership applies to display fields. Matching uses original source evidence. Empty remote fields keep the fallback; clearing a locked field is explicit.');
+      message(box,'Ownership applies to display fields. Matching uses original source evidence. Overrides always win over the ranked choice; Automatic display returns a field to the ranked choice.');
       const records=[...(entry.matches||[]),...(entry.source_variants||[])];
+      const byField=new Map((saved.fields||[]).map(row=>[row.field,row]));
       const form=document.createElement('form');box.append(form);
-      for(const [name,label] of [['description','Synopsis'],['artwork','Artwork'],['author','Author'],['artist','Artist']]){
-        const row=document.createElement('fieldset');row.dataset.metadataField=name;
-        const choice=saved.fields[name]||{mode:'inherited'};
+      // UI name, label, /api/v1 field.
+      for(const [name,label,field] of [['description','Synopsis','description'],['artwork','Artwork','cover'],['author','Author','authors'],['artist','Artist','artists']]){
+        const row=document.createElement('fieldset');row.dataset.metadataField=field;
+        const current=byField.get(field)||{};const over=current.override||null;
+        const mode=over&&over.mode==='source'?'source':over&&current.overridden?'locked':'inherited';
+        row.dataset.initialMode=mode;row.dataset.initialValue=mode==='locked'?String(current.value??''):'';
         row.innerHTML=`<legend>${label}</legend>`+select('Owner',[['inherited','Automatic display'],['locked','Locked value'],['source','Preferred attached source']],'mode')+
           select('Source record',records.map((r,index)=>[index,(r.source_name||r.source_id)+' / '+r.source_manga_id]),'source')+
           (name==='artwork'?select('Pinned artwork',records.filter(r=>r.thumbnail_url).map(r=>[r.thumbnail_url,(r.source_name||r.source_id)+' / '+r.source_manga_id]),'value'):`<label>Locked ${label.toLowerCase()}<textarea data-field="value" rows="${name==='description'?4:2}" maxlength="12000"></textarea></label>`)+
           '<label class="riCheck"><input type="checkbox" data-field="clear">Explicitly clear this locked field</label>';
-        get(row,'mode').value=choice.mode;get(row,'source').value=String(Math.max(0,records.findIndex(r=>r.source_id===choice.source_id&&r.source_manga_id===choice.source_manga_id)));
-        get(row,'value').value=choice.value??entry[name==='artwork'?'thumbnail_url':name]??'';
-        const visibility=()=>{const mode=get(row,'mode').value;get(row,'source').parentElement.hidden=mode!=='source';get(row,'value').parentElement.hidden=mode!=='locked';get(row,'clear').parentElement.hidden=mode!=='locked';};
+        get(row,'mode').value=mode;get(row,'source').value=String(Math.max(0,records.findIndex(r=>String(r.source_id)===String(over?.source_id)&&Number(r.source_manga_id)===Number(over?.source_manga_id))));
+        get(row,'value').value=mode==='locked'?String(current.value??''):(entry[name==='artwork'?'thumbnail_url':name]??current.value??'');
+        const visibility=()=>{const chosen=get(row,'mode').value;get(row,'source').parentElement.hidden=chosen!=='source';get(row,'value').parentElement.hidden=chosen!=='locked';get(row,'clear').parentElement.hidden=chosen!=='locked';};
         get(row,'mode').onchange=visibility;visibility();form.append(row);
       }
       const save=document.createElement('button');save.type='submit';save.textContent='Save display ownership';form.append(save);
-      form.onsubmit=event=>{event.preventDefault();const fields={};for(const row of form.querySelectorAll('[data-metadata-field]')){
-        const mode=get(row,'mode').value,name=row.dataset.metadataField;
+      form.onsubmit=event=>{event.preventDefault();const changes=[];for(const row of form.querySelectorAll('[data-metadata-field]')){
+        const mode=get(row,'mode').value,field=row.dataset.metadataField,initial=row.dataset.initialMode;
         if(mode==='source'){
           const record=records[Number(get(row,'source').value)];if(!record){status('Choose an attached source record.');return;}
-          fields[name]={mode,source_id:record.source_id,source_manga_id:record.source_manga_id};
-        }else fields[name]=mode==='locked'?{mode,value:get(row,'value').value,clear:get(row,'clear').checked}:{mode};
+          changes.push(['PUT',field,{source_id:String(record.source_id),source_manga_id:Number(record.source_manga_id)}]);
+        }else if(mode==='locked'){
+          const value=get(row,'clear').checked?'':get(row,'value').value;
+          if(initial!=='locked'||value!==row.dataset.initialValue)changes.push(['PUT',field,{value}]);
+        }else if(initial!=='inherited')changes.push(['DELETE',field]);
       }
-        form.inert=true;write(save,()=>request('metadata-fields/'+id,'PUT',{revision:saved.revision,fields}),result=>{
+        form.inert=true;write(save,async()=>{
+          let result=null;
+          for(const [method,field,payload] of changes)result=await requestV1('entries/'+id+'/metadata/'+field,method,payload);
+          return result||api('/api/v1/entries/'+id+'/metadata',{suppressClientError:true});
+        },result=>{
           if(owner.isConnected){renderMetadata(result);status('Display ownership saved. Reopen the work to refresh its displayed metadata.');refreshEntryCoverImages(id);}
         }).finally(()=>{form.inert=false;restoreSaveFocus(owner,'[data-metadata] button[type=submit]');});
       };
-      if(saved.history.length){
-        const history=document.createElement('div');history.innerHTML=select('Retained ownership snapshots',saved.history.map(r=>[r.id,date(r.created_at)+' · '+r.reason+' · work '+r.old_entry_id]),'history');box.append(history);
-        history.append(action('Restore selected ownership snapshot',()=>request('metadata-fields/'+id,'PUT',{revision:saved.revision,fields:{},restore_id:Number(get(history,'history').value)}),{after:result=>{if(owner.isConnected)renderMetadata(result);}}));
-      }
     }
     function renderUpgrades(saved){
       upgradeOwner.querySelector('[data-upgrades]')?.remove();const box=panel(upgradeOwner,'Reviewed serving upgrades');box.open=!!ctx.servingBody;box.dataset.upgrades='true';

@@ -83,6 +83,25 @@ public static class CatalogueSharingVersionTests
             Check.Equal("true", legacy["file"]!["legacy"]!.ToJsonString()); Check.Equal(1, c.Exchange.Apply(S(legacy, "id"), S(legacy, "revision"))["added"]!.GetValue<int>());
         });
 
+        suite.Add("catalogue sharing: the header names the first reader app version; a malformed app_version falls back to the format (L1)", () =>
+        {
+            using var a = new World(); a.Native("Header work", "/header", 21); var raw = a.Dump();
+            var written = Parse(raw);
+            Check.True(written["min_reader_app_version"] is JsonValue header && header.GetValue<string>().Length > 0, written.ToJsonString());
+            using var b = new World();
+            var newer = Parse(raw); newer["format_version"] = 5; newer["min_reader_version"] = 5; newer["app_version"] = "1.4.0"; newer["min_reader_app_version"] = "1.3.0";
+            var error = Check.Throws<CatalogueVersionMismatchException>(() => b.Exchange.Preview(Bytes(newer)));
+            Check.Equal("Version mismatch: version 1.3.0 required", error.Message);
+            newer.Remove("min_reader_app_version"); newer["app_version"] = "not a version!";
+            Check.Equal("Version mismatch: version 5 required", Check.Throws<CatalogueVersionMismatchException>(() => b.Exchange.Preview(Bytes(newer))).Message);
+            Check.Equal(0L, b.Scalar("SELECT COUNT(*) FROM catalogue_exchange_stages"));
+            // A current-format file from before the field existed is still read; a malformed one is refused.
+            var without = Parse(raw); without.Remove("min_reader_app_version");
+            Check.Equal("false", b.Exchange.Preview(Bytes(without))["file"]!["legacy"]!.ToJsonString());
+            var malformed = Parse(raw); malformed["min_reader_app_version"] = "not a version!";
+            Check.Equal("Invalid catalogue file header", Check.Throws<ArgumentException>(() => b.Exchange.Preview(Bytes(malformed))).Message);
+        });
+
         suite.Add("catalogue sharing: truncated or corrupted files and a failing apply leave no partial writes", () =>
         {
             using var a = new World(); a.Native("First catalogue work", "/one", 112); a.Native("Rejected second work", "/two", 113); var raw = a.Dump();

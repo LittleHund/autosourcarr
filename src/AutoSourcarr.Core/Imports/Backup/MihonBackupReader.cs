@@ -74,65 +74,96 @@ public sealed record BackupLibrary(string Format, string Compression, string Ver
 public static class MihonBackupReader
 {
     public const string Format = "mihon-tachiyomi-protobuf";
-    public const long MaxBackupBytes = 128L * 1024 * 1024;
-    public const long MaxDecodedBytes = 512L * 1024 * 1024;
+    /// <summary>Largest accepted upload (compressed or not); a larger file is refused before it is decoded.</summary>
+    public const long MaxBackupBytes = 64L * 1024 * 1024;
+    /// <summary>Largest decoded protobuf: gzip output is streamed into one buffer and stopped at this size.</summary>
+    public const long MaxDecodedBytes = 64L * 1024 * 1024;
     public const int MaxRecords = 100_000;
+    /// <summary>Most chapters one manga may carry (counted before the protobuf is materialized).</summary>
+    public const int MaxChaptersPerManga = 20_000;
 
     /// <summary>Every version family the reader detects, oldest first (the sample backups cover each one).</summary>
     public static readonly IReadOnlyList<string> Versions =
         ["tachiyomi-legacy", "tachiyomi", "mihon-0.16", "mihon-0.17", "mihon-0.19", "mihon-0.20", "mihon-0.21"];
 
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
+    /// <summary>One decode at a time: a decoded backup and its materialized model are the largest allocation of the app.</summary>
+    private static readonly SemaphoreSlim DecodeGate = new(1, 1);
 
     /// <summary>Reads at most <see cref="MaxBackupBytes"/> + 1 bytes of a stream and decodes them.</summary>
     /// <exception cref="BackupDecodeException">Too large, empty or not a readable backup.</exception>
     public static BackupLibrary Read(Stream input)
     {
         ArgumentNullException.ThrowIfNull(input);
-        return Read(ReadBounded(input, MaxBackupBytes, "Backup file is larger than 128 MiB"));
+        using var buffer = ReadBounded(input, MaxBackupBytes, "Backup file is larger than 64 MiB");
+        return Read(Segment(buffer));
     }
 
     /// <exception cref="BackupDecodeException">Too large, empty or not a readable backup.</exception>
     public static BackupLibrary Read(byte[] payload)
     {
         ArgumentNullException.ThrowIfNull(payload);
-        if (payload.Length == 0) throw new BackupDecodeException("Backup file is empty");
-        if (payload.Length > MaxBackupBytes) throw new BackupDecodeException("Backup file is larger than 128 MiB");
-        var compression = "none";
-        var raw = payload;
-        if (payload.Length >= 2 && payload[0] == 0x1f && payload[1] == 0x8b)
-        {
-            compression = "gzip";
-            try
-            {
-                using var gzip = new GZipStream(new MemoryStream(payload, writable: false), CompressionMode.Decompress);
-                raw = ReadBounded(gzip, MaxDecodedBytes, "Decoded backup exceeds the 512 MiB safety limit");
-            }
-            catch (Exception error) when (error is InvalidDataException or IOException && error is not BackupDecodeException)
-            {
-                throw new BackupDecodeException("Invalid gzip backup: " + error.Message, error);
-            }
-        }
-        var first = Array.FindIndex(raw, value => value is not (0x20 or 0x09 or 0x0a or 0x0d));
-        if (first >= 0 && raw[first] is (byte)'{' or (byte)'[')
-            throw new BackupDecodeException("JSON backups are not supported by current Mihon backup format");
-
-        CountManga(raw);
-        ProtoBackup backup;
-        try { backup = ProtoBackup.Parser.ParseFrom(raw); }
-        catch (InvalidProtocolBufferException error) { throw new BackupDecodeException("Backup could not be decoded as a Mihon/Tachiyomi protobuf backup: " + error.Message, error); }
-        if (backup.Manga.Count == 0) throw new BackupDecodeException("No manga entries were found in the backup");
-
-        var sources = backup.Sources.Select(source => new BackupSourceName(source.SourceId, source.Name)).ToList();
-        foreach (var legacy in backup.LegacyBrokenSources)
-            if (ReadLegacySource(legacy.ToByteArray()) is { } old && sources.All(source => source.SourceId != old.SourceId)) sources.Add(old);
-        var names = new Dictionary<long, string>();
-        foreach (var source in sources)
-            if (source.Name.Trim().Length > 0) names[source.SourceId] = source.Name.Trim();
-
-        var manga = backup.Manga.Select(item => Item(item, names)).ToList();
-        return new BackupLibrary(Format, compression, DetectVersion(backup), manga, sources, backup.Categories.Count, backup.ExtensionRepos.Count);
+        return Read(new ArraySegment<byte>(payload));
     }
+
+    private static BackupLibrary Read(ArraySegment<byte> payload)
+    {
+        if (payload.Count == 0) throw new BackupDecodeException("Backup file is empty");
+        if (payload.Count > MaxBackupBytes) throw new BackupDecodeException("Backup file is larger than 64 MiB");
+        DecodeGate.Wait();
+        try { return Decode(payload); }
+        finally { DecodeGate.Release(); }
+    }
+
+    private static BackupLibrary Decode(ArraySegment<byte> payload)
+    {
+        var compression = "none";
+        MemoryStream? decoded = null;
+        try
+        {
+            var raw = payload;
+            if (payload.Count >= 2 && payload[0] == 0x1f && payload[1] == 0x8b)
+            {
+                compression = "gzip";
+                try
+                {
+                    using var gzip = new GZipStream(new MemoryStream(payload.Array!, payload.Offset, payload.Count, writable: false), CompressionMode.Decompress);
+                    decoded = ReadBounded(gzip, MaxDecodedBytes, "Decoded backup exceeds the 64 MiB safety limit");
+                }
+                catch (Exception error) when (error is InvalidDataException or IOException && error is not BackupDecodeException)
+                {
+                    throw new BackupDecodeException("Invalid gzip backup: " + error.Message, error);
+                }
+                // The decoded bytes are parsed in place (no ToArray copy of up to 64 MiB).
+                raw = Segment(decoded);
+            }
+            var span = raw.AsSpan();
+            var first = span.IndexOfAnyExcept(" \t\n\r"u8);
+            if (first >= 0 && span[first] is (byte)'{' or (byte)'[')
+                throw new BackupDecodeException("JSON backups are not supported by current Mihon backup format");
+
+            CountManga(raw);
+            ProtoBackup backup;
+            try { backup = ProtoBackup.Parser.ParseFrom(raw.Array!, raw.Offset, raw.Count); }
+            catch (InvalidProtocolBufferException error) { throw new BackupDecodeException("Backup could not be decoded as a Mihon/Tachiyomi protobuf backup: " + error.Message, error); }
+            decoded?.Dispose(); decoded = null;
+            if (backup.Manga.Count == 0) throw new BackupDecodeException("No manga entries were found in the backup");
+
+            var sources = backup.Sources.Select(source => new BackupSourceName(source.SourceId, source.Name)).ToList();
+            foreach (var legacy in backup.LegacyBrokenSources)
+                if (ReadLegacySource(legacy.ToByteArray()) is { } old && sources.All(source => source.SourceId != old.SourceId)) sources.Add(old);
+            var names = new Dictionary<long, string>();
+            foreach (var source in sources)
+                if (source.Name.Trim().Length > 0) names[source.SourceId] = source.Name.Trim();
+
+            var manga = backup.Manga.Select(item => Item(item, names)).ToList();
+            return new BackupLibrary(Format, compression, DetectVersion(backup), manga, sources, backup.Categories.Count, backup.ExtensionRepos.Count);
+        }
+        finally { decoded?.Dispose(); }
+    }
+
+    private static ArraySegment<byte> Segment(MemoryStream buffer) =>
+        buffer.TryGetBuffer(out var segment) ? segment : new ArraySegment<byte>(buffer.ToArray());
 
     /// <summary>
     /// The oldest release family whose fields appear (kotlinx omits default values, so a backup without any newer field
@@ -185,23 +216,56 @@ public static class MihonBackupReader
         };
     }
 
-    /// <summary>Counts the top-level manga before materializing them (MaxRecords), skipping every other field.</summary>
-    private static void CountManga(byte[] raw)
+    /// <summary>
+    /// Counts the top-level manga (<see cref="MaxRecords"/>) and each manga's chapters (<see cref="MaxChaptersPerManga"/>)
+    /// before anything is materialized, skipping every other field. The scan stops quietly at anything it does not
+    /// understand (a group, a truncated field): the protobuf parser then gives the real error or reads the fork's data.
+    /// </summary>
+    private static void CountManga(ArraySegment<byte> raw)
     {
-        var count = 0;
-        try
+        var data = raw.AsSpan();
+        var position = 0; var count = 0;
+        while (position < data.Length)
         {
-            var input = new CodedInputStream(raw);
-            uint tag;
-            while ((tag = input.ReadTag()) != 0)
+            if (!TryVarint(data, ref position, out var key)) return;
+            var field = key >> 3; var wire = (int)(key & 7);
+            if (wire != 2) { if (!SkipScalar(data, ref position, wire)) return; continue; }
+            if (!TryVarint(data, ref position, out var size) || size > (ulong)(data.Length - position)) return;
+            if (field == 1)
             {
-                if (WireFormat.GetTagFieldNumber(tag) == 1 && WireFormat.GetTagWireType(tag) == WireFormat.WireType.LengthDelimited
-                    && ++count > MaxRecords)
-                    throw new BackupDecodeException("Backup has too many manga records");
-                input.SkipLastField();
+                if (++count > MaxRecords) throw new BackupDecodeException("Backup has too many manga records");
+                if (CountChapters(data.Slice(position, (int)size)) > MaxChaptersPerManga)
+                    throw new BackupDecodeException("A backup manga has more than " + MaxChaptersPerManga.ToString(System.Globalization.CultureInfo.InvariantCulture) + " chapters");
             }
+            position += (int)size;
         }
-        catch (InvalidProtocolBufferException error) { throw new BackupDecodeException("Backup could not be decoded as a Mihon/Tachiyomi protobuf backup: " + error.Message, error); }
+    }
+
+    /// <summary>The BackupManga.chapters (field 16) entries of one encoded manga.</summary>
+    private static int CountChapters(ReadOnlySpan<byte> manga)
+    {
+        var position = 0; var chapters = 0;
+        while (position < manga.Length)
+        {
+            if (!TryVarint(manga, ref position, out var key)) return chapters;
+            var wire = (int)(key & 7);
+            if (wire != 2) { if (!SkipScalar(manga, ref position, wire)) return chapters; continue; }
+            if (!TryVarint(manga, ref position, out var size) || size > (ulong)(manga.Length - position)) return chapters;
+            if (key >> 3 == 16 && ++chapters > MaxChaptersPerManga) return chapters;
+            position += (int)size;
+        }
+        return chapters;
+    }
+
+    private static bool SkipScalar(ReadOnlySpan<byte> data, ref int position, int wire)
+    {
+        switch (wire)
+        {
+            case 0: return TryVarint(data, ref position, out _);
+            case 1: position += 8; return position <= data.Length;
+            case 5: position += 4; return position <= data.Length;
+            default: return false;
+        }
     }
 
     /// <summary>Tachiyomi BrokenBackupSource { 0: name (bytes), 1: sourceId (varint) }; null when unreadable.</summary>
@@ -231,7 +295,7 @@ public static class MihonBackupReader
         return name.Length > 0 || id != 0 ? new BackupSourceName(id, name) : null;
     }
 
-    private static bool TryVarint(byte[] data, ref int position, out ulong value)
+    private static bool TryVarint(ReadOnlySpan<byte> data, ref int position, out ulong value)
     {
         value = 0;
         for (var shift = 0; shift < 64 && position < data.Length; shift += 7)
@@ -243,17 +307,26 @@ public static class MihonBackupReader
         return false;
     }
 
-    private static byte[] ReadBounded(Stream input, long limit, string tooLarge)
+    /// <summary>Copies at most <paramref name="limit"/> bytes into one growing buffer (the caller parses it in place).</summary>
+    private static MemoryStream ReadBounded(Stream input, long limit, string tooLarge)
     {
-        using var buffer = new MemoryStream();
-        var chunk = new byte[81920];
-        int read;
-        while ((read = input.Read(chunk, 0, chunk.Length)) > 0)
+        var buffer = new MemoryStream();
+        try
         {
-            buffer.Write(chunk, 0, read);
-            if (buffer.Length > limit) throw new BackupDecodeException(tooLarge);
+            var chunk = new byte[81920];
+            int read;
+            while ((read = input.Read(chunk, 0, chunk.Length)) > 0)
+            {
+                if (buffer.Length + read > limit) throw new BackupDecodeException(tooLarge);
+                buffer.Write(chunk, 0, read);
+            }
+            return buffer;
         }
-        return buffer.ToArray();
+        catch
+        {
+            buffer.Dispose();
+            throw;
+        }
     }
 
     /// <summary>Human label of a version family ("Mihon 0.19", "Tachiyomi (legacy)").</summary>

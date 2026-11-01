@@ -128,13 +128,12 @@ public static class DisplayMetadataTests
         using (var denied = Send(HttpMethod.Get, 11, key: "reader")) Check.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
         using (var denied = Send(HttpMethod.Get, 11, key: null)) Check.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
         using (var initial = Send(HttpMethod.Get, 9007199254740993)) Check.Equal(9007199254740993L, JsonNode.Parse(initial.Content.ReadAsStringAsync().Result)!["entry_id"]!.GetValue<long>());
-        using (var saved = Send(HttpMethod.Put, 11, """{"revision":0,"fields":{"author":{"mode":"locked","value":"Saved through HTTP"}}}""")) Check.Equal(HttpStatusCode.OK, saved.StatusCode);
-        using (var stale = Send(HttpMethod.Put, 11, """{"revision":0,"fields":{}}""")) Check.Equal(HttpStatusCode.Conflict, stale.StatusCode);
-        using (var invalid = Send(HttpMethod.Put, 11, """{"revision":1,"fields":{"artwork":{"mode":"locked","value":"file:///private"}}}""")) Check.Equal(HttpStatusCode.Conflict, invalid.StatusCode);
-        using (var invalid = Send(HttpMethod.Put, 11, """{"revision":1,"revision":0,"fields":{}}""")) Check.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
-        using (var invalid = Send(HttpMethod.Put, 11, """{"revision":1,"extra":0}""")) Check.Equal(HttpStatusCode.UnprocessableEntity, invalid.StatusCode);
+        // Phase 9: /api/v1/entries/{id}/metadata is the only write path; the 0.4.5 PUT here is gone and changes nothing.
+        var before = f.Store.Read(11).ToJsonString();
+        using (var removed = Send(HttpMethod.Put, 11, """{"revision":0,"fields":{"author":{"mode":"locked","value":"Saved through HTTP"}}}"""))
+            Check.True(removed.StatusCode is HttpStatusCode.MethodNotAllowed or HttpStatusCode.NotFound, removed.StatusCode.ToString());
+        Check.Equal(before, f.Store.Read(11).ToJsonString());
         using (var missing = Send(HttpMethod.Get, 999)) Check.Equal(HttpStatusCode.NotFound, missing.StatusCode);
-        using (var restored = Send(HttpMethod.Put, 11, """{"revision":1,"restore_id":1}""")) Check.Equal(HttpStatusCode.OK, restored.StatusCode);
         Check.Equal(0, f.Store.Read(11)["fields"]!.AsObject().Count); Check.Equal(0, unexpected);
     }
 

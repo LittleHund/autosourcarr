@@ -106,19 +106,78 @@ public sealed partial class ImportRuns
     /// <summary>_clear_import_rejection_for_entry: an explicit Match of this work overrides an earlier Reject of it.</summary>
     internal int ClearRejectionForEntry(JsonObject item, long entryId)
     {
-        var signatures = EntrySignatures(entryId);
-        if (signatures.Count == 0) return 0;
         var key = RejectionKey(item);
-        return Write(c => c.Execute("DELETE FROM import_match_rejections WHERE backup_key=$key AND signature IN (SELECT value FROM json_each($signatures))",
-            ("$key", key), ("$signatures", JsonSerializer.Serialize(signatures.Order(StringComparer.Ordinal).ToArray()))));
+        return Write(c => ClearRejectionIn(c, key, entryId));
     }
 
-    /// <summary>reset_import_match_rejections: forgets every import Reject; unresolved rows search again.</summary>
-    public JsonObject ResetRejections(DecisionActor actor)
+    private static int ClearRejectionIn(DatabaseSession c, string key, long entryId)
+    {
+        var signatures = EntrySignatures(c, CatalogueTitles.Canonical(c, entryId));
+        if (signatures.Count == 0) return 0;
+        return c.Execute("DELETE FROM import_match_rejections WHERE backup_key=$key AND signature IN (SELECT value FROM json_each($signatures))",
+            ("$key", key), ("$signatures", JsonSerializer.Serialize(signatures.Order(StringComparer.Ordinal).ToArray())));
+    }
+
+    private const string RejectionsDigestSql = "SELECT backup_key,signature,rejected_at FROM import_match_rejections ORDER BY backup_key,signature";
+    private const string AutoresolveDigestSql = "SELECT backup_key,target_source_id,target_source_manga_id,target_entry_id_hint,updated_at FROM import_manual_autoresolve ORDER BY backup_key";
+
+    /// <summary>Row count and a digest of the rows (the preview_token a confirmed reset must send back).</summary>
+    private static (long Count, string Token) PreviewDigest(DatabaseSession c, string sql)
+    {
+        using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        long count = 0;
+        foreach (var row in c.Query(sql))
+        {
+            count++;
+            var line = string.Join('\u001f', row.Values.Select(value => Convert.ToString(value, CultureInfo.InvariantCulture) ?? "")) + "\u001e";
+            hash.AppendData(System.Text.Encoding.UTF8.GetBytes(line));
+        }
+        hash.AppendData(System.Text.Encoding.UTF8.GetBytes(sql + "\u001d" + Id(count)));
+        return (count, Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant());
+    }
+
+    private static void CheckPreview(DatabaseSession c, string sql, string? previewToken, string what)
+    {
+        if (previewToken is null) return;
+        if (!string.Equals(PreviewDigest(c, sql).Token, previewToken.Trim(), StringComparison.Ordinal))
+            throw new ImportConflictException(what + " changed since the preview; review the new preview before resetting");
+    }
+
+    /// <summary>GET preview of reset_import_match_rejections: what would be forgotten and the preview_token to confirm with.</summary>
+    public JsonObject PreviewResetRejections() => Read(c =>
+    {
+        var (count, token) = PreviewDigest(c, RejectionsDigestSql);
+        return new JsonObject
+        {
+            ["rejections"] = count,
+            ["backup_identities"] = Convert.ToInt64(c.Scalar("SELECT COUNT(DISTINCT backup_key) FROM import_match_rejections"), CultureInfo.InvariantCulture),
+            ["unresolved_rows"] = Convert.ToInt64(c.Scalar("SELECT COUNT(*) FROM import_items WHERE state IN ('unresolved','failed')"), CultureInfo.InvariantCulture),
+            ["preview_token"] = token,
+            ["note"] = "Every remembered import Reject is forgotten; unresolved rows search for candidates again. Accepted rows are unchanged.",
+        };
+    });
+
+    /// <summary>GET preview of reset_import_manual_autoresolve.</summary>
+    public JsonObject PreviewResetManualAutoresolve() => Read(c =>
+    {
+        var (count, token) = PreviewDigest(c, AutoresolveDigestSql);
+        return new JsonObject
+        {
+            ["autoresolve_mappings"] = count, ["preview_token"] = token,
+            ["note"] = "Remembered manual import matches are forgotten (and old import history is no longer learned from). Ordinary manual matches, groups and bindings stay.",
+        };
+    });
+
+    /// <summary>
+    /// reset_import_match_rejections: forgets every import Reject; unresolved rows search again. With
+    /// <paramref name="previewToken"/> (the routes always send one) the reset is refused when the rejections changed since that preview.
+    /// </summary>
+    public JsonObject ResetRejections(DecisionActor actor, string? previewToken = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         var result = Write(c =>
         {
+            CheckPreview(c, RejectionsDigestSql, previewToken, "Import rejections");
             var count = Convert.ToInt64(c.Scalar("SELECT COUNT(*) FROM import_match_rejections"), CultureInfo.InvariantCulture);
             c.Execute("DELETE FROM import_match_rejections");
             var runs = c.QueryAs<string>("SELECT DISTINCT import_id FROM import_items WHERE state IN ('unresolved','failed')").ToArray();
@@ -169,33 +228,57 @@ public sealed partial class ImportRuns
         };
     }
 
+    /// <summary>What remembering a manual import match needs from the backup row (read before the write transaction).</summary>
+    internal sealed record ManualMemory(string Key, string SourceName, string WantedSource, string Title, string BackupSourceId, string Url);
+
+    internal ManualMemory PrepareManualMemory(JsonObject item) =>
+        new(RejectionKey(item), ExpectedSourceName(item), CurrentSourceId(item), Str(item, "title"), Str(item, "source"), Str(item, "url"));
+
     /// <summary>
     /// _remember_import_manual_autoresolve: keeps the user's Match for this backup identity outside import history, anchored
     /// to a concrete source record that is also locked as a manual binding.
     /// </summary>
     internal JsonObject RememberManualAutoresolve(JsonObject item, long entryId, DecisionActor actor)
     {
-        var wanted = CurrentSourceId(item);
-        var key = RejectionKey(item); var sourceName = ExpectedSourceName(item);
-        var (canonical, anchor, title) = Write(c =>
+        var memory = PrepareManualMemory(item);
+        var (result, bound) = Write(c => RememberManualAutoresolveIn(c, memory, entryId));
+        LogManualBinding(bound, actor);
+        return result;
+    }
+
+    /// <summary>The "manual.bind" entry of a binding written inside an import transaction.</summary>
+    private void LogManualBinding((long EntryId, string Record)? bound, DecisionActor actor)
+    {
+        if (bound is { } binding) Log("manual.bind", actor, [binding.EntryId], "Manual source binding saved", records: [binding.Record]);
+    }
+
+    /// <summary>
+    /// The remembered match in the caller's transaction: the anchor record becomes manual and locked, the manual binding
+    /// (ManualDecisions.PersistBinding) and the import_manual_autoresolve row are written with it. Answers the summary and
+    /// the bound record (for the caller's log entry after commit).
+    /// </summary>
+    private (JsonObject Result, (long EntryId, string Record)? Bound) RememberManualAutoresolveIn(DatabaseSession c, ManualMemory memory, long entryId)
+    {
+        var canonical = CatalogueTitles.Canonical(c, entryId);
+        var anchor = AutoresolveAnchor(c, canonical, memory.WantedSource);
+        if (anchor is not null)
         {
-            var id = CatalogueTitles.Canonical(c, entryId);
-            var found = AutoresolveAnchor(c, id, wanted);
-            if (found is not null)
-            {
-                var table = Str(found, "table") == "source_matches" ? "source_matches" : "source_variants";
-                c.Execute("UPDATE " + table + " SET match_type='manual',locked=1,last_checked=$now WHERE entry_id=$id AND source_id=$source AND source_manga_id=$manga",
-                    ("$now", Now()), ("$id", id), ("$source", Str(found, "source_id")), ("$manga", found["source_manga_id"]!.GetValue<long>()));
-            }
-            var preferred = c.Scalar("SELECT preferred_title FROM entries WHERE id=$id", ("$id", id)) as string ?? "";
-            return (id, found, preferred.Length > 0 ? preferred : found is null ? "Entry " + Id(id) : Str(found, "source_title"));
-        });
+            var table = Str(anchor, "table") == "source_matches" ? "source_matches" : "source_variants";
+            c.Execute("UPDATE " + table + " SET match_type='manual',locked=1,last_checked=$now WHERE entry_id=$id AND source_id=$source AND source_manga_id=$manga",
+                ("$now", Now()), ("$id", canonical), ("$source", Str(anchor, "source_id")), ("$manga", anchor["source_manga_id"]!.GetValue<long>()));
+        }
+        var preferred = c.Scalar("SELECT preferred_title FROM entries WHERE id=$id", ("$id", canonical)) as string ?? "";
+        var title = preferred.Length > 0 ? preferred : anchor is null ? "Entry " + Id(canonical) : Str(anchor, "source_title");
         var sourceId = anchor is null ? "" : Str(anchor, "source_id");
         var mangaId = anchor?["source_manga_id"]?.GetValue<long>() ?? 0;
         var record = anchor?["record"] as JsonObject;
+        (long, string)? bound = null;
         if (anchor is not null && record is not null && Manual is { } manual && sourceId.Length > 0 && mangaId > 0)
-            manual.PersistManualBinding(canonical, sourceId, (JsonObject)record.DeepClone(), actor, Str(anchor, "source_name"));
-        Write(c => c.Execute("""
+        {
+            manual.PersistBinding(c, canonical, sourceId, (JsonObject)record.DeepClone(), Str(anchor, "source_name"));
+            bound = (canonical, sourceId + ":" + Id(mangaId));
+        }
+        c.Execute("""
             INSERT INTO import_manual_autoresolve(backup_key,backup_title,backup_source,backup_source_id,backup_source_url,target_source_id,
               target_source_manga_id,target_source_name,target_title,target_entry_id_hint,target_record_json,created_at,updated_at)
             VALUES($key,$title,$source,$sourceId,$url,$target,$manga,$targetName,$targetTitle,$hint,$record,$now,$now)
@@ -203,13 +286,13 @@ public sealed partial class ImportRuns
               backup_source_id=excluded.backup_source_id,backup_source_url=excluded.backup_source_url,target_source_id=excluded.target_source_id,
               target_source_manga_id=excluded.target_source_manga_id,target_source_name=excluded.target_source_name,target_title=excluded.target_title,
               target_entry_id_hint=excluded.target_entry_id_hint,target_record_json=excluded.target_record_json,updated_at=excluded.updated_at
-            """, ("$key", key), ("$title", Str(item, "title")), ("$source", sourceName), ("$sourceId", Str(item, "source")), ("$url", Str(item, "url")),
+            """, ("$key", memory.Key), ("$title", memory.Title), ("$source", memory.SourceName), ("$sourceId", memory.BackupSourceId), ("$url", memory.Url),
             ("$target", sourceId), ("$manga", mangaId), ("$targetName", anchor is null ? "" : Str(anchor, "source_name")), ("$targetTitle", title),
-            ("$hint", canonical), ("$record", record?.ToJsonString() ?? "{}"), ("$now", Now())));
-        return new JsonObject
+            ("$hint", canonical), ("$record", record?.ToJsonString() ?? "{}"), ("$now", Now()));
+        return (new JsonObject
         {
-            ["backup_key"] = key, ["entry_id"] = canonical, ["target_title"] = title, ["target_source_id"] = sourceId, ["target_source_manga_id"] = mangaId,
-        };
+            ["backup_key"] = memory.Key, ["entry_id"] = canonical, ["target_title"] = title, ["target_source_id"] = sourceId, ["target_source_manga_id"] = mangaId,
+        }, bound);
     }
 
     /// <summary>
@@ -244,7 +327,8 @@ public sealed partial class ImportRuns
             return entryId;
         }
         var targetTitle = row.Text("target_title").Trim();
-        if (targetTitle.Length > 0 && _ingest.ExactSearchEntryIds(targetTitle, 20) is { Count: 1 } single) return _ingest.CanonicalEntryId(single[0]);
+        if (targetTitle.Length > 0 && _ingest.ExactSearchEntryIds(targetTitle, 20) is { Count: 1 } single && _ingest.EntryExists(single[0]))
+            return _ingest.CanonicalEntryId(single[0]);
         return null;
     }
 
@@ -295,11 +379,12 @@ public sealed partial class ImportRuns
     }
 
     /// <summary>reset_import_manual_autoresolve: forgets the learned import → entry mappings (and the legacy history learning).</summary>
-    public JsonObject ResetManualAutoresolve(DecisionActor actor)
+    public JsonObject ResetManualAutoresolve(DecisionActor actor, string? previewToken = null)
     {
         ArgumentNullException.ThrowIfNull(actor);
         return Write(c =>
         {
+            CheckPreview(c, AutoresolveDigestSql, previewToken, "Remembered manual import matches");
             var count = Convert.ToInt64(c.Scalar("SELECT COUNT(*) FROM import_manual_autoresolve"), CultureInfo.InvariantCulture);
             c.Execute("DELETE FROM import_manual_autoresolve");
             c.Execute("""
