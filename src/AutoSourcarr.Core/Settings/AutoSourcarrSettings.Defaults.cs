@@ -437,6 +437,10 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("source_cooldown_seconds")]
     public double SourceCooldownSeconds { get; init; } = 120.0;
 
+    /// <summary>SRC-9 paced traffic: least milliseconds between two source host requests to one website (0 = off).</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("source_min_interval_ms")]
+    public int SourceMinIntervalMs { get; init; } = 250;
+
     [System.Text.Json.Serialization.JsonPropertyName("background_idle_seconds")]
     public double BackgroundIdleSeconds { get; init; } = 2.0;
 
@@ -622,6 +626,7 @@ public sealed partial record AutoSourcarrSettings
         new("TRANSLATION_STARTUP_DELAY_SECONDS", nameof(TranslationStartupDelaySeconds), SettingKind.Number, false, []),
         new("SOURCE_FAILURE_THRESHOLD", nameof(SourceFailureThreshold), SettingKind.Integer, false, []),
         new("SOURCE_COOLDOWN_SECONDS", nameof(SourceCooldownSeconds), SettingKind.Number, false, []),
+        new("SOURCE_MIN_INTERVAL_MS", nameof(SourceMinIntervalMs), SettingKind.Integer, false, []),
         new("BACKGROUND_IDLE_SECONDS", nameof(BackgroundIdleSeconds), SettingKind.Number, false, []),
         new("SQLITE_CACHE_MB", nameof(SqliteCacheMb), SettingKind.Integer, false, []),
         new("SQLITE_BUSY_TIMEOUT_MS", nameof(SqliteBusyTimeoutMs), SettingKind.Integer, false, []),

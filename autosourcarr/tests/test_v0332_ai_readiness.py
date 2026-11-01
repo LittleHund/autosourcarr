@@ -369,7 +369,7 @@ def test_host_diagnostics_open_and_download_the_authenticated_policy_bundle():
  assert(detail.children.some(x=>x.textContent.includes('ChatGPT sign-in')&&x.textContent.includes('without this repair check or Compose changes')));
  const button=advanced.children.find(x=>x.textContent==='Download host policies and instructions');assert(button);
  await button.listeners.click();assert.equal(button.disabled,false);
- assert.equal(calls[0].path,'/api/admin/source-maintenance/host-setup');assert.equal(calls[0].opts.responseType,'blob');
+ assert.equal(calls[0].path,'/api/v1/source-maintenance/host-setup');assert.equal(calls[0].opts.responseType,'blob');
  assert.deepEqual(clicked,['autosourcarr-repair-host-setup.zip']);timers.at(-1).fn();assert.deepEqual(revoked,['blob:fixture']);
  api=async()=>{throw Error('Download blocked')};await button.listeners.click();assert(advanced.children.some(x=>x.textContent==='Download blocked'));
 })().catch(e=>{console.error(e);process.exitCode=1;});

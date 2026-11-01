@@ -12,7 +12,8 @@ public interface IRepairHealthObservations
 }
 public sealed class SourceCheckConflictException(string message) : Exception(message);
 
-/// <summary>Daily and explicit installed-source checks share per-site pacing, not UI admission.</summary>
+/// <summary>Daily and explicit installed-source checks share per-site pacing, not UI admission. <c>onWorking</c> is told the
+/// package of every source whose check passed (it must return quickly; REP-1 queues the last-working keep).</summary>
 public sealed class SourceHealthCoordinator : IAsyncDisposable
 {
     private sealed class Job(string taskId, HashSet<string> ids, CancellationTokenSource cancel, IDisposable lease)
@@ -37,6 +38,7 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
     private readonly SupportPrivacy _privacy;
     private readonly Func<double> _clock;
     private readonly TimeSpan _pacing;
+    private readonly Action<string>? _onWorking;
     private readonly OperationOwner _owner = new();
     private readonly SemaphoreSlim _tick = new(1, 1);
     private readonly Dictionary<string, Job> _jobs = new(StringComparer.Ordinal);
@@ -47,8 +49,9 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
 
     public SourceHealthCoordinator(SourceHealthStore store, SuwayomiClient client, BoundedWorkScheduler io, WholeTaskCoordinator lanes,
         TaskRegistry tasks, IRepairHealthObservations repairs, Func<bool> engineReady, SupportPrivacy privacy,
-        Func<double>? clock = null, TimeSpan? pacing = null)
+        Func<double>? clock = null, TimeSpan? pacing = null, Action<string>? onWorking = null)
     {
+        _onWorking = onWorking;
         _store = store; _client = client; _io = io; _lanes = lanes; _tasks = tasks; _repairs = repairs; _engineReady = engineReady; _privacy = privacy;
         _clock = clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0); _pacing = pacing ?? TimeSpan.FromSeconds(3);
         _probe = new(client, io, _pacing);
@@ -250,6 +253,12 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
                             { state = "deferred"; message = "Source engine transport retired during this check; native evidence remains unknown."; if (checks.Count > 0) checks[^1]!["state"] = state; }
                             _store.Finish(sid, state, message, checks, origin, startedAt: began, package: package, version: version); return 0;
                         }, workToken).ConfigureAwait(false);
+                        // REP-1: a passed check (SRC-7) lets the owner keep this package's jar as the last working version.
+                        if (state == "working" && package.Length > 0 && _onWorking is { } onWorking)
+                        {
+                            try { onWorking(package); }
+                            catch (Exception) { }
+                        }
                         states[state] = states.GetValueOrDefault(state) + 1; return 0;
                     }
                     if (origin == "manual") await _lanes.RunManualAsync(Sample, job.TaskId, token).ConfigureAwait(false);

@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace AutoSourcarr.Core.Repair.Migration;
 
 /// <summary>A refused or failed migration; <see cref="Code"/> is a stable reason for reports and the API.</summary>
-public sealed class DomainMigrationException(string code, string message) : InvalidDataException(message)
+public sealed class DomainMigrationException(string code, string message) : IOException(message)
 {
     public string Code { get; } = code;
 }

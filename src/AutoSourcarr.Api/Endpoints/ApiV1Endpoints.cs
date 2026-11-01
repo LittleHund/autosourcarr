@@ -157,6 +157,8 @@ public sealed class ApiV1Services
     public SourceInventoryServices? SourceInventory { get; init; }
     /// <summary>Domain-migration repair and rollback (phase 6e); null answers 503.</summary>
     public SourceRepairServices? SourceRepair { get; init; }
+    /// <summary>The /source-maintenance repair routes: raw-code storage, runner check, feedback folder (phase 6); null answers 503 where needed.</summary>
+    public RepairV1Services? Repair { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -522,6 +524,7 @@ public static class ApiV1Endpoints
         SourceV1Endpoints.Map(group, services, json);
         SourceInventoryV1Endpoints.Map(group, services, json);
         SourceRepairV1Endpoints.Map(group, services, json, services.SourceRepair);
+        RepairV1Endpoints.Map(group, services, json);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),
@@ -541,10 +544,10 @@ public static class ApiV1Endpoints
                 context.Response.Headers.CacheControl = "no-store";
                 if (services.Tasks is null) return Problem(503, "The task list is not available in this host.");
                 var snapshot = services.Tasks.Snapshot();
-                return Results.Json(services.Jobs?.Annotate(snapshot) ?? snapshot, json.JsonObject);
+                return Results.Json(RepairV1Endpoints.ProjectTasks(services.Jobs?.Annotate(snapshot) ?? snapshot, services), json.JsonObject);
             }))
             .WithName("getTasks")
-            .WithSummary("Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work.")
+            .WithSummary("Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work; repair jobs are listed as kind source-repair with package and repair state.")
             .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapPost("/tasks/clear-history", (Func<HttpContext, IResult>)(_ =>

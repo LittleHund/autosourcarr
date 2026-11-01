@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using AutoSourcarr.Core.Repair.Migration;
 using AutoSourcarr.Core.Settings;
 using AutoSourcarr.Core.Sources;
 using AutoSourcarr.Core.Sources.Runtime;
@@ -19,15 +20,108 @@ public static class SourceHostIntegrationTests
     {
         suite.Add("source host: supervised host serves install, search, details, chapters, pages and image to the client; restarts after a crash", () =>
         {
-            var jar = Environment.GetEnvironmentVariable("AUTOSOURCARR_TEST_SOURCE_HOST_JAR");
-            if (string.IsNullOrWhiteSpace(jar) || !File.Exists(jar))
-            {
-                Console.WriteLine("NOTE source host jar not set; the source host integration check runs in the CI probe.");
-                if (Environment.GetEnvironmentVariable("AUTOSOURCARR_REQUIRE_SOURCE_HOST") == "1") throw new InvalidOperationException("The source host jar is required here.");
-                return;
-            }
+            if (HostJar() is not { } jar) return;
             Run(jar).GetAwaiter().GetResult();
         });
+        // Phase 6 done-when proof: a known orphan is repaired and passes content checks.
+        suite.Add("source host: a moved-domain orphan is repaired by the domain repair, passes the content check and rolls back", () =>
+        {
+            if (HostJar() is not { } jar) return;
+            RunDomainRepair(jar).GetAwaiter().GetResult();
+        });
+    }
+
+    /// <summary>The host jar the CI probe builds, or null (with a note) when it is not set here.</summary>
+    private static string? HostJar()
+    {
+        var jar = Environment.GetEnvironmentVariable("AUTOSOURCARR_TEST_SOURCE_HOST_JAR");
+        if (!string.IsNullOrWhiteSpace(jar) && File.Exists(jar)) return jar;
+        Console.WriteLine("NOTE source host jar not set; the source host integration check runs in the CI probe.");
+        if (Environment.GetEnvironmentVariable("AUTOSOURCARR_REQUIRE_SOURCE_HOST") == "1") throw new InvalidOperationException("The source host jar is required here.");
+        return null;
+    }
+
+    private static Dictionary<string, string> HostEnvironment(string home)
+    {
+        var environment = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["PATH"] = Environment.GetEnvironmentVariable("PATH") ?? "/usr/bin:/bin",
+            ["HOME"] = home,
+            ["EXTENSION_STORES"] = "[\"" + Keiyoushi + "\"]",
+            ["WEBVIEW_ENABLED"] = "false"
+        };
+        if (Environment.GetEnvironmentVariable("JAVA_HOME") is { Length: > 0 } javaHome) environment["JAVA_HOME"] = javaHome;
+        return environment;
+    }
+
+    /// <summary>
+    /// Mangatown (passes the CI source check) made into an orphan by moving its compiled address to
+    /// www.mangatown.invalid: the content check fails; the domain repair from the .invalid host back to
+    /// www.mangatown.com ends repaired with a passing content check; rollback installs the kept jar and it still loads.
+    /// </summary>
+    private static async Task RunDomainRepair(string jar)
+    {
+        const string package = "eu.kanade.tachiyomi.extension.en.mangatown";
+        const string liveHost = "www.mangatown.com", deadHost = "www.mangatown.invalid";
+        using var temp = new Sandbox();
+        var java = Environment.GetEnvironmentVariable("JAVA_HOME") is { Length: > 0 } home ? Path.Combine(home, "bin", "java") : "java";
+        var log = new List<string>();
+        await using var host = new SourceHostProcess(java, jar, Path.Combine(temp.Path, "source-host"), FreePort(), HostEnvironment(temp.Path),
+            line => { lock (log) log.Add(line); });
+        try
+        {
+            await host.StartAsync(TimeSpan.FromMinutes(3), CancellationToken.None);
+            await using var client = SuwayomiClient.ForSourceHost(new AutoSourcarrSettings(), host.BaseUrl, host.Token);
+            var catalog = await client.ExtensionsAsync(refresh: true);
+            Check.True(catalog["extensions"]!.AsArray().Any(row => row?["pkgName"]?.GetValue<string>() == package), "store lists " + package);
+            var installed = await client.UpdateExtensionAsync(package, "install");
+            Check.True(installed?["isInstalled"]?.GetValue<bool>() == true, "extension installed");
+
+            // 1. the working jar
+            var working = await client.ReadExtensionJarAsync(package);
+            var contents = new SuwayomiContentCheckSource(client);
+
+            // 2. the simulated orphan: its site "moved" to an address that does not exist
+            var orphan = DomainMigration.Migrate(working, liveHost, deadHost);
+            Check.True(orphan.Replacements > 0, "the jar names " + liveHost);
+            var broken = await client.InstallExtensionJarAsync(package, orphan.Jar);
+            Check.Equal("", SourceResponseContract.Text(broken["loadError"]));
+            var sources = (broken["source"] as JsonObject)?["nodes"] as JsonArray ?? [];
+            var source = sources.OfType<JsonObject>().First(row => SourceResponseContract.Text(row["lang"]) == "en");
+            var sourceId = SourceResponseContract.Identity(source["id"])!;
+            Check.True(SourceResponseContract.Text(source["baseUrl"]).Contains(deadHost, StringComparison.Ordinal), "orphan base URL " + source["baseUrl"]);
+            var failing = await ContentCheck.RunAsync(contents, sourceId, SourceResponseContract.Text(source["name"]));
+            Check.True(!failing.Ok, "the orphan's content check fails");
+            // The failed check must not leave the source paused by the host's back-off.
+            await client.HostAsync(HttpMethod.Delete, "/v1/sources/" + Uri.EscapeDataString(sourceId) + "/backoff");
+
+            // 3. the domain repair back to the live site
+            var root = Path.Combine(temp.Path, "source-maintenance");
+            var repair = new DomainRepair(root, new SuwayomiDomainRepairHost(client), new SemaphoreSlim(1, 1));
+            var report = await repair.RunAsync(package, new DomainRepairOptions(NewHost: liveHost, OldHost: deadHost));
+            Check.True(SourceResponseContract.Text(report["state"]) == "repaired", "domain repair: " + report.ToJsonString());
+            Check.True(report["content_check"]?["ok"]?.GetValue<bool>() == true, "repaired content check passed");
+            Check.True(((report["sources_after"] as JsonArray) ?? []).OfType<JsonObject>()
+                .Any(row => SourceResponseContract.Text(row["base_url"]).Contains(liveHost, StringComparison.Ordinal)), "repaired base URL");
+            var passing = await ContentCheck.RunAsync(contents, sourceId, SourceResponseContract.Text(source["name"]));
+            Check.True(passing.Ok, "content check after repair: " + passing.ToJson().ToJsonString());
+            Check.True(Directory.EnumerateFiles(repair.LastWorkingDirectory(package), "*.jar").Any(), "the jar before the repair is kept");
+
+            // 4. rollback installs the kept jar (the orphan's) and the source still loads
+            var rolledBack = await repair.RollbackAsync(package);
+            Check.True(SourceResponseContract.Text(rolledBack["state"]) == "rolled_back", "rollback: " + rolledBack.ToJsonString());
+            Check.True((await client.SourcesAsync()).Any(row => row["id"]!.ToString() == sourceId), "source loads after rollback");
+            var after = await client.HostExtensionAsync(package);
+            Check.Equal("", SourceResponseContract.Text(after?["loadError"]));
+
+            // Leave the working jar installed.
+            await client.InstallExtensionJarAsync(package, working);
+        }
+        catch
+        {
+            lock (log) Console.WriteLine(string.Join('\n', log.TakeLast(80)));
+            throw;
+        }
     }
 
     private static async Task Run(string jar)

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -61,6 +62,10 @@ public sealed class DomainRepair
     private readonly SemaphoreSlim _adminLock;
     private readonly Func<string, CancellationToken, Task<JsonObject>>? _observe;
     private readonly TimeProvider _time;
+    // REP-1: package -> "versionName|versionCode" whose installed jar is already kept as last working; a repair or
+    // rollback of the package forgets it, because those keep the version but change the jar.
+    private readonly ConcurrentDictionary<string, string> _keptVersions = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> _keeping = new(StringComparer.Ordinal);
 
     /// <param name="maintenanceRoot">The app's &lt;data&gt;/source-maintenance folder.</param>
     /// <param name="observe">Observes one public URL and answers WebsiteProbe.OneAsync's JSON (state, final_url, redirects); null disables discovery.</param>
@@ -128,6 +133,7 @@ public sealed class DomainRepair
         }
 
         await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        _keptVersions.TryRemove(packageName, out _);
         try
         {
             // (a) the last working code
@@ -243,6 +249,7 @@ public sealed class DomainRepair
         var (sha, record, jar) = LatestKept(packageName) ?? throw new DomainRepairException(404, "nothing_kept", "No working jar of " + packageName + " has been kept.");
         var report = new JsonObject { ["kind"] = "domain-repair-rollback", ["package"] = packageName, ["started_at"] = Now(), ["kept"] = record.DeepClone() };
         await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        _keptVersions.TryRemove(packageName, out _);
         try
         {
             var answer = await _host.InstallJarAsync(packageName, jar, cancellationToken).ConfigureAwait(false);
@@ -259,6 +266,59 @@ public sealed class DomainRepair
         report["finished_at"] = Now();
         SaveReport(packageName, report);
         return report;
+    }
+
+    /// <summary>
+    /// REP-1: keeps the installed jar of a package as its latest confirmed working version, after the package passed a
+    /// source health check (SRC-7). At most once per jar digest: a jar already kept is not written again, and while the
+    /// installed version is unchanged since the last keep the jar is not even read. Answers the kept record, or null when
+    /// nothing was kept (not installed, does not load, or already kept for this version).
+    /// </summary>
+    public async Task<JsonObject?> KeepLastWorkingAsync(string packageName, CancellationToken cancellationToken = default)
+    {
+        RequirePackage(packageName);
+        await _adminLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var extension = await _host.ExtensionAsync(packageName, cancellationToken).ConfigureAwait(false);
+            if (extension is null || !(SourceResponseContract.Boolean(extension["isInstalled"], out var installed) && installed)) return null;
+            if (SourceResponseContract.Text(extension["loadError"]).Length > 0) return null;
+            var version = SourceResponseContract.Text(extension["versionName"]) + "|" + SourceResponseContract.Text(extension["versionCodeLong"]);
+            if (_keptVersions.TryGetValue(packageName, out var known) && known == version) return null;
+            var jar = await _host.ReadJarAsync(packageName, cancellationToken).ConfigureAwait(false);
+            var sha = DomainMigration.Sha(jar);
+            var directory = LastWorkingDirectory(packageName);
+            JsonObject? record = null;
+            if (File.Exists(Path.Combine(directory, sha + ".jar")))
+                record = Records(directory).Where(item => item.Sha == sha).Select(item => item.Record).FirstOrDefault();
+            var kept = record is null;
+            record ??= Keep(packageName, jar, extension, "passed-health-check");
+            _keptVersions[packageName] = version;
+            return kept ? record : null;
+        }
+        finally { _adminLock.Release(); }
+    }
+
+    /// <summary>
+    /// Fire-and-forget form of <see cref="KeepLastWorkingAsync"/> for the health check's completion: one keep per package
+    /// at a time, three minutes at most, never throws. Errors other than "no source host here" go to
+    /// <paramref name="recordError"/>.
+    /// </summary>
+    public void QueueKeepLastWorking(string packageName, Action<Exception>? recordError = null)
+    {
+        if (!IsPackageName(packageName) || !_keeping.TryAdd(packageName, 0)) return;
+        _ = Task.Run(async () =>
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+            try { await KeepLastWorkingAsync(packageName, deadline.Token).ConfigureAwait(false); }
+            catch (SourceEngineUnavailableException) { }
+            catch (Exception error)
+            {
+                try { recordError?.Invoke(error); }
+                catch (Exception) { }
+            }
+            finally { _keeping.TryRemove(packageName, out _); }
+        });
     }
 
     private async Task<JsonObject> RestoreAsync(string packageName, byte[] kept, string keptSha, JsonObject report, string reason,
