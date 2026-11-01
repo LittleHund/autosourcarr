@@ -5,5 +5,8 @@ OK: JVM extension JAR structure checks passed
 File: tachiyomi-all.autosourcarr-v1.4.4005.jar
 Size: 100832 bytes
 JVM classes: 33
-SHA-256: b45ace4430fbce765fad80c589ec2b59705c31a856f5ae7f8abf834824ed9be2
-Could not read the APK signing fingerprint.
+SHA-256: fc6f8b8bab7a68f12903d5d7c58ffb595cb26e12fe6e6203bc4e9e3c8f4600c4
+index: eu.kanade.tachiyomi.extension.all.autosourcarr 1.4.4005 (code 108005), 5 server slots
+Reader extension repository: .build/reader-extension
+  APK: apk/tachiyomi-all.autosourcarr-v1.4.4005.apk  JAR: jar/tachiyomi-all.autosourcarr-v1.4.4005.jar  signing SHA-256: d06afc4fbdc0a5a7287916d504bb4683f6abdb3832992095c9124f3609fd362a
+UNSIGNED-FOR-RELEASE: signed with a throwaway debug key. Add the AUTOSOURCARR_EXT_* secrets before releasing.

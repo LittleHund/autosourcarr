@@ -1,0 +1,6 @@
+.build/reader-extension/apk/tachiyomi-all.autosourcarr-v1.4.4005.apk
+.build/reader-extension/build.json
+.build/reader-extension/icon/eu.kanade.tachiyomi.extension.all.autosourcarr.png
+.build/reader-extension/index.min.json
+.build/reader-extension/jar/tachiyomi-all.autosourcarr-v1.4.4005.jar
+.build/reader-extension/repo.json
