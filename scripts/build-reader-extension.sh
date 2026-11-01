@@ -101,8 +101,9 @@ bash "$root/extension/verify-tachiyomi-apk.sh" "$apk"
 bash "$root/extension/verify-suwayomi-jar.sh" "$jar"
 apksigner=$(find_apksigner) || { echo 'apksigner was not found in the Android SDK.' >&2; exit 7; }
 certs=$("$apksigner" verify --print-certs "$apk" 2>&1) || { echo "$certs" >&2; echo 'The APK signature does not verify.' >&2; exit 7; }
-fingerprint=$(awk -F': ' '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}' <<< "$certs" | tr -d ': ' | tr 'A-F' 'a-f')
-[[ "$fingerprint" =~ ^[0-9a-f]{64}$ ]] || { echo 'Could not read the APK signing fingerprint.' >&2; exit 7; }
+# "Signer #1 certificate SHA-256 digest: …" (older apksigner) or "Signer (minSdkVersion=…) certificate SHA-256 digest: …".
+fingerprint=$(awk -F'digest: ' '/certificate SHA-256 digest: / {print $2; exit}' <<< "$certs" | tr -d ': ' | tr 'A-F' 'a-f')
+[[ "$fingerprint" =~ ^[0-9a-f]{64}$ ]] || { echo "$certs" >&2; echo 'Could not read the APK signing fingerprint.' >&2; exit 7; }
 
 # 5. The repository: legacy Tachiyomi/Mihon layout (index.min.json + repo.json, apk/, icon/), plus jar/.
 rm -rf "$out.tmp"; mkdir -p "$out.tmp/apk" "$out.tmp/icon" "$out.tmp/jar"

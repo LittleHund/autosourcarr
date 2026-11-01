@@ -27,6 +27,8 @@ public sealed class CoverCache : IAsyncDisposable
     private long _epoch;
     private int _pending, _active;
     private bool _clearing, _closed;
+    /// <summary>Whether shutdown has reached the cache (fills that finish now write nothing).</summary>
+    internal bool Closed { get { lock (_gate) return _closed; } }
     private Task? _closing;
     private int _disposed;
 

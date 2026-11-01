@@ -161,6 +161,10 @@ public static class CatalogueHostTests
             await entered.Task.WaitAsync(TimeSpan.FromSeconds(5)); Check.True(await inline is null);
             stop = f.Runtime.DisposeAsync().AsTask(); Check.True(SpinWait.SpinUntil(() => f.Runtime.Stopping, TimeSpan.FromSeconds(5)));
             Check.True(!stop.IsCompleted); Check.Throws<IOException>(() => ApplicationRuntime.InstanceRoots.Acquire([f.Settings.SettingsConfigDir]));
+            // The app's shutdown reaches the cover cache after the job queue and the background services; the fill is
+            // released only once the cache is closing, and the app still waits for it before it lets go of storage.
+            Check.True(SpinWait.SpinUntil(() => f.Runtime.Catalogue.Covers.Closed, TimeSpan.FromSeconds(30)), "cover cache closing");
+            Check.True(!stop.IsCompleted, "storage is held while the fill runs");
         }
         finally { release.TrySetResult(); await inline; if (stop is not null) await stop; }
         Check.True(!File.Exists(Path.Combine(f.Settings.DataDir, "cover-cache", "entry-pending.img")));
