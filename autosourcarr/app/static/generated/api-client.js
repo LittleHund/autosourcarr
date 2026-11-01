@@ -225,6 +225,50 @@
        */
       addConnection(body, options) { return call('POST', '/api/v1/connections', body, options); },
       /**
+       * Add a manual alternative title: {title, language?}. The whole title is kept (never split) and becomes matching evidence for this entry. Returns the entry.
+       * POST /api/v1/entries/{entryId}/aliases
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      addEntryAlias(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/aliases`, body, options); },
+      /**
+       * Add an attached source record to a manual group: its entry is merged into the group's entry and the record is bound there.
+       * POST /api/v1/manual-groups/{groupId}/members
+       * @param {string} groupId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      addManualGroupMember(groupId, body, options) { return call('POST', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/members`, body, options); },
+      /**
+       * Forget a separate-entry decision, so matching may attach the record to this entry again.
+       * DELETE /api/v1/entries/{entryId}/separate-source/{sourceId}/{sourceMangaId}
+       * @param {string} entryId
+       * @param {string} sourceId
+       * @param {string} sourceMangaId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      allowSourceRecordMatch(entryId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/separate-source/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
+      /**
+       * Save the previewed policy when rules and evidence are unchanged; nothing is merged or split now. Logged with the signed-in actor.
+       * POST /api/v1/policy-simulator/apply
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      applyPolicySimulator(body, options) { return call('POST', '/api/v1/policy-simulator/apply', body, options); },
+      /**
+       * Apply a previewed review batch when its revision still matches; logged as one decision with the signed-in actor.
+       * POST /api/v1/review-workbench/apply
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      applyReviewWorkbench(body, options) { return call('POST', '/api/v1/review-workbench/apply', body, options); },
+      /**
        * Keep the original APK of an installed source as repair evidence (headers confirm the original and its version).
        * POST /api/v1/source-maintenance/original-apk/{pkgName}
        * @param {string} pkgName
@@ -274,6 +318,14 @@
        */
       checkEngineCompatibility(target, options) { return call('POST', `/api/v1/engine/${encodeURIComponent(target)}/compatibility`, undefined, options); },
       /**
+       * Start (or resume) the mixed-entry check as a job: the whole catalogue in bounded keyset batches, resumable after a restart. Body: restart (start over), auto_split (also split high-confidence automatic color/media mixtures), batch_size.
+       * POST /api/v1/mixed-entries/check
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      checkMixedEntries(body, options) { return call('POST', '/api/v1/mixed-entries/check', body, options); },
+      /**
        * Check draft reader addresses and key without saving them.
        * POST /api/v1/setup/reader-preflight
        * @param {ReaderPreflightRequest} body
@@ -297,12 +349,39 @@
        */
       clearErrors(body, options) { return call('POST', '/api/v1/errors/clear', body, options); },
       /**
+       * Remove the manual main title and manual alternate titles of an entry (owner or admin); its main title returns to the most-used title of its records.
+       * DELETE /api/v1/entries/{entryId}/manual-titles
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      clearManualTitles(entryId, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/manual-titles`, undefined, options); },
+      /**
        * Remove the engine's cookies and browser data (sign-ins and Cloudflare clearances). Installed extensions stay.
        * POST /api/v1/source-browser/clear-data
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       clearSourceBrowserData(options) { return call('POST', '/api/v1/source-browser/clear-data', undefined, options); },
+      /**
+       * Detach every record of one source from the entry (their manual bindings are forgotten).
+       * DELETE /api/v1/entries/{entryId}/matches/{sourceId}
+       * @param {string} entryId
+       * @param {string} sourceId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      clearSourceMatch(entryId, sourceId, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/matches/${encodeURIComponent(sourceId)}`, undefined, options); },
+      /**
+       * Remove an additional source record from an entry.
+       * DELETE /api/v1/entries/{entryId}/variants/{sourceId}/{sourceMangaId}
+       * @param {string} entryId
+       * @param {string} sourceId
+       * @param {string} sourceMangaId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      clearSourceVariant(entryId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/variants/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
       /**
        * Remove completed and failed tasks from the list; running and queued work stays.
        * POST /api/v1/tasks/clear-history
@@ -319,6 +398,13 @@
        */
       confirmSourceExtensionUpload(body, options) { return call('POST', '/api/v1/source-extensions/upload/confirm', body, options); },
       /**
+       * Auto-merge duplicates across the catalogue as a job: recovers pending chapter work, then merges only pairs proven across every original member.
+       * POST /api/v1/maintenance/consolidate
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      consolidateDuplicates(options) { return call('POST', '/api/v1/maintenance/consolidate', undefined, options); },
+      /**
        * Owner only: add an admin or guest account with a password.
        * POST /api/v1/accounts
        * @param {JsonObject} body
@@ -334,6 +420,14 @@
        * @returns {Promise<JsonObject>}
        */
       createKey(body, options) { return call('POST', '/api/v1/keys', body, options); },
+      /**
+       * Save a new matching profile: {revision, name, description?, rule} (0.4.5 rule {enabled, checks}) or {revision, name, description?, kind: simple|advanced, settings}. The title floor never goes below 94%.
+       * POST /api/v1/matching-presets
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      createMatchingPreset(body, options) { return call('POST', '/api/v1/matching-presets', body, options); },
       /**
        * First boot: create the owner account (the first admin) and sign in. Refused once an owner exists.
        * POST /api/v1/auth/setup
@@ -367,6 +461,15 @@
        */
       deleteAccount(accountId, options) { return call('DELETE', `/api/v1/accounts/${encodeURIComponent(accountId)}`, undefined, options); },
       /**
+       * Delete an entry and suppress its source records so a refresh does not bring it back (owner or admin). Refused for main-library subscriptions unless the body says {force: true}.
+       * DELETE /api/v1/entries/{entryId}
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      deleteCatalogueEntry(entryId, body, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}`, body, options); },
+      /**
        * Delete a saved connection (?revision= names the revision it is based on). Connections from Settings are cleared on the Settings page.
        * DELETE /api/v1/connections/{connectionId}
        * @param {string} connectionId
@@ -374,6 +477,15 @@
        * @returns {Promise<JsonObject>}
        */
       deleteConnection(connectionId, options) { return call('DELETE', `/api/v1/connections/${encodeURIComponent(connectionId)}`, undefined, options); },
+      /**
+       * Delete a saved matching profile: body {revision}. Ready-made profiles cannot be deleted.
+       * DELETE /api/v1/matching-presets/{presetId}
+       * @param {string} presetId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      deleteMatchingPreset(presetId, body, options) { return call('DELETE', `/api/v1/matching-presets/${encodeURIComponent(presetId)}`, body, options); },
       /**
        * Delete a source group; its members become ungrouped.
        * DELETE /api/v1/source-groups/{groupId}
@@ -439,6 +551,14 @@
        */
       finishSetup(body, options) { return call('POST', '/api/v1/setup/finish', body, options); },
       /**
+       * Full reset as an exclusive job (body {confirm: true}): clears the catalogue and every decision, keeps configuration and main-library subscriptions.
+       * POST /api/v1/maintenance/full-reset
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      fullResetDatabase(body, options) { return call('POST', '/api/v1/maintenance/full-reset', body, options); },
+      /**
        * Owner only: accounts with role and sign-in source (no password data).
        * GET /api/v1/accounts
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -481,12 +601,50 @@
        */
       getDatabaseStorage(options) { return call('GET', '/api/v1/storage/database', undefined, options); },
       /**
+       * One decision with its before/after state.
+       * GET /api/v1/decisions/{eventId}
+       * @param {string} eventId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getDecision(eventId, options) { return call('GET', `/api/v1/decisions/${encodeURIComponent(eventId)}`, undefined, options); },
+      /**
+       * The newest 50 decisions of the decision log (merges, splits, separates, manual matches and groups, titles, reviews, resets) with their actor.
+       * GET /api/v1/decisions
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getDecisions(options) { return call('GET', '/api/v1/decisions', undefined, options); },
+      /**
        * PERF-9: all logs and diagnostics in one download, with secrets and private data removed.
        * GET /api/v1/diagnostics
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       getDiagnostics(options) { return call('GET', '/api/v1/diagnostics', undefined, options); },
+      /**
+       * Duplicate review badges for entries (?ids=1,2,...; at most 500) from the completed snapshot, never rescoring; pending while a refresh runs.
+       * GET /api/v1/duplicate-candidates
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getDuplicateCandidates(options) { return call('GET', '/api/v1/duplicate-candidates', undefined, options); },
+      /**
+       * One recorded merge: both entries as they were before it, its evidence, and the entry it lives on now.
+       * GET /api/v1/duplicates/history/{eventId}
+       * @param {string} eventId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getDuplicateHistoryEvent(eventId, options) { return call('GET', `/api/v1/duplicates/history/${encodeURIComponent(eventId)}`, undefined, options); },
+      /**
+       * Search the catalogue by the entry's own names (main title, alternative and source titles, romanised forms): other entries with an exact shared title, plus the names used.
+       * GET /api/v1/entries/{entryId}/manual-search
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getEntryManualSearch(entryId, options) { return call('GET', `/api/v1/entries/${encodeURIComponent(entryId)}/manual-search`, undefined, options); },
       /**
        * Recent errors grouped by cause with counts, newest first (resolved ones included).
        * GET /api/v1/errors
@@ -523,12 +681,55 @@
        */
       getKeys(options) { return call('GET', '/api/v1/keys', undefined, options); },
       /**
+       * Every saved user decision by kind: manual matches and groups, manual titles with their frozen record scope, separate-entry rules, rejected chapters and different-work reviews.
+       * GET /api/v1/manual-actions
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getManualActions(options) { return call('GET', '/api/v1/manual-actions', undefined, options); },
+      /**
+       * Persistent manual groups (two or more chosen records kept on one entry) and the individual manual matches.
+       * GET /api/v1/manual-groups
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getManualGroups(options) { return call('GET', '/api/v1/manual-groups', undefined, options); },
+      /**
+       * Matching rules per source and source group (internal / external matching), with their revision, the sources and groups they can name, and the matching profiles.
+       * GET /api/v1/matching-policies
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getMatchingPolicies(options) { return call('GET', '/api/v1/matching-policies', undefined, options); },
+      /**
+       * Matching profiles: ready-made presets (fixed), saved simple and advanced profiles with their effective scorer options, the preset revision and the default source ranking (official publisher sources, then health, then quality).
+       * GET /api/v1/matching-presets
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getMatchingPresets(options) { return call('GET', '/api/v1/matching-presets', undefined, options); },
+      /**
        * Who is calling: name, role and how they signed in.
        * GET /api/v1/auth/me
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
       getMe(options) { return call('GET', '/api/v1/auth/me', undefined, options); },
+      /**
+       * One entry's source records with the pairwise evidence, its color/media edition profile (with every signal: title marker, page analysis, tags, source type, description) and the automatic split proposals.
+       * GET /api/v1/mixed-entries/{entryId}
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getMixedEntry(entryId, options) { return call('GET', `/api/v1/mixed-entries/${encodeURIComponent(entryId)}`, undefined, options); },
+      /**
+       * Sources, custom groups, saved matching rules (with revision) and presets for the policy simulator.
+       * GET /api/v1/policy-simulator/options
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getPolicySimulatorOptions(options) { return call('GET', '/api/v1/policy-simulator/options', undefined, options); },
       /**
        * Where repairs run: always inside this instance (no external worker); which repair kinds are available.
        * GET /api/v1/source-maintenance/connection
@@ -557,6 +758,21 @@
        * @returns {Promise<JsonObject>}
        */
       getRepairProvider(options) { return call('GET', '/api/v1/source-maintenance/provider', undefined, options); },
+      /**
+       * Recent matching decisions with who made them (merges, splits, separate works, manual matches, title choices), reviewed batches and their undo state.
+       * GET /api/v1/review-workbench
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getReviewWorkbench(options) { return call('GET', '/api/v1/review-workbench', undefined, options); },
+      /**
+       * The audit trail of one work: its decisions with actors, its current source records and title.
+       * GET /api/v1/review-workbench/entries/{entryId}
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getReviewWorkbenchEntry(entryId, options) { return call('GET', `/api/v1/review-workbench/entries/${encodeURIComponent(entryId)}`, undefined, options); },
       /**
        * Timing samples per work phase (no URLs, titles or keys).
        * GET /api/v1/diagnostics/metrics
@@ -711,6 +927,13 @@
        */
       getSuwayomiImport(connectionId, options) { return call('GET', `/api/v1/connections/${encodeURIComponent(connectionId)}/import`, undefined, options); },
       /**
+       * The tag synonym map: built-in synonyms, your synonyms and the effective list (namespace, from, to, origin), with its revision.
+       * GET /api/v1/tag-synonyms
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getTagSynonyms(options) { return call('GET', '/api/v1/tag-synonyms', undefined, options); },
+      /**
        * Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work; repair jobs are listed as kind source-repair with package and repair state.
        * GET /api/v1/tasks
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -750,6 +973,34 @@
        */
       installSourceRepairJob(jobId, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/install`, undefined, options); },
       /**
+       * Recorded automatic merges, newest first (offset, limit, q); older merges that kept only a reason are listed as legacy.
+       * GET /api/v1/duplicates/history
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listDuplicateHistory(options) { return call('GET', '/api/v1/duplicates/history', undefined, options); },
+      /**
+       * The duplicate review snapshot: groups of entries that may be one work, each pair with title/merge scores and whether the automatic gate would merge it; pending/stale while a refresh job runs, plus the automatic matching status.
+       * GET /api/v1/duplicates
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listDuplicates(options) { return call('GET', '/api/v1/duplicates', undefined, options); },
+      /**
+       * Entries whose source records may be different works (different formats, color editions, titles with unrelated detailed summaries), from the saved findings of the last mixed-entry check, with counts and the check's progress. Optional query: state, q, offset, limit.
+       * GET /api/v1/mixed-entries
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listMixedEntries(options) { return call('GET', '/api/v1/mixed-entries', undefined, options); },
+      /**
+       * Merged entries whose source records can be split apart again, with every record and its match type.
+       * GET /api/v1/maintenance/unmatch-duplicates
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listUnmatchDuplicates(options) { return call('GET', '/api/v1/maintenance/unmatch-duplicates', undefined, options); },
+      /**
        * Sign in with name and password (login page). Failed attempts slow down and are logged.
        * POST /api/v1/auth/login
        * @param {JsonObject} body
@@ -764,6 +1015,15 @@
        * @returns {Promise<JsonObject>}
        */
       logout(options) { return call('POST', '/api/v1/auth/logout', undefined, options); },
+      /**
+       * Bind the exact source record the user chose to the entry: body {source_id, source_manga_id, mode replace|add, candidate, defer_hydration}. With defer_hydration and the search card the choice commits at once and details load as a job.
+       * POST /api/v1/entries/{entryId}/manual-match
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      manualMatch(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/manual-match`, body, options); },
       /**
        * Mark an installed source as orphaned (only when it is missing from the configured repositories).
        * POST /api/v1/source-orphans/{pkgName}/mark
@@ -781,12 +1041,82 @@
        */
       moveDatabaseStorage(body, options) { return call('POST', '/api/v1/storage/database/move', body, options); },
       /**
+       * Duplicate review badges for the entries in {"ids": [...]} (at most 500) from the completed snapshot, never rescoring.
+       * POST /api/v1/duplicate-candidates
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      postDuplicateCandidates(body, options) { return call('POST', '/api/v1/duplicate-candidates', body, options); },
+      /**
+       * Preview of resetting every saved manual decision (matches, groups, titles, separate rules, reviews, rejected chapters and imports, deleted-record suppression): counts per kind and the preview_token the confirmation must send back.
+       * GET /api/v1/maintenance/reset-all-manual-actions
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewAllManualActionsReset(options) { return call('GET', '/api/v1/maintenance/reset-all-manual-actions', undefined, options); },
+      /**
+       * Exactly which duplicate pairs the automatic gate would merge now (evidence only; the merge re-checks every pair).
+       * GET /api/v1/maintenance/consolidate-preview
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewConsolidateDuplicates(options) { return call('GET', '/api/v1/maintenance/consolidate-preview', undefined, options); },
+      /**
+       * Preview of resetting the manual groups (matches stay attached and bound): counts per kind and the preview_token the confirmation must send back.
+       * GET /api/v1/maintenance/reset-manual-groups
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewManualGroupsReset(options) { return call('GET', '/api/v1/maintenance/reset-manual-groups', undefined, options); },
+      /**
+       * Preview of resetting the manual matches and groups (records stay attached as automatic ones): counts per kind and the preview_token the confirmation must send back.
+       * GET /api/v1/maintenance/reset-manual-matches
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewManualMatchesReset(options) { return call('GET', '/api/v1/maintenance/reset-manual-matches', undefined, options); },
+      /**
+       * Run the real matcher with the current and a draft policy: chosen pairs or a catalogue page at once, or the whole catalogue as a task (scan); lists works that would merge or split.
+       * POST /api/v1/policy-simulator/preview
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewPolicySimulator(body, options) { return call('POST', '/api/v1/policy-simulator/preview', body, options); },
+      /**
        * Retired: Compose/SSH repair worker setup was removed (410).
        * POST /api/v1/source-maintenance/setup-preview
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<null>}
        */
       previewRepairSetup(options) { return call('POST', '/api/v1/source-maintenance/setup-preview', undefined, options); },
+      /**
+       * Check 1 to 100 review items (pairs to keep separate, or actions: separate, merge, split, manual.match, title) and return their effects and a revision.
+       * POST /api/v1/review-workbench/preview
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewReviewWorkbench(body, options) { return call('POST', '/api/v1/review-workbench/preview', body, options); },
+      /**
+       * Use an additional record as the primary record of its source; the old primary stays as an additional record.
+       * POST /api/v1/entries/{entryId}/variants/{sourceId}/{sourceMangaId}/promote
+       * @param {string} entryId
+       * @param {string} sourceId
+       * @param {string} sourceMangaId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      promoteSourceVariant(entryId, sourceId, sourceMangaId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/variants/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}/promote`, undefined, options); },
+      /**
+       * Filter the decision log: body {kind (also matches dotted sub-kinds), entry_id, actor_kind, actor_name, record "source_id:source_manga_id", before (next_before of the previous page), limit (1-500)}.
+       * POST /api/v1/decisions
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      queryDecisions(body, options) { return call('POST', '/api/v1/decisions', body, options); },
       /**
        * The code is unavailable: rebuild the source from its installed binary (body: revision, optional job_id). Needs an AI provider; 409 until Connections.
        * POST /api/v1/source-maintenance/raws/{package}/unavailable
@@ -796,6 +1126,14 @@
        * @returns {Promise<JsonObject>}
        */
       reconstructSourceRaw(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/unavailable`, body, options); },
+      /**
+       * Redo an entry's automation as a job: keep the best-supported native record and manual/locked records, split every other automatic attachment back out, drop generated identities and titles, then search and refresh again.
+       * POST /api/v1/entries/{entryId}/redo-automation
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      redoEntryAutomation(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/redo-automation`, undefined, options); },
       /**
        * Collect removed sources from sampled original Keiyoushi history (two years) in the background; at most once a minute.
        * POST /api/v1/source-orphans/refresh
@@ -810,6 +1148,16 @@
        * @returns {Promise<JsonObject>}
        */
       regenerateAdminToken(options) { return call('POST', '/api/v1/keys/admin-token/regenerate', undefined, options); },
+      /**
+       * Take a record out of its manual group; it stays attached but later rebuilds no longer keep it in the group.
+       * DELETE /api/v1/manual-groups/{groupId}/members/{sourceId}/{sourceMangaId}
+       * @param {string} groupId
+       * @param {string} sourceId
+       * @param {string} sourceMangaId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      removeManualGroupMember(groupId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
       /**
        * Repair an installed source whose website moved: keep its jar, rewrite the old host in its compiled strings (new_host, or the observed redirect), check the structure, install, check content, and roll back when the check fails. Runs as a job.
        * POST /api/v1/source-repairs/{pkgName}/domain
@@ -836,6 +1184,45 @@
        * @returns {Promise<JsonObject>}
        */
       requestSourceRawInput(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/request-input`, body, options); },
+      /**
+       * Forget every saved manual decision (matches, groups, titles, separate rules, reviews, rejected chapters and imports, deleted-record suppression) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when the decisions changed since the preview.
+       * POST /api/v1/maintenance/reset-all-manual-actions
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resetAllManualActions(body, options) { return call('POST', '/api/v1/maintenance/reset-all-manual-actions', body, options); },
+      /**
+       * Invalidate every cached cover; source thumbnails are fetched again when shown.
+       * POST /api/v1/maintenance/reset-covers
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resetCovers(options) { return call('POST', '/api/v1/maintenance/reset-covers', undefined, options); },
+      /**
+       * Database reset as an exclusive job (body {confirm: true}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.
+       * POST /api/v1/maintenance/reset-database
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resetDatabase(body, options) { return call('POST', '/api/v1/maintenance/reset-database', body, options); },
+      /**
+       * Forget the manual groups (matches stay attached and bound) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when the decisions changed since the preview.
+       * POST /api/v1/maintenance/reset-manual-groups
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resetManualGroups(body, options) { return call('POST', '/api/v1/maintenance/reset-manual-groups', body, options); },
+      /**
+       * Forget the manual matches and groups (records stay attached as automatic ones) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when the decisions changed since the preview.
+       * POST /api/v1/maintenance/reset-manual-matches
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      resetManualMatches(body, options) { return call('POST', '/api/v1/maintenance/reset-manual-matches', body, options); },
       /**
        * Restart the integrated image to apply saved settings.
        * POST /api/v1/setup/restart
@@ -867,6 +1254,23 @@
        */
       retryTask(taskId, options) { return call('POST', `/api/v1/tasks/${encodeURIComponent(taskId)}/retry-safe`, undefined, options); },
       /**
+       * Review a duplicate pair (left_entry_id, right_entry_id, decision): duplicate merges them and keeps the records together as a manual group, not_duplicate keeps them apart permanently, clear forgets the decision.
+       * POST /api/v1/duplicates/review
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      reviewDuplicate(body, options) { return call('POST', '/api/v1/duplicates/review', body, options); },
+      /**
+       * Keep this exact combination of source records together (decision keep) or forget that review (clear). The fingerprint must match the current evidence; nothing else changes.
+       * POST /api/v1/mixed-entries/{entryId}/review
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      reviewMixedEntry(entryId, body, options) { return call('POST', `/api/v1/mixed-entries/${encodeURIComponent(entryId)}/review`, body, options); },
+      /**
        * Revoke a key at once (a lost phone is cut off without touching other devices).
        * DELETE /api/v1/keys/{keyId}
        * @param {string} keyId
@@ -891,6 +1295,13 @@
        */
       rollbackSourceRepair(body, options) { return call('POST', '/api/v1/source-maintenance/rollback', body, options); },
       /**
+       * Run automatic duplicate matching now as a job: merge only pairs whose every original member passes the automatic gate (non-transitive); reviewed and separated pairs are never merged.
+       * POST /api/v1/duplicates/automatic
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      runAutomaticDuplicates(options) { return call('POST', '/api/v1/duplicates/automatic', undefined, options); },
+      /**
        * Repair control actions: check (or prepare) runs the repair runner self-check; account actions answer 409 until an AI provider is configured.
        * POST /api/v1/source-maintenance/control/{action}
        * @param {string} action
@@ -906,6 +1317,17 @@
        */
       runSourceAutoRepair(options) { return call('POST', '/api/v1/source-maintenance/auto-repair/run', undefined, options); },
       /**
+       * Save the matching rule of one source or group and direction: {revision, rule: {enabled, checks} | null (inherit), reason?}. Title checks stay at 94% or more; identity and edition safeguards always apply.
+       * PUT /api/v1/matching-policies/{scope}/{subject}/{direction}
+       * @param {string} scope
+       * @param {string} subject
+       * @param {string} direction
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveMatchingPolicy(scope, subject, direction, body, options) { return call('PUT', `/api/v1/matching-policies/${encodeURIComponent(scope)}/${encodeURIComponent(subject)}/${encodeURIComponent(direction)}`, body, options); },
+      /**
        * Save changed settings to config.json. Null resets a setting to its default; an empty secret removes it.
        * PUT /api/v1/settings
        * @param {SettingsSaveRequest} body
@@ -913,6 +1335,32 @@
        * @returns {Promise<SettingsSaveResponse>}
        */
       saveSettings(body, options) { return call('PUT', '/api/v1/settings', body, options); },
+      /**
+       * Replace your tag synonyms (body: synonyms [{namespace, from, to}], optional revision from the last read). Mapping a built-in synonym to itself switches it off. Creator, character, parody and language names cannot be synonyms.
+       * PUT /api/v1/tag-synonyms
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveTagSynonyms(body, options) { return call('PUT', '/api/v1/tag-synonyms', body, options); },
+      /**
+       * Manual search: {query, source_id?, page?, all_names?}. With source_id, search that source live with the typed query and (all_names, default true) the entry's names; results are ranked by the matching scorer against the entry and show their current owner. Without source_id, search the catalogue.
+       * POST /api/v1/entries/{entryId}/manual-search
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      searchEntryManual(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/manual-search`, body, options); },
+      /**
+       * Catalogue records that could join a manual group: body {q, limit (1-100, default 60)}; best title match first.
+       * POST /api/v1/manual-groups/{groupId}/candidates
+       * @param {string} groupId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      searchManualGroupCandidates(groupId, body, options) { return call('POST', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/candidates`, body, options); },
       /**
        * Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Kept in feedback.jsonl (bounded); revert queues a rollback.
        * POST /api/v1/source-maintenance/jobs/{jobId}/feedback
@@ -922,6 +1370,24 @@
        * @returns {Promise<JsonObject>}
        */
       sendSourceRepairFeedback(jobId, body, options) { return call('POST', `/api/v1/source-maintenance/jobs/${encodeURIComponent(jobId)}/feedback`, body, options); },
+      /**
+       * Keep a source record as its own entry and remember it (body {source_id, source_manga_id, candidate}); the two entries are marked as different works.
+       * POST /api/v1/entries/{entryId}/separate-source
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      separateSourceRecord(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/separate-source`, body, options); },
+      /**
+       * Set the entry's main title: {title}. A manual main title is kept for this exact entry until it is removed or an explicit reset; it is recorded in the decision log. Returns the entry.
+       * POST /api/v1/entries/{entryId}/preferred-title
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      setEntryPreferredTitle(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/preferred-title`, body, options); },
       /**
        * Retired: external repair worker connections were removed (410).
        * PUT /api/v1/source-maintenance/connection
@@ -994,6 +1460,22 @@
        */
       testRepairProvider(options) { return call('POST', '/api/v1/source-maintenance/provider/test', undefined, options); },
       /**
+       * Split every automatic source attachment off an entry (each to its own entry) and keep them apart (owner or admin); manual, imported, split and locked records stay.
+       * POST /api/v1/entries/{entryId}/unbind-auto-matches
+       * @param {string} entryId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      unbindAutomaticMatches(entryId, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/unbind-auto-matches`, undefined, options); },
+      /**
+       * Undo a reviewed batch while every work and decision it changed is still as the batch left it.
+       * POST /api/v1/review-workbench/{identifier}/undo
+       * @param {string} identifier
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      undoReviewWorkbench(identifier, options) { return call('POST', `/api/v1/review-workbench/${encodeURIComponent(identifier)}/undo`, undefined, options); },
+      /**
        * Return an installed orphan to the Installed list.
        * POST /api/v1/source-orphans/{pkgName}/unmark
        * @param {string} pkgName
@@ -1001,6 +1483,15 @@
        * @returns {Promise<JsonObject>}
        */
       unmarkSourceOrphan(pkgName, options) { return call('POST', `/api/v1/source-orphans/${encodeURIComponent(pkgName)}/unmark`, undefined, options); },
+      /**
+       * Split the chosen source records off an entry into one new entry; the split is remembered as a manual decision so automation never re-joins them.
+       * POST /api/v1/entries/{entryId}/unmatch-duplicates
+       * @param {string} entryId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      unmatchDuplicateRecords(entryId, body, options) { return call('POST', `/api/v1/entries/${encodeURIComponent(entryId)}/unmatch-duplicates`, body, options); },
       /**
        * Update every installed extension that has a newer version.
        * POST /api/v1/source-extensions/update-all
@@ -1017,6 +1508,15 @@
        * @returns {Promise<JsonObject>}
        */
       updateConnection(connectionId, body, options) { return call('PUT', `/api/v1/connections/${encodeURIComponent(connectionId)}`, body, options); },
+      /**
+       * Change a saved matching profile (same body as create). Ready-made profiles are copied with Save as new instead.
+       * PUT /api/v1/matching-presets/{presetId}
+       * @param {string} presetId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      updateMatchingPreset(presetId, body, options) { return call('PUT', `/api/v1/matching-presets/${encodeURIComponent(presetId)}`, body, options); },
       /**
        * Change a source's choices: enabled, priority, group, official, matching rules.
        * PUT /api/v1/source-settings/{sourceId}

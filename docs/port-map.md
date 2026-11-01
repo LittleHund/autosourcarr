@@ -147,6 +147,30 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | Later | AI providers, Postgres connections, SRC-9 AI benchmark (phase 16); creating entries from the Suwayomi plan (8) |
 | Audit fixes (fresh-agent audit) | 17 findings: 15 fixed (secret exfiltration via changed address, late-applying changes, unreachable import, damaged-connection crash, Settings solver switches, WebView cookie scope and reach, two Suwayomi sources of truth, rollback note, health, feed back-off, limiter clock, CAPTCHA routing, leaks, keyed redirects); 2 kept as limitations (public-suffix cookie check for admin-configured solvers; metadata clients only used by Test until phase 8) |
 
+### Phase 8 (matching), ticked 2026-11-01
+
+| Row | Result |
+| --- | --- |
+| Scorer (MAT-1, MAT-4) | done: MatchScorer over the kept TextMatcher/IndelSimilarity/alias/summary code; symmetric missing-word penalty (small words 0.01, normal 0.03, numbers/sequel/edition words 0.08); floor 0.94 everywhere (0.985 + identity evidence for generic titles); whole titles kept (Steins;Gate, Yotsuba&!) |
+| Identity evidence (MAT-2) | done: creators (romanisation/name-order tolerant, author + artist), year gap > 1, cover hash; applied on ingest and in the automatic merge gate |
+| Edition separation (MAT-3) | done: EditionProfiles/EditionSignals (title markers, page colour and aspect analysis, tags via synonyms, webtoon-only sources, description cues); editions never auto-merge |
+| Profiles + ranking | done: ready-made (0.4.5 presets), simple, advanced; options reach the scorer; official publisher sources first, then health, then priority; floor never below 0.94 |
+| Scaled mixed-entry check | done: keyset-paged job, ≤64 records per entry per batch, resumable cursor, findings table; reviewed entries never auto-split |
+| Tag synonyms | done: built-in + user map (settings), applied to edition signals and policy tag checks; `/api/v1/tag-synonyms` |
+| One decision log with actor | done: `decision_log` table (migration 2026110180), every merge/split/separate/manual/title/policy/review/reset recorded with user/key/automatic/upgrade actor; `/api/v1/decisions` |
+| Matching → EntryIngest (30), Sources/Discovery (2), Catalogue/Titles (22) | done |
+| Matching → ManualDecisions (34) | done except manual source search (4: `_cached_source_shortlist`, `_cached_manual_source_candidates`, `search_source_for_manual*`, `source_manga_details*`), covered by `POST /entries/{entryId}/manual-search` live search |
+| Matching → DuplicateReview / AutomaticMerge (58) | done; merges atomic with their history, lineage and decision; reviewed merges locked |
+| Matching → MixedEntries / ColorProfile (28), Catalogue/Structure (16) | done |
+| Catalogue/Maintenance (6 + 6) | done; a normal reset keeps not-duplicate reviews and re-keys separate rules, overrides, title scopes and manual aliases to the restored entries (dropped ones counted) |
+| SuwayomiLibrary moved from phase 6 (5) | done (reset seeds snapshot/restore/rebrowse, orphan alias repair); search-all → phase 9 discovery |
+| Review workbench, decision preview, policy simulator | done; apply/undo all-or-nothing, actor shown |
+| MatchingEndpoints (45 routes) | done under `/api/v1` (manual-search GET without query + POST with body; group candidates as POST) |
+| MaintenanceEndpoints | reset-database, full-reset, reset-covers, resets of manual actions, delete entry, variants, matches done; refresh-feeds, refresh-metadata, discover-additional → phase 9 (feed crawl, metadata enrichment, additional-record scan) |
+| Done when | synthetic duplicate set (67 pairs) scores 0 wrong merges through the production gate and the ingest path; a 0.4.4 catalogue keeps every manual decision through the migrations and a normal reset (C# tests, CI); the user's private set (2,680 pairs from exported decisions) is ready in the data folder but not run in CI (needs a CI secret the user sets) |
+| UI pages of this phase | done: matching review, duplicates, manual groups, mixed entries, instance tools (workbench, history with actor), policy simulator; `scripts/check-v1-matching-paths.sh` strict |
+| Audit fixes (fresh-agent audit) | 4 high, 4 medium, 5 low: all fixed except split-path atomicity (merges only) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
