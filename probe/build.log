@@ -1,13 +1,15 @@
-  AutoSourcarr.Core -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/bin/Release/net10.0/AutoSourcarr.Core.dll
-  AutoSourcarr.Host -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Host/bin/Release/net10.0/AutoSourcarr.Host.dll
-CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
-  AutoSourcarr.Api -> /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll
-  AutoSourcarr.Tests -> /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/bin/Release/net10.0/AutoSourcarr.Tests.dll
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Review/ReviewWorkbench.cs(368,28): error CS7036: There is no argument given that corresponds to the required parameter 'Title' of 'ReviewWorkbench.ReviewAction.ReviewAction(string, long, long, IReadOnlyList<string>, string?)' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Review/ReviewWorkbench.cs(372,28): error CS7036: There is no argument given that corresponds to the required parameter 'Title' of 'ReviewWorkbench.ReviewAction.ReviewAction(string, long, long, IReadOnlyList<string>, string?)' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Review/ReviewWorkbench.cs(376,28): error CS7036: There is no argument given that corresponds to the required parameter 'Title' of 'ReviewWorkbench.ReviewAction.ReviewAction(string, long, long, IReadOnlyList<string>, string?)' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Mixed/MixedEntries.cs(355,24): error CS1061: 'EditionProfiles' does not contain a definition for 'Options' and no accessible extension method 'Options' accepting a first argument of type 'EditionProfiles' could be found (are you missing a using directive or an assembly reference?) [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
 
-Build succeeded.
+Build FAILED.
 
-CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
-    1 Warning(s)
-    0 Error(s)
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Review/ReviewWorkbench.cs(368,28): error CS7036: There is no argument given that corresponds to the required parameter 'Title' of 'ReviewWorkbench.ReviewAction.ReviewAction(string, long, long, IReadOnlyList<string>, string?)' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Review/ReviewWorkbench.cs(372,28): error CS7036: There is no argument given that corresponds to the required parameter 'Title' of 'ReviewWorkbench.ReviewAction.ReviewAction(string, long, long, IReadOnlyList<string>, string?)' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Review/ReviewWorkbench.cs(376,28): error CS7036: There is no argument given that corresponds to the required parameter 'Title' of 'ReviewWorkbench.ReviewAction.ReviewAction(string, long, long, IReadOnlyList<string>, string?)' [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/Matching/Mixed/MixedEntries.cs(355,24): error CS1061: 'EditionProfiles' does not contain a definition for 'Options' and no accessible extension method 'Options' accepting a first argument of type 'EditionProfiles' could be found (are you missing a using directive or an assembly reference?) [/home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj]
+    0 Warning(s)
+    4 Error(s)
 
-Time Elapsed 00:00:36.03
+Time Elapsed 00:00:11.08
