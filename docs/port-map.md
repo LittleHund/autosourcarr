@@ -128,6 +128,25 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | Moved | source host as a separate low-rights user → phase 13 (needs the new image: a second uid cannot be created from an unprivileged app container); the runner binary in the image → phase 13 |
 | Audit fixes (fresh-agent audit) | 19 findings: 17 fixed (rollback on cancel, lock scope, orphan Repair button, auto repairs in Tasks, SRC-8 check, parking guard, APK preview, OpenAPI names, admission list, shutdown order, loop clamp, ABI 6 + signal gate, NPROC/AS limits, pacing burst, new-address field, raws/original-APK wiring, lock files); 2 as limitations (SNI not checked inside CONNECT tunnels; runner binary in the image with phase 13) |
 
+### Phase 7 (connections), ticked 2026-11-01
+
+| Row | Result |
+| --- | --- |
+| Connections menu (CON-1) | done: Settings > Connections (add, test, enable, delete); `/api/v1/connections` (+ `/{connectionId}`, `/{connectionId}/test`, `/test`, `/{connectionId}/import`); types: flaresolverr, byparr, anilist, mangaupdates, mangadex, komf, malwarebazaar, suwayomi; settings that are really connections (MAIN_SUWAYOMI_*, FLARESOLVERR_URL, KOMF_BROWSER_URL) shown read-only |
+| Storage (CON-5) | done: config.json `connections` (values + encrypted secrets bound to the connection id), secrets never returned, redacted, dropped when the address changes; exact change notices (host recycle for solvers, feed reconnect, rollback note) |
+| Solvers (CON-2) | done: built-in WebView first, then FlareSolverr/Byparr connections in the source host (cookies and user agent only, per-domain cache until cf_clearance expiry or 30 min); solver changes recycle the host |
+| Image CAPTCHAs / Open in WebView (SRC-5) | done: interactive WebView (host JCEF frames over a framed HTTP stream, app WebSocket with one-time tickets, one session per admin, idle 5 min / max 15 min, link-local and metadata addresses refused, cookies of visited hosts copied to the source jar); Needs attention items carry an Open in WebView action |
+| Metadata providers | done: AniList (30/min shared limiter, Retry-After, rate headers), MangaUpdates, MangaDex clients with Test; used for matching from phase 8 |
+| Komf | done: KomfClient (providers, search) + Test |
+| MalwareBazaar (SRC-2 hash lookup) | done: Auth-Key lookup in the APK preview (5 s bound, warning on a known file, never blocks) |
+| Suwayomi (CON-3) | done: Test (aboutServer + library count), change feed (graphql-transport-ws downloadStatusChanged / libraryUpdateStatusChanged + library id diff every 10 s; polling fallback every 5 s) feeding the main-library cache and live events; one-time import stores the library plan (`awaiting-matching`); entries are created with matching/ingest in phase 8 |
+| Health | main_suwayomi from the last connection test and feed mode (background, never blocks); translation → phase 10 |
+| ConnectionEndpoints (5 routes) | `/services` routes dropped with compose; `source-webview` session/page/socket → `/api/v1/source-webview/session`, `/static/source-webview.html`, `/api/v1/source-webview/socket` |
+| `source_browser.py`, `source_challenges.py`, `source_webview.py` | done (SourceWebViewBroker, SolverConnectionType, host ExternalSolvers/InteractiveWebView) |
+| Done when | every connection type passes Test against a stub and fails on 401/5xx/wrong body (C# tests); the real host passes the interactive WebView test (frames, click, navigation, cookie in the jar) and the external-solver fallback test against the fake Cloudflare server |
+| Later | AI providers, Postgres connections, SRC-9 AI benchmark (phase 16); creating entries from the Suwayomi plan (8) |
+| Audit fixes (fresh-agent audit) | 17 findings: 15 fixed (secret exfiltration via changed address, late-applying changes, unreachable import, damaged-connection crash, Settings solver switches, WebView cookie scope and reach, two Suwayomi sources of truth, rollback note, health, feed back-off, limiter clock, CAPTCHA routing, leaks, keyed redirects); 2 kept as limitations (public-suffix cookie check for admin-configured solvers; metadata clients only used by Test until phase 8) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):

@@ -2,6 +2,8 @@
 (() => {
   'use strict';
   const request=(path,method,body)=>api('/api/admin/'+path,{method,body:JSON.stringify(body),suppressClientError:true});
+  // Phase 8E: the policy simulator lives under /api/v1 (not yet in the generated client).
+  const requestV1=(path,method,body)=>api('/api/v1/'+path,{method,body:JSON.stringify(body),suppressClientError:true});
   const date=value=>value?new Date(value).toLocaleString():'Not recorded';
   const panel=(parent,title)=>{const box=document.createElement('details');box.className='riImprovementPanel';const summary=document.createElement('summary');summary.textContent=title;box.append(summary);parent.append(box);return box;};
   const message=(parent,text)=>{const p=document.createElement('p');p.className='muted';p.textContent=text;parent.append(p);};
@@ -92,7 +94,7 @@
   async function review(ctx){
     const {body,action,status,signal}=ctx,box=panel(body,'Simulate a matching policy');
     message(box,'Run the actual matcher on up to 32 work pairs, with the 0.94 floor, edition checks, recorded separations and original-member proof. Applying saves a policy for future work.');
-    const data=await api('/api/admin/policy-simulator/options',{signal,suppressClientError:true});if(!box.isConnected)return;
+    const data=await api('/api/v1/policy-simulator/options',{signal,suppressClientError:true});if(!box.isConnected)return;
     const form=document.createElement('form');form.innerHTML=select('Scope',[['source','One source'],['group','Custom source group']],'scope')+'<div data-subject></div>'+select('Direction',[['external','Between sources'],['internal','Within one source']],'direction')+
       select('Starting rule',data.presets.map((p,i)=>[i,p.name]),'preset')+'<label class="riCheck"><input type="checkbox" data-field="enabled" checked>Allow matching when all checks pass</label><label class="riCheck"><input type="checkbox" data-field="inherit">Restore inherited rule</label>';
     for(const [key,label,min,value] of [['title','Title similarity',.94,.97],['summary','Summary similarity',.01,.9],['author','Creator similarity',.01,.9],['tags','Informative tag overlap',.01,.7]])form.innerHTML+=`<div class="riRuleCheck"><label><input type="checkbox" data-check="${key}" ${key==='title'?'checked':''}>${label}</label><input aria-label="${label} minimum" type="number" data-threshold="${key}" min="${min}" max="1" step=".01" value="${value}"></div>`;
@@ -104,9 +106,9 @@
     get(form,'preset').onchange=()=>{const rule=data.presets[Number(get(form,'preset').value)].rule;for(const key of ['title','summary','author','tags']){form.querySelector('[data-check="'+key+'"]').checked=key in rule.checks;if(key in rule.checks)form.querySelector('[data-threshold="'+key+'"]').value=rule.checks[key];}};
     form.onsubmit=event=>{event.preventDefault();invalidate();const checks={};for(const el of form.querySelectorAll('[data-check]'))if(el.checked)checks[el.dataset.check]=Number(form.querySelector('[data-threshold="'+el.dataset.check+'"]').value);
       const draft={scope:get(form,'scope').value,subject:get(form,'subject').value,direction:get(form,'direction').value,rule:get(form,'inherit').checked?null:{enabled:get(form,'enabled').checked,checks}},pairs=get(form,'pairs').value.trim().split(/\n/).map(line=>line.split(',').map(v=>Number(v.trim())));
-      ctx.write(event.submitter,()=>previewOwner.preview(()=>request('policy-simulator/preview','POST',{draft,pairs})),result=>{
-        if(!box.isConnected||!result||previewOwner.current()!==result)return;output.innerHTML='<div class="riTableScroll"><table><thead><tr><th>Pair</th><th>Current</th><th>Draft</th></tr></thead><tbody>'+result.pairs.map(r=>`<tr><td>${r.pair.join(' / ')}</td><td>${r.before.eligible?'Eligible':'Blocked'}<br>${esc(r.before.reason)}</td><td>${r.after.eligible?'Eligible':'Blocked'}<br>${esc(r.after.reason)}</td></tr>`).join('')+'</tbody></table></div>';
-        message(output,result.scope_note+' Engine: '+result.engine);output.append(action('Apply reviewed policy',()=>{const snapshot=previewOwner.current();if(!snapshot)throw Error('Preview the current draft first.');return request('policy-simulator/apply','POST',{draft:snapshot.draft,pairs:snapshot.pairs.map(r=>r.pair),revision:snapshot.revision});},{after:()=>{invalidate();status('Policy saved. No selected pair was merged.');}}));
+      ctx.write(event.submitter,()=>previewOwner.preview(()=>requestV1('policy-simulator/preview','POST',{draft,pairs})),result=>{
+        if(!box.isConnected||!result||previewOwner.current()!==result)return;output.innerHTML='<div class="riTableScroll"><table><thead><tr><th>Pair</th><th>Current</th><th>Draft</th><th>Effect</th></tr></thead><tbody>'+result.pairs.map(r=>`<tr><td>${r.pair.join(' / ')}</td><td>${r.before.eligible?'Eligible':'Blocked'}<br>${esc(r.before.reason)}</td><td>${r.after.eligible?'Eligible':'Blocked'}<br>${esc(r.after.reason)}</td><td>${esc(({would_merge:'Would merge',would_split:'Would split',would_not_merge:'Would no longer merge',unchanged:'Unchanged'})[r.effect]||r.effect||'')}</td></tr>`).join('')+'</tbody></table></div>';
+        message(output,result.scope_note+' Engine: '+result.engine);output.append(action('Apply reviewed policy',()=>{const snapshot=previewOwner.current();if(!snapshot)throw Error('Preview the current draft first.');return requestV1('policy-simulator/apply','POST',{draft:snapshot.draft,pairs:snapshot.pairs.map(r=>r.pair),revision:snapshot.revision});},{after:()=>{invalidate();status('Policy saved. No selected pair was merged.');}}));
       });
     };
   }

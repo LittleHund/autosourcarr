@@ -181,7 +181,7 @@ if command -v node >/dev/null 2>&1; then
   grep -q '/static/ui.css?v=0.4.5' autosourcarr/app/static/index.html
 grep -q 'data-tab="manual-actions"' autosourcarr/app/static/index.html
 grep -q 'data-manual-action-subtab="titles"' autosourcarr/app/static/index.html
-grep -q '/api/admin/manual-actions' autosourcarr/app/static/app.js
+grep -q '/api/v1/manual-actions' autosourcarr/app/static/app.js
 grep -q 'CREATE TABLE IF NOT EXISTS manual_title_scopes' autosourcarr/app/db.py
   grep -q 'autoButton.disabled=!!automatic.paused' autosourcarr/app/static/app.js
   grep -q 'id="databaseStoragePath"' autosourcarr/app/static/index.html
@@ -276,6 +276,9 @@ for f in autosourcarr/start-truenas.sh extension/build-in-container.sh extension
   if [[ "$first_line" == '#!/bin/sh' ]]; then sh -n "$f"; else bash -n "$f"; fi
   echo "$f OK"
 done
+bash -n scripts/check-v1-matching-paths.sh
+# Phase 8: the static UI calls the matching routes under /api/v1 only (fails listing any /api/admin MatchingEndpoints call).
+bash scripts/check-v1-matching-paths.sh
 
 step 7 'Extension compatibility + JAR/APK packaging guards + validators'
 grep -q 'src:all:autosourcarr:assembleRelease' extension/build-in-container.sh
@@ -428,7 +431,7 @@ assert 'Has possible match' in imports_block and 'No possible match' in imports_
 assert 'Source reference found' in imports_block and 'Has English hint' in imports_block, 'Imports source/translation review filters are missing'
 js = Path('autosourcarr/app/static/app.js').read_text()
 assert 'importPassesReviewFilter' in js and 'importReviewFilter' in js, 'Imports review-filter behavior is missing'
-for required in ('/api/admin/browse','/api/admin/maintenance/unmatch-duplicates','/api/admin/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/admin/maintenance/refresh-metadata','/api/admin/maintenance/reset-covers','/api/admin/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','apiV1().getSettings()','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','.getErrors()','runLiveEvents()','openErrors','loadErrors'):
+for required in ('/api/admin/browse','/api/v1/maintenance/unmatch-duplicates','/api/v1/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/admin/maintenance/refresh-metadata','/api/v1/maintenance/reset-covers','/api/admin/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','apiV1().getSettings()','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','.getErrors()','runLiveEvents()','openErrors','loadErrors'):
     assert required in js, required
 assert '<h3>All known titles</h3>' not in js, 'Inspector should separate canonical main title from alternate titles'
 assert 'refreshAfterManualEdit' not in js, 'manual matching must update the open browser in-place instead of reloading both matrices after every click'
@@ -506,7 +509,7 @@ grep -q 'tasksCompletedList' autosourcarr/app/static/index.html
 grep -q 'tasksFailedList' autosourcarr/app/static/index.html
 grep -q 'cancelTask' autosourcarr/app/static/app.js
 grep -q 'autoMergePreviewModal' autosourcarr/app/static/index.html
-grep -q '/api/admin/maintenance/consolidate-preview' autosourcarr/app/static/app.js
+grep -q '/api/v1/maintenance/consolidate-preview' autosourcarr/app/static/app.js
 grep -q 'Confirm and merge' autosourcarr/app/static/app.js
 grep -q 'Downloaded chapters' autosourcarr/app/static/app.js
 grep -q 'Downloaded size' autosourcarr/app/static/app.js

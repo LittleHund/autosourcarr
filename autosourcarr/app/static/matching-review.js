@@ -59,7 +59,7 @@
     loadingRules=true;
     const generation=++configGeneration,presetsAtStart=presetGeneration;el('matchingPolicyStatus').textContent='Loading saved matching rules…';
     try{
-      const data=await api('/api/admin/matching-policies');if(generation!==configGeneration)return;
+      const data=await api('/api/v1/matching-policies');if(generation!==configGeneration)return;
       config=presetsAtStart!==presetGeneration&&config?{...data,presets:config.presets,preset_revision:config.preset_revision}:data;
       const select=el('matchingPolicyTarget'),previous=target||select.value;
       select.innerHTML='<optgroup label="Source groups">'+data.groups.map(g=>`<option value="group:${Number(g.id)}">${escape(g.name)}</option>`).join('')+'</optgroup><optgroup label="Sources and language variants">'+data.sources.map(s=>`<option value="source:${escape(s.id)}">${escape(s.name)} (${escape(s.lang||'all')}) · ${escape(s.id)}</option>`).join('')+'</optgroup>';
@@ -83,7 +83,7 @@
     const buttons=[...el('matchingPolicyForms').querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);
     const status=form.querySelector('.ruleSaveStatus');status.textContent='Saving…';
     try{
-      const data=await api(`/api/admin/matching-policies/${scope}/${encodeURIComponent(subject)}/${form.dataset.direction}`,{method:'PUT',body:JSON.stringify({revision:config.revision,rule:mode==='inherit'?null:{enabled:mode!=='off',checks:mode==='custom'?checks:{}}})});
+      const data=await api(`/api/v1/matching-policies/${scope}/${encodeURIComponent(subject)}/${form.dataset.direction}`,{method:'PUT',body:JSON.stringify({revision:config.revision,rule:mode==='inherit'?null:{enabled:mode!=='off',checks:mode==='custom'?checks:{}}})});
       if(generation!==configGeneration)return;
       // A rule response may predate an independent preset edit.
       config={...data,presets:config.presets,preset_revision:config.preset_revision};
@@ -136,7 +136,7 @@
     const body=remove?{revision:config.preset_revision}:{revision:config.preset_revision,name:clone?el('matchingPresetName').value.slice(0,75)+' copy':el('matchingPresetName').value,description:el('matchingPresetDescription').value,rule};
     presetSaving=true;freezePresetEditor(true);el('matchingPresetStatus').textContent=remove?'Deleting…':'Saving preset…';
     try{
-      const data=await api('/api/admin/matching-presets'+(id?'/'+encodeURIComponent(id):''),{method:remove?'DELETE':id?'PUT':'POST',body:JSON.stringify(body)});
+      const data=await api('/api/v1/matching-presets'+(id?'/'+encodeURIComponent(id):''),{method:remove?'DELETE':id?'PUT':'POST',body:JSON.stringify(body)});
       if(own!==presetGeneration||!config)return;
       config={...config,...data};presetId=remove?'':id||data.presets.find(p=>!before.has(p.id))?.id||'';
       updatePresetChoices();renderPresetEditor(presetId);el('matchingPresetStatus').textContent=remove?'Preset deleted. Applied rules unchanged.':'Preset saved. Select it in a direction and Save to apply.';
@@ -148,7 +148,7 @@
     const own=++presetGeneration;
     if(presetDirty&&!confirm('Discard this preset draft and reload saved presets?'))return;
     presetSaving=true;freezePresetEditor(true);
-    try{const data=await api('/api/admin/matching-presets');if(own!==presetGeneration||!config)return;config={...config,...data};updatePresetChoices();renderPresetEditor(presetId);}
+    try{const data=await api('/api/v1/matching-presets');if(own!==presetGeneration||!config)return;config={...config,...data};updatePresetChoices();renderPresetEditor(presetId);}
     catch(error){if(own===presetGeneration&&config)el('matchingPresetStatus').textContent=error.message;}
     finally{if(own===presetGeneration&&config){presetSaving=false;freezePresetEditor(false);}}
   }
@@ -184,7 +184,7 @@
   async function fetchHistory(){
     const generation=++historyGeneration;el('mergeHistoryCount').textContent='Loading recorded merges…';
     try{
-      const data=await api(`/api/admin/duplicates/history?offset=${offset}&limit=50&q=${encodeURIComponent(historyQuery)}`);
+      const data=await api(`/api/v1/duplicates/history?offset=${offset}&limit=50&q=${encodeURIComponent(historyQuery)}`);
       if(generation!==historyGeneration)return;
       if(offset&&offset>=data.total){offset=data.total?Math.floor((data.total-1)/50)*50:0;saveView();return loadHistory();}
       historyLoaded=true;
@@ -204,7 +204,7 @@
   async function loadDetail(node,generation){
     node.dataset.loaded='loading';const target=node.querySelector('.mergeHistoryDetail');target.textContent='Loading saved snapshot…';
     try{
-      const data=await api('/api/admin/duplicates/history/'+node.dataset.event);if(generation!==historyGeneration)return;
+      const data=await api('/api/v1/duplicates/history/'+node.dataset.event);if(generation!==historyGeneration)return;
       target.innerHTML='<div class="mergeHistoryBefore">'+data.before.map((snapshot,index)=>`<section><h4>${escape(snapshot.role||'Original entry')} before merge</h4>${snapshot.available?`<strong>${escape(snapshot.entry.preferred_title||'Untitled')} · ID ${Number(snapshot.entry.id)}</strong><p>${escape(snapshot.entry.description||'No saved description')}</p><details><summary>Original aliases</summary><p>${snapshot.titles.map(escape).join(' · ')||'None saved'}</p></details><h5>Source records</h5>${snapshot.records.map(r=>`<p><strong>${escape(r.source_title||'Untitled')}</strong><br><span class="muted">Source ${escape(r.source_id)} · record ${Number(r.source_manga_id)}</span></p>`).join('')}`:'<p class="muted">Original details were not saved by that release.</p>'}</section>`).join('')+'</div><details><summary>Recorded decision details</summary><pre>'+escape(Object.keys(data.evidence).length?JSON.stringify(data.evidence,null,2):'Only the recorded reason is available for this older merge. Current settings are not used to reconstruct an old decision.')+'</pre></details>';
       node.dataset.loaded='yes';
     }catch(error){if(generation===historyGeneration){target.textContent=error.message;delete node.dataset.loaded;}}

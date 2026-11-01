@@ -6,10 +6,14 @@ async function loadMixedEntries(reset=false){
   const query=document.querySelector('#mixedSearch').value.trim(),filter=document.querySelector('#mixedFilter').value;
   document.querySelector('#mixedSummary').textContent='Checking saved source records…';
   try{
-    const data=await api(`/api/admin/mixed-entries?state=${encodeURIComponent(filter)}&q=${encodeURIComponent(query)}&offset=${state.offset}&limit=50`,{timeoutMs:15000});
+    const data=await api(`/api/v1/mixed-entries?state=${encodeURIComponent(filter)}&q=${encodeURIComponent(query)}&offset=${state.offset}&limit=50`,{timeoutMs:15000});
     if(generation!==state.generation)return;
     state.items=data.items||[];state.offset=Number(data.offset||0);state.total=Number(data.total||0);
-    document.querySelector('#mixedSummary').textContent=`${Number(data.counts?.needs_review||0)} need review · ${Number(data.counts?.reviewed||0)} reviewed · ${Number(data.counts?.all||0)} entries with multiple records`;
+    const check=data.check;let progress='';
+    // Findings come from the saved catalogue-wide check (a resumable job); start the first one automatically.
+    if(check&&!check.run_id){progress=' · first check starting';startMixedCheck(false);}
+    else if(check&&!check.completed_at)progress=` · check running (${Number(check.checked||0)} entries so far)`;
+    document.querySelector('#mixedSummary').textContent=`${Number(data.counts?.needs_review||0)} need review · ${Number(data.counts?.reviewed||0)} reviewed · ${Number(data.counts?.all||0)} entries with multiple records${progress}`;
     if(!state.items.some(item=>item.entry_id===state.selected))state.selected=state.items[0]?.entry_id??null;
     renderMixedQueue();
     if(state.selected!==null)await selectMixedEntry(state.selected);
@@ -31,7 +35,7 @@ async function selectMixedEntry(id){
   state.selected=id;state.detail=null;renderMixedQueue();
   const target=document.querySelector('#mixedDetail');target.innerHTML='<div class="emptyTaskState">Loading source evidence…</div>';
   try{
-    const data=await api(`/api/admin/mixed-entries/${Number(id)}`,{timeoutMs:10000});
+    const data=await api(`/api/v1/mixed-entries/${Number(id)}`,{timeoutMs:10000});
     if(generation!==state.detailGeneration||id!==state.selected)return;
     state.detail=data;renderMixedDetail(data);
   }catch(error){if(generation!==state.detailGeneration)return;target.innerHTML=`<div class="notice">${esc(error.message)} <button type="button" id="mixedRetryDetail">Retry</button></div>`;const retry=document.querySelector('#mixedRetryDetail');if(retry)retry.onclick=()=>selectMixedEntry(id);}
@@ -48,13 +52,17 @@ async function reviewMixedEntry(data){
   const state=mixedEntriesState;if(state.busy)return;
   const button=document.querySelector('#mixedKeep');state.busy=true;if(button)button.disabled=true;
   try{
-    await api(`/api/admin/mixed-entries/${Number(data.entry_id)}/review`,{method:'POST',body:JSON.stringify({fingerprint:data.fingerprint,decision:data.reviewed_at?'clear':'keep'}),noMutationRefresh:true});
+    await api(`/api/v1/mixed-entries/${Number(data.entry_id)}/review`,{method:'POST',body:JSON.stringify({fingerprint:data.fingerprint,decision:data.reviewed_at?'clear':'keep'}),noMutationRefresh:true});
     toast(data.reviewed_at?'Review cleared':'Combination marked as correct');
     await loadMixedEntries();
   }catch(error){toast('Unable to save review: '+error.message);if(state.selected===data.entry_id)await selectMixedEntry(data.entry_id);}
   finally{state.busy=false;if(button?.isConnected)button.disabled=false;}
 }
-document.querySelector('#mixedRefresh').onclick=()=>loadMixedEntries();
+async function startMixedCheck(restart){
+  try{await api('/api/v1/mixed-entries/check',{method:'POST',body:JSON.stringify({restart:Boolean(restart)}),noMutationRefresh:true});}
+  catch(error){toast('Unable to start the mixed-entry check: '+error.message);}
+}
+document.querySelector('#mixedRefresh').onclick=async()=>{await startMixedCheck(true);await loadMixedEntries();};
 document.querySelector('#mixedApply').onclick=()=>loadMixedEntries(true);
 document.querySelector('#mixedFilter').onchange=()=>loadMixedEntries(true);
 document.querySelector('#mixedSearch').onkeydown=event=>{if(event.key==='Enter')loadMixedEntries(true);};

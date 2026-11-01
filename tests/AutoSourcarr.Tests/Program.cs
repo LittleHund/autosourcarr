@@ -6,6 +6,9 @@ if (args.Length == 2 && args[0] == "--raster-scratch-probe") return RasterScratc
 if (args.Length == 2 && args[0] == "--write-openapi") return ApiV1Tests.WriteOpenApi(args[1]);
 if (args.Length == 2 && args[0] == "--write-settings-docs") return ApiV1Tests.WriteSettingsDocs(args[1]);
 if (args.Length == 2 && args[0] == "--raster-scratch-reject-probe") return RasterScratchTests.RejectProbe(args[1]);
+// Phase 8 matching tools: score labelled title pairs (8A) and run a duplicate test set through the automatic gate (8C).
+if (args is ["--score-pairs", var pairFile]) return AutoSourcarr.Tests.Matching.PairScoringTool.Run(pairFile, Console.Out);
+if (args.Length == 2 && args[0] == "--duplicate-test-set") return AutoSourcarr.Tests.Matching.DuplicateTestSet.Run(args[1], Console.Out);
 
 var filters = new List<string>();
 for (var index = 0; index < args.Length; index += 2)
@@ -121,4 +124,17 @@ SourceSnapshotTests.Register(suite);
 NativeSourceOwnerConnectionTests.Register(suite);
 SourceEngineControllerTests.Register(suite);
 ReaderCatalogueReadTests.Register(suite);
+// Phase 8 "Matching".
+AutoSourcarr.Tests.Matching.MatchScorerTests.Register(suite);
+AutoSourcarr.Tests.Matching.CatalogueTitlesTests.Register(suite);
+AutoSourcarr.Tests.Matching.EntryIngestTests.Register(suite);
+AutoSourcarr.Tests.Matching.DecisionLogTests.Register(suite);
+AutoSourcarr.Tests.Matching.ManualDecisionsTests.Register(suite);
+AutoSourcarr.Tests.Matching.ManualDecisionsMigrationTests.Register(suite);
+AutoSourcarr.Tests.Matching.CatalogueMaintenanceTests.Register(suite);
+AutoSourcarr.Tests.Matching.DuplicateTests.Register(suite);
+AutoSourcarr.Tests.Matching.MixedEntriesTests.Register(suite);
+TagSynonymsTests.Register(suite);
+AutoSourcarr.Tests.Matching.ReviewWorkbenchTests.Register(suite);
+AutoSourcarr.Tests.Matching.MatchingWiringTests.Register(suite);
 return suite.Run(filters);

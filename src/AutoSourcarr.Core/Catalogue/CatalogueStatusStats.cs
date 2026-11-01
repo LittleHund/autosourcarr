@@ -8,9 +8,10 @@ namespace AutoSourcarr.Core.Catalogue;
 /// <summary>
 /// Status page counts (port of service.status_stats / status_stats_snapshot): one owned scan at a time,
 /// the last result served for 15 seconds so polling never stacks database and folder scans.
-/// Duplicate-snapshot and live task counters belong to phases 3 and 8 and are reported as not available yet.
+/// Duplicate counts come from the last completed duplicate review snapshot (phase 8, <paramref name="duplicates"/>:
+/// DuplicateMatching.SnapshotSummary); without it they are reported as not available.
 /// </summary>
-public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourcarrSettings> settings, TimeProvider? clock = null)
+public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourcarrSettings> settings, TimeProvider? clock = null, Func<JsonObject>? duplicates = null)
 {
     private static readonly string[] StatusLabels = ["Unknown", "Ongoing", "Completed", "Licensed", "Publishing finished", "Cancelled", "Hiatus"];
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -69,6 +70,7 @@ public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourc
                     ["possible_duplicates"] = null,
                     ["duplicate_groups"] = null,
                     ["duplicate_snapshot_ready"] = false,
+                    ["duplicate_snapshot_age_seconds"] = null,
                     ["reviewed_nonduplicates"] = Count("SELECT COUNT(*) FROM duplicate_reviews WHERE decision='not_duplicate'"),
                     ["duplicate_review_history"] = Count("SELECT COUNT(*) FROM duplicate_review_history"),
                     ["entries_with_additional_matches"] = Count("SELECT COUNT(DISTINCT entry_id) FROM source_variants WHERE active=1"),
@@ -105,6 +107,14 @@ public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourc
                 ["served_history"] = Count("SELECT COUNT(*) FROM origin_history")
             };
         });
+        if (duplicates?.Invoke() is { } summary && summary["ready"] is JsonValue ready && ready.TryGetValue<bool>(out var isReady) && isReady)
+        {
+            var counts = catalog["catalog"]!.AsObject();
+            counts["possible_duplicates"] = summary["entries"]?.DeepClone();
+            counts["duplicate_groups"] = summary["groups"]?.DeepClone();
+            counts["duplicate_snapshot_ready"] = true;
+            counts["duplicate_snapshot_age_seconds"] = summary["age_seconds"]?.DeepClone();
+        }
         var current = settings();
         var (covers, coverBytes) = Folder(Path.Combine(current.DataDir, "cover-cache"), "*.img", recursive: false);
         var cache = catalog["cache"]!.AsObject();

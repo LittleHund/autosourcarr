@@ -64,7 +64,7 @@ public sealed record SuwayomiImportPlan(string CreatedAt, string ServerUrl, stri
 public static class SuwayomiImport
 {
     public const string AwaitingMatching = "awaiting-matching";
-    public const string AwaitingMatchingNote = "Stored; creating catalogue entries waits for matching and ingest (conversion phase 8).";
+    public const string AwaitingMatchingNote = "Stored, awaiting matching: catalogue entries are created when matching and ingest arrive (conversion phase 8).";
     public const string FolderName = "suwayomi-import";
     public static readonly JobType Job = new("suwayomi-import", "Import the main Suwayomi library", JobPriority.Low, StallTimeout: TimeSpan.FromMinutes(5));
     private const string ImportFields = "id sourceId url realUrl title thumbnailUrl source { id name lang }";

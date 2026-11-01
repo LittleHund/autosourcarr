@@ -129,35 +129,35 @@
   async function openReview(){
     if(!show('Matching evidence & reviewed decisions'))return;
     body.innerHTML='<p class="muted">Review recorded matching, separate-work decisions and automatic merge evidence in one place. The existing match matrix and merge-history inspectors retain full evidence. Bulk actions here remember separate works and preserve all library data.</p><label>Work ID for the audit trail<input id="riAuditEntry" type="number" min="1" placeholder="Leave empty for recent history"/></label><div class="riToolActions" id="riAuditActions"></div><div id="riAuditResults"></div><details><summary>Review several separate-work decisions</summary><label>One exact pair per line<textarea id="riReviewPairs" rows="4" placeholder="12, 34&#10;56, 78"></textarea></label><div class="riToolActions" id="riReviewActions"></div><div id="riReviewPreview"></div></details>';
-    byId('riAuditActions').append(action('Load evidence',()=>api('/api/admin/review-workbench'+(byId('riAuditEntry').value?'?entry_id='+encodeURIComponent(byId('riAuditEntry').value):'')),{after:renderAudit}));
+    byId('riAuditActions').append(action('Load evidence',()=>api('/api/v1/review-workbench'+(byId('riAuditEntry').value?'/entries/'+encodeURIComponent(byId('riAuditEntry').value):'')),{after:renderAudit}));
     byId('riReviewActions').append(action('Preview separate-work decisions',()=>{
       const pairs=byId('riReviewPairs').value.trim().split(/\n/).map(line=>line.split(',').map(v=>Number(v.trim())));
-      return api('/api/admin/review-workbench/preview',{method:'POST',body:JSON.stringify({pairs})});
+      return api('/api/v1/review-workbench/preview',{method:'POST',body:JSON.stringify({pairs})});
     },{after:result=>{
       review=result;byId('riReviewPreview').innerHTML='<ul>'+result.items.map(item=>`<li>${item.entries.map(e=>esc(e.preferred_title)+' (#'+e.id+')').join(' / ')} — ${esc(item.effect)}</li>`).join('')+'</ul><p class="muted">'+esc(result.undo)+'</p><div id="riReviewApply"></div>';
-      byId('riReviewApply').append(action('Confirm reviewed separations',()=>api('/api/admin/review-workbench/apply',{method:'POST',body:JSON.stringify({pairs:review.items.map(item=>item.pair),revision:review.revision})}),{after:async result=>{
-        byId('riReviewPreview').textContent=`${result.applied} reviewed decisions saved.`;renderAudit(await api('/api/admin/review-workbench'));
+      byId('riReviewApply').append(action('Confirm reviewed separations',()=>api('/api/v1/review-workbench/apply',{method:'POST',body:JSON.stringify({pairs:review.items.map(item=>item.pair),revision:review.revision})}),{after:async result=>{
+        byId('riReviewPreview').textContent=`${result.applied} reviewed decisions saved.`+(result.failure?' '+result.failure:'');renderAudit(await api('/api/v1/review-workbench'));
       }}));
     }}));
-    const own=generation;const result=await api('/api/admin/review-workbench',{signal:read.signal,suppressClientError:true});if(own===generation)renderAudit(result);
+    const own=generation;const result=await api('/api/v1/review-workbench',{signal:read.signal,suppressClientError:true});if(own===generation)renderAudit(result);
     if(own===generation)await window.AutoSourcarrArrControls?.review({body,action,write,status,signal:read.signal});
   }
   function renderAudit(result){
-    const rows=[...result.matches.map(r=>({at:r.changed_at,kind:r.change_type,entry:r.entry_id,detail:`${r.source_id}: ${r.old_source_manga_id??'—'} → ${r.new_source_manga_id??'—'}`})),
-      ...result.decisions.map(r=>({at:r.reviewed_at,kind:r.decision,entry:r.left_entry_id,detail:'Work pair '+r.left_entry_id+' / '+r.right_entry_id})),
-      ...result.automatic_merges.items.map(r=>({at:r.merged_at,kind:r.state,entry:r.current_entry_id,detail:r.reason}))].sort((a,b)=>String(b.at).localeCompare(String(a.at)));
-    byId('riAuditResults').innerHTML='<p class="muted">'+esc(result.note)+'</p><div class="riTableScroll"><table><thead><tr><th>Date</th><th>Decision / evidence</th><th>Work</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${esc(new Date(r.at).toLocaleString())}</td><td><strong>${esc(r.kind)}</strong><br>${esc(r.detail)}</td><td>${r.entry?Number(r.entry):'Historical'}</td></tr>`).join('')+'</tbody></table></div><div id="riReviewUndoActions" class="riToolActions"></div>';
+    // Phase 8E: one decision log; every row names who made the decision (account, key or automatic).
+    const who=actor=>actor?(actor.kind==='automatic'?'Automatic':actor.kind==='key'?'Key '+actor.name:actor.kind==='upgrade'?'Upgrade '+actor.name:actor.name):'Unknown';
+    const rows=result.decisions.map(r=>({at:r.at,kind:r.kind,entry:r.entries[0],actor:who(r.actor),detail:r.reason+(r.records.length?' · '+r.records.join(', '):'')+(r.undo_of?' · undoes #'+r.undo_of:'')}));
+    byId('riAuditResults').innerHTML='<p class="muted">'+esc(result.note)+'</p><div class="riTableScroll"><table><thead><tr><th>Date</th><th>Decision / evidence</th><th>Who</th><th>Work</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${esc(new Date(r.at).toLocaleString())}</td><td><strong>${esc(r.kind)}</strong><br>${esc(r.detail)}</td><td>${esc(r.actor)}</td><td>${r.entry?Number(r.entry):'Historical'}</td></tr>`).join('')+'</tbody></table></div><ul class="riReviewBatches">'+result.bulk_actions.map(b=>`<li>Reviewed batch #${Number(b.id)} · ${Number(b.items)} item(s) · ${esc(who(b.actor))} · ${esc(new Date(b.created_at).toLocaleString())}${b.undone_at?' · undone by '+esc(who(b.undone_by))+' '+esc(new Date(b.undone_at).toLocaleString()):''}</li>`).join('')+'</ul><div id="riReviewUndoActions" class="riToolActions"></div>';
     if(result.entry){
       const evidence=document.createElement('details');evidence.open=true;
-      evidence.innerHTML=`<summary>Current work evidence: ${esc(result.entry.preferred_title)}</summary><p class="muted">These are retained source identities and scores. The 0.94 automatic title floor and original-member/edition gates remain enforced.</p><div class="riTableScroll"><table><thead><tr><th>Original source record</th><th>Identity</th><th>Decision</th></tr></thead><tbody>${[...(result.entry.matches||[]),...(result.entry.source_variants||[])].map(r=>`<tr><td>${esc(r.source_title)}<br>${esc(r.source_name||r.source_id)}</td><td>${esc(String(r.source_id))} / ${Number(r.source_manga_id)}</td><td>${esc(r.match_type||'Recorded match')} · ${r.locked?'Manual lock':'Automatic'} · ${Number(r.confidence||0).toFixed(3)}</td></tr>`).join('')}</tbody></table></div>`;
+      evidence.innerHTML=`<summary>Current work evidence: ${esc(result.entry.preferred_title)}</summary><p class="muted">${result.entry.title_manual?'Manual title.':'Automatic title.'} The 0.94 automatic title floor and original-member/edition gates remain enforced.</p><div class="riTableScroll"><table><thead><tr><th>Source record (source / manga)</th></tr></thead><tbody>${(result.entry.records||[]).map(r=>`<tr><td>${esc(String(r).replace(':',' / '))}</td></tr>`).join('')}</tbody></table></div>`;
       byId('riAuditResults').prepend(evidence);
     }
     const merges=document.createElement('div');merges.className='riToolActions';
-    for(const event of result.automatic_merges.items)merges.append(action('Inspect merge '+event.id,()=>api('/api/admin/duplicates/history/'+event.id),{after:detail=>{
+    for(const event of result.automatic_merges.items)merges.append(action('Inspect merge '+event.id,()=>api('/api/v1/duplicates/history/'+event.id),{after:detail=>{
       const box=document.createElement('details');box.open=true;const label=document.createElement('summary');label.textContent='Recorded merge evidence '+detail.id;const pre=document.createElement('pre');pre.textContent=JSON.stringify(detail,null,2);box.append(label,pre);byId('riAuditResults').append(box);
     }}));
     byId('riAuditResults').append(merges);
-    for(const item of result.bulk_actions.filter(a=>!a.undone_at))byId('riReviewUndoActions').append(action('Undo reviewed batch '+item.id.slice(0,8),()=>api('/api/admin/review-workbench/'+item.id+'/undo',{method:'POST',body:'{}'}),{after:async()=>renderAudit(await api('/api/admin/review-workbench'))}));
+    for(const item of result.bulk_actions.filter(a=>!a.undone_at))byId('riReviewUndoActions').append(action('Undo reviewed batch #'+Number(item.id),()=>api('/api/v1/review-workbench/'+encodeURIComponent(item.id)+'/undo',{method:'POST',body:'{}'}),{after:async()=>renderAudit(await api('/api/v1/review-workbench'))}));
     status(`${rows.length} retained audit events shown.`);
   }
   function openTool(kind){

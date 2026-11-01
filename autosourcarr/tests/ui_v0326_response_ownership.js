@@ -67,7 +67,7 @@ test('closing or reopening same entry invalidates older open and failure',async(
 test('save captures submitted entry source and candidate before navigation',async()=>{
   const h=matchHarness();await opened(h);
   const saving=h.context.useManualMatch(11),request=h.requests.at(-1),submitted=JSON.parse(request.options.body);
-  assert.equal(request.url,'/api/admin/entries/1/manual-match');assert.equal(submitted.source_id,'a');assert.equal(submitted.candidate.description,'Original');
+  assert.equal(request.url,'/api/v1/entries/1/manual-match');assert.equal(submitted.source_id,'a');assert.equal(submitted.candidate.description,'Original');
   state(h).results[0].description='Enriched after click';await opened(h,2,'b');
   request.resolve(entry(1,11));await saving;
   assert.equal(state(h).entryId,2);assert.equal(h.snapshots.get(1).matches[0].source_manga_id,11);
@@ -100,7 +100,7 @@ test('clear separate and allow replies retain source and editor ownership',async
   for(const action of ['clear','separate','allow']){
     const h=matchHarness();h.context.confirm=()=>true;await opened(h);
     const original=state(h),saving=action==='clear'?h.$('#clearCurrentMatch').onclick():action==='separate'?h.context.separateManualCandidate(11):h.context.allowManualCandidate(11),request=h.requests.at(-1);
-    assert(request.url.startsWith('/api/admin/entries/1/'));
+    assert(request.url.startsWith('/api/v1/entries/1/'));
     await opened(h,2,'b');request.resolve(action==='clear'?entry(1):action==='separate'?{entry:entry(1),separate_entry_id:3}:{});await saving;
     assert.equal(state(h).entryId,2);assert.equal(state(h).dirty,false);assert.equal(original.results[0].manual_separate,undefined);
   }
@@ -284,7 +284,7 @@ test('manual group removal cannot be undone on screen by its older ledger GET',a
   const h=manualLedgerHarness();await seedManualLedger(h);
   const oldLoad=h.context.loadManualActions(),old=h.requests.at(-1);
   const removing=h.context.removeManualGroupMember('group','a',11,new Node()),write=h.requests.at(-1);
-  h.reply(write);await tick();const fresh=h.requests.at(-1);assert.equal(fresh.url,'/api/admin/manual-actions');
+  h.reply(write);await tick();const fresh=h.requests.at(-1);assert.equal(fresh.url,'/api/v1/manual-actions');
   h.reply(fresh,ledgerSnapshot('Removed',false));await removing;assertEmptyLedger(h);
   h.reply(old,ledgerSnapshot('Stale'));await oldLoad;assertEmptyLedger(h);
 });
@@ -308,7 +308,7 @@ const ledgerWrites=[
   ['remove entry','DELETE','/api/admin/entries/1?force=true'],
   ['chapter reject','POST','/api/admin/candidates/1/reject'],
   ['chapter restore','POST','/api/admin/candidates/1/restore'],
-  ['duplicate review or clear','POST','/api/admin/duplicates/review'],
+  ['duplicate review or clear','POST','/api/v1/duplicates/review'],
   ['explicit duplicate split','POST','/api/admin/entries/1/unmatch-duplicates'],
   ['unbind automatic attachments','POST','/api/admin/entries/1/unbind-auto-matches'],
   ['redo automation','POST','/api/admin/entries/1/redo-automation'],
@@ -327,7 +327,7 @@ for(const [name,method,url] of ledgerWrites)test('manual ledger ownership starts
   assert.equal(h.$('#manualGroupsList').innerHTML,saved,'Write start must fence the old GET');
   const before=h.requests.length,waiting=h.context.loadManualActions();assert.equal(h.requests.length,before,'Wait for outstanding writes before reconciling');await waiting;
   h.reply(write);await writing;await h.flushReconcile();const fresh=h.requests.at(-1);
-  assert.equal(fresh.url,'/api/admin/manual-actions');assert.equal(fresh.options.cache,'no-store');
+  assert.equal(fresh.url,'/api/v1/manual-actions');assert.equal(fresh.options.cache,'no-store');
   h.reply(fresh,ledgerSnapshot('Removed',false));await tick();assertEmptyLedger(h);
 });
 
@@ -391,7 +391,7 @@ test('credential replacement holds manual write ownership until both attempts se
   await h.flushReconcile();h.reply(h.requests.at(-1),ledgerSnapshot('Removed',false));await tick();assertEmptyLedger(h);
 });
 test('read-only POSTs and unrelated actions do not invalidate a manual ledger GET',async()=>{
-  for(const [method,url] of [['POST','/api/admin/entries/summaries'],['POST','/api/admin/duplicate-candidates'],['POST','/api/admin/matrix/chapter-stats'],['POST','/api/admin/source-repositories/preview'],['POST','/api/admin/tags/review'],['POST','/api/admin/candidates/1/quality'],['GET','/api/admin/maintenance/reset-all-manual-actions'],['GET','/api/admin/manual-groups/group/candidates?q=test']]){
+  for(const [method,url] of [['POST','/api/admin/entries/summaries'],['POST','/api/v1/duplicate-candidates'],['POST','/api/admin/matrix/chapter-stats'],['POST','/api/admin/source-repositories/preview'],['POST','/api/admin/tags/review'],['POST','/api/admin/candidates/1/quality'],['GET','/api/admin/maintenance/reset-all-manual-actions'],['GET','/api/admin/manual-groups/group/candidates?q=test']]){
     const h=manualLedgerHarness(),loading=h.context.loadManualActions(),read=h.requests.at(-1),operation=h.context.api(url,{method});
     h.reply(h.requests.at(-1));await operation;h.reply(read,ledgerSnapshot('Saved'));await loading;
     assert.match(h.$('#manualGroupsList').innerHTML,/Saved/);assert.equal(h.$('#manualActionsStatus').hidden,true,url);

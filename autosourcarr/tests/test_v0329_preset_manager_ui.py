@@ -41,9 +41,9 @@ const context={console,Number,String,Date,JSON,Promise,encodeURIComponent,confir
  openBrowseEntry:()=>{},openUnmatchDuplicatesForEntry:()=>{},
  api:async(path,options={})=>{
   calls.push([path,options]);
-  if(path==='/api/admin/matching-policies')return heldRules||structuredClone(server);
-  if(path.startsWith('/api/admin/matching-policies/')){const body=JSON.parse(options.body);assert.equal(body.revision,server.revision);const direction=path.split('/').at(-1);server.rules.push({scope:'source',subject:'a',direction,rule:body.rule});server.revision+='x';return structuredClone(server);}
-  if(path.startsWith('/api/admin/matching-presets')){
+  if(path==='/api/v1/matching-policies')return heldRules||structuredClone(server);
+  if(path.startsWith('/api/v1/matching-policies/')){const body=JSON.parse(options.body);assert.equal(body.revision,server.revision);const direction=path.split('/').at(-1);server.rules.push({scope:'source',subject:'a',direction,rule:body.rule});server.revision+='x';return structuredClone(server);}
+  if(path.startsWith('/api/v1/matching-presets')){
    if(!options.method)return catalog();
    const body=JSON.parse(options.body);assert.equal(body.revision,server.preset_revision);
    if(heldMutation)await heldMutation;
@@ -62,8 +62,8 @@ const submitPreset=()=>event(presetForm,'submit');
 const choose=id=>{node('matchingPresetTarget').value=id;event(node('matchingPresetTarget'),'change');};
 const text=(id,value)=>{assert(!node(id).disabled);node(id).value=value;event(node(id),'input');};
 const open=async()=>{context.openMatchingPolicy('source','a');await tick();};
-const policies=()=>calls.filter(([path,opts])=>path.startsWith('/api/admin/matching-policies/')&&opts.method==='PUT');
-const writes=()=>calls.filter(([path,opts])=>path.startsWith('/api/admin/matching-presets')&&opts.method);
+const policies=()=>calls.filter(([path,opts])=>path.startsWith('/api/v1/matching-policies/')&&opts.method==='PUT');
+const writes=()=>calls.filter(([path,opts])=>path.startsWith('/api/v1/matching-presets')&&opts.method);
 '''
 
 

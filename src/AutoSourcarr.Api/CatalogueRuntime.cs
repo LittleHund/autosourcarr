@@ -39,6 +39,8 @@ internal sealed class CatalogueRuntime : IAsyncDisposable
     internal CatalogueMetadata NativeMetadata => _nativeMetadata ?? throw new InvalidOperationException("Native metadata is not initialized.");
     internal CatalogueStructure Structure => _structure ?? throw new InvalidOperationException("Native structure is not initialized.");
     internal NativeMetadataHydration Hydration => _hydration ?? throw new InvalidOperationException("Native hydration is not initialized.");
+    /// <summary>The record-wide native chapter writer (manual matches store the chapters of a just attached record).</summary>
+    internal NativeChapterWriter Chapters => _chapters ?? throw new InvalidOperationException("Native chapter writer is not initialized.");
     internal GalleryReconciliationResult ReconcileGallery(long entryId, CancellationToken cancellationToken = default)
         => Structure.ReconcileGallery(entryId, _chapters ?? throw new InvalidOperationException("Native chapter writer is not initialized."), cancellationToken);
 

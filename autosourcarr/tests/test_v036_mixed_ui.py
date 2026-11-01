@@ -46,7 +46,7 @@ def test_review_removes_item_from_queue_after_authoritative_refresh():
       const reviewing=reviewMixedEntry({entry_id:1,fingerprint:'f'.repeat(64)});
       assert.equal(JSON.parse(requests[0].options.body).decision,'keep');
       requests[0].resolve({ok:true});await tick();
-      assert(requests[1].url.startsWith('/api/admin/mixed-entries?'));
+      assert(requests[1].url.startsWith('/api/v1/mixed-entries?'));
       requests[1].resolve({items:[],total:0,counts:{needs_review:0,reviewed:1,all:1}});await reviewing;
       assert.equal(mixedEntriesState.items.length,0);assert.equal(mixedEntriesState.detail,null);
       assert(nodes['#mixedSummary'].textContent.includes('1 reviewed'));
