@@ -67,7 +67,7 @@ public static class CatalogueSharingVersionTests
         {
             using var a = new World(); a.Native("Future work", "/future", 11); var raw = a.Dump();
             using var b = new World();
-            var newer = Parse(raw); newer["format_version"] = 3; newer["min_reader_version"] = 3; newer["app_version"] = "0.9.1"; newer["entries"] = "a later entry shape";
+            var newer = Parse(raw); newer["format_version"] = 3; newer["min_reader_version"] = 3; newer["app_version"] = "0.9.1"; newer.Remove("min_reader_app_version"); newer["entries"] = "a later entry shape";
             var error = Check.Throws<CatalogueVersionMismatchException>(() => b.Exchange.Preview(Bytes(newer)));
             Check.Equal("Version mismatch: version 0.9.1 required", error.Message); Check.Equal("0.9.1", error.RequiredVersion);
             Check.Equal(0L, b.Scalar("SELECT COUNT(*) FROM catalogue_exchange_stages")); Check.Equal(0L, b.Count());
@@ -143,7 +143,7 @@ public static class CatalogueSharingVersionTests
         suite.Add("catalogue HTTP v1: version mismatch detail, compatibility list and identity review", () =>
         {
             using var original = new World(); original.Native("Published fixture", "/published", 112); var newer = Parse(original.Dump());
-            newer["format_version"] = 4; newer["min_reader_version"] = 4; newer["app_version"] = "1.2.0";
+            newer["format_version"] = 4; newer["min_reader_version"] = 4; newer["app_version"] = "0.9.0"; newer["min_reader_app_version"] = "1.2.0";
             using var setup = new HttpSetup();
             var refused = setup.SendBytes("/api/v1/catalog-sharing/preview", Bytes(newer)); Check.Equal(HttpStatusCode.Conflict, refused.StatusCode);
             Check.Equal("Version mismatch: version 1.2.0 required", S(Body(refused), "detail"));
