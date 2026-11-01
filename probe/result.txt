@@ -1,4 +1,4 @@
-sha=b4ff785c3e5a44fc42e3f417bbddef01008d737b
+sha=03287d420cc19f93e2ae3e6aac1baa01a338ac9a
 restore=0
 build=0
 test=0
@@ -9,4 +9,4 @@ source_host_check=0
 source_host_csharp=0
 repair_runner=exit=0
 kavita=0
-reader_extension_build=1
+reader_extension_build=7

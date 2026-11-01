@@ -11,23 +11,23 @@ c65183130753: Pulling fs layer
 4f4fb700ef54: Pulling fs layer
 ae21f418a34a: Waiting
 f22b818d3bd0: Waiting
-4f4fb700ef54: Waiting
 d3425bc32418: Waiting
 c65183130753: Waiting
+4f4fb700ef54: Waiting
 a3629ac5b9f4: Verifying Checksum
 a3629ac5b9f4: Download complete
 ae21f418a34a: Verifying Checksum
 ae21f418a34a: Download complete
-a3629ac5b9f4: Pull complete
-4755ce20b67e: Verifying Checksum
 4755ce20b67e: Download complete
 d3425bc32418: Verifying Checksum
 d3425bc32418: Download complete
+c65183130753: Verifying Checksum
+c65183130753: Download complete
 f22b818d3bd0: Verifying Checksum
 f22b818d3bd0: Download complete
-c65183130753: Download complete
 4f4fb700ef54: Verifying Checksum
 4f4fb700ef54: Download complete
+a3629ac5b9f4: Pull complete
 42604ec00e21: Verifying Checksum
 42604ec00e21: Download complete
 42604ec00e21: Pull complete
