@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-2",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 2: data layer (branch conversion, 3f85715)",
+   "body": "{\"commit\": \"3f85715\", \"ci\": \"run 41225208045 green\", \"archive\": \"autosourcarr-0.5.0-phase-2.zip\", \"archive_sha256\": \"6b78d9589f6e6ef7d1e4824e140a09c3c60830da471b9c853b7a052736ec0be2\", \"built\": [\"FluentMigrator 8.0.1 migrations per database file (tags catalog/origins, VersionInfo per file): 2026103101 catalog 0.4.4 baseline (released SQL + 0.3.x upgrade steps), 2026103102 catalog feature tables, 2026103111 origins baseline\", \"ASC1 application_id/user_version checked before and written after; journal_mode=WAL set on every start\", \"Dapper 2.1.66 under DatabaseSession: QueryAs, FirstOrDefaultAs, QueryPage (keyset, LIMIT n+1), ExecuteWith\", \"read sessions refuse writes; a write nested in a read uses an IMMEDIATE transaction and writes only for its own call\", \"changed-rows-only upserts (WHERE ... IS NOT excluded...) for settings, ui preferences, source_config, matching policies, source groups, virtual chapters, chapter candidates\", \"preferred-title normalization runs on every start as in 0.4.x\", \"SET-5 live database move: POST /api/v1/storage/database/move (DatabaseRelocation: validate, symlink check, instance lock on target, drain, online backup, integrity/stamp/row-count check, WAL, save DATABASE_DIR, switch; old files kept)\", \"legacy fixtures 0.3.27 and 0.4.4 for both databases; upgrade tests\"], \"tests\": \"927 C# tests pass\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 2)",
+   "source_ref": "src/AutoSourcarr.Core/Persistence/SchemaMigrator.cs",
+   "applies_to": "Conversion phase 2",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261031-PHASE-2",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 2 verified: probe 927/927, CI green on conversion, check-project locally",
+   "body": "{\"probe\": \"ci-probe 5d7b95f: restore, build, 927 tests, OpenAPI export, client generation all exit 0\", \"ci\": \"conversion 3f85715 run 41225208045 success\", \"local\": \"scripts/check-project.sh with AUTOSOURCARR_SKIP_PYTEST=1 completed\", \"done_when\": \"repository tests pass; 0.3.27 and 0.4.4 catalog and origins files upgrade in place (DataLayerTests)\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 2)",
+   "source_ref": "tests/AutoSourcarr.Tests/Persistence/DataLayerTests.cs",
+   "applies_to": "Conversion phase 2",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261031-LAST-SEEN-MEANING",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "last_seen on source_config and chapter_candidates now means last changed",
+   "body": "{\"why\": \"PERF-5 changed-rows-only writes: rewriting every unchanged row only to bump last_seen caused tens of thousands of writes per scan\", \"impact\": \"no code decides on these columns; the scan time per source title stays in source_record_scans.checked_at\", \"0.4.x\": \"last_seen was the last time the row was listed\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 2 audit)",
+   "source_ref": "src/AutoSourcarr.Core/Catalogue/Chapters/NativeChapterWriter.cs",
+   "applies_to": "Data layer",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261031-PHASE2-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Independent audit of phase 2 found 7 issues; 6 fixed, 1 accepted",
+   "body": "{\"fixed\": [\"moved databases stayed in rollback-journal mode: placed files switched back to WAL and every start sets WAL\", \"move accepted symlinked folders that startup refuses: same check now runs before the move\", \"new folder had no instance lock until restart: lock taken before copying, kept after success, released on failure\", \"write nested in a read used a deferred upgrade and left the read writable: IMMEDIATE transaction, write allowed only for the nested call\", \"status page showed the old database folder after a move: live paths\", \"storage card hid its instruction text: condition reverted\"], \"accepted\": [\"last_seen meaning change (DECISION-20261031-LAST-SEEN-MEANING)\"], \"open\": [\"a reverse proxy with a short timeout can cut the move request while the server still switches; the move becomes a queued task in phase 3\"]}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 2)",
+   "source_ref": "src/AutoSourcarr.Core/Persistence/DatabaseRelocation.cs",
+   "applies_to": "Conversion phase 2",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261031-PHASE2-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 2 items carried into later phases",
+   "body": "{\"phase 3\": \"database move runs as a queued task with progress instead of one long request\", \"phases 8-10\": \"each list adopts QueryPage as its routes are ported\", \"phase 9\": \"engine-neutral exchange format (CatalogueFormat) routes ported\", \"phase 16\": \"Postgres form of the baselines on the same migration numbers\", \"tests\": \"no crash-between-baseline-and-VersionInfo test; only 0.3.27 and 0.4.4 fixtures (no intermediate 0.4.x)\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 2)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

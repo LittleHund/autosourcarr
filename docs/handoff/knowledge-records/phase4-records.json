@@ -1,0 +1,70 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-4",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 4: own extension host (branch conversion, 9822947)",
+   "body": "{\"commit\": \"9822947 (CI green), 80cfd5a docs\", \"ci\": \"run 41242494664 green; probe 41241543669\", \"archive\": \"autosourcarr-0.5.0-phase-4.zip\", \"archive_sha256\": \"aae9fbc6f82c92b518f3bcfec230a40785fa9e49392f16ea86655060538e989d\", \"built\": [\"source-host/ Kotlin host built inside Suwayomi v2.4.2366 (40bc5da5), vendored Tachiyomi API + loader\", \"R8 APKs load with verification on: AutoSourcarrDex2jar, ExtensionConstructors, getCommonSuperClass fix, ExtensionBytecodeRepair\", \"REST API in Suwayomi data shape, per-run token, loopback; SQLite ids incl. tachiyomix 1.6 memo; BouncyCastle\", \"WebView: JCEF from JetBrains Runtime release, off screen, cookie sync; Cloudflare solved in WebView when FlareSolverr is off or fails\", \"C#: SuwayomiClient host mode, SourceHostProcess (supervision, restart ladder, setsid group, own Xvfb, not dumpable), hosted runtime path via AUTOSOURCARR_SOURCE_HOST_JAR\", \"/api/v1 source-engine, challenges, source-browser (+user-agent, clear-data, restart), attention (+retry), engine/{target}/compatibility; real source check in /api/v1/health; UI on v1 client\"]}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 4)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261031-PHASE-4",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 4 verified in CI probe against real extensions",
+   "body": "{\"sources\": \"12/13 Keiyoushi pass install-search-details-chapters-pages-image (MangaDex, MangaPill, Weeb Central, Mangatown, Webtoons, MANGA Plus, MangaBuddy, Mangahere, MangaFox, Asura Scans, Flame Comics, Mangago); Mangakakalot blocked by Cloudflare managed challenge\", \"lib14\": \"Komga 1.4.50 (archived tachiyomiorg repo) passes against demo.komga.org\", \"webview\": \"local JS challenge passed via WebView (3 challenged, 3 passed)\", \"csharp\": \"957 tests; integration test against real host incl. crash restart PASS\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 4)",
+   "source_ref": "scripts/source-host-check.py",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261031-HOST-ENTRY",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "Web entry stays in AutoSourcarr.Api; hosted path chosen by AUTOSOURCARR_SOURCE_HOST_JAR",
+   "body": "{\"why\": \"Keeps one entry; the native PID1 launcher and resolver stay only for the Suwayomi image and are removed with the image switch in phase 13\", \"open_user_decision\": \"(1) Host entry point was open; this default was taken while working unattended\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 4)",
+   "source_ref": "src/AutoSourcarr.Api/Program.cs",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  },
+  {
+   "id": "FINDING-20261031-R8-VERIFY",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Keiyoushi R8 APKs fail JVM verification after dex2jar; fixed with verification on",
+   "body": "{\"causes\": [\"new X initialised with a superclass constructor\", \"constructor this-calls skipping the direct superclass\", \"dex2jar getCommonSuperClass never compared type2 with type1 ancestors\"], \"note\": \"turning verification off was refused as security weakening and not used\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 4)",
+   "source_ref": "source-host/src/main/java/com/googlecode/d2j/dex/AutoSourcarrDex2jar.java",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "FINDING-20261031-PHASE4-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Phase 4 audit: 8 findings, 7 fixed, 1 scoped",
+   "body": "{\"fixed\": [\"disposed Process exposed in status / relaunch after dispose\", \"failed first host start aborted the app\", \"host env built once (UA, repositories stale after restart)\", \"any host log Exception became engine error\", \"id import dropped ids on (source,url) conflicts\", \"challenge check messages / native-mode state\", \"chunked upload unbounded\", \"hosted app dumpable\"], \"scoped\": \"separate user for the host: phase 6 low-rights runner, phase 13 image\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 4)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261031-PHASE4-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 4 items carried into later phases",
+   "body": "{\"cloudflare\": \"real Cloudflare managed challenge (kakamanga) not passed from GitHub runners; verify on the user's network; interactive Open in WebView (user solves) phase 7\", \"phase 6\": \"host runs as separate low-rights user\", \"phase 13\": \"hosted image (Java 25 + jar + Xvfb + setsid), native launcher removal\", \"mangakakalot\": \"needs Cloudflare clearance\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 4)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}

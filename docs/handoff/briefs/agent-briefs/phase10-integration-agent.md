@@ -1,0 +1,9 @@
+# Phase 10 integration
+
+## Brief given to the agent
+
+Read /home/claude/phase10-common.md (rules) and /home/claude/phase10-integration.md (wiring of four parallel areas + extra tasks). Repo /home/claude/autosourcarr, branch `conversion`; you own all files now; do NOT commit or change git state. No dotnet SDK: verify every API by reading; must compile with TreatWarningsAsErrors + nullable + analyzers. Do the wiring as the brief describes, adjusting to the real code. Then a careful compile-review pass over all phase-10 files (git status shows them: new and modified under src/, tests/, extension/) for: wrong member names on other areas' classes (the four agents never saw each other's code — e.g. 10B expects CatalogueRuntime.Reader/Display, 10A exposes Repository; 10C expects ReaderBrowse.BrowseAsync(JsonObject, ct)), nullable flow, null to non-nullable params, unused locals/params, pattern-variable scope clashes, missing usings, record positional args, JsonValue int/long GetValue mismatches, `$$"""` raw strings with "}}}", sealed-type inheritance (InvalidDataException is sealed in .NET 10), Magick.NET 15 API names (check the package version in Directory.Packages.props and existing uses in Core/Imaging for the right overloads: e.g. MagickImage.Resize(uint,uint), GetPixels().ToByteArray(PixelMapping.RGB) / ("RGBA")). Kotlin: review extension/module/src/autosourcarr/AutoSourcarr.kt for compile problems against the tachiyomi extensions-lib 1.4 API used by the rest of that file (ConfigurableSource.setupPreferenceScreen(PreferenceScreen), androidx.preference.EditTextPreference), and that check-project.sh step 7 greps still pass. Reply ≤800 words: files, wiring decisions, fidelity gaps, what you couldn't verify.
+
+## Agent's final report
+
+(Not preserved in the session files. Check the agent's actual output in git: `git show 3ed0b4e --stat` for phase 10.)

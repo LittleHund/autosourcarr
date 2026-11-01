@@ -4,6 +4,12 @@ Written 2026-11-01 (Europe/Amsterdam) at the end of a Claude cloud session. Fact
 checked against the repo, CI results or the project docs on that date; anything not checked is
 marked **unverified**. When this file and an explicit user instruction disagree, the user wins.
 
+**Where everything is.** This file and all Claude-only material (plan, requirements, checkpoint,
+briefs, Project docs, PC guidance) are on GitHub branch **`handoff/phase-10-wip`** (= `conversion`
++ the phase 10 WIP commit + this handoff). Index: [`docs/handoff/README.md`](docs/handoff/README.md).
+The copies there are snapshots of 2026-11-01; the Claude Docs/Project originals are the live versions
+when you can reach them. The knowledge DB and release ZIPs stay on the user's PC (see that index).
+
 ## 1. Project summary
 
 AutoSourcarr ("AutoSourcarr Reimagined") is a self-hosted Sonarr/Radarr-style manager for manga
@@ -12,8 +18,10 @@ indexers, matches their titles into one catalogue (entries, source records, chap
 catalogue to Mihon/Suwayomi through its own reader extension, and repairs orphaned/broken sources
 inside the instance. The catalogue must be shareable/migratable into other people's instances.
 
-- Repo: `LittleHund/autosourcarr` on GitHub (**public**). Branches: `main` (initial commit only),
-  `conversion` (the migration), `ci-probe` (scratch compile/test branch, see §4).
+- Repo: `LittleHund/autosourcarr` on GitHub (**public** — never commit personal data). Branches: `main`
+  (initial commit only), `conversion` (the migration; last pushed commit 1cc573b = phase 9),
+  `ci-probe` (scratch compile/test branch, see §4), `handoff/phase-10-wip` (this handoff; triggers no CI).
+  To continue: `git checkout conversion && git merge --ff-only origin/handoff/phase-10-wip`.
 - Released app: **0.4.5** (`VERSION`), Python 3.12 FastAPI + SQLite, UI "Reimagined"
   (vanilla JS, Sonarr v5 style), image built on `ghcr.io/suwayomi/suwayomi-server:v2.3.2243`,
   deployed by TrueNAS Compose behind Authelia, UID/GID 568:568, Europe/Amsterdam. Whether 0.4.5 is
@@ -25,8 +33,8 @@ inside the instance. The catalogue must be shareable/migratable into other peopl
 ### Migration state (plan: Claude Docs "AutoSourcarr conversion plan", 14 phases to cutover)
 
 The old "stage 1–26" migration (2026-10-25, Codex) was folded into this phase plan; stage numbers
-are no longer used. Plan doc: Claude Docs artifact `4cf80085-d5a6-40e1-9c4e-c40a0e4fbbba`
-(search node `9b1de541-77e7` with `{"kind":"search","text":"<n> <Name>"}`).
+are no longer used. Plan: `docs/handoff/conversion-plan.md` (copy of Claude Docs artifact
+`4cf80085-d5a6-40e1-9c4e-c40a0e4fbbba`; search node `9b1de541-77e7` with `{"kind":"search","text":"<n> <Name>"}`).
 
 | Phase | Status (2026-11-01) | Last `conversion` commit / CI |
 | --- | --- | --- |
@@ -37,7 +45,7 @@ are no longer used. Plan doc: Claude Docs artifact `4cf80085-d5a6-40e1-9c4e-c40a
 | 7 Connections (menu, solvers, WebView, metadata providers, Suwayomi feed) | done | 6acfff5, CI 41272743279 green |
 | 8 Matching (scorer, decisions log, duplicates, mixed entries, workbench) | done | 26ef573, CI 41309786259 green |
 | 9 Imports, metadata, sharing | done | 1cc573b, CI 41321311062 green |
-| **10 Chapters/reader** | **in progress, paused** | local commit 3ed0b4e only (see below) |
+| **10 Chapters/reader** | **in progress, paused** | WIP commit 3ed0b4e (on `handoff/phase-10-wip`, see below) |
 | 11 Web UI finish, 12 Backup, 13 Pipeline/image, 14 Cutover | open | — |
 | 15–17 (0.6.0) | open | — |
 
@@ -49,16 +57,20 @@ Progress: 131 of 173 plan-hours (76 %); estimate ≈ 8.2 h to cutover, ≈ 5.5 h
 10B CBZ library + downloads (`Core/Library`, migration 2026110192, `LIBRARY_DIR`), 10C imaging,
 hydration, tags, translation (`Core/Imaging`, `Core/Translation`, `Core/Catalogue/Metadata/Hydration`),
 10D reader extension with 5 server slots, own repo index, QR setup, reverse-proxy docs.
-Wiring them into `ApplicationRuntime`/`ApiV1Endpoints` was started by an integration agent that the
-user interrupted; **which wiring edits landed is unverified** — diff `3ed0b4e` against `1cc573b`
-before continuing. The full wiring brief is in this session's scratch (lost); redo it by reading each
-area's endpoint/services classes. Phase-10 also contains `tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json`
+**None of the wiring is in 3ed0b4e** (checked: `git diff 1cc573b 3ed0b4e` touches no
+`ApplicationRuntime*.cs`, `ApiV1Endpoints.cs`, `AccessControl.cs`, `RequestPolicy.cs`, `CatalogueRuntime.cs`
+or `tests/AutoSourcarr.Tests/Program.cs`; the integration agent was interrupted before committing).
+The new endpoint classes and tests exist but are not mapped or registered. Next step: apply
+[`docs/handoff/briefs/phase10-integration.md`](docs/handoff/briefs/phase10-integration.md) (full wiring
+brief; snippets were never compiled, adjust to real signatures), then the probe. Area briefs and
+10A's report: `docs/handoff/briefs/agent-briefs/`. Phase-10 also contains `tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json`
 (see §6).
 
-**Checkpoint:** Claude Project doc `claude/checkpoint.md` (time table, per-phase checklist results,
-carried items, open user decisions). Port map with per-phase ticks: `docs/port-map.md` (copy in the
-Project as `claude/port-map.md`). Requirements: Claude Project `claude/requirements.md` (copy of the
-Docs artifact "AutoSourcarr requirements"; IDs ARC, PIPE, SRC, REP, CON, MAT, IMP, META, CHAP, READ,
+**Checkpoint:** `docs/handoff/project-docs/checkpoint.md` (copy of Claude Project `claude/checkpoint.md`:
+time table, per-phase checklist results, carried items, open user decisions). Port map with per-phase
+ticks: `docs/port-map.md` (copy in the Project as `claude/port-map.md`). Requirements:
+`docs/handoff/requirements.md` (copy of the Docs artifact "AutoSourcarr requirements", artifact
+`Ww9SEgJQNF8tgGJ1mXBPmb`; the Project's `claude/requirements.md` is an older 2026-10-26 copy; IDs ARC, PIPE, SRC, REP, CON, MAT, IMP, META, CHAP, READ,
 AUTH, GST, UI, PERF, SET, DEV). Knowledge DB records per phase: `RELEASE-0.5.0-PHASE-n`,
 `VERIFY-…`, `DECISION-…`, `FINDING-…`, `LIMIT-…`.
 
@@ -176,13 +188,14 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 5. Phase end (update the checkpoint):
    - push `conversion` once; confirm its CI run is green (record the run id);
    - ZIP `git archive --format=zip --prefix=autosourcarr/ HEAD` → `F:\claude projects\autosourcarr data\autosourcarr-0.5.0-phase-N.zip` (record sha256);
-   - knowledge DB: write `knowledge-records/phaseN-records.json` (kinds release/verification/decision/finding/limitation;
+   - knowledge DB: write `docs/handoff/knowledge-records/phaseN-records.json` (examples for phases 0–9 there; kinds release/verification/decision/finding/limitation;
      states implemented/verified/resolved/open — not "accepted"; fields id, kind, state, title, body (JSON string), origin,
      source_ref, applies_to, confidence), then on the PC VM: copy the DB, `index <zip>`, `import <records>`, `check`, copy back;
    - tick `docs/port-map.md` (section 0, "Phase N"), upload it to the Project as `claude/port-map.md`;
    - PC sync: zip `git diff --name-only <prev>..HEAD` (minus `.github`) → `conversion-export/phaseN-sync.zip`,
      extract into `F:\claude projects\autosourcarr\autosourcarr` (deleted files → move to `_to_delete/`, deleting is not allowed there);
-   - re-estimate with actual hours; update `claude/checkpoint.md`;
+   - re-estimate with actual hours; update `claude/checkpoint.md` in the Project **and** `docs/handoff/project-docs/checkpoint.md`
+     (the repo copy is the one any agent can reach; if the Project/Docs/PC are not reachable, update the repo copies only and say so);
    - report to the user: time table, progress bar with percentage, current phase, remaining time.
 6. Write short, plain text; tables over prose; distinguish verified results from estimates.
 
@@ -190,7 +203,7 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 
 | Date | Item | State |
 | --- | --- | --- |
-| 2026-11-01 | Phase 10 integration interrupted; WIP commit 3ed0b4e is uncompiled and possibly half-wired. | open |
+| 2026-11-01 | Phase 10 integration interrupted before any wiring was committed; WIP commit 3ed0b4e is uncompiled and unwired (brief: `docs/handoff/briefs/phase10-integration.md`). | open |
 | 2026-11-01 | `duplicate-pairs.user.json` (2,680 pairs from the user's decisions) committed locally for CI; user agreed it need not be private but **must be removed once everything functions**. | open (remove before cutover) |
 | 2026-11-01 | Reader extension signing: user must add GitHub secrets `AUTOSOURCARR_EXT_KEYSTORE_B64`, `_KEYSTORE_PASSWORD`, `_KEY_PASSWORD`, `_KEY_ALIAS` (= `autosourcarr`); without them CI signs with a throwaway key. | waiting on user |
 | 2026-11-01 | Reader extension slot count is fixed at build time (5); "add more from Mihon" is not possible with the Keiyoushi plugin. | limitation |
@@ -198,13 +211,14 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 | 2026-11-01 | Split paths are not written in the same transaction as their decision-log entry (merges are). | open |
 | 2026-11-01 | `CatalogueDiscovery.SourceResult` (source health) not wired. | open |
 | 2026-11-01 | Phase 10 carried in: import exact-thumbnail tie-break, machine translation in search, gallery identity, page colour sampling (`IPageImageSource`). | in WIP |
-| 2026-11-01 | The workspace-root `F:\claude projects\autosourcarr\CLAUDE.md` and Project doc `claude/CLAUDE.md` still say the migration is "paused at stage 26" — outdated; this file supersedes them. | to update |
+| 2026-11-01 | Older guidance files (PC workspace-root `CLAUDE.md`, Project `claude/CLAUDE.md`) said "paused at stage 26"; both now point here. This file supersedes them. | resolved |
 | 2026-10-31 | Real Cloudflare managed challenge not passed from CI (GitHub network); WebView passes the local challenge. | open, needs user network |
 | 2026-10-31 | Source host runs as the same user as the app; separate low-rights user + runner binary in image → phase 13. | deferred |
 | 2026-10-31 | Two-factor (AUTH-7), owner transfer/recovery (AUTH-9), AI providers + Postgres connections (CON-4, phase 16), SRC-9 AI benchmark. | deferred to 0.6.0 |
+| 2026-11-01 | Checkpoint item "(4) private duplicate test set in CI via encrypted fixture" is superseded: the user allowed committing it plainly (it must still be removed before cutover). | resolved |
 | 2026-10-31 | Open user decisions: (2) custom C# test runner vs xUnit; (3) SET-5 default `/config` vs `/data`; (1) host entry: default taken (stays in Api). | open |
 | 2026-10-31 | User items: delete old `src\eu` folders (stage 2), run `scripts\stage3-remove-old.ps1`, delete `src\AutoSourcarr.Core\Text`, deploy 0.4.5, optionally allow nuget/dotnet domains, delete `ci-probe` at the end, add the `/api/reader/repo/` Authelia/NPM bypass at 0.5.0 deploy. | open |
-| 2026-10-29 | Requirements proposals PROP-1..4 (release split, defer CON-4/SRC-9/MAT-21, drop UI-3 theme research, hand-maintained backup schema) — status in `claude/requirements-changes-2026-10-29.md`; PROP-1/PROP-4 were applied in practice (unverified that the user formally accepted them). | unverified |
+| 2026-10-29 | Requirements proposals PROP-1..4 (release split, defer CON-4/SRC-9/MAT-21, drop UI-3 theme research, hand-maintained backup schema): `requirements.md` §18 records them as accepted on 2026-10-29. | resolved |
 | 2026-10-25 | C# runtime version constant still `0.4.3-migration`; the compatibility list describes 0.5.0. | fix at release |
 
 ## 7. User skills used on this project

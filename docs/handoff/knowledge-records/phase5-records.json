@@ -1,0 +1,59 @@
+{
+ "records": [
+  {
+   "id": "RELEASE-0.5.0-PHASE-5",
+   "kind": "release",
+   "state": "implemented",
+   "title": "Conversion phase 5: accounts essentials (branch conversion, 2940c0c)",
+   "body": "{\"commit\": \"2940c0c\", \"ci\": \"run 41247208644 green; probe 41246219771 (962 tests)\", \"archive\": \"autosourcarr-0.5.0-phase-5.zip\", \"archive_sha256\": \"56d604b0e3dec438a0550445904842bce250d9cdcc30f66732ee565546680a55\", \"built\": [\"AUTH_METHOD forms/basic/external, owner on first boot, PBKDF2-SHA512 hashes\", \"AccessPolicy + AccessControlMiddleware: one role check (owner/admin/guest/reader/script) for every request\", \"Keys page: automatic admin token, permanent admin key, per-device reader keys, script keys\", \"security log + login slow-down, AUTH_RESET_OWNER with one-time setup code\", \"login page, Settings > Security\"]}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 5)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "VERIFY-20261031-PHASE-5",
+   "kind": "verification",
+   "state": "verified",
+   "title": "Phase 5 Done when verified",
+   "body": "{\"role_test\": \"every route of the app refused for anonymous/guest/reader/script-guest where the policy says so; admins reach all admin routes; owner-only routes refuse admins\", \"cross_site\": \"reset-covers, reset-database, full-reset, reset-all-manual-actions refuse cross-site posts with the admin token\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 5)",
+   "source_ref": "tests/AutoSourcarr.Tests/Api/AccessControlTests.cs",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "DECISION-20261031-SIGNED-SESSIONS",
+   "kind": "decision",
+   "state": "implemented",
+   "title": "Forms sessions are HMAC-signed tokens with a per-account epoch; hashes are PBKDF2-SHA512 from the runtime",
+   "body": "{\"why\": \"no extra NuGet packages or DI changes (restore runs only in CI); sessions survive restarts; sign-out, password change and removal bump the epoch\", \"tradeoff\": \"sign-out ends all sessions of the account\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 5)",
+   "source_ref": "src/AutoSourcarr.Core/Accounts/AccountStore.cs",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  },
+  {
+   "id": "FINDING-20261031-PHASE5-AUDIT",
+   "kind": "finding",
+   "state": "resolved",
+   "title": "Phase 5 audit: 9 findings, all fixed",
+   "body": "{\"fixed\": [\"upper-case path bypassed cross-site check and policy\", \"Remote-User trusted from any client\", \"throttle lockout and bypass\", \"sign-out kept sessions valid\", \"login open redirect\", \"Basic first boot impossible\", \"guest reads blocked by v1 filter\", \"AUTH_RESET_OWNER repeated and claimable by visitors\", \"token redaction, Secure cookie, password-change slow-down\"]}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 5)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "high"
+  },
+  {
+   "id": "LIMIT-20261031-PHASE5-DEFERRED",
+   "kind": "limitation",
+   "state": "open",
+   "title": "Phase 5 items carried later",
+   "body": "{\"phase 16\": \"two-factor AUTH-7, owner transfer and recovery codes AUTH-9\", \"SET-11\": \"failed-login burst notification (now an error-registry warning)\", \"0.6.0\": \"guest pages GST-*\", \"default trust\": \"AUTH_TRUSTED_PROXIES empty trusts loopback and private networks; set it when the port is reachable from other machines\"}",
+   "origin": "Claude cloud session 2026-10-31 (conversion phase 5)",
+   "source_ref": "docs/port-map.md",
+   "applies_to": "Conversion plan",
+   "confidence": "medium"
+  }
+ ]
+}
