@@ -41,7 +41,7 @@ public sealed class KomfClient : IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(_api, path));
         var answer = await ConnectionHttp.SendJsonAsync(_client, request, "Komf", cancellationToken).ConfigureAwait(false);
         if (answer is not JsonArray list || list.Any(item => item is not JsonValue value || !value.TryGetValue<string>(out _)))
-            throw new ConnectionHttpException("The server answered, but not like Komf: metadata/providers is not a list of provider names.", null);
+            throw new ConnectionHttpException("The server answered, but not like Komf: metadata/providers is not a list of provider names.");
         return list.Select(JsonRead.Text).ToList();
     }
 
@@ -53,7 +53,7 @@ public sealed class KomfClient : IDisposable
         var path = "metadata/search?name=" + Uri.EscapeDataString(query) + (string.IsNullOrWhiteSpace(libraryId) ? "" : "&libraryId=" + Uri.EscapeDataString(libraryId));
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(_api, path));
         var answer = await ConnectionHttp.SendJsonAsync(_client, request, "Komf", cancellationToken).ConfigureAwait(false);
-        if (answer is not JsonArray list) throw new ConnectionHttpException("Komf search did not answer with a list.", null);
+        if (answer is not JsonArray list) throw new ConnectionHttpException("Komf search did not answer with a list.");
         return list.OfType<JsonObject>()
             .Select(row => new KomfSearchResult(JsonRead.Text(row["title"]), JsonRead.Text(row["provider"]), JsonRead.Text(row["resultId"]),
                 JsonRead.Text(row["url"]), JsonRead.Text(row["imageUrl"])))
@@ -65,7 +65,7 @@ public sealed class KomfClient : IDisposable
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(_api, "media-server/connected"));
         var answer = await ConnectionHttp.SendJsonAsync(_client, request, "Komf", cancellationToken).ConfigureAwait(false) as JsonObject
-            ?? throw new ConnectionHttpException("Komf media-server/connected did not answer with an object.", null);
+            ?? throw new ConnectionHttpException("Komf media-server/connected did not answer with an object.");
         return new KomfMediaServerStatus(JsonRead.Bool(answer["success"]), JsonRead.Int(answer["httpStatusCode"]), JsonRead.Text(answer["errorMessage"]));
     }
 

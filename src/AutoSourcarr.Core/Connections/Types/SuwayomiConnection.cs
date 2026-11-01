@@ -46,13 +46,13 @@ public sealed class SuwayomiGraphQlHttp : IDisposable
         request.Headers.Authorization = Endpoint.Authorization;
         request.Headers.Accept.ParseAdd("application/json");
         var answer = await ConnectionHttp.SendJsonAsync(_client, request, "Suwayomi", cancellationToken).ConfigureAwait(false) as JsonObject
-            ?? throw new ConnectionHttpException("Suwayomi did not answer the GraphQL request with an object; is this a Suwayomi server?", null);
+            ?? throw new ConnectionHttpException("Suwayomi did not answer the GraphQL request with an object; is this a Suwayomi server?");
         if (answer["errors"] is JsonArray { Count: > 0 } errors)
         {
             var message = string.Join("; ", errors.OfType<JsonObject>().Select(error => JsonRead.Text(error["message"])).Where(text => text.Length > 0).Take(3));
             throw new ConnectionHttpException("Suwayomi GraphQL error: " + (message.Length > 0 ? message : "unknown") + ".", null);
         }
-        return answer["data"] as JsonObject ?? throw new ConnectionHttpException("Suwayomi answered without a GraphQL data object.", null);
+        return answer["data"] as JsonObject ?? throw new ConnectionHttpException("Suwayomi answered without a GraphQL data object.");
     }
 
     /// <summary>
@@ -70,14 +70,14 @@ public sealed class SuwayomiGraphQlHttp : IDisposable
         {
             var data = await QueryAsync(query, new JsonObject { ["first"] = pageSize, ["after"] = after }, cancellationToken).ConfigureAwait(false);
             if (data["mangas"] is not JsonObject connection || connection["nodes"] is not JsonArray nodes)
-                throw new ConnectionHttpException("Suwayomi library answer has no mangas.nodes list.", null);
+                throw new ConnectionHttpException("Suwayomi library answer has no mangas.nodes list.");
             items.AddRange(nodes.OfType<JsonObject>().Select(node => (JsonObject)node.DeepClone()));
             var info = connection["pageInfo"] as JsonObject;
             if (info is null || !JsonRead.Bool(info["hasNextPage"])) return items;
             after = JsonRead.Text(info["endCursor"]);
-            if (after.Length == 0 || !cursors.Add(after)) throw new ConnectionHttpException("Suwayomi library paging repeated or lost its cursor.", null);
+            if (after.Length == 0 || !cursors.Add(after)) throw new ConnectionHttpException("Suwayomi library paging repeated or lost its cursor.");
         }
-        throw new ConnectionHttpException("Suwayomi library has more than 100 pages; refusing an incomplete read.", null);
+        throw new ConnectionHttpException("Suwayomi library has more than 100 pages; refusing an incomplete read.");
     }
 
     public void Dispose() => _client.Dispose();
