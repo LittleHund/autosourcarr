@@ -41,7 +41,7 @@ internal static class MaintenanceV1Endpoints
         JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(2), Cancellable: false);
 
     /// <summary>Resets need an owner or admin account (not a script key); without accounts the admin token was already checked.</summary>
-    private static bool OwnerOrAdmin(HttpContext context) => !context.Items.ContainsKey(AccessControlMiddleware.CallerItem)
+    internal static bool OwnerOrAdmin(HttpContext context) => !context.Items.ContainsKey(AccessControlMiddleware.CallerItem)
         || AccessControlMiddleware.CallerOf(context).Role is Role.Owner or Role.Admin;
 
     internal static void Map(RouteGroupBuilder group, ApiV1Services services, ApiJsonContext json, MaintenanceV1Services? maintenance)
@@ -129,7 +129,7 @@ internal static class MaintenanceV1Endpoints
                 .WithName(name)
                 .WithSummary(full
                     ? "Full reset as an exclusive job (body {confirm: true}): clears the catalogue and every decision, keeps configuration and main-library subscriptions."
-                    : "Database reset as an exclusive job (body {confirm: true}): clears the rebuildable catalogue, keeps manual decisions and subscriptions, and restores manual matches.")
+                    : "Database reset as an exclusive job (body {confirm: true}): clears entries, automatic matches and titles, merge/split history and caches; keeps subscriptions, manual matches and groups (restored), deleted-record suppression and mixed-entry reviews; re-attaches different-works reviews, separate rules, manual titles, scopes and aliases to the restored works and drops (and counts) those whose work is not back.")
                 .Produces<JsonObject>(StatusCodes.Status202Accepted)
                 .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
                 .Produces<ProblemResponse>(StatusCodes.Status403Forbidden);
@@ -149,6 +149,7 @@ internal static class MaintenanceV1Endpoints
         group.MapDelete("/entries/{entryId}", (Func<HttpContext, Task<IResult>>)(async context =>
             {
                 if (maintenance is null) return Unavailable();
+                if (!OwnerOrAdmin(context)) return Problem(403, "Only the owner or an admin account can delete an entry.");
                 if (!TryRouteLong(context, "entryId", out var entryId)) return Problem(400, "Invalid entry id.");
                 JsonObject body;
                 try { body = await Body(context).ConfigureAwait(false); }
@@ -171,8 +172,9 @@ internal static class MaintenanceV1Endpoints
             }))
             .Accepts<JsonObject>("application/json")
             .WithName("deleteCatalogueEntry")
-            .WithSummary("Delete an entry and suppress its source records so a refresh does not bring it back. Refused for main-library subscriptions unless the body says {force: true}.")
+            .WithSummary("Delete an entry and suppress its source records so a refresh does not bring it back (owner or admin). Refused for main-library subscriptions unless the body says {force: true}.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status403Forbidden)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 

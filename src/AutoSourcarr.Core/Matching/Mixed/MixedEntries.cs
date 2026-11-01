@@ -16,6 +16,12 @@ namespace AutoSourcarr.Core.Matching.Mixed;
 public interface IEditionSplitter
 {
     (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType, CancellationToken cancellationToken);
+
+    /// <summary>As the split above, but
+    /// <paramref name="stillAllowed"/> is re-checked under the catalogue write gate right before the split (a person's
+    /// review may have arrived since the proposal); false refuses with InvalidOperationException and changes nothing.</summary>
+    (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
+        Func<DatabaseSession, bool> stillAllowed, CancellationToken cancellationToken);
 }
 
 /// <summary>What an automatic edition split would do. <see cref="Blocked"/> proposals are left for review (manual,
@@ -158,8 +164,10 @@ public sealed class MixedEntries
                 return 0;
             });
             var splits = 0;
+            // A mixed entry a person reviewed as "keep together" is never split automatically.
             if (read.State["auto_split"]?.GetValue<bool>() == true && _splitter is not null)
-                foreach (var snapshot in read.Snapshots.Where(item => item.Evidence.Any(pair => pair.Reasons.Any(reason => reason.StartsWith("Different", StringComparison.Ordinal)))))
+                foreach (var snapshot in read.Snapshots.Where(item => !read.Reviewed.ContainsKey(item.Fingerprint)
+                    && item.Evidence.Any(pair => pair.Reasons.Any(reason => reason.StartsWith("Different", StringComparison.Ordinal)))))
                     foreach (var axis in new[] { "color", "media" })
                     {
                         cancellationToken.ThrowIfCancellationRequested();
@@ -217,12 +225,8 @@ public sealed class MixedEntries
             return (current, current is null ? null : Reviewed(c, [current.Fingerprint]).GetValueOrDefault(current.Fingerprint),
                 current is null ? null : _editions.Build(current.EntryId, current.PreferredTitle, current.Decisions));
         });
-        if (snapshot is null || profile is null)
-        {
-            _database.Write(DatabaseFile.Catalog, c => c.Execute("DELETE FROM mixed_entry_findings WHERE entry_id=$id", ("$id", entryId)));
-            throw new KeyNotFoundException("This entry no longer has multiple source records");
-        }
-        _database.Write(DatabaseFile.Catalog, c => { SaveFinding(c, snapshot); return 0; });
+        // A read: the saved finding is refreshed by the check and by a review, never by viewing the detail.
+        if (snapshot is null || profile is null) throw new KeyNotFoundException("This entry no longer has multiple source records");
         var proposals = _database.Read(DatabaseFile.Catalog, c => new[] { ProposeSplit(c, snapshot.EntryId, "color"), ProposeSplit(c, snapshot.EntryId, "media") });
         return new JsonObject
         {
@@ -286,11 +290,15 @@ public sealed class MixedEntries
     /// <summary>Applies an unblocked proposal as an automatic split, recomputes both entries and records the decision.</summary>
     public JsonObject? AutoSplit(long entryId, string axis, CancellationToken cancellationToken = default)
     {
-        var proposal = _database.Read(DatabaseFile.Catalog, c => ProposeSplit(c, entryId, axis));
+        var proposal = _database.Read(DatabaseFile.Catalog, c => KeptTogether(c, entryId) ? null : ProposeSplit(c, entryId, axis));
         if (proposal is null || proposal.Blocked) return null;
         if (_splitter is null) throw new InvalidOperationException("Automatic edition splits need the catalogue structure owner.");
+        var planned = proposal.Move.ToHashSet(); var proposedEntry = proposal.EntryId;
+        // Re-checked under the write gate: a "keep together" review or changed records since the proposal refuse the split.
+        bool StillAllowed(DatabaseSession c) => !KeptTogether(c, entryId) && ProposeSplit(c, entryId, axis) is { Blocked: false } current
+            && current.EntryId == proposedEntry && planned.SetEquals(current.Move);
         (long OriginalEntryId, long NewEntryId) result;
-        try { result = _splitter.SplitAutomatic(proposal.EntryId, proposal.Move, "split-duplicate", cancellationToken); }
+        try { result = _splitter.SplitAutomatic(proposal.EntryId, proposal.Move, "split-duplicate", StillAllowed, cancellationToken); }
         catch (Exception error) when (error is InvalidOperationException or KeyNotFoundException) { return null; }
         _database.Write(DatabaseFile.Catalog, c =>
         {
@@ -372,6 +380,9 @@ public sealed class MixedEntries
     }
 
     // ---- internals --------------------------------------------------------------------------------------------------
+
+    /// <summary>The entry's current evidence was reviewed as correct ("keep together").</summary>
+    private bool KeptTogether(DatabaseSession c, long entryId) => Current(c, entryId) is { } current && Reviewed(c, [current.Fingerprint]).ContainsKey(current.Fingerprint);
 
     private MixedSnapshot? Current(DatabaseSession c, long entryId)
     {

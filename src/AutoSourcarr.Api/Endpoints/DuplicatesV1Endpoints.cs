@@ -266,6 +266,7 @@ internal static class DuplicatesV1Endpoints
         group.MapPost("/entries/{entryId}/unbind-auto-matches", (Func<HttpContext, Task<IResult>>)(async context =>
             {
                 if (duplicates is null) return Unavailable();
+                if (!MaintenanceV1Endpoints.OwnerOrAdmin(context)) return Problem(403, "Only the owner or an admin account can unbind automatic matches.");
                 if (!EntryId(context, out var entryId)) return Problem(400, "A numeric entry id is required");
                 var actor = Actor(context);
                 try { return Answer(await Task.Run(() => duplicates.UnbindAutomaticRecords(entryId, actor), CancellationToken.None).ConfigureAwait(false)); }
@@ -273,14 +274,16 @@ internal static class DuplicatesV1Endpoints
                 catch (InvalidOperationException failure) { return Problem(409, failure.Message); }
             }))
             .WithName("unbindAutomaticMatches")
-            .WithSummary("Split every automatic source attachment off an entry (each to its own entry) and keep them apart; manual, imported, split and locked records stay.")
+            .WithSummary("Split every automatic source attachment off an entry (each to its own entry) and keep them apart (owner or admin); manual, imported, split and locked records stay.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status403Forbidden)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 
         group.MapPost("/entries/{entryId}/redo-automation", (Func<HttpContext, IResult>)(context =>
             {
                 if (duplicates is null) return Unavailable();
+                if (!MaintenanceV1Endpoints.OwnerOrAdmin(context)) return Problem(403, "Only the owner or an admin account can redo an entry's automation.");
                 if (!EntryId(context, out var entryId)) return Problem(400, "A numeric entry id is required");
                 if (duplicates.Jobs is null) return Problem(503, "The job queue is not running; nothing was started.");
                 try
@@ -295,6 +298,7 @@ internal static class DuplicatesV1Endpoints
             .WithName("redoEntryAutomation")
             .WithSummary("Redo an entry's automation as a job: keep the best-supported native record and manual/locked records, split every other automatic attachment back out, drop generated identities and titles, then search and refresh again.")
             .Produces<JsonObject>(StatusCodes.Status202Accepted)
+            .Produces<ProblemResponse>(StatusCodes.Status403Forbidden)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
             .Produces<ProblemResponse>(StatusCodes.Status503ServiceUnavailable);
     }

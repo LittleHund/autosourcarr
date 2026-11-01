@@ -159,10 +159,11 @@ public sealed partial class CatalogueStructure
         ["policies"] = new JsonArray(c.Query("SELECT * FROM gallery_policies ORDER BY source_id").Select(row => (JsonNode)Json(row)).ToArray())
     });
 
-    private long Split(long original, IReadOnlyList<NativeSourceRecord> requested, bool manual, string splitMatchType = "split-duplicate")
+    private long Split(long original, IReadOnlyList<NativeSourceRecord> requested, bool manual, string splitMatchType = "split-duplicate", Func<DatabaseSession, bool>? precondition = null)
     {
         var result = _database.Write(DatabaseFile.Catalog, c =>
         {
+            if (precondition is not null && !precondition(c)) throw new InvalidOperationException("The automatic split is no longer allowed (reviewed or changed since it was proposed)");
             original = Canonical(c, original); if (!Exists(c, original)) throw new KeyNotFoundException("Split entry no longer exists"); var wanted = requested.ToHashSet();
             var records = Records(c, original); var selected = records.Where(row => wanted.Contains(row.Key)).OrderByDescending(row => row.Row.Integer("locked")).ThenByDescending(row => row.Row.Integer("initialized")).ThenByDescending(row => Length(row.Row.Text("description"))).ThenByDescending(row => row.Row.Number("confidence")).ToList();
             if (wanted.Count == 0 || selected.Select(row => row.Key).ToHashSet().Count != wanted.Count) throw new InvalidOperationException("Selected source records are no longer attached");

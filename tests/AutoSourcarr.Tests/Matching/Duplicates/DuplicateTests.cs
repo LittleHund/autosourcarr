@@ -22,6 +22,9 @@ public static class DuplicateTests
             Check.True(result.Pairs >= 60, "The synthetic set keeps at least 60 pairs");
             Check.True(result.WrongMerges.Count == 0, "Wrong merges: " + string.Join("; ", result.WrongMerges));
             Check.True(result.Recall >= 0.5, "Recall on same-work pairs fell to " + result.Recall.ToString("P1", CultureInfo.InvariantCulture));
+            // The same pairs through match-on-ingest (side a, then side b): a different work never attaches.
+            Check.True(result.Ingest is { } ingest && ingest.Pairs == result.Pairs, "the ingest path is evaluated over the same pairs");
+            Check.True(result.Ingest!.WrongMerges.Count == 0, "Ingest wrong merges: " + string.Join("; ", result.Ingest!.WrongMerges));
         });
         var privateSet = Environment.GetEnvironmentVariable(DuplicateTestSet.EnvironmentVariable);
         if (!string.IsNullOrWhiteSpace(privateSet) && File.Exists(privateSet))
@@ -58,6 +61,12 @@ public static class DuplicateTests
             var other = S(["Other Name"], "Different Person"); other["identity_details"] = trusted["identity_details"]!.DeepClone();
             Check.True(gate.Decide(trusted, other).Eligible, "a locked/manual shared identity is trusted proof");
             Check.True(!gate.Decide(S(["The Long Journey Home"], "A, B"), S(["The Long Journey Home"], "A, C")).Eligible, "two adaptations with different artists never merge");
+            // Exact titles without creators on one side prove a merge only when one of them is specific (4+ words / 24+ chars).
+            Check.True(!gate.Decide(S(["Blue Flag", "Ao no Flag"], ""), S(["Blue Flag", "Ao no Flag"])).Eligible, "short exact titles with a creator missing are not proof");
+            Check.True(gate.Decide(S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], ""), S(["Nagai Tabiji no Kaeri", "The Long Journey Home"])).Eligible, "specific exact titles still merge");
+            var scored = new AutoSourcarr.Core.Matching.Scoring.ScoredAutomaticMatchGate(gate);
+            Check.True(!scored.Decide(S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], "Writer Lee"), S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], "Writer Park")).Eligible,
+                "the production gate refuses two different writers sharing name parts");
         });
 
         suite.Add("duplicates: automatic consolidation is non-transitive and logged as automatic", () =>
@@ -99,6 +108,63 @@ public static class DuplicateTests
             Check.Equal(2L, f.Scalar("SELECT COUNT(*) FROM manual_match_bindings"));
             Check.Equal(2L, f.Scalar("SELECT COUNT(*) FROM source_matches WHERE locked=1 AND match_type='manual'") + f.Scalar("SELECT COUNT(*) FROM source_variants WHERE locked=1 AND match_type='manual'"));
             Check.True(f.Log.Events.Any(e => e.Kind == "merge.manual" && e.Actor == Person && e.Records.Count == 2), "manual merge recorded with both records");
+        });
+
+        suite.Add("duplicates: a workbench merge is a reviewed duplicate: records locked, one manual group, one transaction", () =>
+        {
+            using var f = new DuplicateFixture();
+            var a = f.Entry(["The Paper Moon Courier"], ["Sato Ken"], 2012);
+            var b = f.Entry(["Paper Moon Courier"], ["Sato Ken"], 2012);
+            var merged = f.Duplicates.MergeReviewed(a, b, Person, "workbench", "manual-review-workbench");
+            Check.Equal(f.Canonical(a), f.Canonical(b));
+            Check.True(merged["manual_group_id"] is JsonValue, "the reviewed records form one manual group");
+            Check.Equal(2L, f.Scalar("SELECT COUNT(*) FROM manual_match_bindings WHERE group_id IS NOT NULL"));
+            Check.Equal(2L, f.Scalar("SELECT COUNT(*) FROM source_matches WHERE locked=1 AND match_type='manual' AND active=1") + f.Scalar("SELECT COUNT(*) FROM source_variants WHERE locked=1 AND match_type='manual' AND active=1"));
+            Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM duplicate_review_history WHERE decision='duplicate'"));
+            Check.True(f.Log.Events.Count(e => e.Kind == "merge.manual" && e.Actor == Person) == 1, "one manual merge decision with the person");
+            Check.Throws<InvalidOperationException>(() => f.Duplicates.MergeReviewed(a, b, Person, "again"));
+        });
+
+        suite.Add("duplicates: a merge and its rollback event, lineage and decision commit together or not at all", () =>
+        {
+            using var f = new DuplicateFixture();
+            var a = f.Entry(["The Crimson Lantern Society", "Akai Chouchin no Kai"], ["Mori Takeshi"], 2010);
+            var b = f.Entry(["The Crimson Lantern Society", "Akai Chouchin no Kai"], ["Mori Takeshi"], 2010);
+            var failing = new DuplicateMatching(f.Database, f.Gate, f.Structure, f.Evidence.Snapshot, new FailingDecisionLog(), () => f.Settings);
+            var decision = new JsonObject { ["eligible"] = true, ["reason"] = "2 exact native titles" };
+            Check.Throws<InvalidOperationException>(() => failing.MergeAutomatic(a, b, decision, DecisionActor.Automatic));
+            Check.True(f.Canonical(a) != f.Canonical(b), "the merge rolled back with its decision");
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM automatic_merge_events"));
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM automatic_merge_lineage"));
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM entry_aliases"));
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM pending_entry_merges"));
+            Check.Throws<InvalidOperationException>(() => failing.Review(a, b, "duplicate", Person));
+            Check.True(f.Canonical(a) != f.Canonical(b), "a reviewed merge rolls back with its group and decision");
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM manual_match_bindings"));
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM duplicate_review_history"));
+            var target = f.Duplicates.MergeAutomatic(a, b, decision, DecisionActor.Automatic);
+            Check.Equal(target, f.Canonical(a));
+            Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM automatic_merge_events"));
+        });
+
+        suite.Add("duplicates: automatic merges never drop manual titles; manual merges keep them on the survivor", () =>
+        {
+            using var f = new DuplicateFixture();
+            var curated = f.Entry(["The Hollow Bell Garden", "Utsuro Kane no Niwa"], ["Abe Rin"], 2014);
+            var reliable = f.Entry(["The Hollow Bell Garden", "Utsuro Kane no Niwa"], ["Abe Rin"], 2014, locked: true);
+            f.Database.Write(DatabaseFile.Catalog, c =>
+            {
+                c.Execute("INSERT INTO titles(entry_id,title,normalized,title_type) VALUES($p0,'Hollow Bell','hollow bell','manual')", ("$p0", curated));
+                return c.Execute("INSERT INTO preferred_title_overrides(entry_id,title,updated_at) VALUES($p0,'Hollow Bell','2026-01-01')", ("$p0", curated));
+            });
+            var evidence = f.Duplicates.GroupEvidence(curated, reliable);
+            Check.True(!evidence["eligible"]!.GetValue<bool>() && evidence["reason"]!.GetValue<string>() == "manual-titles", evidence.ToJsonString());
+            Check.Throws<InvalidOperationException>(() => f.Duplicates.MergeAutomatic(curated, reliable, new JsonObject { ["reason"] = "test" }, DecisionActor.Automatic));
+            Check.True(f.Canonical(curated) != f.Canonical(reliable), "nothing was merged");
+            f.Duplicates.Review(curated, reliable, "duplicate", Person);
+            Check.Equal(reliable, f.Canonical(curated));
+            Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM titles WHERE title_type='manual' AND entry_id=" + reliable.ToString(CultureInfo.InvariantCulture)));
+            Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM preferred_title_overrides WHERE entry_id=" + reliable.ToString(CultureInfo.InvariantCulture)));
         });
 
         suite.Add("duplicates: unmatch, unbind and redo split records without touching manual ones", () =>
@@ -181,5 +247,10 @@ public static class DuplicateTests
             Check.True(!f.Duplicates.Paused, "resumed");
             Check.Equal(0, f.Duplicates.PauseReasons().Count);
         });
+    }
+
+    private sealed class FailingDecisionLog : IDecisionLog
+    {
+        public long Record(DecisionEvent decision) => throw new InvalidOperationException("decision log unavailable");
     }
 }

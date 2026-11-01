@@ -86,8 +86,13 @@ public sealed partial class CatalogueStructure : IEditionSplitter
 
     /// <summary>IEditionSplitter: a journaled, non-manual split of automatic records (edition and legacy repairs).</summary>
     public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType, CancellationToken cancellationToken)
+        => SplitAutomatic(entryId, records, splitMatchType, _ => true, cancellationToken);
+
+    /// <summary>IEditionSplitter with a precondition re-checked under the source-write gate right before the split.</summary>
+    public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
+        Func<DatabaseSession, bool> stillAllowed, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(records);
+        ArgumentNullException.ThrowIfNull(records); ArgumentNullException.ThrowIfNull(stillAllowed);
         lock (_gate)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -101,7 +106,8 @@ public sealed partial class CatalogueStructure : IEditionSplitter
                 return (Entry: id, Manual: manual);
             });
             if (state.Manual) throw new InvalidOperationException("Manual or locked records are never moved automatically");
-            var created = Split(state.Entry, keys, manual: false, splitMatchType: splitMatchType);
+            // The precondition is re-checked inside the split's own catalogue transaction (a review can not slip in between).
+            var created = Split(state.Entry, keys, manual: false, splitMatchType: splitMatchType, precondition: stillAllowed);
             return (state.Entry, created);
         }
     }

@@ -39,6 +39,9 @@ public interface IReviewActions
     /// <summary>The canonical entry a source record is bound to, or null when the record is not bound.</summary>
     long? RecordEntry(string record);
 
+    /// <summary>How the record is bound now: "manual" (a manual binding, manual match type or lock), "automatic", or null when unbound.</summary>
+    string? RecordBinding(string record);
+
     /// <summary>
     /// Saves (or with null removes) the duplicate review row of a work pair (left &lt; right) only: it never merges or splits.
     /// "not_duplicate" is the Separate decision (review_duplicate(left, right, 'not_duplicate')).
@@ -53,6 +56,10 @@ public interface IReviewActions
 
     /// <summary>Manual match: binds the source record to the entry (manual_match; persistent manual binding).</summary>
     long ManualMatch(long entryId, string record, ReviewContext context);
+
+    /// <summary>Moves the record back to the entry as an automatic (unlocked, unbound) record — the undo of a manual match
+    /// that took an automatically attached record away from its entry.</summary>
+    long RestoreAutomaticMatch(long entryId, string record, ReviewContext context);
 
     /// <summary>Removes the manual binding of the record from the entry; the record leaves the entry (into its own entry).</summary>
     long ClearManualMatch(long entryId, string record, ReviewContext context);

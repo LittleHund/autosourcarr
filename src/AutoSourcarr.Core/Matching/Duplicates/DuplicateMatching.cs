@@ -150,7 +150,26 @@ public sealed partial class DuplicateMatching
         }
     }
 
-    private JsonObject ReviewLocked(long leftId, long rightId, string decision, DecisionActor actor, string why)
+    /// <summary>
+    /// A person's "these are the same work" merge from another review surface (the review workbench): the same protected
+    /// path as a duplicate review "duplicate" — the reviewed records are locked and kept together as one manual group, and
+    /// the merge, its review history, the group and the decision commit in one transaction.
+    /// </summary>
+    public JsonObject MergeReviewed(long targetId, long sourceId, DecisionActor actor, string why, string mergeReason = "manual-duplicate-review")
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        lock (_gate)
+        {
+            var (left, right) = Read(c => (DuplicateEvidence.Canonical(c, targetId), DuplicateEvidence.Canonical(c, sourceId)));
+            if (!Read(c => Exists(c, left) && Exists(c, right))) throw new KeyNotFoundException("Entry not found");
+            if (left == right) throw new InvalidOperationException("The two works are one entry already");
+            var result = ReviewLocked(left, right, "duplicate", actor, why, mergeReason);
+            Invalidate();
+            return result;
+        }
+    }
+
+    private JsonObject ReviewLocked(long leftId, long rightId, string decision, DecisionActor actor, string why, string mergeReason = "manual-duplicate-review")
     {
         var (left, right) = Read(c => Pair(DuplicateEvidence.Canonical(c, leftId), DuplicateEvidence.Canonical(c, rightId)));
         if (left == right) return new JsonObject { ["decision"] = "duplicate", ["canonical_entry_id"] = left };
@@ -171,11 +190,15 @@ public sealed partial class DuplicateMatching
         {
             var records = Read(c => ActiveRecords(c, left).Concat(ActiveRecords(c, right)).Select(row => new NativeSourceRecord(row.Text("source_id"), row.Integer("source_manga_id"))).Distinct().ToArray());
             var before = Read(c => new JsonObject { ["left"] = Brief(c, left), ["right"] = Brief(c, right) });
-            var canonical = _structure.MergeEntries(left, right, "manual-duplicate-review");
-            Write(c => c.Execute("INSERT INTO duplicate_review_history(left_entry_id,right_entry_id,decision,reviewed_at) VALUES($p0,$p1,'duplicate',$p2)", P(left, right, stamp)));
-            var group = _manual.PersistReviewedGroup(canonical, records);
-            _decisions.Record(new DecisionEvent("merge.manual", actor, [canonical, canonical == left ? right : left], records.Select(Key).ToArray(), why, before,
-                new JsonObject { ["canonical_entry_id"] = canonical, ["manual_group_id"] = group["manual_group_id"]?.DeepClone() }));
+            JsonObject group = new();
+            // One transaction: the merge, its review history, the locked manual group and the decision.
+            var canonical = _structure.MergeEntries(left, right, mergeReason, automatic: false, (c, survivor, merged) =>
+            {
+                c.Execute("INSERT INTO duplicate_review_history(left_entry_id,right_entry_id,decision,reviewed_at) VALUES($p0,$p1,'duplicate',$p2)", P(left, right, stamp));
+                group = _manual.PersistReviewedGroup(survivor, records);
+                _decisions.Record(new DecisionEvent("merge.manual", actor, [survivor, merged], records.Select(Key).ToArray(), why, before,
+                    new JsonObject { ["canonical_entry_id"] = survivor, ["manual_group_id"] = group["manual_group_id"]?.DeepClone() }));
+            });
             Invalidate();
             return new JsonObject { ["decision"] = decision, ["canonical_entry_id"] = canonical, ["merged"] = true, ["manual_group_id"] = group["manual_group_id"]?.DeepClone(), ["manual_group_members"] = records.Length };
         }
@@ -267,6 +290,9 @@ public sealed partial class DuplicateMatching
         var separated = Read(c => ActiveRecords(c, right).Any(row => _manual.SeparatedRecord(left, row.Text("source_id"), row.Integer("source_manga_id")))
             || ActiveRecords(c, left).Any(row => _manual.SeparatedRecord(right, row.Text("source_id"), row.Integer("source_manga_id"))));
         if (separated) return new JsonObject { ["eligible"] = false, ["reason"] = "a source record was manually kept separate", ["direct_pairs"] = 0 };
+        // An automatic merge never drops the manual titles of the entry it would merge away.
+        if (Read(c => CatalogueStructure.AutomaticMergeLosesManualTitles(c, left, right)))
+            return new JsonObject { ["eligible"] = false, ["reason"] = "manual-titles", ["blocker"] = "manual-titles", ["direct_pairs"] = 0 };
         List<JsonObject> Members(long id)
         {
             if (memberCache is not null && memberCache.TryGetValue(id, out var cached)) return cached;
@@ -322,31 +348,29 @@ public sealed partial class DuplicateMatching
                 Members: _evidence.MemberSnapshots(c, left).Concat(_evidence.MemberSnapshots(c, right)).ToList(),
                 Left: _evidence.RestoreSnapshot(c, left), Right: _evidence.RestoreSnapshot(c, right),
                 Records: ActiveRecords(c, left).Concat(ActiveRecords(c, right)).Select(row => Key(new(row.Text("source_id"), row.Integer("source_manga_id")))).Distinct(StringComparer.Ordinal).ToArray()));
-            var target = _structure.MergeEntries(left, right, "automatic-safe:" + reason);
-            var duplicate = target == left ? right : left;
             var evidence = (JsonObject)decision.DeepClone(); evidence["recorded_reason"] = reason;
             var stamp = Stamp();
-            var eventId = Write(c =>
+            // One transaction: the merge, its rollback event, the frozen lineage and the decision.
+            var target = _structure.MergeEntries(left, right, "automatic-safe:" + reason, automatic: true, (c, kept, removed) =>
             {
-                var targetSnapshot = target == left ? capture.Left : capture.Right; var duplicateSnapshot = target == left ? capture.Right : capture.Left;
+                var targetSnapshot = kept == left ? capture.Left : capture.Right; var duplicateSnapshot = kept == left ? capture.Right : capture.Left;
                 if (HasEvidenceColumn(c))
                     c.Execute("INSERT INTO automatic_merge_events(target_entry_id,duplicate_entry_id,target_snapshot_json,duplicate_snapshot_json,reason,merged_at,evidence_json) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p6)",
-                        P(target, duplicate, targetSnapshot.ToJsonString(), duplicateSnapshot.ToJsonString(), reason, stamp, evidence.ToJsonString()));
+                        P(kept, removed, targetSnapshot.ToJsonString(), duplicateSnapshot.ToJsonString(), reason, stamp, evidence.ToJsonString()));
                 else
                     c.Execute("INSERT INTO automatic_merge_events(target_entry_id,duplicate_entry_id,target_snapshot_json,duplicate_snapshot_json,reason,merged_at) VALUES($p0,$p1,$p2,$p3,$p4,$p5)",
-                        P(target, duplicate, targetSnapshot.ToJsonString(), duplicateSnapshot.ToJsonString(), reason, stamp));
+                        P(kept, removed, targetSnapshot.ToJsonString(), duplicateSnapshot.ToJsonString(), reason, stamp));
                 // The rollback row's id: the review workbench lists automatic merges by it (decision After["event_id"]).
                 var mergeEvent = Convert.ToInt64(c.Scalar("SELECT last_insert_rowid()"), CultureInfo.InvariantCulture);
-                c.Execute("DELETE FROM automatic_merge_lineage WHERE canonical_entry_id IN ($p0,$p1)", P(target, duplicate));
+                c.Execute("DELETE FROM automatic_merge_lineage WHERE canonical_entry_id IN ($p0,$p1)", P(kept, removed));
                 foreach (var member in capture.Members)
                 {
                     var id = Long(member["entry_id"]);
-                    if (id > 0) c.Execute("INSERT OR REPLACE INTO automatic_merge_lineage(canonical_entry_id,member_entry_id,snapshot_json,merged_at) VALUES($p0,$p1,$p2,$p3)", P(target, id, member.ToJsonString(), stamp));
+                    if (id > 0) c.Execute("INSERT OR REPLACE INTO automatic_merge_lineage(canonical_entry_id,member_entry_id,snapshot_json,merged_at) VALUES($p0,$p1,$p2,$p3)", P(kept, id, member.ToJsonString(), stamp));
                 }
-                return mergeEvent;
+                _decisions.Record(new DecisionEvent("merge.automatic", actor, [kept, removed], capture.Records, reason,
+                    new JsonObject { ["left"] = Brief(capture.Left), ["right"] = Brief(capture.Right) }, new JsonObject { ["canonical_entry_id"] = kept, ["event_id"] = mergeEvent, ["evidence"] = evidence }));
             });
-            _decisions.Record(new DecisionEvent("merge.automatic", actor, [target, duplicate], capture.Records, reason,
-                new JsonObject { ["left"] = Brief(capture.Left), ["right"] = Brief(capture.Right) }, new JsonObject { ["canonical_entry_id"] = target, ["event_id"] = eventId, ["evidence"] = evidence }));
             Invalidate();
             return target;
         }

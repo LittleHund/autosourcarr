@@ -108,6 +108,9 @@ public static partial class MatchScorer
         var (authorState, authorScore) = AuthorEvidence(left.Authors, right.Authors, settings);
         if (authorState == "agree") { agreements++; boost += settings.AuthorWeight; evidence.Add(new("author", "creators agree", authorScore)); }
         else if (authorState == "conflict") blockers.Add(new("author", "different creators", authorScore));
+        // Two adaptations of one novel share its author but not their artists (MAT-2): each side naming a creator the
+        // other lacks is a different work; one side merely naming fewer creators is not.
+        if (authorState != "conflict" && CreatorsDiverge(left.Authors, right.Authors)) blockers.Add(new("author", "different creators: each side names someone the other does not", authorScore));
         if (settings.RequiredAuthor is { } requiredAuthor)
         {
             if (authorState == "missing") blockers.Add(new("author-required", "creator evidence missing"));
@@ -263,6 +266,44 @@ public static partial class MatchScorer
         if (comparable && best < settings.AuthorConflict) return ("conflict", best);
         return ("neutral", best);
     }
+
+    /// <summary>
+    /// True when each side names a Latin-script creator who is nobody on the other side (<see cref="SamePerson"/>).
+    /// Sides naming a non-Latin creator are never judged (no transliteration).
+    /// </summary>
+    public static bool CreatorsDiverge(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        ArgumentNullException.ThrowIfNull(left); ArgumentNullException.ThrowIfNull(right);
+        var a = SplitNames(left); var b = SplitNames(right);
+        if (a.Count == 0 || b.Count == 0) return false;
+        static bool Unmatched(List<string> from, List<string> to) => to.All(LatinName) && from.Any(x => LatinName(x) && !to.Any(y => SamePerson(x, y)));
+        return Unmatched(a, b) && Unmatched(b, a);
+    }
+
+    /// <summary>
+    /// Two creator names that are one person: every name part of the shorter name is a part of the longer one (exact after
+    /// the romanisation fold, or 80% similar for parts of four or more letters, any order), or the names written without
+    /// spaces are 90% similar ("Nekokurage" / "Neko Kurage"). Shared generic parts alone never make one person
+    /// ("Writer Lee" / "Writer Park").
+    /// </summary>
+    public static bool SamePerson(string left, string right)
+    {
+        var a = Parts(left); var b = Parts(right);
+        if (a.Count == 0 || b.Count == 0) return false;
+        if (IndelSimilarity.Ratio(string.Concat(a), string.Concat(b)) >= .9) return true;
+        var (shorter, longer) = a.Count <= b.Count ? (a, b) : (b, a);
+        var free = longer.ToList();
+        foreach (var part in shorter)
+        {
+            var index = free.FindIndex(other => other == part || part.Length >= 4 && other.Length >= 4 && IndelSimilarity.Ratio(part, other) >= .8);
+            if (index < 0) return false;
+            free.RemoveAt(index);
+        }
+        return true;
+    }
+
+    private static List<string> Parts(string name) => TextMatcher.NormalizeTitle(name).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        .Where(token => token != "sensei").Select(Fold).ToList();
 
     private static List<string> SplitNames(IEnumerable<string> names) =>
         names.SelectMany(name => NameSeparator().Split(name)).Select(name => name.Trim()).Where(name => name.Length > 0).ToList();

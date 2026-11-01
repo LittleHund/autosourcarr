@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Catalogue.Records;
 using AutoSourcarr.Core.Catalogue.Sharing;
+using AutoSourcarr.Core.Catalogue.Tags;
 using AutoSourcarr.Core.Catalogue.Titles;
 using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Matching.Scoring;
@@ -23,7 +24,15 @@ public sealed record LocalMatch(long EntryId, double Score, string Reason, Score
 /// automatic attachment never teaches the entry a title that authorizes the next one.
 /// </summary>
 public sealed record TrustedEntryEvidence(long EntryId, IReadOnlyList<string> Titles, IReadOnlyList<string> Descriptions, string Author,
-    IReadOnlyList<string> SourceIds, string ColorMode, string MediaMode, bool SharedUnverified, int PrimaryRecords);
+    IReadOnlyList<string> SourceIds, string ColorMode, string MediaMode, bool SharedUnverified, int PrimaryRecords)
+{
+    /// <summary>Every creator (author and artist) of the trusted records, so MAT-2 can see adaptations with other artists.</summary>
+    public IReadOnlyList<string> Creators { get; init; } = [];
+    /// <summary>Genres of the trusted records (one entry per record), for a matching rule's tags check.</summary>
+    public IReadOnlyList<string> Genres { get; init; } = [];
+    /// <summary>First-publication year of the trusted records (their stored payload), when known.</summary>
+    public int? Year { get; init; }
+}
 
 /// <summary>One search query built from an entry's names (_expanded_search_names); kind says where it came from.</summary>
 public sealed record SearchName(string Query, string Kind, string Language);
@@ -62,6 +71,8 @@ public sealed class EntryIngest
 
     /// <summary>Per-source matching rules (matching_policies); null = no rules.</summary>
     public MatchingPolicyStore? Policies { get; init; }
+    /// <summary>Matching profiles: a rule set from a simple/advanced profile scores with that profile's options; null = the rule's checks only.</summary>
+    public MatchingPresetStore? Presets { get; init; }
     /// <summary>Optional metadata cleaning of a source payload (GalleryEvidenceService.CleanNative); the source label is always stripped.</summary>
     public Func<string, JsonObject, JsonObject>? CleanPayload { get; init; }
     /// <summary>Optional cover cache probe for entry cards ("entry-{id}" keys).</summary>
@@ -261,11 +272,8 @@ public sealed class EntryIngest
             var conflict = HasPrimary(session, entryId, sourceId);
             var options = OptionsFor(sourceId, trusted.SourceIds) ?? (MatchScoringOptions.Default with { Floor = Floor });
             if (conflict) options = options with { Floor = Math.Max(options.Floor, .97) };
-            var decision = CatalogueTitles.StrictAutomaticTitleEvidence(candidateTitles, trusted.Titles, description, trusted.Descriptions,
-                Author(manga), trusted.Author, options,
-                new MatchCandidate { Authors = Authors(manga), Year = MatchCandidate.YearOf(manga["year"]) },
-                new MatchCandidate { ColorHint = Known(trusted.ColorMode, "colored", "monochrome"), MediaHint = Known(trusted.MediaMode, "manga", "webtoon", "novel") });
-            if (PolicyBlocked(sourceId, trusted.SourceIds) is { } blocked)
+            var decision = Evidence(candidateTitles, description, manga, trusted, options);
+            if (PolicyBlocked(session, sourceId, manga, trusted) is { } blocked)
                 decision = decision with { Blockers = [.. decision.Blockers, new MatchEvidence("policy", blocked)] };
             if (!decision.AutomaticMatch) continue;
             var reason = "trusted-anchor-title " + ScoredMatchDecision.Percent(decision.TitleScore) + ": " + decision.MatchedLeft + " ↔ " + decision.MatchedRight;
@@ -333,13 +341,16 @@ public sealed class EntryIngest
         var entry = session.Query("SELECT preferred_title,manual_preferred_title,author,color_mode,media_mode FROM entries WHERE id=$id", ("$id", entryId)).FirstOrDefault();
         var titleRows = session.Query("SELECT title,title_type FROM titles WHERE entry_id=$id AND title_type IN ('manual','main-library') ORDER BY id", ("$id", entryId));
         var records = session.Query("""
-            SELECT id record_id,0 is_variant,source_id,source_manga_id,source_title,description,author,match_type,locked FROM source_matches WHERE entry_id=$id AND active=1
+            SELECT id record_id,0 is_variant,source_id,source_manga_id,source_title,description,author,artist,genre,metadata_json,match_type,locked FROM source_matches WHERE entry_id=$id AND active=1
             UNION ALL
-            SELECT id record_id,1 is_variant,source_id,source_manga_id,source_title,description,author,match_type,locked FROM source_variants WHERE entry_id=$id AND active=1
+            SELECT id record_id,1 is_variant,source_id,source_manga_id,source_title,description,author,artist,genre,metadata_json,match_type,locked FROM source_variants WHERE entry_id=$id AND active=1
             """, ("$id", entryId));
         var unverified = CatalogueIdentity.Unverified(session, entryId);
         var primaries = records.Where(row => !row.Flag("is_variant")).ToArray();
-        var anchor = (primaries.Length > 0 ? primaries : records).OrderBy(row => row.Integer("record_id")).FirstOrDefault();
+        // The ingestion anchor is an automatic choice: an official publisher source (default source ranking) anchors before
+        // older records. Manual and locked records are trusted whatever the anchor, so a manual choice is never overridden.
+        var official = records.Count > 1 ? SourceRanking.Load(session).Where(rank => rank.Official).Select(rank => rank.SourceId).ToHashSet(StringComparer.Ordinal) : [];
+        var anchor = (primaries.Length > 0 ? primaries : records).OrderBy(row => official.Contains(row.Text("source_id")) ? 0 : 1).ThenBy(row => row.Integer("record_id")).FirstOrDefault();
         var trusted = records.Where(row => ReferenceEquals(row, anchor) || row.Flag("locked") || TrustedMatchTypes.Contains(row.Text("match_type").ToLowerInvariant())).ToArray();
 
         var titles = new List<string>(); var normalized = new HashSet<string>(StringComparer.Ordinal); var descriptions = new List<string>();
@@ -386,38 +397,52 @@ public sealed class EntryIngest
         var author = trusted.Select(row => row.Text("author").Trim()).FirstOrDefault(text => text.Length > 0) ?? "";
         if (author.Length == 0 && entry is not null && entry.Flag("manual_preferred_title")) author = entry.Text("author");
         else if (author.Length == 0 && orphan) author = bootstrapAuthor;
+        var creators = trusted.SelectMany(row => new[] { row.Text("author").Trim(), row.Text("artist").Trim() }).Where(name => name.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        if (creators.Count == 0 && author.Trim().Length > 0) creators.Add(author.Trim());
         return new(entryId, titles, descriptions, author, records.Select(row => row.Text("source_id")).Distinct(StringComparer.Ordinal).ToArray(),
-            entry?.Text("color_mode", "unknown") ?? "unknown", entry?.Text("media_mode", "unknown") ?? "unknown", unverified, primaries.Length);
+            entry?.Text("color_mode", "unknown") ?? "unknown", entry?.Text("media_mode", "unknown") ?? "unknown", unverified, primaries.Length)
+        {
+            Creators = creators,
+            Genres = trusted.Select(row => row.Text("genre")).Where(genre => genre.Trim().Length > 0).ToArray(),
+            Year = trusted.Select(row => RecordYear(row.Text("metadata_json"))).FirstOrDefault(year => year is not null),
+        };
     }
 
-    /// <summary>_entry_matching_policy: the stricter scorer options the matching rules of the involved sources ask for, or null.</summary>
+    /// <summary>
+    /// _entry_matching_policy: the stricter scorer options the matching rules of the involved sources ask for, or null.
+    /// A rule set from a simple/advanced profile brings that profile's options (identity evidence, year tolerance, cover
+    /// distances, weights); the automatic floor in use is never lowered.
+    /// </summary>
     private MatchScoringOptions? OptionsFor(string candidateSource, IReadOnlyList<string> entrySources)
     {
         if (Policies is null || Policies.Rules().Count == 0) return null;
-        var options = MatchScoringOptions.Default with { Floor = Floor };
-        var any = false;
-        foreach (var (rule, _) in Rules(candidateSource, entrySources))
-        {
-            if (rule?["checks"] is not JsonObject checks) continue;
-            any = true;
-            if (MatchProfiles.Number(checks["title"]) is { } title) options = options with { Floor = Math.Max(options.Floor, title) };
-            if (MatchProfiles.Number(checks["author"]) is { } author) options = options with { RequiredAuthor = Math.Max(options.RequiredAuthor ?? 0, author) };
-            if (MatchProfiles.Number(checks["summary"]) is { } summary) options = options with { RequiredSummary = Math.Max(options.RequiredSummary ?? 0, summary) };
-        }
-        return any ? options : null;
+        var options = MatchProfiles.Combine(Rules(candidateSource, entrySources).Select(item => item.Rule).OfType<JsonObject>()
+            .Where(rule => rule["checks"] is JsonObject).Select(rule => Presets?.OptionsForRule(rule) ?? MatchProfiles.OptionsFor(rule, null)));
+        return options is null ? null : options with { Floor = Math.Max(options.Floor, Floor) };
     }
 
-    /// <summary>A disabled rule, or a tags check (tag overlap is evaluated by the tag store, not here), refuses automation.</summary>
-    private string? PolicyBlocked(string candidateSource, IReadOnlyList<string> entrySources)
+    /// <summary>A disabled rule refuses automation; a tags check compares the record's genres/tags with the entry's trusted
+    /// records through the tag synonyms (missing tags or an overlap below the threshold refuse).</summary>
+    private string? PolicyBlocked(DatabaseSession session, string candidateSource, JsonObject manga, TrustedEntryEvidence trusted)
     {
         if (Policies is null || Policies.Rules().Count == 0) return null;
-        foreach (var (rule, origin) in Rules(candidateSource, entrySources))
+        double? needed = null; var tagOrigin = "";
+        foreach (var (rule, origin) in Rules(candidateSource, trusted.SourceIds))
         {
             if (rule is null) continue;
             if (!MatchProfiles.Flag(rule["enabled"])) return origin + " is disabled";
-            if (rule["checks"] is JsonObject checks && checks.ContainsKey("tags")) return origin + ": tags evidence missing";
+            if (rule["checks"] is JsonObject checks && checks.ContainsKey("tags"))
+            {
+                var threshold = MatchProfiles.Number(checks["tags"]) ?? 1;
+                if (needed is null || threshold > needed) { needed = threshold; tagOrigin = origin; }
+            }
         }
-        return null;
+        if (needed is not { } required) return null;
+        var map = TagSynonyms.Load(session);
+        var candidate = PolicyTags.Keys(manga["genre"] ?? manga["genres"], manga["tags"], map);
+        var entry = trusted.Genres.Select(genre => (IReadOnlySet<string>)PolicyTags.Keys(JsonValue.Create(genre), null, map)).ToArray();
+        if (PolicyTags.Overlap([candidate], entry) is not { } score) return tagOrigin + ": tags evidence missing";
+        return score + 1e-12 >= required ? null : tagOrigin + ": tags " + ScoredMatchDecision.Percent(score) + " is below " + ScoredMatchDecision.Percent(required);
     }
 
     private IEnumerable<(JsonObject? Rule, string Origin)> Rules(string candidateSource, IReadOnlyList<string> entrySources)
@@ -664,10 +689,39 @@ public sealed class EntryIngest
         if (TextMatcher.IsMatchEvidenceTitle(title, "", primary: true)) titles.Add(title);
         titles.AddRange(WholeTitleAliases.Extract(description, [title]).Where(alias => TextMatcher.IsMatchEvidenceTitle(alias)));
         var options = OptionsFor(sourceId, trusted.SourceIds) ?? (MatchScoringOptions.Default with { Floor = Floor });
-        var decision = CatalogueTitles.StrictAutomaticTitleEvidence(titles, trusted.Titles, description, trusted.Descriptions, Author(manga), trusted.Author, options,
+        var decision = Evidence(titles, description, manga, trusted, options);
+        return PolicyBlocked(session, sourceId, manga, trusted) is { } blocked ? decision with { Blockers = [.. decision.Blockers, new MatchEvidence("policy", blocked)] } : decision;
+    }
+
+    private static int? RecordYear(string metadata)
+    {
+        if (metadata.Length == 0) return null;
+        try { return JsonNode.Parse(metadata) is JsonObject payload ? MatchCandidate.YearOf(payload["year"]) : null; }
+        catch (JsonException) { return null; }
+    }
+
+    private static IReadOnlyList<string> TrustedCreators(TrustedEntryEvidence trusted)
+    {
+        if (trusted.Creators.Count > 0) return trusted.Creators;
+        return trusted.Author.Trim().Length > 0 ? new[] { trusted.Author } : Array.Empty<string>();
+    }
+
+    /// <summary>The scorer on one record against an entry's trusted evidence: every creator (author and artist) of both
+    /// sides, so creator divergence (adaptations with other artists) blocks as in the automatic duplicate gate.</summary>
+    private static ScoredMatchDecision Evidence(IReadOnlyList<string> titles, string description, JsonObject manga, TrustedEntryEvidence trusted, MatchScoringOptions options)
+    {
+        var decision = CatalogueTitles.StrictAutomaticTitleEvidence(titles, trusted.Titles, description, trusted.Descriptions, "", "", options,
             new MatchCandidate { Authors = Authors(manga), Year = MatchCandidate.YearOf(manga["year"]) },
-            new MatchCandidate { ColorHint = Known(trusted.ColorMode, "colored", "monochrome"), MediaHint = Known(trusted.MediaMode, "manga", "webtoon", "novel") });
-        return PolicyBlocked(sourceId, trusted.SourceIds) is { } blocked ? decision with { Blockers = [.. decision.Blockers, new MatchEvidence("policy", blocked)] } : decision;
+            new MatchCandidate
+            {
+                Authors = TrustedCreators(trusted), Year = trusted.Year,
+                ColorHint = Known(trusted.ColorMode, "colored", "monochrome"), MediaHint = Known(trusted.MediaMode, "manga", "webtoon", "novel"),
+            });
+        // The trusted year can refuse (a different year is a different work) but never alone admits a generic title.
+        var generic = decision.MatchedLeft.Length == 0 || !MatchScorer.IsDistinctive(decision.MatchedLeft) || !MatchScorer.IsDistinctive(decision.MatchedRight);
+        if (decision.AutomaticMatch && generic && !decision.Evidence.Any(item => item.Kind is "author" or "cover" or "summary"))
+            decision = decision with { Blockers = [.. decision.Blockers, new MatchEvidence("identity-evidence", "a generic title needs agreeing creator, cover or summary evidence; a shared year alone is not enough")] };
+        return decision;
     }
 
     internal T WithRead<T>(Func<DatabaseSession, T> operation) => Read(operation);
@@ -1061,8 +1115,6 @@ public sealed class EntryIngest
         JsonValue value => value.ToJsonString() is not ("0" or "0.0"),
         _ => true,
     };
-
-    private static string Author(JsonObject manga) => CatalogueTitles.Text(manga["author"]);
 
     private static string[] Authors(JsonObject manga) =>
         new[] { CatalogueTitles.Text(manga["author"]), CatalogueTitles.Text(manga["artist"]) }.Where(name => name.Trim().Length > 0).Distinct(StringComparer.Ordinal).ToArray();

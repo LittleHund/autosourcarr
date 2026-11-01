@@ -45,7 +45,9 @@ internal sealed partial class ApplicationRuntime
             policy?.Invalidate();
             owner._duplicates?.Invalidate();
         });
-        policy = new MatchingPolicyApplication(policies.Rules, MatchingPolicyApplication.CatalogueSources(database));
+        // A tags check compares through the tag synonyms (built-in, user and reviewed equivalences).
+        policy = new MatchingPolicyApplication(policies.Rules, MatchingPolicyApplication.CatalogueSources(database)) { Synonyms = new TagSynonyms(database).Load };
+        var presets = new MatchingPresetStore(database, writeGate, decisions);
 
         var titles = new CatalogueTitles(database, writeGate, decisions) { TitlesChanged = _ => owner._duplicates?.Invalidate() };
         EntryIngest? ingest = null;
@@ -60,14 +62,17 @@ internal sealed partial class ApplicationRuntime
             });
         var manual = new ManualDecisions(database, writeGate, decisions, operations);
         ingest = new EntryIngest(database, writeGate, decisions, new ManualDecisionsView(manual),
-            autoMatchThreshold: () => owner.Settings.AutoMatchThreshold) { Policies = policies };
-        var presets = new MatchingPresetStore(database, writeGate, decisions);
+            autoMatchThreshold: () => owner.Settings.AutoMatchThreshold) { Policies = policies, Presets = presets };
         Func<long, JsonObject> entryView = new Core.Catalogue.CatalogueQueries(database, writeGate, _ => false).Entry;
 
         var evidence = new NativeCatalogueEvidence(catalogue.NativeMetadata, new GalleryEvidenceService(database, writeGate),
             () => owner.Settings.DuplicateAutoMergeMinSummaryChars, () => owner.Settings.ExactThumbnailMatching);
         var duplicates = new DuplicateMatching(database, writeGate, structure, evidence.Snapshot, decisions, () => owner.Settings,
-            gate: new ScoredAutomaticMatchGate(new TextAutomaticMatchGate(() => owner.Settings, structure.AutomaticGalleryEvidence, policy)),
+            gate: new ScoredAutomaticMatchGate(new TextAutomaticMatchGate(() => owner.Settings, structure.AutomaticGalleryEvidence, policy))
+            {
+                // The matching profile behind the involved sources' rules sets the scorer's identity checks.
+                OptionsFor = (left, right) => policy is null ? null : MatchProfiles.Combine(policy.RulesFor(left, right).Select(presets.OptionsForRule)),
+            },
             manual: new ManualDuplicateView(database, manual), chooseMetadata: catalogue.NativeMetadata.ChooseMetadata)
         { Jobs = owner.Jobs };
         owner._duplicates = duplicates;

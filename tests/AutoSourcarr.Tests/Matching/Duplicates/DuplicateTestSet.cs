@@ -9,6 +9,8 @@ using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Matching;
 using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Matching.Duplicates;
+using AutoSourcarr.Core.Matching.Scoring;
+using AutoSourcarr.Core.Matching.Ingest;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Reader;
 using AutoSourcarr.Core.Settings;
@@ -36,8 +38,10 @@ internal sealed class DuplicateFixture : IDisposable
     public CatalogueStructure Structure { get; }
     public MemoryDecisionLog Log { get; } = new();
     public DuplicateMatching Duplicates { get; }
+    public NativeCatalogueEvidence Evidence { get; }
 
-    public DuplicateFixture(IAutomaticMatchGate? gate = null)
+    /// <param name="productionGate">The gate ApplicationRuntime.Matching uses: the scorer (MAT-2/MAT-3) in front of the text gate with gallery evidence.</param>
+    public DuplicateFixture(IAutomaticMatchGate? gate = null, bool productionGate = false)
     {
         Settings = new AutoSourcarrSettings { DataDir = _sandbox.Path };
         Database = new SqliteDatabase(Settings);
@@ -45,8 +49,10 @@ internal sealed class DuplicateFixture : IDisposable
         CatalogueExchange.InitializeSchema(Database);
         var gallery = new GalleryEvidenceService(Database, Gate);
         var evidence = new NativeCatalogueEvidence(Metadata, gallery, () => Settings.DuplicateAutoMergeMinSummaryChars, () => Settings.ExactThumbnailMatching);
+        Evidence = evidence;
         var reader = new ReaderRepository(Database, Gate);
         Structure = new CatalogueStructure(Database, Gate, Tasks, gallery, Metadata.Recompute, reader.ReconcileVisibility, DisplayMetadata.Reparent, evidence.Snapshot, _ => { });
+        if (productionGate) gate ??= new ScoredAutomaticMatchGate(new TextAutomaticMatchGate(() => Settings, Structure.AutomaticGalleryEvidence));
         Duplicates = new DuplicateMatching(Database, Gate, Structure, evidence.Snapshot, Log, () => Settings, gate, chooseMetadata: Metadata.ChooseMetadata);
     }
 
@@ -100,10 +106,12 @@ internal sealed class DuplicateFixture : IDisposable
 }
 
 /// <summary>
-/// DONE-WHEN harness for automatic merging: ingests both sides of every pair of a pair file as catalogue entries,
-/// runs the automatic duplicate sweep end to end, and checks that no "same": false pair was merged; recall on the
-/// "same": true pairs is reported. Pair file format (shared with the phase 8A PairScoringTool):
-/// {"pairs":[{"a":{"titles":[...],"authors":[...],"year":2001},"b":{...},"same":true}]}.
+/// DONE-WHEN harness for automatic matching, over both automatic paths: (1) the automatic duplicate sweep with the
+/// production gate (ScoredAutomaticMatchGate in front of TextAutomaticMatchGate, as ApplicationRuntime.Matching builds
+/// it) over both sides of every pair stored as catalogue entries, and (2) match-on-ingest: side a, then side b, are
+/// ingested through EntryIngest from two sources; b attaching to a's entry is a merge. No "same": false pair may merge
+/// on either path; recall on the "same": true pairs is reported for both. Pair file format (shared with the phase 8A
+/// PairScoringTool): {"pairs":[{"a":{"titles":[...],"authors":[...],"year":2001},"b":{...},"same":true}]}.
 /// </summary>
 public static class DuplicateTestSet
 {
@@ -113,6 +121,8 @@ public static class DuplicateTestSet
     public sealed record Result(int Pairs, int SamePairs, int Merged, int MergedSame, IReadOnlyList<string> WrongMerges, IReadOnlyList<string> Missed)
     {
         public double Recall => SamePairs == 0 ? 1 : (double)MergedSame / SamePairs;
+        /// <summary>The match-on-ingest path over the same pairs (null when not evaluated).</summary>
+        public Result? Ingest { get; init; }
     }
 
     /// <summary>Program.cs hook: <c>--duplicate-test-set &lt;file&gt;</c>. Returns 0 when no different-work pair was merged.</summary>
@@ -127,18 +137,21 @@ public static class DuplicateTestSet
             return 2;
         }
         output.WriteLine(Report(result));
-        return result.WrongMerges.Count == 0 ? 0 : 1;
+        return result.WrongMerges.Count == 0 && (result.Ingest?.WrongMerges.Count ?? 0) == 0 ? 0 : 1;
     }
 
     public static string Report(Result result)
     {
         ArgumentNullException.ThrowIfNull(result);
-        var lines = new List<string>
+        var lines = new List<string>();
+        void Add(string path, Result part)
         {
-            string.Create(CultureInfo.InvariantCulture, $"pairs {result.Pairs} · same-work pairs {result.SamePairs} · merged {result.Merged} · wrong merges {result.WrongMerges.Count} · recall {result.Recall:P1} ({result.MergedSame}/{result.SamePairs})"),
-        };
-        lines.AddRange(result.WrongMerges.Select(item => "WRONG MERGE " + item));
-        lines.AddRange(result.Missed.Select(item => "not merged  " + item));
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"{path}: pairs {part.Pairs} · same-work pairs {part.SamePairs} · merged {part.Merged} · wrong merges {part.WrongMerges.Count} · recall {part.Recall:P1} ({part.MergedSame}/{part.SamePairs})"));
+            lines.AddRange(part.WrongMerges.Select(item => path + " WRONG MERGE " + item));
+            lines.AddRange(part.Missed.Select(item => path + " not merged  " + item));
+        }
+        Add("automatic sweep (production gate)", result);
+        if (result.Ingest is { } ingest) Add("match-on-ingest", ingest);
         return string.Join(Environment.NewLine, lines);
     }
 
@@ -146,7 +159,7 @@ public static class DuplicateTestSet
     {
         using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { MaxDepth = 16, CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
         if (!document.RootElement.TryGetProperty("pairs", out var pairs) || pairs.ValueKind != JsonValueKind.Array) throw new InvalidDataException("The pair file needs a \"pairs\" array");
-        using var fixture = new DuplicateFixture();
+        using var fixture = new DuplicateFixture(productionGate: true);
         var ingested = new List<(long A, long B, bool Same, string Label)>();
         var index = 0;
         foreach (var pair in pairs.EnumerateArray())
@@ -166,7 +179,62 @@ public static class DuplicateTestSet
             if (same && together) mergedSame++;
             if (same && !together) missed.Add(label);
         }
-        return new Result(ingested.Count, ingested.Count(item => item.Same), merged, mergedSame, wrong, missed);
+        return new Result(ingested.Count, ingested.Count(item => item.Same), merged, mergedSame, wrong, missed) { Ingest = EvaluateIngest(pairs) };
+    }
+
+    /// <summary>Match-on-ingest: side a from one source, then side b from another, through EntryIngest (one catalogue).</summary>
+    private static Result EvaluateIngest(JsonElement pairs)
+    {
+        using var sandbox = new Sandbox();
+        using var database = new SqliteDatabase(new AutoSourcarrSettings { DataDir = sandbox.Path });
+        new SchemaMigrator(database).Initialize();
+        var ingest = new EntryIngest(database, new object(), new MemoryDecisionLog());
+        var wrong = new List<string>(); var missed = new List<string>(); var merged = 0; var mergedSame = 0; var total = 0; var same = 0;
+        var index = 0;
+        foreach (var pair in pairs.EnumerateArray())
+        {
+            index++;
+            var isSame = pair.TryGetProperty("same", out var flag) && flag.ValueKind == JsonValueKind.True;
+            var (a, aLabel) = Payload(pair, "a", index); var (b, bLabel) = Payload(pair, "b", index);
+            var label = string.Create(CultureInfo.InvariantCulture, $"#{index} {aLabel} | {bLabel}");
+            var first = ingest.IngestManga(Source(database, index, "a"), a).EntryId;
+            var second = ingest.IngestManga(Source(database, index, "b"), b).EntryId;
+            var together = first is not null && first == second;
+            total++; if (isSame) same++;
+            if (together) merged++;
+            if (together && !isSame) wrong.Add(label);
+            if (isSame && together) mergedSame++;
+            if (isSame && !together) missed.Add(label);
+        }
+        return new Result(total, same, merged, mergedSame, wrong, missed);
+    }
+
+    private static string Source(SqliteDatabase database, int index, string side)
+    {
+        var id = "ingest-" + index.ToString(CultureInfo.InvariantCulture) + "-" + side;
+        database.Write(DatabaseFile.Catalog, c => c.Execute("INSERT OR IGNORE INTO source_config(source_id,name,last_seen) VALUES($p0,$p1,'2026-10-21')", ("$p0", id), ("$p1", "Source " + id)));
+        return id;
+    }
+
+    /// <summary>One side as a source record: the first title is the record title, the others its "Alternative Titles", the
+    /// first creator its author and the rest its artist.</summary>
+    private static (JsonObject Manga, string Label) Payload(JsonElement pair, string name, int index)
+    {
+        if (!pair.TryGetProperty(name, out var side) || side.ValueKind != JsonValueKind.Object) throw new InvalidDataException("Pair " + index.ToString(CultureInfo.InvariantCulture) + " needs \"" + name + "\"");
+        static string[] Strings(JsonElement value, string key) => value.TryGetProperty(key, out var array) && array.ValueKind == JsonValueKind.Array
+            ? array.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString()!.Trim()).Where(item => item.Length != 0).ToArray() : [];
+        var titles = Strings(side, "titles"); var authors = Strings(side, "authors");
+        if (titles.Length == 0) throw new InvalidDataException("Pair " + index.ToString(CultureInfo.InvariantCulture) + " side " + name + " has no titles");
+        var description = side.TryGetProperty("description", out var d) && d.ValueKind == JsonValueKind.String ? d.GetString() ?? "" : "";
+        if (titles.Length > 1) description = (description + "\n\nAlternative Titles:\n" + string.Join("\n", titles.Skip(1))).Trim();
+        var manga = new JsonObject
+        {
+            ["id"] = index * 2 + (name == "a" ? 0 : 1), ["title"] = titles[0], ["url"] = "/manga/" + index.ToString(CultureInfo.InvariantCulture) + name,
+            ["author"] = authors.FirstOrDefault() ?? "", ["artist"] = string.Join(", ", authors.Skip(1)), ["description"] = description,
+            ["thumbnailUrl"] = "", ["initialized"] = false,
+        };
+        if (side.TryGetProperty("year", out var y) && y.ValueKind == JsonValueKind.Number && y.TryGetInt64(out var year)) manga["year"] = year;
+        return (manga, titles[0]);
     }
 
     private static (long Id, string Label) Side(DuplicateFixture fixture, JsonElement pair, string name, int index)

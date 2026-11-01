@@ -81,6 +81,21 @@ public sealed class ReviewActions : IReviewActions
         });
     }
 
+    public string? RecordBinding(string record)
+    {
+        var key = Parse(record);
+        return _database.Read(DatabaseFile.Catalog, c =>
+        {
+            var row = c.Query("""
+                SELECT match_type,locked FROM source_matches WHERE source_id=$source AND source_manga_id=$manga AND active=1
+                UNION ALL SELECT match_type,locked FROM source_variants WHERE source_id=$source AND source_manga_id=$manga AND active=1
+                """, ("$source", key.SourceId), ("$manga", key.MangaId)).FirstOrDefault();
+            if (row is null) return null;
+            var bound = c.Scalar("SELECT 1 FROM manual_match_bindings WHERE source_id=$source AND source_manga_id=$manga", ("$source", key.SourceId), ("$manga", key.MangaId)) is not null;
+            return bound || row.Flag("locked") || row.Text("match_type").Equals("manual", StringComparison.OrdinalIgnoreCase) ? "manual" : "automatic";
+        });
+    }
+
     private static (long Left, long Right) Ordered(long left, long right) => left < right ? (left, right) : (right, left);
 
     private long Canonical(long entryId) => _database.Read(DatabaseFile.Catalog, c => PortableIdentityResolver.Canonical(c, entryId));
@@ -142,19 +157,12 @@ public sealed class ReviewActions : IReviewActions
         ArgumentNullException.ThrowIfNull(context);
         var into = Current(target); var from = Current(source);
         if (into.CanonicalId == from.CanonicalId) throw new ReviewException(409, "The two works are one entry already");
-        var survivor = Refused(() => _structure.MergeEntries(into.CanonicalId, from.CanonicalId, "manual-review-workbench"));
-        var id = _log.Record(new DecisionEvent("merge.manual", context.Actor, [survivor, survivor == into.CanonicalId ? from.CanonicalId : into.CanonicalId],
-            into.Records.Concat(from.Records).Distinct(StringComparer.Ordinal).ToArray(), context.Reason,
-            new JsonObject { ["target"] = Brief(into), ["source"] = Brief(from) },
-            new JsonObject { ["canonical_entry_id"] = survivor }, context.UndoOf));
-        _duplicates.Invalidate();
-        return id;
+        // A reviewed merge is a person's "same work" decision: the same protected path as a duplicate review "duplicate"
+        // (records locked and kept together as one manual group; merge, group and decision in one transaction).
+        using var scope = _log.Begin(context.Actor, context.Reason, context.UndoOf);
+        _ = Refused(() => _duplicates.MergeReviewed(into.CanonicalId, from.CanonicalId, context.Actor, context.Reason, "manual-review-workbench"));
+        return Recorded(scope, "The merge");
     }
-
-    private static JsonObject Brief(ReviewEntrySnapshot entry) => new()
-    {
-        ["id"] = entry.CanonicalId, ["preferred_title"] = entry.Title, ["records"] = ReviewJson.Texts(entry.Records),
-    };
 
     public ReviewSplitResult Split(long entryId, IReadOnlyList<string> records, ReviewContext context)
     {
@@ -180,7 +188,39 @@ public sealed class ReviewActions : IReviewActions
         ArgumentNullException.ThrowIfNull(context);
         var entry = Current(entryId);
         var key = Parse(record);
-        // A record already in the catalogue commits locally from its stored row; an unknown one is fetched from its source.
+        using var scope = _log.Begin(context.Actor, context.Reason, context.UndoOf);
+        Bind(entry.CanonicalId, key, context.Actor);
+        _duplicates.Invalidate();
+        return Recorded(scope, "The manual match");
+    }
+
+    public long RestoreAutomaticMatch(long entryId, string record, ReviewContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        var entry = Current(entryId);
+        var key = Parse(record);
+        using var scope = _log.Begin(context.Actor, context.Reason, context.UndoOf);
+        // Moved back like a manual match, then demoted: no manual binding, unlocked, automatic.
+        Bind(entry.CanonicalId, key, context.Actor);
+        lock (_gate)
+        {
+            _ = _manual.ForgetManualBinding(key.SourceId, key.MangaId);
+            var stamp = DecisionStamp.Now(_clock);
+            _database.Write(DatabaseFile.Catalog, c =>
+            {
+                foreach (var table in new[] { "source_matches", "source_variants" })
+                    c.Execute("UPDATE " + table + " SET locked=0,match_type='auto',last_checked=$at WHERE entry_id=$entry AND source_id=$source AND source_manga_id=$manga AND active=1",
+                        ("$at", stamp), ("$entry", entry.CanonicalId), ("$source", key.SourceId), ("$manga", key.MangaId));
+                return 0;
+            });
+        }
+        _duplicates.Invalidate();
+        return Recorded(scope, "The restored automatic match");
+    }
+
+    /// <summary>Binds the record to the entry through ManualDecisions (locally from its stored row when it is in the catalogue).</summary>
+    private void Bind(long entryId, NativeSourceRecord key, DecisionActor actor)
+    {
         JsonObject? candidate = null;
         if (_manual.ManualRecordRow(key.SourceId, key.MangaId) is { } row)
         {
@@ -188,11 +228,8 @@ public sealed class ReviewActions : IReviewActions
             candidate["id"] = key.MangaId;
             if (candidate["title"] is null) candidate["title"] = row["source_title"]?.DeepClone();
         }
-        using var scope = _log.Begin(context.Actor, context.Reason, context.UndoOf);
-        _ = Refused(() => _manual.ManualMatchAsync(entry.CanonicalId, key.SourceId, key.MangaId, "add", candidate, deferHydration: candidate is not null, context.Actor)
+        _ = Refused(() => _manual.ManualMatchAsync(entryId, key.SourceId, key.MangaId, "add", candidate, deferHydration: candidate is not null, actor)
             .GetAwaiter().GetResult());
-        _duplicates.Invalidate();
-        return Recorded(scope, "The manual match");
     }
 
     public long ClearManualMatch(long entryId, string record, ReviewContext context)
@@ -268,8 +305,9 @@ public sealed class DecisionLogHistory(SqliteDatabase database, IDecisionLogRead
 
     public RecordedDecision? Find(long id) => log.Get(id) is { } entry ? Map(entry) : null;
 
+    /// <summary>Only the completed batch undo marks a batch undone; the item decisions of a failed (rolled back) undo name it too.</summary>
     public long? UndoneBy(long id) => database.Read(DatabaseFile.Catalog, c =>
-        c.Query("SELECT id FROM decision_log WHERE undo_of=$undo ORDER BY id DESC LIMIT 1", ("$undo", id.ToString(CultureInfo.InvariantCulture)))
+        c.Query("SELECT id FROM decision_log WHERE undo_of=$undo AND kind=$kind ORDER BY id DESC LIMIT 1", ("$undo", id.ToString(CultureInfo.InvariantCulture)), ("$kind", ReviewWorkbench.UndoKind))
             .FirstOrDefault() is { } row ? row.Integer("id") : (long?)null);
 
     public IReadOnlyList<RecordedDecision> Recent(long? entryId, string? kind, int limit)

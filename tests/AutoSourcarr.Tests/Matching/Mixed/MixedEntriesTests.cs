@@ -84,6 +84,33 @@ public static class MixedEntriesTests
             Check.True(mixed.AutoSplit(1, "color") is null, "a blocked proposal is not applied");
         });
 
+        suite.Add("mixed entries: a kept-together review stops automatic splits, also when it arrives while the split waits for the gate", () =>
+        {
+            using var f = new Fixture();
+            f.Entry(1, "Shared Title");
+            f.Record("source_matches", 1, "20", 201, "Shared Title"); f.Record("source_variants", 1, "21", 202, "Shared Title");
+            f.Profile("20", 201, "monochrome", .95); f.Profile("21", 202, "colored", .99);
+            var splitter = new FakeSplitter(f.Database);
+            var mixed = new MixedEntries(f.Database, new EditionProfiles(f.Database, () => new EditionOptions()), f.Log, splitter);
+            var fingerprint = mixed.Detail(1)["fingerprint"]!.GetValue<string>();
+            Check.Equal(0L, f.Count("SELECT COUNT(*) FROM mixed_entry_findings")); // viewing the detail writes nothing
+            // A review that arrives after the proposal is seen under the write gate: nothing is split.
+            splitter.BeforeCheck = () => mixed.Review(1, fingerprint, "keep", DecisionActor.User("owner"));
+            Check.True(mixed.AutoSplit(1, "color") is null, "a review arriving before the split refuses it");
+            Check.Equal(0, splitter.Splits);
+            splitter.BeforeCheck = null;
+            // The scaled check with automatic splits skips the reviewed entry, and so does a direct automatic split.
+            mixed.StartCheck(restart: true, autoSplit: true);
+            var batch = mixed.CheckBatch();
+            Check.Equal(0, batch.Splits);
+            Check.True(mixed.AutoSplit(1, "color") is null, "a kept-together entry is never split automatically");
+            Check.Equal(0, splitter.Splits);
+            // Once the review is cleared the same split goes ahead.
+            mixed.Review(1, fingerprint, "clear", DecisionActor.User("owner"));
+            Check.True(mixed.AutoSplit(1, "color") is not null, "without the review the split is applied");
+            Check.Equal(1, splitter.Splits);
+        });
+
         suite.Add("mixed entries: a review applies only to the exact evidence and is logged with its actor", () =>
         {
             using var f = new Fixture();
@@ -162,6 +189,23 @@ public static class MixedEntriesTests
             Task.FromResult<IReadOnlyList<PageRaster>>(Pages.TryGetValue((sourceId, mangaId), out var found) ? found.Take(pages).ToArray() : []);
     }
 
+    /// <summary>A splitter that evaluates the precondition like CatalogueStructure (under its gate) and only counts splits.</summary>
+    private sealed class FakeSplitter(SqliteDatabase database) : IEditionSplitter
+    {
+        public int Splits { get; private set; }
+        public Action? BeforeCheck { get; set; }
+        public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType, CancellationToken cancellationToken) =>
+            SplitAutomatic(entryId, records, splitMatchType, _ => true, cancellationToken);
+        public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
+            Func<DatabaseSession, bool> stillAllowed, CancellationToken cancellationToken)
+        {
+            BeforeCheck?.Invoke();
+            if (!database.Read(DatabaseFile.Catalog, stillAllowed)) throw new InvalidOperationException("The automatic split is no longer allowed");
+            Splits++;
+            return (entryId, 0);
+        }
+    }
+
     internal sealed class RecordingLog : IDecisionLog
     {
         public List<DecisionEvent> Events { get; } = [];
@@ -181,6 +225,7 @@ public static class MixedEntriesTests
         public MixedEntries Mixed() => new(Database, new EditionProfiles(Database, () => new EditionOptions()), Log);
         public void Execute(string sql) => Database.Write(DatabaseFile.Catalog, c => c.Execute(sql));
         public string? Scalar(string sql) => Database.Read(DatabaseFile.Catalog, c => c.Scalar(sql) as string);
+        public long Count(string sql) => Convert.ToInt64(Database.Read(DatabaseFile.Catalog, c => c.Scalar(sql)), CultureInfo.InvariantCulture);
         public void Entry(long id, string title) => Database.Write(DatabaseFile.Catalog, c =>
             c.Execute("INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES($id,$title,'t','t')", ("$id", id), ("$title", title)));
         public void Record(string table, long entry, string source, long manga, string title, string genre = "") => Database.Write(DatabaseFile.Catalog, c =>

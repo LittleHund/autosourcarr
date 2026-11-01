@@ -1,8 +1,10 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Catalogue.Sharing;
+using AutoSourcarr.Core.Catalogue.Tags;
 using AutoSourcarr.Core.Matching.Duplicates;
 using AutoSourcarr.Core.Matching.Review;
+using AutoSourcarr.Core.Matching.Scoring;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Sources.Configuration;
 
@@ -16,14 +18,13 @@ namespace AutoSourcarr.Core.Matching.Wiring;
 /// every rule write) unless <see cref="Override"/> substitutes a draft map (the policy simulator).
 /// </summary>
 /// <remarks>
-/// Tags are compared as lower-cased "namespace:name" keys of the payloads' genre and tags (language, category, type and
-/// uploader namespaces excluded); 0.4.5 additionally folded reviewed tag equivalences (tag_store.canonical_keys).
+/// Tags are compared as canonical keys of the payloads' genre and tags through the tag synonyms (<see cref="Synonyms"/>:
+/// built-in, user and reviewed equivalences; language, category, type and uploader namespaces excluded).
 /// </remarks>
 public sealed class MatchingPolicyApplication : IDuplicateMatchingPolicy
 {
     private static readonly AsyncLocal<IReadOnlyDictionary<MatchingRuleKey, JsonObject?>?> Draft = new();
     private static readonly string[] Checks = ["title", "summary", "author", "tags"];
-    private static readonly HashSet<string> IgnoredTagNamespaces = new(StringComparer.Ordinal) { "language", "category", "type", "uploader" };
     private readonly Func<IReadOnlyDictionary<MatchingRuleKey, JsonObject?>> _rules;
     private readonly Func<IReadOnlyDictionary<string, JsonObject>> _sources;
     private readonly TimeProvider _clock;
@@ -45,6 +46,26 @@ public sealed class MatchingPolicyApplication : IDuplicateMatchingPolicy
         return () => database.Read(DatabaseFile.Catalog, session => SourceConfigurationStore.Sources(session))
             .GroupBy(source => SourceConfigurationJson.Text(source["source_id"]), StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+    }
+
+    /// <summary>The tag synonym map a tags check compares through (TagSynonyms.Load); null = the built-in synonyms only.</summary>
+    public Func<TagSynonymMap>? Synonyms { get; init; }
+
+    /// <summary>The effective rules (own or group, saved or the simulator's draft) that apply to the source pairs of two snapshots.</summary>
+    public IReadOnlyList<JsonObject> RulesFor(JsonObject left, JsonObject right)
+    {
+        ArgumentNullException.ThrowIfNull(left); ArgumentNullException.ThrowIfNull(right);
+        var (values, sources) = Current();
+        if (values.Count == 0) return [];
+        var rules = new List<JsonObject>();
+        foreach (var l in SourceIds(left, Payloads(left)))
+            foreach (var r in SourceIds(right, Payloads(right)))
+            {
+                var direction = l.Length != 0 && l == r ? "internal" : "external";
+                foreach (var sid in new[] { l, r }.Distinct(StringComparer.Ordinal))
+                    if (MatchingRuleConfiguration.Effective(values, sources, sid, direction).Rule is { } rule) rules.Add(rule);
+            }
+        return rules;
     }
 
     /// <summary>Drops the cached rules (called after every rule write).</summary>
@@ -114,7 +135,7 @@ public sealed class MatchingPolicyApplication : IDuplicateMatchingPolicy
             {
                 var label = direction + " matching · " + origin;
                 if (!Flag(rule["enabled"])) return Blocked(label + " is disabled");
-                scores ??= Metrics(lp, rp, pair.Where(item => Flag(item.Rule["enabled"]))
+                scores ??= Metrics(lp, rp, Synonyms, pair.Where(item => Flag(item.Rule["enabled"]))
                     .SelectMany(item => (item.Rule["checks"] as JsonObject ?? new JsonObject()).Select(check => check.Key)).ToHashSet(StringComparer.Ordinal));
                 foreach (var (key, node) in rule["checks"] as JsonObject ?? new JsonObject())
                 {
@@ -135,7 +156,7 @@ public sealed class MatchingPolicyApplication : IDuplicateMatchingPolicy
         return allowed;
     }
 
-    private static Dictionary<string, double?> Metrics(IReadOnlyList<JsonObject> left, IReadOnlyList<JsonObject> right, IReadOnlySet<string> required)
+    private static Dictionary<string, double?> Metrics(IReadOnlyList<JsonObject> left, IReadOnlyList<JsonObject> right, Func<TagSynonymMap>? synonyms, IReadOnlySet<string> required)
     {
         var result = Checks.ToDictionary(key => key, _ => (double?)null, StringComparer.Ordinal);
         if (left.Count != 0 && right.Count != 0)
@@ -161,9 +182,10 @@ public sealed class MatchingPolicyApplication : IDuplicateMatchingPolicy
         }
         if (required.Contains("tags"))
         {
-            var lt = left.Select(TagKeys).ToArray(); var rt = right.Select(TagKeys).ToArray();
-            var ratios = lt.SelectMany(a => rt.Where(b => a.Count != 0 && b.Count != 0).Select(b => (double)a.Intersect(b).Count() / a.Union(b).Count())).ToArray();
-            result["tags"] = ratios.Length != 0 ? ratios.Max() : null;
+            // Tags compare through the tag synonyms (built-in, user and reviewed equivalences), like the tag store.
+            var map = synonyms?.Invoke() ?? TagSynonymMap.Empty;
+            IReadOnlySet<string> Keys(JsonObject payload) => PolicyTags.Keys(payload["genre"], payload["tags"], map);
+            result["tags"] = PolicyTags.Overlap(left.Select(Keys).ToArray(), right.Select(Keys).ToArray());
         }
         return result;
     }
@@ -179,29 +201,6 @@ public sealed class MatchingPolicyApplication : IDuplicateMatchingPolicy
             values.AddRange(TextMatcher.ExtractAltTitles(Text(payload["description"])));
         }
         return values.Where(value => value.Length != 0).ToList();
-    }
-
-    private static HashSet<string> TagKeys(JsonObject payload)
-    {
-        var keys = new HashSet<string>(StringComparer.Ordinal);
-        void Add(string space, string name)
-        {
-            space = space.Trim().ToLowerInvariant(); name = name.Trim().ToLowerInvariant();
-            if (name.Length == 0 || IgnoredTagNamespaces.Contains(space)) return;
-            keys.Add(space + ":" + name);
-        }
-        switch (payload["genre"])
-        {
-            case JsonArray genres: foreach (var item in genres) Add("", Text(item)); break;
-            case JsonValue text: foreach (var item in Text(text).Split(',')) Add("", item); break;
-        }
-        if (payload["tags"] is JsonArray tags)
-            foreach (var tag in tags)
-            {
-                if (tag is JsonObject named) Add(Text(named["namespace"]), Text(named["name"]));
-                else Add("", Text(tag));
-            }
-        return keys;
     }
 
     private static JsonObject[] Payloads(JsonObject snapshot) => snapshot["policy_payloads"] is JsonArray array ? array.OfType<JsonObject>().ToArray() : [];

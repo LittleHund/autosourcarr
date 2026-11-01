@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Catalogue.Structure;
+using AutoSourcarr.Core.Persistence;
 
 namespace AutoSourcarr.Core.Matching.Duplicates;
 
@@ -53,6 +54,13 @@ public interface IDuplicateStructure
 {
     /// <summary>Merges two entries (the more reliable survives), finishes chapter recovery; returns the surviving id.</summary>
     long MergeEntries(long left, long right, string reason);
+    /// <summary>
+    /// Merges like <see cref="MergeEntries(long, long, string)"/> and runs <paramref name="commit"/> (session, survivor,
+    /// merged-away entry) inside the merge's own catalogue transaction, so the caller's rollback event, lineage, manual
+    /// group and decision commit or fail together with the merge. <paramref name="automatic"/> refuses (InvalidOperationException
+    /// "manual-titles") to merge away an entry with manual titles.
+    /// </summary>
+    long MergeEntries(long left, long right, string reason, bool automatic, Action<DatabaseSession, long, long> commit);
     /// <summary>Moves the records to one new entry; <paramref name="manual"/> also persists the user's split decision.</summary>
     long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, bool manual, string matchType);
     /// <summary>Retries committed merges/splits whose chapter work is still pending.</summary>

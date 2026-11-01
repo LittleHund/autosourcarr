@@ -236,12 +236,14 @@ internal static class ManualDecisionsV1Endpoints
         group.MapDelete("/entries/{entryId}/manual-titles", (Func<HttpContext, IResult>)(context =>
             {
                 if (manual is null) return Unavailable();
+                if (!MaintenanceV1Endpoints.OwnerOrAdmin(context)) return Problem(403, "Only the owner or an admin account can clear manual titles.");
                 if (!TryRouteLong(context, "entryId", out var entryId)) return Problem(400, "Invalid entry id.");
                 return Guard(() => Answer(WithEntry(manual.Manual.ClearManualTitles(entryId, Actor(context)), "entry_id", nest: false)));
             }))
             .WithName("clearManualTitles")
-            .WithSummary("Remove the manual main title and manual alternate titles of an entry; its main title returns to the most-used title of its records.")
+            .WithSummary("Remove the manual main title and manual alternate titles of an entry (owner or admin); its main title returns to the most-used title of its records.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
+            .Produces<ProblemResponse>(StatusCodes.Status403Forbidden)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound);
 
         IResult Decisions(DecisionLogQuery query) => manual is null ? Unavailable() : Answer(manual.Log.Read(query).ToJson());
