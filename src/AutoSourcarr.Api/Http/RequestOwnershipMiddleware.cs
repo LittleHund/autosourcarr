@@ -2,6 +2,7 @@ using AutoSourcarr.Core.Concurrency;
 using AutoSourcarr.Core.Privacy;
 using AutoSourcarr.Core.Jobs;
 using Microsoft.AspNetCore.Http;
+using AutoSourcarr.Core.Diagnostics;
 
 namespace AutoSourcarr.Api.Http;
 
@@ -15,7 +16,9 @@ public sealed class CatalogAdmissionMiddleware(RequestDelegate next, RequestAdmi
         try { lease = admission.Enter(); }
         catch (RequestAdmissionPausedException error)
         { context.Response.Headers.RetryAfter = "5"; await ApiJson.ProblemAsync(context, 503, error.Message).ConfigureAwait(false); return; }
-        using (lease) await next(context).ConfigureAwait(false);
+        using (lease)
+        using (RuntimeMetrics.Shared.Phase("admission"))
+            await next(context).ConfigureAwait(false);
     }
 }
 

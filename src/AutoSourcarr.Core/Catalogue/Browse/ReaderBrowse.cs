@@ -118,8 +118,23 @@ public sealed class ReaderBrowse(SqliteDatabase database, object sourceWriteGate
         };
     }
 
+    private const string EntryIdToken = "__autosourcarr_entry_id__:";
+
     private JsonObject Search(ReaderBrowseRequest request, string query, int size)
     {
+        // The reader source's private exact-entry lookup (0.4.5 federated): a known work is answered from the catalogue in
+        // one local read, so adding it to the main library never fans out into title searches on the sources.
+        if (query.StartsWith(EntryIdToken, StringComparison.OrdinalIgnoreCase)
+            && long.TryParse(query.AsSpan(EntryIdToken.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var wanted) && wanted > 0)
+        {
+            var found = request.Page == 1 ? Queries.Summaries(Canonical([wanted])).ToArray() : [];
+            return new JsonObject
+            {
+                ["items"] = new JsonArray(found.Select(item => (JsonNode)item).ToArray()), ["page_size"] = size, ["has_next_page"] = false,
+                ["source_errors"] = new JsonArray(), ["cache_hit"] = true, ["persistent_cache"] = false, ["catalog_fallback"] = true,
+                ["exact_local_match"] = found.Length > 0, ["internal_entry_lookup"] = true,
+            };
+        }
         var ids = Queries.SearchEntryIds(query, 200, null, request.SourceIds is { Count: > 0 } ? request.SourceIds : null);
         var titles = database.Read(DatabaseFile.Catalog, session => ids.ToDictionary(id => id, id => session.Query(
             "SELECT title FROM titles WHERE entry_id=$id UNION SELECT preferred_title FROM entries WHERE id=$id", ("$id", id)).Select(row => row.Text("title")).ToArray()));

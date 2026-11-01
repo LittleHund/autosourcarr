@@ -644,10 +644,13 @@ public sealed class SourceOrphans
                 var expected = Text(row["sha256"]);
                 if (expected.Length > 0 && digest != expected) throw new InvalidDataException("Archived download does not match its original release SHA256");
                 ValidatePackage(data, package);
+                // Hard rule 8: the same checks as an APK upload; the admin's install click is the confirmation.
+                var inspection = InspectArchive(data, package, suffix);
                 AtomicSourceFiles.Write(Path.Combine(_root, "archives", digest, "original" + suffix), data, MaximumPackage, immutable: true);
                 // Retain recovery provenance before mutation; an uncertain response is never replayed automatically.
                 lock (_gate)
                 {
+                    if (inspection is not null) _operation["inspection"] = InspectionJson(inspection);
                     _operation["message"] = "Installing original archive; functionality is not yet verified";
                     if (_records[package] is JsonObject record) { record["download_sha256"] = digest; record["archive_saved"] = true; }
                     Save();
@@ -900,6 +903,31 @@ public sealed class SourceOrphans
         if (!payloads.Keys.Any(name => name.EndsWith(".class", StringComparison.Ordinal) || name.EndsWith(".dex", StringComparison.Ordinal)))
             throw new InvalidDataException("Archive has no executable extension code");
     }
+
+    /// <summary>
+    /// Runs the APK upload checks (archive structure, manifest, entry point, permissions, domains; native code refused)
+    /// on a downloaded archive. A JAR has no Android manifest to inspect, so only its native code is refused.
+    /// </summary>
+    public static ApkReport? InspectArchive(byte[] data, string package, string suffix)
+    {
+        if (suffix == ".apk")
+        {
+            try { return ApkInspection.Inspect(data, package + ".apk"); }
+            catch (InvalidDataException error) { throw new InvalidDataException("The archived APK failed the source upload checks and was not installed: " + error.Message, error); }
+        }
+        if (SourcePackage.Payloads(data).Keys.Any(name => name.EndsWith(".so", StringComparison.OrdinalIgnoreCase) || name.StartsWith("lib/", StringComparison.Ordinal)))
+            throw new InvalidDataException("The archived JAR contains native code (lib/*.so). Source extensions are JVM code only; this file is refused and was not installed.");
+        return null;
+    }
+
+    private static JsonObject InspectionJson(ApkReport report) => new()
+    {
+        ["package"] = report.Package, ["class_name"] = report.ClassName, ["library_version"] = report.LibraryVersion,
+        ["sha256"] = report.Sha256, ["bytes"] = report.Bytes,
+        ["permissions"] = new JsonArray(report.Permissions.Select(item => (JsonNode?)JsonValue.Create(item)).ToArray()),
+        ["domains"] = new JsonArray(report.Domains.Select(item => (JsonNode?)JsonValue.Create(item)).ToArray()),
+        ["warnings"] = new JsonArray(report.Warnings.Select(item => (JsonNode?)JsonValue.Create(item)).ToArray())
+    };
 
     // ---------------------------------------------------------------- helpers
 

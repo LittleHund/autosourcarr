@@ -45,6 +45,13 @@ public static class ReaderBrowseTests
         Check.True(search["items"]![0]!["match_confidence"]!.GetValue<double>() > 0);
         var admin = await browse.BrowseAsync(new JsonObject { ["mode"] = "SEARCH", ["q"] = "story", ["page_size"] = 5 }, default);
         Check.Equal(5, admin["page_size"]!.GetValue<int>());
+        // The reader source's private entry-id token resolves one known work locally (no source search, no crawl).
+        var before = crawls;
+        var token = await browse.BrowseAsync(new ReaderBrowseRequest("SEARCH", Query: "__autosourcarr_entry_id__:1"), default);
+        Check.True(token["internal_entry_lookup"]!.GetValue<bool>() && token["exact_local_match"]!.GetValue<bool>(), "token lookup");
+        Check.Equal(1, token["items"]!.AsArray().Count);
+        Check.Equal(0, (await browse.BrowseAsync(new ReaderBrowseRequest("SEARCH", Query: "__autosourcarr_entry_id__:424242"), default))["items"]!.AsArray().Count);
+        Check.Equal(before, crawls);
     }
 
     private static async Task Chapters()

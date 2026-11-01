@@ -294,8 +294,8 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
 
     /// <summary>
     /// Hosted mode has no native launcher to do this: mark the app not dumpable, so code running in the source host
-    /// (same user) cannot read the app's memory or /proc/&lt;pid&gt;/environ (secrets in variables). A separate user for
-    /// the host comes with the low-rights runner (phase 6) and the new image (phase 13).
+    /// (same user) cannot read the app's memory or /proc/&lt;pid&gt;/environ (secrets in variables). A separate low-rights user for
+    /// the host is planned for conversion phase 13 (the new image).
     /// </summary>
     public static void ProtectParentProcess()
     {

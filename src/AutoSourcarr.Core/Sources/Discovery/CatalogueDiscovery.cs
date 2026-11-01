@@ -107,7 +107,11 @@ public sealed class CatalogueDiscovery
                     cancellationToken.ThrowIfCancellationRequested();
                     progress?.Invoke(step++, total, mode + " page " + page.ToString(CultureInfo.InvariantCulture) + " · " + source.Name);
                     JsonObject payload;
-                    try { payload = await Deadline(token => _client.BrowseAsync(source.Id, mode, page, "", token), settings.FederatedSourceTimeout, cancellationToken).ConfigureAwait(false); }
+                    try
+                    {
+                        using var metric = Diagnostics.RuntimeMetrics.Shared.Phase("crawl");
+                        payload = await Deadline(token => _client.BrowseAsync(source.Id, mode, page, "", token), settings.FederatedSourceTimeout, cancellationToken).ConfigureAwait(false);
+                    }
                     catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
                         failures++; SourceResult?.Invoke(source.Id, error);
@@ -237,6 +241,7 @@ public sealed class CatalogueDiscovery
     /// <summary>enrich_entry_metadata; answers whether source detail was applied.</summary>
     public async Task<bool> EnrichEntryAsync(long entryId, CancellationToken cancellationToken)
     {
+        using var metric = Diagnostics.RuntimeMetrics.Shared.Phase("metadata");
         var settings = _settings();
         var id = Read(session => CatalogueTitles.Canonical(session, entryId));
         if (Identity is { } identity && settings.MetadataIdentityEnabled)

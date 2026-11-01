@@ -233,6 +233,24 @@ public static class JobQueueTests
             Check.Equal(1L, fixture.Errors.Snapshot(10)["items"]!.AsArray().Single(row => row!["key"]!.GetValue<string>() == "job-frozen:stuck2")!["count"]!.GetValue<long>());
         });
 
+        suite.Add("jobs: a reset running as a job stops background work without cancelling or waiting for itself", () =>
+        {
+            using var fixture = new Fixture(new JobQueueOptions { Workers = 2, CancelGrace = TimeSpan.FromSeconds(5) });
+            var reset = new JobType("reset", "Reset", JobPriority.High, JobFlags.Exclusive, Cancellable: false);
+            var stopped = new TaskCompletionSource<(bool Drained, TimeSpan Took)>();
+            var handle = fixture.Queue.Enqueue(reset, "", async job =>
+            {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                var drained = await fixture.Queue.StopBackgroundAsync("Database reset", keep: job.Id);
+                stopped.SetResult((drained, watch.Elapsed));
+                fixture.Queue.ResumeBackground();
+            });
+            var (drained, took) = stopped.Task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+            Check.True(drained && took < TimeSpan.FromSeconds(2), "The reset did not wait for itself (" + took.TotalMilliseconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " ms)");
+            Check.Equal(JobOutcome.Completed, handle.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+            Check.Equal(JobOutcome.Completed, fixture.Queue.Enqueue(Fast, "after", _ => Task.CompletedTask).Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+        });
+
         suite.Add("jobs: a non-cancellable exclusive job cannot be cancelled and is never abandoned", () =>
         {
             using var fixture = new Fixture(new JobQueueOptions { Workers = 2, WatchdogInterval = TimeSpan.FromMilliseconds(20), CancelGrace = TimeSpan.FromMilliseconds(100) });

@@ -141,16 +141,17 @@ public sealed class JobQueue : IAsyncDisposable
     /// <summary>
     /// 0.4.x stop_background_tasks / cancel_background_tasks: before a reset or restore, cancel every queued and running
     /// job and wait until running work has physically ended (at most <paramref name="grace"/>). Nothing starts until
-    /// <see cref="ResumeBackground"/>; jobs added meanwhile wait in the queue.
+    /// <see cref="ResumeBackground"/>; jobs added meanwhile wait in the queue. <paramref name="keep"/> is the id of the job
+    /// asking (a reset running as a job): it is neither cancelled nor waited for.
     /// </summary>
-    public async Task<bool> StopBackgroundAsync(string reason, TimeSpan? grace = null)
+    public async Task<bool> StopBackgroundAsync(string reason, TimeSpan? grace = null, string? keep = null)
     {
         Job[] queued, running;
         lock (_gate)
         {
             _paused = true;
             queued = _queued.ToArray(); _queued.Clear();
-            running = _running.ToArray();
+            running = _running.Where(job => job.Id != keep).ToArray();
             foreach (var job in queued) { job.CancelRequested = true; job.Finished = true; }
             foreach (var job in running.Where(job => job.Type.Cancellable)) { job.CancelRequested = true; job.CancelReason = reason; job.StoppedAt = Now(); }
         }

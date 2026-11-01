@@ -455,6 +455,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._sourceWatch = owner.WatchSourceAsync();
             await owner._source.StartAsync().ConfigureAwait(false);
             if (owner._raws is not null) await owner._raws.StartAsync(cancellationToken).ConfigureAwait(false);
+            owner.ScheduleStartupWork();
             cancellationToken.ThrowIfCancellationRequested();
             return owner;
         }

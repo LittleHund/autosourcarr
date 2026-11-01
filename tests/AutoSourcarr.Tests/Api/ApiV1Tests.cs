@@ -4,7 +4,10 @@ using System.Text.Json.Nodes;
 using AutoSourcarr.Api.Endpoints;
 using AutoSourcarr.Api.Http;
 using AutoSourcarr.Api.Security;
+using AutoSourcarr.Core.Concurrency;
+using AutoSourcarr.Core.Repair;
 using AutoSourcarr.Core.Settings;
+using AutoSourcarr.Core.Sources.Repositories;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Routing;
@@ -161,13 +164,35 @@ public static class ApiV1Tests
     public static int WriteOpenApi(string path)
     {
         using var temp = new Sandbox();
-        using var host = Start(temp.Path, new AutoSourcarrSettings());
-        var document = OpenApiDocumentBuilder.Build(host.Services.GetRequiredService<EndpointDataSource>());
-        var text = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }).ReplaceLineEndings("\n") + "\n";
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, text);
-        Console.WriteLine("Wrote " + path);
-        return 0;
+        var settings = new AutoSourcarrSettings();
+        // The documented groups ApplicationRuntime.ConfigureHttp maps beside MapApiV1, with the same prefixes. No request
+        // is sent: the dependencies only have to exist for the routes and their metadata to be mapped.
+        using var health = new HealthCoordinationTests.Fixture();
+        using var adminLock = new SemaphoreSlim(1, 1);
+        var io = new BoundedWorkScheduler(1, 1);
+        var fetcher = new PublicSourceFetcher();
+        var previews = new SourceRepositoryPreview(fetcher);
+        try
+        {
+            var repositories = new SourceRepositoryStore(new CanonicalConfiguration(temp.Path));
+            using var host = Start(temp.Path, settings, endpoints =>
+            {
+                endpoints.MapSourceRepositories(repositories, previews, io, () => settings, "/api/v1/source-repositories");
+                endpoints.MapSourceHealth(health.Coordinator, () => settings, adminLock, "/api/v1/source-health");
+            });
+            var document = OpenApiDocumentBuilder.Build(host.Services.GetRequiredService<EndpointDataSource>());
+            var text = document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }).ReplaceLineEndings("\n") + "\n";
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+            File.WriteAllText(path, text);
+            Console.WriteLine("Wrote " + path);
+            return 0;
+        }
+        finally
+        {
+            previews.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            fetcher.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            io.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
     /// <summary>Test-runner mode used by CI: writes docs/settings.md from the settings schema.</summary>
@@ -197,7 +222,7 @@ public static class ApiV1Tests
         return body;
     }
 
-    private static IHost Start(string root, AutoSourcarrSettings settings)
+    private static IHost Start(string root, AutoSourcarrSettings settings, Action<IEndpointRouteBuilder>? extra = null)
     {
         var services = new ApiV1Services(() => settings, root, null);
         var host = new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer()
@@ -206,7 +231,11 @@ public static class ApiV1Tests
             {
                 app.UseMiddleware<ReaderAuthorizationMiddleware>((Func<AutoSourcarrSettings>)(() => settings));
                 app.UseRouting();
-                app.UseEndpoints(endpoints => endpoints.MapApiV1(services));
+                app.UseEndpoints(endpoints =>
+                {
+                    endpoints.MapApiV1(services);
+                    extra?.Invoke(endpoints);
+                });
             })).Build();
         host.StartAsync().GetAwaiter().GetResult();
         return host;

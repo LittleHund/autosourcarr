@@ -14,10 +14,10 @@ import java.util.concurrent.atomic.AtomicLong
  * Each host has its own reservation clock (no lock shared between hosts): a request takes the next free slot with one
  * compare-and-set and sleeps until it, so consecutive slots are always [intervalMs] apart. The wait is bounded by
  * [maxWaitMs]: when the next free slot lies further ahead than that (more than maxWaitMs / intervalMs requests already
- * queued for the host), the request fails at once with an [IOException] and takes no slot, instead of waiting longer or
+ * queued for the host), the request fails at once with [LocalPacingDeferred] and takes no slot, instead of waiting longer or
  * being let through early. Letting it through would break the spacing (every overflow request would share one slot and
  * burst together); waiting longer would tie up dispatcher threads and run into call timeouts anyway. The caller (a
- * page or chapter fetch) reports the error and can retry once the queue has drained. A slot taken by a request that
+ * page or chapter fetch) gets a local deferral, never a source error, and can retry once the queue has drained. A slot taken by a request that
  * is then cancelled stays used, leaving at most one interval of idle time. The wait ends early
  * when the call is cancelled (call timeout or a cancelled request) or the thread is interrupted. Loopback hosts
  * (FlareSolverr, the host itself) are not paced. Installed as a network interceptor, so cached responses never wait.
@@ -41,7 +41,7 @@ class HostPacingInterceptor(
 
     /**
      * Takes the next slot of [host] and answers how long to wait for it, in nanoseconds (at most [maxWaitMs]).
-     * Throws [IOException] without taking a slot when the next free slot is further ahead than [maxWaitMs].
+     * Throws [LocalPacingDeferred] without taking a slot when the next free slot is further ahead than [maxWaitMs].
      */
     internal fun reserve(host: String): Long {
         val interval = TimeUnit.MILLISECONDS.toNanos(intervalMs)
@@ -51,7 +51,10 @@ class HostPacingInterceptor(
             val now = nanoTime()
             val current = clock.get()
             val slot = if (current == Long.MIN_VALUE || current - now < 0) now else current
-            if (slot - now > horizon) throw IOException("paced: too many queued requests for $host")
+            if (slot - now > horizon) {
+                val retryAfter = TimeUnit.NANOSECONDS.toSeconds(slot - now - horizon + 999_999_999).coerceAtLeast(1)
+                throw LocalPacingDeferred("paced: request deferred before upstream; too many queued requests for $host", retryAfter)
+            }
             if (clock.compareAndSet(current, slot + interval)) {
                 if (next.size > MAX_HOSTS) prune(now)
                 return slot - now
@@ -65,7 +68,8 @@ class HostPacingInterceptor(
     ) {
         val end = nanoTime() + waitNanos
         while (true) {
-            if (chain.call().isCanceled()) throw IOException("Canceled")
+            // The call timed out or was cancelled while still waiting for its local slot: nothing reached the site.
+            if (chain.call().isCanceled()) throw LocalPacingDeferred("Canceled while waiting for a pacing slot for ${chain.request().url.host}")
             val left = end - nanoTime()
             if (left <= 0) return
             try {
@@ -89,5 +93,29 @@ class HostPacingInterceptor(
     companion object {
         private const val STEP_MS = 100L
         private const val MAX_HOSTS = 2048
+    }
+}
+
+/**
+ * The host's own pacing queue deferred a request before it reached the site. Never evidence of a source outage:
+ * [SourceBackoff] does not count it and [HostApi] answers it as a local deferral. An [IOException], so OkHttp
+ * propagates it like any call failure; wrappers keep it in the cause chain, see [of].
+ */
+class LocalPacingDeferred(
+    message: String,
+    val retryAfterSeconds: Long = 5,
+) : IOException(message) {
+    companion object {
+        /** The deferral in [error] or its cause chain, or null. */
+        fun of(error: Throwable): LocalPacingDeferred? {
+            var current: Throwable? = error
+            var depth = 0
+            while (current != null && depth++ < 16) {
+                val here: Throwable = current
+                if (here is LocalPacingDeferred) return here
+                current = here.cause.takeIf { it !== here }
+            }
+            return null
+        }
     }
 }

@@ -157,8 +157,19 @@ internal sealed partial class ApplicationRuntime
         };
         _ = imports.ScheduleStartupRecovery();
 
+        // Built below; the startup maintenance and reset hooks run only after OpenMatching returned.
+        EditionProfiles? editionsLate = null; MixedEntries? mixedLate = null;
+        IResetHintIngest hintIngest = new ResetHintIngest(ingest, () => owner.SourceRuntime.Client);
         var maintenance = new CatalogueMaintenance(database, writeGate, decisions, manual, new CatalogueMaintenanceHooks
         {
+            // One-time upgrade steps (run_startup_catalog_maintenance): unwired steps would be skipped for good.
+            RepairEntryAliasIntegrity = titles.RepairEntryAliasIntegrity,
+            RepairSourceTitleSuffixes = titles.RepairSourceTitleSuffixes,
+            RepairColoredDisplayTitles = () => new JsonObject { ["changed"] = editionsLate!.RepairColoredDisplayTitles() },
+            RepairLegacyColorMarkerProfiles = () => editionsLate!.RepairLegacyColorMarkerProfiles(),
+            RepairLegacyColorFalseAttachments = ids => mixedLate!.RepairLegacyColorFalseAttachments(ids),
+            // A reset's rebuild hints are replayed as a job (schedule_reset_hint_replay).
+            ScheduleHintReplay = path => structure.ScheduleResetHintReplay(owner.Jobs, path, hintIngest) is not null,
             ClearCovers = catalogue.Covers.ClearAllAsync,
             RepairUnsafeAutomaticMerges = duplicates.RepairUnsafeAutomaticMerges,
             ResetCaches = () => { duplicates.Invalidate(); titles.LoadAliasCache(); },
@@ -175,20 +186,29 @@ internal sealed partial class ApplicationRuntime
                 settings.ColorDetectionSamplePages, settings.ColorDetectionTimeout);
         }, new ReaderPageImages(database, candidatePages, new MagickPageRasterDecoder()));
         var mixed = new MixedEntries(database, editions, decisions, structure, catalogue.NativeMetadata);
+        editionsLate = editions; mixedLate = mixed;
         // A check interrupted by a restart continues from its saved cursor.
         var check = mixed.CheckStatus();
         if (check["run_id"] is not null && check["completed_at"] is null)
             _ = mixed.EnqueueCheck(owner.Jobs, restart: false, autoSplit: false, origin: "automatic");
 
+        Core.Catalogue.Chapters.ChapterRefresh? chapterRefresh = null;
         var discovery = new CatalogueDiscovery(database, writeGate, ingest, new SuwayomiCatalogueClient(owner.SourceRuntime.Client), () => owner.Settings)
         {
             Identity = identity, ChooseMetadata = Choose,
-            RecordAttached = (_, sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId),
+            // A newly attached record gets its details and (phase 10) its chapters, as a low-priority job per work.
+            RecordAttached = (entryId, sourceId, mangaId) =>
+            {
+                catalogue.Hydration.Schedule(sourceId, mangaId);
+                chapterRefresh?.ScheduleEntry(owner.Jobs, entryId, "automatic", Core.Jobs.JobPriority.Low);
+            },
             TranslateNames = (names, genre, language, token) => translatedNames.ExpandAsync(names, genre, language, token),
         };
 
         var reading = OpenReading(owner, library, new ReadingInputs(decisions, identity, ingest, discovery, providers, candidatePages, coverHints,
             translator, translatedNames));
+        chapterRefresh = reading.Chapters.Refresh;
+        owner._startup = new StartupWork(maintenance, titles, structure, duplicates, discovery, library, hintIngest);
 
         var review = new ReviewV1Services
         {

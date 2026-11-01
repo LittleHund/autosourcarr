@@ -112,6 +112,20 @@ public static class Phase10WiringTests
                 Check.True(body.StartsWith('{') || body.StartsWith('['), path + " answers JSON");
             }
 
+            // Hard rule 1: the database resets are previewed; a confirm without the preview's token, or with a stale one, resets nothing.
+            foreach (var reset in new[] { "reset-database", "full-reset" })
+            {
+                using (var preview = await admin.GetAsync("/api/v1/maintenance/" + reset))
+                {
+                    var body = await preview.Content.ReadAsStringAsync();
+                    Check.True(preview.StatusCode == HttpStatusCode.OK && body.Contains("\"preview_token\"", StringComparison.Ordinal), reset + " preview: " + body);
+                }
+                using (var missing = await admin.PostAsync("/api/v1/maintenance/" + reset, new StringContent("{\"confirm\":true}", Encoding.UTF8, "application/json")))
+                    Check.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+                using (var stale = await admin.PostAsync("/api/v1/maintenance/" + reset, new StringContent("{\"confirm\":true,\"preview_token\":\"stale\"}", Encoding.UTF8, "application/json")))
+                    Check.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+            }
+
             // READ-1: Mihon adds the repository by URL without credentials. No build is present here, so 404, never 401.
             using (var repo = await anonymous.GetAsync("/api/reader/repo/index.min.json"))
                 Check.True(repo.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound, "public reader repository: " + (int)repo.StatusCode);
