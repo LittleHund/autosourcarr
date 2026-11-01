@@ -250,10 +250,10 @@ public static class ConnectionStoreTests
             // Test with id: another host, scheme or port never gets the saved secret.
             foreach (var target in new[] { "http://attacker.example:8191", "https://solver:8191", "http://solver:9999" })
             {
-                var refused = Check.Throws<SettingsValidationException>(() => store.TestValuesAsync("fake", Values($$"""{"url":"{{target}}","api_key":{"set":true}}"""), requiredId,
+                var refused = Check.Throws<SettingsValidationException>(() => store.TestValuesAsync("fake", Values("""{"url":"TARGET","api_key":{"set":true}}""".Replace("TARGET", target, StringComparison.Ordinal)), requiredId,
                     CancellationToken.None).GetAwaiter().GetResult());
                 Check.True(refused.Message.Contains("address changed", StringComparison.Ordinal), refused.Message);
-                store.TestValuesAsync("optional", Values($$"""{"url":"{{target}}","api_key":"","password":{"set":true}}"""), optionalId, CancellationToken.None).GetAwaiter().GetResult();
+                store.TestValuesAsync("optional", Values("""{"url":"TARGET","api_key":"","password":{"set":true}}""".Replace("TARGET", target, StringComparison.Ordinal)), optionalId, CancellationToken.None).GetAwaiter().GetResult();
             }
             Check.True(seen.Count == 3 && seen.All(entry => !entry.Contains(Secret, StringComparison.Ordinal)), "no saved secret sent: " + string.Join(",", seen));
             // Re-sending the secret explicitly is allowed; the same server keeps it.
