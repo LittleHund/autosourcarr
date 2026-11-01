@@ -217,6 +217,14 @@
     }
     return {
       /**
+       * Add a connection: {revision, type, label?, enabled?, values}. Values are checked by field kind (URL, whole number, on/off, required); a type that allows one connection refuses a second, and a Suwayomi connection is refused (409) while MAIN_SUWAYOMI_URL is set in Settings. The answer's notice says what happens next (solver: the source host restarts; Suwayomi: the change feed reconnects; the first saved connection: how to roll back to 0.4.x).
+       * POST /api/v1/connections
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      addConnection(body, options) { return call('POST', '/api/v1/connections', body, options); },
+      /**
        * Keep the original APK of an installed source as repair evidence (headers confirm the original and its version).
        * POST /api/v1/source-maintenance/original-apk/{pkgName}
        * @param {string} pkgName
@@ -359,6 +367,14 @@
        */
       deleteAccount(accountId, options) { return call('DELETE', `/api/v1/accounts/${encodeURIComponent(accountId)}`, undefined, options); },
       /**
+       * Delete a saved connection (?revision= names the revision it is based on). Connections from Settings are cleared on the Settings page.
+       * DELETE /api/v1/connections/{connectionId}
+       * @param {string} connectionId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      deleteConnection(connectionId, options) { return call('DELETE', `/api/v1/connections/${encodeURIComponent(connectionId)}`, undefined, options); },
+      /**
        * Delete a source group; its members become ungrouped.
        * DELETE /api/v1/source-groups/{groupId}
        * @param {string} groupId
@@ -450,6 +466,13 @@
        * @returns {Promise<ConfigView>}
        */
       getConfig(options) { return call('GET', '/api/v1/config', undefined, options); },
+      /**
+       * The Connections menu: every connection type with its fields, the saved connections (secret values as {set} markers), the read-only ones derived from Settings, the last test of each, and the revision to send with a change.
+       * GET /api/v1/connections
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getConnections(options) { return call('GET', '/api/v1/connections', undefined, options); },
       /**
        * Where the databases are and how large they are.
        * GET /api/v1/storage/database
@@ -680,6 +703,14 @@
        */
       getSubbedLibrary(options) { return call('GET', '/api/v1/subbed', undefined, options); },
       /**
+       * The stored one-time import plan of the main Suwayomi (Suwayomi connections only): status (awaiting-matching), saved_at, server_url and counts (total, sources, per source); plan is null before the first import.
+       * GET /api/v1/connections/{connectionId}/import
+       * @param {string} connectionId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getSuwayomiImport(connectionId, options) { return call('GET', `/api/v1/connections/${encodeURIComponent(connectionId)}/import`, undefined, options); },
+      /**
        * Ongoing, completed and failed tasks with progress, ETA and finish time; job type, priority and queue position for queued work; repair jobs are listed as kind source-repair with package and repair state.
        * GET /api/v1/tasks
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -693,6 +724,15 @@
        * @returns {Promise<UpdateNoticeResponse>}
        */
       getUpdateNotice(options) { return call('GET', '/api/v1/settings/update-notice', undefined, options); },
+      /**
+       * One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; catalogue entries are created when matching arrives (conversion phase 8). With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.
+       * POST /api/v1/connections/{connectionId}/import
+       * @param {string} connectionId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      importSuwayomiLibrary(connectionId, body, options) { return call('POST', `/api/v1/connections/${encodeURIComponent(connectionId)}/import`, body, options); },
       /**
        * Install the original archived package of a removed source (digest and package identity checked; never replaces an installed source).
        * POST /api/v1/source-orphans/{pkgName}/install
@@ -931,6 +971,22 @@
        */
       syncSources(options) { return call('POST', '/api/v1/source-settings/sync', undefined, options); },
       /**
+       * Test a saved connection (or one from Settings) without changing anything on the remote side, within 15 seconds: ok, a short message and details such as the version. The result is kept as the connection's last test.
+       * POST /api/v1/connections/{connectionId}/test
+       * @param {string} connectionId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      testConnection(connectionId, options) { return call('POST', `/api/v1/connections/${encodeURIComponent(connectionId)}/test`, undefined, options); },
+      /**
+       * Test values that are not saved yet: {type, values, id?}. With id, the values are applied onto that connection first, so a kept secret is tested with its saved value, unless an address now points at another server (then the secret must be sent again). Nothing is saved.
+       * POST /api/v1/connections/test
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      testConnectionValues(body, options) { return call('POST', '/api/v1/connections/test', body, options); },
+      /**
        * Test the repair AI provider (409 while none is configured).
        * POST /api/v1/source-maintenance/provider/test
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -952,6 +1008,15 @@
        * @returns {Promise<JsonObject>}
        */
       updateAllSourceExtensions(options) { return call('POST', '/api/v1/source-extensions/update-all', undefined, options); },
+      /**
+       * Change a saved connection: {revision, label?, enabled?, values?}. Fields left out keep their value; a secret sent as {set:true} or empty text is kept unless an address now points at another server (then it must be entered again); null clears a field. The answer's notice says what happens next.
+       * PUT /api/v1/connections/{connectionId}
+       * @param {string} connectionId
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      updateConnection(connectionId, body, options) { return call('PUT', `/api/v1/connections/${encodeURIComponent(connectionId)}`, body, options); },
       /**
        * Change a source's choices: enabled, priority, group, official, matching rules.
        * PUT /api/v1/source-settings/{sourceId}
