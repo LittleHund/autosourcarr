@@ -227,7 +227,8 @@ public static class SourceOrphanTests
             Check.Equal(HttpStatusCode.NotFound, client.PostAsync("/api/v1/source-orphans/" + Prefix + "zeta/mark", null).GetAwaiter().GetResult().StatusCode);
             var marked = Json(client.PostAsync("/api/v1/source-orphans/" + Prefix + "theta/mark", null).GetAwaiter().GetResult(), HttpStatusCode.OK);
             Check.Equal(true, marked["extension"]!["is_orphaned"]!.GetValue<bool>());
-            Check.Equal(HttpStatusCode.Conflict, client.PostAsync("/api/v1/source-orphans/" + Prefix + "alpha/repair", null).GetAwaiter().GetResult().StatusCode);
+            // The repair route forwards to /api/v1/source-repairs; without the domain repair service it is unavailable.
+            Check.Equal(HttpStatusCode.ServiceUnavailable, client.PostAsync("/api/v1/source-orphans/" + Prefix + "alpha/repair", null).GetAwaiter().GetResult().StatusCode);
             Check.Equal(HttpStatusCode.NotFound, client.PostAsync("/api/v1/source-orphans/" + Prefix + "nothing/install", null).GetAwaiter().GetResult().StatusCode);
             var status = Json(client.GetAsync("/api/v1/source-maintenance").GetAwaiter().GetResult(), HttpStatusCode.OK);
             Check.Equal(false, status["configured"]!.GetValue<bool>());

@@ -161,8 +161,8 @@ public static class RepairV1EndpointsTests
                         .Replace("{pkgName}", Package, StringComparison.Ordinal).Replace("{package}", Package, StringComparison.Ordinal)
                         .Replace("{jobId}", "ffffffffffff", StringComparison.Ordinal).Replace("{action}", "check", StringComparison.Ordinal))))
                 .Distinct().ToArray();
-            // 23 repair routes and 5 inventory routes (snapshot, watch, installed, rollback, original APK).
-            Check.Equal(28, routes.Length);
+            // 23 repair routes and 7 inventory routes (snapshot, watch, installed, rollback, original APK, auto-repair status and run).
+            Check.Equal(30, routes.Length);
             using var anonymous = setup.Server.CreateClient();
             foreach (var (method, path) in routes)
             {
