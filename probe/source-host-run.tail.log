@@ -1,18 +1,19 @@
-i.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/collections?unpaged=true h2
-01:16:24.855 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 401 https://demo.komga.org/api/v1/collections?unpaged=true (790ms, unknown-length body)
-01:16:24.855 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/collections?unpaged=true h2
-01:16:25.111 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/collections?unpaged=true (884ms, unknown-length body)
-01:16:25.115 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
-01:16:25.377 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEXQ3DRJP6D (854ms, unknown-length body)
-01:16:25.381 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEXQ3DRJP6D/books?unpaged=true&media_status=READY&deleted=false h2
-01:16:25.605 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/collections?unpaged=true (852ms, unknown-length body)
-01:16:25.606 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
-01:16:25.994 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 401 https://demo.komga.org/api/v1/collections?unpaged=true (1137ms, unknown-length body)
-01:16:25.995 [RxIoScheduler-2] ERROR android.util.Log -- [extension.all.komga]: error while decoding JSON for collections filter
-kotlinx.serialization.MissingFieldException: Fields [content, empty, first, last, number, numberOfElements, size, totalElements, totalPages] are required for type with serial name 'eu.kanade.tachiyomi.extension.all.komga.dto.PageWrapperDto', but they were missing at path: $
-	at kotlinx.serialization.MissingFieldException.withNewMessageInternal$kotlinx_serialization_core(SerializationExceptions.kt:147)
-	at kotlinx.serialization.internal.JsonInternalDependenciesKt.missingFieldExceptionWithNewMessage(JsonInternalDependencies.kt:21)
-	at kotlinx.serialization.json.internal.StreamingJsonDecoder.decodeSerializableValue(StreamingJsonDecoder.kt:95)
+collections?unpaged=true h2
+01:25:21.242 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series?page=0&deleted=false&sort=metadata.titleSort,asc (1119ms, unknown-length body)
+01:25:21.267 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEXQ3DRJP6D h2
+01:25:21.501 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 401 https://demo.komga.org/api/v1/libraries (1124ms, unknown-length body)
+01:25:21.502 [RxIoScheduler-2] ERROR android.util.Log -- [extension.all.komga]: error while decoding JSON for libraries filter
+kotlinx.serialization.json.JsonDecodingException: Unexpected JSON token at offset 0: Expected start of the array '[', but had '{' instead at path: $
+JSON input: {"timestamp":"2026-11-01T01:25:21.430+00:00","status":401,"error":"Unauthorized","message":"Unauthorized","path":"/api/v1/libraries"}
+	at kotlinx.serialization.json.internal.JsonExceptionsKt.decodingExceptionOf(JsonExceptions.kt:48)
+	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail(AbstractJsonLexer.kt:583)
+	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail$default(AbstractJsonLexer.kt:582)
+	at kotlinx.serialization.json.internal.AbstractJsonLexer.unexpectedToken(AbstractJsonLexer.kt:785)
+	at kotlinx.serialization.json.internal.StringJsonLexer.consumeNextToken(StringJsonLexer.kt:81)
+	at kotlinx.serialization.json.internal.StreamingJsonDecoder.beginStructure(StreamingJsonDecoder.kt:102)
+	at kotlinx.serialization.internal.AbstractCollectionSerializer.merge(CollectionSerializers.kt:29)
+	at kotlinx.serialization.internal.AbstractCollectionSerializer.deserialize(CollectionSerializers.kt:43)
+	at kotlinx.serialization.json.internal.StreamingJsonDecoder.decodeSerializableValue(StreamingJsonDecoder.kt:69)
 	at kotlinx.serialization.json.Json.decodeFromString(Json.kt:149)
 	at eu.kanade.tachiyomi.extension.all.komga.Komga._init_$lambda$66(Unknown Source)
 	at eu.kanade.tachiyomi.extension.all.komga.Komga.$r8$lambda$ynuqkMqzxPPJuvWrK8aC3kbS6kc(Unknown Source)
@@ -29,103 +30,104 @@ kotlinx.serialization.MissingFieldException: Fields [content, empty, first, last
 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
-Caused by: kotlinx.serialization.MissingFieldException: Fields [content, empty, first, last, number, numberOfElements, size, totalElements, totalPages] are required for type with serial name 'eu.kanade.tachiyomi.extension.all.komga.dto.PageWrapperDto', but they were missing
-	at kotlinx.serialization.internal.PluginExceptionsKt.throwMissingFieldException(PluginExceptions.kt:20)
-	at eu.kanade.tachiyomi.extension.all.komga.dto.PageWrapperDto.<init>(Unknown Source)
-	at eu.kanade.tachiyomi.extension.all.komga.dto.PageWrapperDto$$serializer.deserialize(Unknown Source)
-	at eu.kanade.tachiyomi.extension.all.komga.dto.PageWrapperDto$$serializer.deserialize(Unknown Source)
-	at kotlinx.serialization.json.internal.StreamingJsonDecoder.decodeSerializableValue(StreamingJsonDecoder.kt:69)
-	... 16 common frames omitted
-01:16:25.995 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
-01:16:26.121 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/genres (1005ms, unknown-length body)
-01:16:26.124 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
-01:16:26.394 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEXQ3DRJP6D/books?unpaged=true&media_status=READY&deleted=false (1013ms, unknown-length body)
-01:16:26.464 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEXQ3DRJP69/pages h2
-01:16:26.608 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/genres (1001ms, unknown-length body)
-01:16:26.609 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
-01:16:26.853 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/genres (858ms, unknown-length body)
-01:16:26.854 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
-01:16:27.110 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/tags (985ms, 2-byte body)
-01:16:27.111 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
-01:16:27.366 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEXQ3DRJP69/pages (901ms, 2-byte body)
-01:16:27.371 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH h2
-01:16:27.604 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/tags (994ms, 2-byte body)
-01:16:27.605 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
-01:16:27.855 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/tags (1001ms, 2-byte body)
-01:16:27.856 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
-01:16:28.111 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/publishers (1000ms, 21-byte body)
-01:16:28.112 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
-01:16:28.357 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH (986ms, unknown-length body)
-01:16:28.360 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH/books?unpaged=true&media_status=READY&deleted=false h2
-01:16:28.606 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/publishers (1001ms, 21-byte body)
-01:16:28.607 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
-01:16:28.860 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/publishers (1004ms, 21-byte body)
-01:16:28.861 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
-01:16:29.102 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/authors (990ms, unknown-length body)
-01:16:29.392 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH/books?unpaged=true&media_status=READY&deleted=false (1032ms, unknown-length body)
-01:16:29.396 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCR/pages h2
-01:16:29.625 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/authors (1018ms, unknown-length body)
-01:16:29.852 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/authors (990ms, unknown-length body)
-01:16:30.108 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCR/pages (712ms, 2-byte body)
-01:16:30.111 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF h2
-01:16:30.361 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF (249ms, unknown-length body)
-01:16:30.362 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF/books?unpaged=true&media_status=READY&deleted=false h2
-01:16:30.605 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF/books?unpaged=true&media_status=READY&deleted=false (243ms, unknown-length body)
-01:16:30.611 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEX4TZ0JSFS/pages h2
-01:16:30.858 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEX4TZ0JSFS/pages (247ms, 2-byte body)
-01:16:30.860 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0NW37HGJZPDWR h2
-01:16:31.116 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0NW37HGJZPDWR (256ms, unknown-length body)
-01:16:31.117 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0NW37HGJZPDWR/books?unpaged=true&media_status=READY&deleted=false h2
-01:16:31.364 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0NW37HGJZPDWR/books?unpaged=true&media_status=READY&deleted=false (247ms, unknown-length body)
-01:16:31.367 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0NW37HGHFP62J/pages h2
-01:16:31.607 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0NW37HGHFP62J/pages (239ms, 2-byte body)
-01:16:31.609 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG h2
-01:16:31.875 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG (265ms, unknown-length body)
-01:16:31.876 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG/books?unpaged=true&media_status=READY&deleted=false h2
-01:16:32.120 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG/books?unpaged=true&media_status=READY&deleted=false (244ms, unknown-length body)
-01:16:32.122 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCQ/pages h2
-01:16:32.373 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCQ/pages (250ms, 2-byte body)
-01:16:32.375 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/63 h2
-01:16:32.619 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/63 (243ms, unknown-length body)
-01:16:32.620 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/63/books?unpaged=true&media_status=READY&deleted=false h2
-01:16:32.864 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/63/books?unpaged=true&media_status=READY&deleted=false (243ms, unknown-length body)
-01:16:32.867 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/64/pages h2
-01:16:33.116 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/64/pages (249ms, unknown-length body)
-01:16:33.118 [OkHttp https://demo.komga.org/...] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/64/pages/1 h2
-01:16:33.383 [OkHttp https://demo.komga.org/...] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/64/pages/1 (264ms, 892360-byte body)
-01:16:34.495 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://www.kakamanga.com/ h2
-01:16:34.578 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://www.kakamanga.com/ (82ms, unknown-length body)
-01:16:34.585 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET http://127.0.0.1:8899/ http/1.1
-01:16:34.586 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 503 Service Unavailable http://127.0.0.1:8899/ (0ms, 519-byte body)
-01:16:34.587 [source-host-http] DEBUG xyz.nulldev.androidcompat.webkit.CefHelper -- CEF: Initialization state INITIALIZED
-01:16:38.589 [source-host-http] INFO autosourcarr.host.CloudflareWebViewSolver -- WebView passed the Cloudflare check for 127.0.0.1
-01:16:38.593 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET http://127.0.0.1:8899/ http/1.1
-01:16:38.593 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- HTTP FAILED: java.io.IOException: unexpected end of stream on http://127.0.0.1:8899/.... http://127.0.0.1:8899/ (0ms)
-01:16:38.594 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.mangadex-v1.6.0.jar
-01:16:38.594 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET http://127.0.0.1:8899/ http/1.1
-01:16:38.595 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 OK http://127.0.0.1:8899/ (0ms, 76-byte body)
-01:16:38.602 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangapill-v1.6.0.jar
-01:16:38.602 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.weebcentral-v1.6.25.jar
-01:16:38.603 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangatown-v1.6.1.jar
-01:16:38.603 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.webtoons-v1.6.2.jar
-01:16:38.603 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.mangaplus-v1.6.67.jar
-01:16:38.603 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangakakalot-v1.6.27.jar
-01:16:38.604 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangabuddy-v1.6.35.jar
-01:16:38.604 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangahere-v1.6.2.jar
-01:16:38.604 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangafox-v1.6.2.jar
-01:16:38.604 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.asurascans-v1.6.70.jar
-01:16:38.604 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.flamecomics-v1.6.2.jar
-01:16:38.605 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangago-v1.6.44.jar
-01:16:38.605 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.komga-v1.4.50.jar
-01:16:38.606 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/libraries h2
-01:16:38.840 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/libraries (234ms, 0-byte body)
-01:16:38.842 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/collections?unpaged=true h2
-01:16:39.097 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/collections?unpaged=true (255ms, 0-byte body)
-01:16:39.098 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
-01:16:39.349 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/genres (250ms, 0-byte body)
-01:16:39.350 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
-01:16:39.592 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/tags (241ms, 0-byte body)
-01:16:39.593 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
-01:16:39.846 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/publishers (253ms, 0-byte body)
-01:16:39.847 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
-01:16:40.095 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/authors (248ms, 0-byte body)
+01:25:21.502 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/collections?unpaged=true h2
+01:25:21.621 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/collections?unpaged=true (806ms, unknown-length body)
+01:25:21.628 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
+01:25:21.875 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/collections?unpaged=true (878ms, unknown-length body)
+01:25:21.877 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
+01:25:22.126 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEXQ3DRJP6D (859ms, unknown-length body)
+01:25:22.129 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEXQ3DRJP6D/books?unpaged=true&media_status=READY&deleted=false h2
+01:25:22.371 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/collections?unpaged=true (868ms, unknown-length body)
+01:25:22.373 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
+01:25:22.620 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/genres (992ms, unknown-length body)
+01:25:22.624 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
+01:25:22.870 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/genres (992ms, unknown-length body)
+01:25:22.872 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
+01:25:23.125 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEXQ3DRJP6D/books?unpaged=true&media_status=READY&deleted=false (995ms, unknown-length body)
+01:25:23.234 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEXQ3DRJP69/pages h2
+01:25:23.370 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/genres (997ms, unknown-length body)
+01:25:23.372 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
+01:25:23.661 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/tags (1037ms, 2-byte body)
+01:25:23.662 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
+01:25:23.871 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/tags (998ms, 2-byte body)
+01:25:23.872 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
+01:25:24.121 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEXQ3DRJP69/pages (886ms, 2-byte body)
+01:25:24.129 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH h2
+01:25:24.372 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/tags (999ms, 2-byte body)
+01:25:24.373 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
+01:25:24.639 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/publishers (976ms, 21-byte body)
+01:25:24.640 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
+01:25:24.870 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/publishers (998ms, 21-byte body)
+01:25:24.872 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
+01:25:25.126 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH (997ms, unknown-length body)
+01:25:25.128 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH/books?unpaged=true&media_status=READY&deleted=false h2
+01:25:25.370 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/publishers (997ms, 21-byte body)
+01:25:25.372 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
+01:25:25.620 [RxIoScheduler-4] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/authors (979ms, unknown-length body)
+01:25:25.878 [RxIoScheduler-3] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/authors (1005ms, unknown-length body)
+01:25:26.123 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHH/books?unpaged=true&media_status=READY&deleted=false (994ms, unknown-length body)
+01:25:26.129 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCR/pages h2
+01:25:26.379 [RxIoScheduler-2] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/authors (1006ms, unknown-length body)
+01:25:26.623 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCR/pages (494ms, 2-byte body)
+01:25:26.628 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF h2
+01:25:26.875 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF (246ms, unknown-length body)
+01:25:26.877 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF/books?unpaged=true&media_status=READY&deleted=false h2
+01:25:27.131 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHF/books?unpaged=true&media_status=READY&deleted=false (254ms, unknown-length body)
+01:25:27.137 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEX4TZ0JSFS/pages h2
+01:25:27.388 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEX4TZ0JSFS/pages (250ms, 2-byte body)
+01:25:27.392 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0NW37HGJZPDWR h2
+01:25:27.627 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0NW37HGJZPDWR (235ms, unknown-length body)
+01:25:27.629 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0NW37HGJZPDWR/books?unpaged=true&media_status=READY&deleted=false h2
+01:25:27.879 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0NW37HGJZPDWR/books?unpaged=true&media_status=READY&deleted=false (250ms, unknown-length body)
+01:25:27.884 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0NW37HGHFP62J/pages h2
+01:25:28.160 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0NW37HGHFP62J/pages (275ms, 2-byte body)
+01:25:28.164 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG h2
+01:25:28.378 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG (214ms, unknown-length body)
+01:25:28.380 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG/books?unpaged=true&media_status=READY&deleted=false h2
+01:25:28.627 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/0EBEX4TZ8JXHG/books?unpaged=true&media_status=READY&deleted=false (246ms, unknown-length body)
+01:25:28.631 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCQ/pages h2
+01:25:28.874 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/0EBEX4TZ4JXCQ/pages (242ms, 2-byte body)
+01:25:28.879 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/63 h2
+01:25:29.125 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/63 (246ms, unknown-length body)
+01:25:29.128 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/series/63/books?unpaged=true&media_status=READY&deleted=false h2
+01:25:29.379 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/series/63/books?unpaged=true&media_status=READY&deleted=false (251ms, unknown-length body)
+01:25:29.386 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/64/pages h2
+01:25:29.655 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/64/pages (268ms, unknown-length body)
+01:25:29.660 [OkHttp https://demo.komga.org/...] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/books/64/pages/1 h2
+01:25:29.890 [OkHttp https://demo.komga.org/...] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://demo.komga.org/api/v1/books/64/pages/1 (229ms, 892360-byte body)
+01:25:30.603 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://www.kakamanga.com/ h2
+01:25:31.164 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 https://www.kakamanga.com/ (560ms, unknown-length body)
+01:25:31.364 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET http://127.0.0.1:8899/ http/1.1
+01:25:31.366 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 503 Service Unavailable http://127.0.0.1:8899/ (1ms, 519-byte body)
+01:25:31.367 [source-host-http] DEBUG xyz.nulldev.androidcompat.webkit.CefHelper -- CEF: Initialization state INITIALIZED
+01:25:35.369 [source-host-http] INFO autosourcarr.host.CloudflareWebViewSolver -- WebView passed the Cloudflare check for 127.0.0.1
+01:25:35.375 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.mangadex-v1.6.0.jar
+01:25:35.375 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET http://127.0.0.1:8899/ http/1.1
+01:25:35.377 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- HTTP FAILED: java.io.IOException: unexpected end of stream on http://127.0.0.1:8899/.... http://127.0.0.1:8899/ (0ms)
+01:25:35.380 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET http://127.0.0.1:8899/ http/1.1
+01:25:35.381 [source-host-http] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 200 OK http://127.0.0.1:8899/ (0ms, 76-byte body)
+01:25:35.385 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangapill-v1.6.0.jar
+01:25:35.385 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.weebcentral-v1.6.25.jar
+01:25:35.386 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangatown-v1.6.1.jar
+01:25:35.386 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.webtoons-v1.6.2.jar
+01:25:35.387 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.mangaplus-v1.6.67.jar
+01:25:35.387 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangakakalot-v1.6.27.jar
+01:25:35.387 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangabuddy-v1.6.35.jar
+01:25:35.388 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangahere-v1.6.2.jar
+01:25:35.388 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangafox-v1.6.2.jar
+01:25:35.388 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.asurascans-v1.6.70.jar
+01:25:35.389 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.flamecomics-v1.6.2.jar
+01:25:35.389 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.en.mangago-v1.6.44.jar
+01:25:35.389 [DefaultDispatcher-worker-5] DEBUG suwayomi.tachidesk.manga.impl.util.PackageTools -- loading jar with path: /home/runner/work/_temp/source-host-data/extensions/eu.kanade.tachiyomi.extension.all.komga-v1.4.50.jar
+01:25:35.391 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/libraries h2
+01:25:35.564 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/libraries (172ms, 0-byte body)
+01:25:35.567 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/collections?unpaged=true h2
+01:25:35.817 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/collections?unpaged=true (250ms, 0-byte body)
+01:25:35.820 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/genres h2
+01:25:36.068 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/genres (248ms, 0-byte body)
+01:25:36.070 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/tags h2
+01:25:36.320 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/tags (249ms, 0-byte body)
+01:25:36.323 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/publishers h2
+01:25:36.567 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/publishers (244ms, 0-byte body)
+01:25:36.570 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- --> GET https://demo.komga.org/api/v1/authors h2
+01:25:36.818 [RxIoScheduler-5] DEBUG eu.kanade.tachiyomi.network.NetworkHelper -- <-- 304 https://demo.komga.org/api/v1/authors (248ms, 0-byte body)

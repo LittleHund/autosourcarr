@@ -1,7 +1,7 @@
-sha=bfce0448f248379899fcd3c109102dad60e3a86e
+sha=36e072ae9edeea6195ee49678f474b4c95d637a8
 restore=0
 build=0
-test=1
+test=0
 openapi=0
 client=0
 source_host_build=0
