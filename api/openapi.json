@@ -1209,7 +1209,7 @@
       },
       "post": {
         "operationId": "importSuwayomiLibrary",
-        "summary": "One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; catalogue entries are created when matching arrives (conversion phase 8). With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.",
+        "summary": "One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; POST /api/v1/imports/suwayomi-plan then creates the catalogue entries through the import pipeline. With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.",
         "parameters": [
           {
             "name": "connectionId",
@@ -3153,9 +3153,9 @@
     "/api/v1/imports/recheck-after-reset": {
       "post": {
         "operationId": "recheckImportsAfterReset",
-        "summary": "Recheck accepted imports whose entry is gone (after a catalogue reset) through the kept decision log: manual matches are restored, automatic ones kept only if they still pass the current rules, otherwise reopened.",
+        "summary": "Queue the recheck of accepted imports whose entry is gone (after a catalogue reset) as a task: manual matches are restored (or reopened for review when their work is not back), automatic ones kept only if they still pass the current rules, otherwise reopened. Answers 202 with the task id.",
         "responses": {
-          "200": {
+          "202": {
             "description": "Success",
             "content": {
               "application/json": {
@@ -3172,9 +3172,9 @@
       }
     },
     "/api/v1/imports/reset-manual-autoresolve": {
-      "post": {
-        "operationId": "resetImportManualAutoresolve",
-        "summary": "Forget the remembered manual import matches (explicit reset); ordinary manual matches and groups stay.",
+      "get": {
+        "operationId": "previewImportManualAutoresolveReset",
+        "summary": "Preview of forgetting the remembered manual import matches (ordinary manual matches and groups stay): counts and the preview_token the confirmation must send back.",
         "responses": {
           "200": {
             "description": "Success",
@@ -3186,16 +3186,34 @@
               }
             }
           },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Invalid admin token"
           }
         }
-      }
-    },
-    "/api/v1/imports/reset-rejections": {
+      },
       "post": {
-        "operationId": "resetImportRejections",
-        "summary": "Forget every remembered import Reject (explicit reset); unresolved rows search for candidates again.",
+        "operationId": "resetImportManualAutoresolve",
+        "summary": "Forget the remembered manual import matches (ordinary manual matches and groups stay) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when they changed since the preview.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Success",
@@ -3203,6 +3221,126 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/imports/reset-rejections": {
+      "get": {
+        "operationId": "previewImportRejectionsReset",
+        "summary": "Preview of forgetting every remembered import Reject (unresolved rows search for candidates again): counts and the preview_token the confirmation must send back.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      },
+      "post": {
+        "operationId": "resetImportRejections",
+        "summary": "Forget every remembered import Reject (unresolved rows search for candidates again) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when they changed since the preview.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
                 }
               }
             }

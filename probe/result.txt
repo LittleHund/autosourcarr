@@ -1,10 +1,10 @@
-sha=381ccb7a903eed9947e0ff10aaf295842a13582f
+sha=c47e624c17d794333973d467d2e91dcc0f3fe243
 restore=0
-build=1
-test=skipped
-openapi=skipped
-client=skipped
+build=0
+test=1
+openapi=0
+client=0
 source_host_build=0
 source_host_check=0
-source_host_csharp=
+source_host_csharp=0
 repair_runner=exit=0

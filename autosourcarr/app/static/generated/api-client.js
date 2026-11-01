@@ -1053,7 +1053,7 @@
        */
       getUpdateNotice(options) { return call('GET', '/api/v1/settings/update-notice', undefined, options); },
       /**
-       * One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; catalogue entries are created when matching arrives (conversion phase 8). With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.
+       * One-time import of the main Suwayomi library (Suwayomi connections only): {force?}. Queues a task that reads the library (read-only) and stores the plan; POST /api/v1/imports/suwayomi-plan then creates the catalogue entries through the import pipeline. With a plan stored, the task does nothing unless force is true. Answers 202 with the task id.
        * POST /api/v1/connections/{connectionId}/import
        * @param {string} connectionId
        * @param {JsonObject} body
@@ -1248,6 +1248,20 @@
        */
       previewConsolidateDuplicates(options) { return call('GET', '/api/v1/maintenance/consolidate-preview', undefined, options); },
       /**
+       * Preview of forgetting the remembered manual import matches (ordinary manual matches and groups stay): counts and the preview_token the confirmation must send back.
+       * GET /api/v1/imports/reset-manual-autoresolve
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewImportManualAutoresolveReset(options) { return call('GET', '/api/v1/imports/reset-manual-autoresolve', undefined, options); },
+      /**
+       * Preview of forgetting every remembered import Reject (unresolved rows search for candidates again): counts and the preview_token the confirmation must send back.
+       * GET /api/v1/imports/reset-rejections
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewImportRejectionsReset(options) { return call('GET', '/api/v1/imports/reset-rejections', undefined, options); },
+      /**
        * Preview of resetting the manual groups (matches stay attached and bound): counts per kind and the preview_token the confirmation must send back.
        * GET /api/v1/maintenance/reset-manual-groups
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1303,7 +1317,7 @@
        */
       queryDecisions(body, options) { return call('POST', '/api/v1/decisions', body, options); },
       /**
-       * Recheck accepted imports whose entry is gone (after a catalogue reset) through the kept decision log: manual matches are restored, automatic ones kept only if they still pass the current rules, otherwise reopened.
+       * Queue the recheck of accepted imports whose entry is gone (after a catalogue reset) as a task: manual matches are restored (or reopened for review when their work is not back), automatic ones kept only if they still pass the current rules, otherwise reopened. Answers 202 with the task id.
        * POST /api/v1/imports/recheck-after-reset
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -1424,19 +1438,21 @@
        */
       resetDatabase(body, options) { return call('POST', '/api/v1/maintenance/reset-database', body, options); },
       /**
-       * Forget the remembered manual import matches (explicit reset); ordinary manual matches and groups stay.
+       * Forget the remembered manual import matches (ordinary manual matches and groups stay) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when they changed since the preview.
        * POST /api/v1/imports/reset-manual-autoresolve
+       * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      resetImportManualAutoresolve(options) { return call('POST', '/api/v1/imports/reset-manual-autoresolve', undefined, options); },
+      resetImportManualAutoresolve(body, options) { return call('POST', '/api/v1/imports/reset-manual-autoresolve', body, options); },
       /**
-       * Forget every remembered import Reject (explicit reset); unresolved rows search for candidates again.
+       * Forget every remembered import Reject (unresolved rows search for candidates again) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when they changed since the preview.
        * POST /api/v1/imports/reset-rejections
+       * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
        */
-      resetImportRejections(options) { return call('POST', '/api/v1/imports/reset-rejections', undefined, options); },
+      resetImportRejections(body, options) { return call('POST', '/api/v1/imports/reset-rejections', body, options); },
       /**
        * Forget the manual groups (matches stay attached and bound) after the preview was confirmed: body {confirm: true, preview_token}. Refused (409) when the decisions changed since the preview.
        * POST /api/v1/maintenance/reset-manual-groups
