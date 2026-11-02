@@ -22,6 +22,9 @@ public delegate void DuplicateProgress(int? current, int? total, string? message
 /// </summary>
 public sealed partial class DuplicateMatching
 {
+    /// <summary>Raised when the duplicate list went stale or a new snapshot is ready (live UI topic <c>duplicates</c>).</summary>
+    public Action<string>? Changed { get; set; }
+
     public static readonly JobType AutomaticJob = new("duplicate-automatic", "Automatic duplicate matching", JobPriority.Low, JobFlags.LongRunning, StallTimeout: TimeSpan.FromMinutes(30));
     public static readonly JobType ConsolidateJob = new("duplicate-consolidate", "Auto-merge duplicates", JobPriority.Normal, JobFlags.LongRunning, StallTimeout: TimeSpan.FromMinutes(30));
     public static readonly JobType SnapshotJob = new("duplicate-snapshot", "Refresh duplicate review", JobPriority.Low, JobFlags.LongRunning, StallTimeout: TimeSpan.FromMinutes(30));

@@ -61,7 +61,10 @@ internal sealed partial class ApplicationRuntime
         policy = new MatchingPolicyApplication(policies.Rules, MatchingPolicyApplication.CatalogueSources(database)) { Synonyms = new TagSynonyms(database).Load };
         var presets = new MatchingPresetStore(database, writeGate, decisions);
 
-        var titles = new CatalogueTitles(database, writeGate, decisions) { TitlesChanged = _ => owner._duplicates?.Invalidate() };
+        var titles = new CatalogueTitles(database, writeGate, decisions)
+        {
+            TitlesChanged = id => { owner._duplicates?.Invalidate(); owner.CatalogueChanged(id, "titles"); },
+        };
         var evidence = new NativeCatalogueEvidence(catalogue.NativeMetadata, new GalleryEvidenceService(database, writeGate),
             () => owner.Settings.DuplicateAutoMergeMinSummaryChars, () => owner.Settings.ExactThumbnailMatching);
         // Phase 10 (10C): decoded thumbnail fingerprints (exact-pixel identity evidence) and remembered source cover hints.
@@ -93,7 +96,7 @@ internal sealed partial class ApplicationRuntime
         var identity = new MetadataIdentityResolver(database, writeGate, () => owner.Settings, providers.Current, evidence.Snapshot)
         {
             AddTitle = (id, title, language, kind, source) => titles.AddTitle(id, title, language, kind, source),
-            IdentitiesChanged = id => { Choose(id); owner._duplicates?.Invalidate(); },
+            IdentitiesChanged = id => { Choose(id); owner._duplicates?.Invalidate(); owner.CatalogueChanged(id, "identity"); },
             Failed = (_, error) => owner.Logs.Record("Metadata", "Identity lookup failed (" + error.GetType().Name + ")."),
             Fingerprints = thumbnails.HydrateAsync,
         };
@@ -104,6 +107,7 @@ internal sealed partial class ApplicationRuntime
             {
                 owner._duplicates?.Invalidate();
                 _ = catalogue.Covers.ClearKeys([FormattableString.Invariant($"entry-{id}")]);
+                owner.CatalogueChanged(id, "metadata");
             },
         };
         catalogue.NativeMetadata.FieldPolicy = chooser;
@@ -139,12 +143,14 @@ internal sealed partial class ApplicationRuntime
         { Jobs = owner.Jobs };
         duplicates.Hydration = identity;
         owner._duplicates = duplicates;
+        duplicates.Changed = change => owner.Events.Debounce("duplicates", LiveWindow, change);
         duplicates.LoadPersisted();
 
         // Phase 9 imports (9A): backup imports and the Suwayomi library plan through the matching pipeline.
         var imports = new ImportRuns(database, writeGate, decisions, ingest)
         {
             Manual = manual, History = decisionLog, Jobs = owner.Jobs, DataDirectory = owner._dataDirectory,
+            Changed = id => owner.Events.PulseKeys("imports", LiveWindow, "import_ids", [JsonValue.Create(id)!], "updated"),
             Options = () => ImportOptions.From(owner.Settings),
             // Adding to the main library needs MAIN_SUWAYOMI_URL (read at startup, like the Subbed routes).
             Library = string.IsNullOrWhiteSpace(owner.Settings.MainSuwayomiUrl) ? null : new SuwayomiImportLibrary(library, () => owner._main),

@@ -30,6 +30,9 @@ public sealed class ImportPolicyBlockedException(string message) : InvalidOperat
 /// </summary>
 public sealed partial class ImportRuns
 {
+    /// <summary>Raised with the import id when a run or one of its items changed (live UI topic <c>imports</c>).</summary>
+    public Action<string>? Changed { get; set; }
+
     /// <summary>States an item can be in.</summary>
     public static readonly IReadOnlyList<string> States = ["unresolved", "resolving", "retrying", "added", "existing", "failed", "skipped"];
     public static readonly IReadOnlyList<string> ReviewFilters = ["all", "has_candidates", "no_candidates", "searching", "has_reference", "no_reference", "has_english", "no_english"];
@@ -123,21 +126,23 @@ public sealed partial class ImportRuns
     /// Claims a new import identity in one write: the run row is created only when no run with this id exists, so two
     /// uploads with the same X-Import-Id create one run and one job (the loser answers the winner's receipt).
     /// </summary>
-    internal bool TryCreateRun(string importId, string filename) => Write(c => c.Execute("""
+    internal bool TryCreateRun(string importId, string filename) => Notify(importId, Write(c => c.Execute("""
         INSERT INTO import_runs(id,filename,state,total,added,existing,unresolved,failed,skipped,created_at,completed_at)
         VALUES($id,$file,'running',0,0,0,0,0,0,$now,'')
         ON CONFLICT(id) DO NOTHING
-        """, ("$id", importId), ("$file", filename.Length > 0 ? filename : "backup.tachibk"), ("$now", Now())) > 0);
+        """, ("$id", importId), ("$file", filename.Length > 0 ? filename : "backup.tachibk"), ("$now", Now())) > 0));
+
+    private T Notify<T>(string importId, T value) { Changed?.Invoke(importId); return value; }
 
     /// <summary>_create_import_run.</summary>
-    public void CreateRun(string importId, string filename) => Write(c => c.Execute("""
+    public void CreateRun(string importId, string filename) => Notify(importId, Write(c => c.Execute("""
         INSERT INTO import_runs(id,filename,state,total,added,existing,unresolved,failed,skipped,created_at,completed_at)
         VALUES($id,$file,'running',0,0,0,0,0,0,$now,'')
         ON CONFLICT(id) DO UPDATE SET filename=excluded.filename,state='running',completed_at=''
-        """, ("$id", importId), ("$file", filename.Length > 0 ? filename : "backup.tachibk"), ("$now", Now())));
+        """, ("$id", importId), ("$file", filename.Length > 0 ? filename : "backup.tachibk"), ("$now", Now()))));
 
     /// <summary>_recount_import_run: counters from the item states; resolving/retrying still count as unresolved.</summary>
-    public JsonObject Recount(string importId, string? state = null) => Write(c => RecountIn(c, importId, state));
+    public JsonObject Recount(string importId, string? state = null) => Notify(importId, Write(c => RecountIn(c, importId, state)));
 
     private JsonObject RecountIn(DatabaseSession c, string importId, string? state)
     {
@@ -491,7 +496,7 @@ public sealed partial class ImportRuns
         IReadOnlyCollection<string>? expectedStates = null, long? expectedRevision = null, bool newDecision = false)
     {
         var snapshot = entryId is { } chosen && state is "added" or "existing" or "resolving" ? Snapshot(chosen) : new JsonObject();
-        return Write(c =>
+        return Notify(importId, Write(c =>
         {
             var changed = c.Execute("""
                 UPDATE import_items SET state=$state,reason=$reason,entry_id=$entry,matched_snapshot_json=$snapshot,updated_at=$now,library_add_verified=$verified,
@@ -512,7 +517,7 @@ public sealed partial class ImportRuns
                 ["ok"] = true, ["import_id"] = importId, ["item_id"] = itemId, ["state"] = state, ["reason"] = reason, ["entry_id"] = entryId,
                 ["applied_match"] = snapshot.Count > 0 ? snapshot : null, ["decision_revision"] = Convert.ToInt64(revision, CultureInfo.InvariantCulture),
             };
-        });
+        }));
     }
 
     /// <summary>_restore_cancelled_import_resolution: puts back the settled row this action replaced (only while the action still owns it).</summary>

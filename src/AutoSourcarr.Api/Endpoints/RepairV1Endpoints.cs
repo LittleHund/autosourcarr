@@ -376,6 +376,7 @@ internal static class RepairV1Endpoints
                 // Hard rule 6: only the user's "Fixed" makes a repair Fixed; it is bound to this task and this exact jar.
                 if (action != "revert")
                     services.Repair?.Confirmations?.Record(job.Package, job.Id, installed, action == "fixed" ? RepairConfirmations.Fixed : RepairConfirmations.NotWorking);
+                services.Events?.PulseKeys("repairs", TimeSpan.FromMilliseconds(750), "packages", [JsonValue.Create(job.Package)!], "feedback");
                 if (action == "revert")
                 {
                     if (!Integrated()) return Problem(409, "Integrated engine required");

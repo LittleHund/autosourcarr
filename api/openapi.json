@@ -109,7 +109,7 @@
     "/api/v1/activity/history": {
       "get": {
         "operationId": "getActivityHistory",
-        "summary": "Finished general tasks (up to 300, seven days; query offset and limit) plus the 50 newest download events (downloaded, failed, removed).",
+        "summary": "Finished general tasks (up to 300, seven days; query offset and limit) plus one page of 50 download events (downloaded, failed, removed), newest first; query downloads_before = downloads.next_before continues (page-first, no count).",
         "responses": {
           "200": {
             "description": "Success",
@@ -1052,7 +1052,7 @@
     "/api/v1/catalogue/entries": {
       "get": {
         "operationId": "listCatalogueEntries",
-        "summary": "Catalogue entries as cards, newest first or matching the optional query \u0027search\u0027 (local titles only), at most \u0027limit\u0027 (default 200, at most 1000).",
+        "summary": "Catalogue entries as cards (PERF-5 page-first): newest first in pages of \u0027limit\u0027 (default 50, at most 1000) continued with \u0027cursor\u0027 (next_cursor of the previous page), or matching the optional query \u0027search\u0027 (local titles only, one page).",
         "responses": {
           "200": {
             "description": "Success",
@@ -6487,7 +6487,7 @@
     "/api/v1/matrix": {
       "get": {
         "operationId": "getMatrix",
-        "summary": "The catalogue Matrix from stored data: entries (optional query search, limit 1-500, subbed, source_id, include_chapter_stats), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.",
+        "summary": "The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page continued with \u0027cursor\u0027 = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.",
         "responses": {
           "200": {
             "description": "Success",
@@ -9174,7 +9174,7 @@
     "/api/v1/source-maintenance/jobs/{jobId}/feedback": {
       "post": {
         "operationId": "sendSourceRepairFeedback",
-        "summary": "Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Kept in feedback.jsonl (bounded); revert queues a rollback.",
+        "summary": "Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Fixed (user-confirmed working, hard rule 6) and retry (not working) are kept per package for that jar across restarts; revert queues a rollback. Also kept in feedback.jsonl (bounded).",
         "parameters": [
           {
             "name": "jobId",

@@ -704,7 +704,7 @@
        */
       getAccounts(options) { return call('GET', '/api/v1/accounts', undefined, options); },
       /**
-       * Finished general tasks (up to 300, seven days; query offset and limit) plus the 50 newest download events (downloaded, failed, removed).
+       * Finished general tasks (up to 300, seven days; query offset and limit) plus one page of 50 download events (downloaded, failed, removed), newest first; query downloads_before = downloads.next_before continues (page-first, no count).
        * GET /api/v1/activity/history
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -980,7 +980,7 @@
        */
       getMatchingPresets(options) { return call('GET', '/api/v1/matching-presets', undefined, options); },
       /**
-       * The catalogue Matrix from stored data: entries (optional query search, limit 1-500, subbed, source_id, include_chapter_stats), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.
+       * The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page continued with 'cursor' = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.
        * GET /api/v1/matrix
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -1332,7 +1332,7 @@
        */
       listCatalogueDecisions(options) { return call('GET', '/api/v1/catalog-sharing/decisions', undefined, options); },
       /**
-       * Catalogue entries as cards, newest first or matching the optional query 'search' (local titles only), at most 'limit' (default 200, at most 1000).
+       * Catalogue entries as cards (PERF-5 page-first): newest first in pages of 'limit' (default 50, at most 1000) continued with 'cursor' (next_cursor of the previous page), or matching the optional query 'search' (local titles only, one page).
        * GET /api/v1/catalogue/entries
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -2082,7 +2082,7 @@
        */
       searchManualGroupCandidates(groupId, body, options) { return call('POST', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/candidates`, body, options); },
       /**
-       * Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Kept in feedback.jsonl (bounded); revert queues a rollback.
+       * Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Fixed (user-confirmed working, hard rule 6) and retry (not working) are kept per package for that jar across restarts; revert queues a rollback. Also kept in feedback.jsonl (bounded).
        * POST /api/v1/source-maintenance/jobs/{jobId}/feedback
        * @param {string} jobId
        * @param {JsonObject} body
