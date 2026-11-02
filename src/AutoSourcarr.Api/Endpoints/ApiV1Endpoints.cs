@@ -456,7 +456,11 @@ public static class ApiV1Endpoints
                     var result = services.Editor.Save(changes, body.Revision, body.Transaction);
                     // SET-3: the 0.4.x cleanup_after_setup; the app's own old files move to the trash (never blocks setup).
                     if (services.Backups?.Cleanup is { } cleanup)
+                    {
+                        // The wizard polls the status: "pending" until this run finishes, never the previous run's result.
+                        cleanup.MarkPending("setup");
                         _ = Task.Run(() => { try { cleanup.RunAutomatic("setup"); } catch (Exception error) when (error is not OutOfMemoryException) { _ = error; } });
+                    }
                     return Results.Json(new SetupFinishResponse(true, result.ChangedKeys, result.RestartRequired, body.Transaction,
                         services.Reader(services.Editor.Effective()), services.CanRestart, Changes(result)), json.SetupFinishResponse);
                 });

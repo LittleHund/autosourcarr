@@ -261,7 +261,7 @@
        */
       allowSourceRecordMatch(entryId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/separate-source/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
       /**
-       * Restore a previewed backup as an exclusive job (body {stage_id, preview_token, confirm: true}): background work stops, a pre-restore backup is kept, both databases are swapped and checked, older schemas upgraded, settings merged (this instance's secrets kept); any failure rolls back. Answers 202 with the task id.
+       * Arm a previewed restore for the next start (body {stage_id, preview_token, confirm: true}). It is applied before any database opens: a pre-restore backup, then both databases and the settings are swapped with a journal (this instance's secrets kept); a crash or failed check undoes it. Until the restart changes are refused; the integrated image restarts itself.
        * POST /api/v1/backups/restore/apply
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -285,7 +285,7 @@
        */
       applyGalleryPolicy(sourceId, options) { return call('POST', `/api/v1/gallery-policies/${encodeURIComponent(sourceId)}/apply`, undefined, options); },
       /**
-       * Move the previewed old files to trash/<date> under the data folder (body {confirm: true, preview_token}); nothing is deleted.
+       * Move the previewed old files to trash/<date> under the data folder and delete expired trash (body {confirm: true, preview_token}).
        * POST /api/v1/maintenance/old-files
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -332,6 +332,13 @@
        * @returns {Promise<JsonObject>}
        */
       browseCatalogue(options) { return call('GET', '/api/v1/catalogue/browse', undefined, options); },
+      /**
+       * Cancel an armed restore before the restart; changes are accepted again.
+       * DELETE /api/v1/backups/restore/pending
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      cancelBackupRestore(options) { return call('DELETE', '/api/v1/backups/restore/pending', undefined, options); },
       /**
        * Cancel a queued or running repair job; a repair that already changed the source rolls back itself.
        * POST /api/v1/source-maintenance/jobs/{jobId}/cancel
@@ -519,7 +526,7 @@
        */
       createAccount(body, options) { return call('POST', '/api/v1/accounts', body, options); },
       /**
-       * Create a backup as a job (body {passphrase?}: 12 to 1024 characters protects it with AES-GCM; never stored). Answers 202 with the task id.
+       * Create a backup as a job (body {passphrase?}: 12 to 1024 characters protects it with chunked AES-GCM; never stored). Answers 202 with the task id.
        * POST /api/v1/backups
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -650,7 +657,7 @@
        */
       discoverSourceRawOrigin(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/discover`, body, options); },
       /**
-       * "Keep current": hide the notice of the last update or rollback (SET-9); the automatic backup stays in the list.
+       * "Keep current": hide the notice of the last update or restore; the backups stay in the list.
        * POST /api/v1/backups/update-notice/dismiss
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -664,7 +671,7 @@
        */
       dismissUpdateNotice(options) { return call('POST', '/api/v1/settings/update-notice/dismiss', undefined, options); },
       /**
-       * Download one backup file (.ascbackup).
+       * Download one backup file (.ascbackup), streamed.
        * GET /api/v1/backups/{backupId}/download
        * @param {string} backupId
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1372,7 +1379,7 @@
        */
       linkCatalogueRecord(body, options) { return call('POST', '/api/v1/catalog-sharing/records/link', body, options); },
       /**
-       * Saved backups (manual, automatic before an update, pre-restore), newest first; the update notice of SET-9 while it is not dismissed.
+       * Saved backups (manual, automatic before an update, pre-restore), newest first; the update notice, the safe-mode notice after a failed update, the result of the last restore at start and an armed restore.
        * GET /api/v1/backups
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -1521,6 +1528,14 @@
        */
       matchImportItem(importId, itemId, entryId, options) { return call('POST', `/api/v1/imports/${encodeURIComponent(importId)}/items/${encodeURIComponent(itemId)}/match/${encodeURIComponent(entryId)}`, undefined, options); },
       /**
+       * The owner's explicit choice after the automatic backup failed: the next start migrates without a backup (body {confirm: true, preview_token} from the safe-mode notice).
+       * POST /api/v1/backups/safe-mode/migrate-without-backup
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      migrateWithoutBackup(body, options) { return call('POST', '/api/v1/backups/safe-mode/migrate-without-backup', body, options); },
+      /**
        * Copy, check and switch both databases to another mounted folder (SET-5); the old files are kept.
        * POST /api/v1/storage/database/move
        * @param {DatabaseMoveRequest} body
@@ -1563,7 +1578,7 @@
        */
       previewAllManualActionsReset(options) { return call('GET', '/api/v1/maintenance/reset-all-manual-actions', undefined, options); },
       /**
-       * Check a backup and show what a restore would change: upload the file as the body (optional header X-Backup-Passphrase, base64), or send {backup_id, passphrase?} for a saved one. Refuses damaged, tampered, wrong-passphrase and newer-format files ("Version mismatch: version X required"). Answers stage_id and preview_token.
+       * Check a backup and show what a restore would change: multipart/form-data with fields passphrase (optional, first) and file, a raw unprotected file, or {backup_id, passphrase?} for a saved one. Streamed to disk. Refuses damaged, tampered, wrong-passphrase and newer-format files ("Version mismatch: version X required"). Answers stage_id and preview_token.
        * POST /api/v1/backups/restore/preview
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1621,7 +1636,7 @@
        */
       previewManualMatchesReset(options) { return call('GET', '/api/v1/maintenance/reset-manual-matches', undefined, options); },
       /**
-       * SET-3: old files the app itself left (old reports, orphaned bytecode, abandoned temporary files) and the preview_token to move them to the trash.
+       * SET-3: old files the app itself left (old reports, orphaned bytecode, abandoned temporary files and previews, expired trash) and the preview_token to clean them.
        * GET /api/v1/maintenance/old-files
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -1938,6 +1953,14 @@
        * @returns {Promise<JsonObject>}
        */
       retryAttention(attentionId, options) { return call('POST', `/api/v1/attention/${encodeURIComponent(attentionId)}/retry`, undefined, options); },
+      /**
+       * "Retry the update" after a rolled-back or blocked update: takes a fresh backup now, then the next start migrates again (body {confirm: true}).
+       * POST /api/v1/backups/safe-mode/retry
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      retryBackupUpdate(body, options) { return call('POST', '/api/v1/backups/safe-mode/retry', body, options); },
       /**
        * Retry a row in the background (remembered match, full resolution with metadata, live sources); the newest decision of the row wins.
        * POST /api/v1/imports/{importId}/items/{itemId}/retry

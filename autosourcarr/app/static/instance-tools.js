@@ -112,24 +112,39 @@
     }
     status(`${queue.queue.length} queued chapters · ${queue.state==='STARTED'?'Downloader running':'Downloader paused'}`);
   }
-  // Phase 12 (SET-8/SET-9): backups live on /api/v1 through the generated client; only the file upload and the
-  // file download use api() directly, because the generated client sends JSON bodies and parses JSON answers.
+  // Phase 12 (SET-8/SET-9): backups live on /api/v1 through the generated client. The file upload (multipart, the
+  // passphrase is a form field, never a header) uses api() directly; downloads are plain links (streamed by the server).
   const v1=()=>(window.AutoSourcarrApi||globalThis.AutoSourcarrApi).createClient({request:(path,options)=>api(path,options)});
   const when=value=>value?new Date(value).toLocaleString():'unknown time';
   const kindLabel=kind=>({manual:'Manual',automatic:'Automatic (before update)','pre-restore':'Before a restore'}[kind]||kind);
+  const headerToken=()=>{try{return typeof token==='string'&&token?token:'';}catch(_){return '';}};
+  function downloadLink(item,label='Download'){
+    const url='/api/v1/backups/'+encodeURIComponent(item.id)+'/download';
+    if(headerToken())return action(label,()=>api(url,{responseType:'blob'}),{after:blob=>{
+      // An admin token sent as a header cannot ride on a plain link; only then the browser buffers the file.
+      const href=URL.createObjectURL(blob),a=document.createElement('a');a.href=href;a.download='autosourcarr-'+item.id+'.ascbackup';a.click();setTimeout(()=>URL.revokeObjectURL(href),1000);
+    }});
+    const a=document.createElement('a');a.href=url;a.download='autosourcarr-'+item.id+'.ascbackup';a.textContent=label;a.className='riButtonLink';return a;
+  }
+  function multipart(file,passphrase){
+    const boundary='----autosourcarr'+Math.random().toString(16).slice(2)+Date.now().toString(16);
+    const parts=[];
+    if(passphrase)parts.push('--'+boundary+'\r\nContent-Disposition: form-data; name="passphrase"\r\n\r\n',passphrase,'\r\n');
+    parts.push('--'+boundary+'\r\nContent-Disposition: form-data; name="file"; filename="backup.ascbackup"\r\nContent-Type: application/octet-stream\r\n\r\n',file,'\r\n--'+boundary+'--\r\n');
+    return {body:new Blob(parts),type:'multipart/form-data; boundary='+boundary};
+  }
   async function openBackups(){
     if(!show('Backup & restore'))return;
-    body.innerHTML='<div id="riBackupNotice"></div><p>A backup is one file with both databases (catalogue, manual decisions, chapter provenance), the settings without secrets, matching/serving/source profiles and the portable catalogue export. It can also be shared: secrets, accounts, keys, cookies and downloads are never included.</p><p class="muted">The passphrase is optional (12 to 1024 characters) and never saved; without it the file is not encrypted. An automatic backup is taken before every update or database migration.</p><label>Backup passphrase (optional)<input id="riBackupPassword" type="password" autocomplete="new-password" minlength="12"/></label><div id="riBackupCreate" class="riToolActions"></div><h3>Saved backups</h3><div id="riBackupList"></div><h3>Restore from a file</h3><label>Backup file<input id="riRestoreFile" type="file" accept=".ascbackup"/></label><label>Its passphrase (if protected)<input id="riRestorePassword" type="password" autocomplete="off"/></label><div id="riRestoreActions" class="riToolActions"></div><div id="riRestorePreview"></div>';
+    body.innerHTML='<div id="riBackupNotice"></div><p>A backup is one file with both databases (catalogue, manual decisions, chapter provenance), the settings without secrets, matching/serving/source profiles and the portable catalogue export. It can also be shared: secrets, accounts, keys, cookies and downloads are never included.</p><p class="muted">The passphrase is optional (12 to 1024 characters) and never saved; without it the file is not encrypted. An automatic backup is taken before every update or database migration. A restore is applied at the next start, before the databases open.</p><label>Backup passphrase (optional)<input id="riBackupPassword" type="password" autocomplete="new-password" minlength="12"/></label><div id="riBackupCreate" class="riToolActions"></div><h3>Saved backups</h3><div id="riBackupList"></div><h3>Restore from a file</h3><label>Backup file<input id="riRestoreFile" type="file" accept=".ascbackup"/></label><label>Its passphrase (if protected)<input id="riRestorePassword" type="password" autocomplete="off"/></label><div id="riRestoreActions" class="riToolActions"></div><div id="riRestorePreview"></div>';
     byId('riBackupCreate').append(action('Create backup',()=>{
       const passphrase=byId('riBackupPassword').value;byId('riBackupPassword').value='';
       return v1().createBackup(passphrase?{passphrase}:{}, {timeoutMs:30000});
     },{after:result=>{status('Backup queued in Tasks ('+result.task_id+'). Refresh this list when it is done.');return refreshBackups();}}));
     byId('riRestoreActions').append(action('Check backup & preview restore',async()=>{
       const file=byId('riRestoreFile').files[0],password=byId('riRestorePassword').value;byId('riRestorePassword').value='';
-      if(!file)throw Error('Select a backup file first');if(file.size>1024*1024*1024+64)throw Error('Backup exceeds 1 GiB');
-      const headers={'Content-Type':'application/octet-stream'};
-      if(password)headers['X-Backup-Passphrase']=btoa(String.fromCharCode(...new TextEncoder().encode(password)));
-      return api('/api/v1/backups/restore/preview',{method:'POST',body:file,headers,timeoutMs:600000});
+      if(!file)throw Error('Select a backup file first');
+      const upload=multipart(file,password);
+      return api('/api/v1/backups/restore/preview',{method:'POST',body:upload.body,headers:{'Content-Type':upload.type},timeoutMs:3600000});
     },{after:renderRestorePreview}));
     await refreshBackups();
   }
@@ -138,39 +153,66 @@
     const rows=(result.databases||[]).flatMap(db=>db.tables.map(t=>`<tr><td>${esc(db.name)}</td><td>${esc(t.table)}</td><td>${t.current??'—'}</td><td>${t.backup??'—'}</td></tr>`)).join('');
     const list=(title,items)=>items&&items.length?`<p><strong>${esc(title)}</strong>: ${items.map(esc).join(', ')}</p>`:'';
     const settings=result.settings||{};
-    byId('riRestorePreview').innerHTML=`<div class="notice"><strong>Backup checked</strong><p>From ${esc(when(result.backup?.created_at))} · AutoSourcarr ${esc(result.backup?.app_version)} · format ${Number(result.backup?.format_version)}</p><p>${esc(result.version_check?.message)}</p><div class="riTableScroll"><table><thead><tr><th>Database</th><th>Table</th><th>Now</th><th>Backup</th></tr></thead><tbody>${rows}</tbody></table></div>${settings.included?`<p>${Number(settings.changed.length)} setting values change.</p>`:'<p>The backup has no settings; current settings stay.</p>'}${list('Secrets kept from this instance',settings.secrets_kept_from_this_instance)}${list('Secrets to enter again after the restore',settings.secrets_to_enter_again)}<p class="muted">${esc(result.effect)}</p><label>Type RESTORE THIS INSTANCE<input id="riRestoreConfirmation" autocomplete="off"/></label><div id="riRestoreApply"></div></div>`;
-    byId('riRestoreApply').append(action('Restore this backup',()=>{
+    byId('riRestorePreview').innerHTML=`<div class="notice"><strong>Backup checked</strong><p>From ${esc(when(result.backup?.created_at))} · AutoSourcarr ${esc(result.backup?.app_version)} · format ${Number(result.backup?.format_version)}</p><p>${esc(result.version_check?.message)}</p>${result.decisions_warning?'<p><strong>'+esc(result.decisions_warning)+'</strong></p>':''}<div class="riTableScroll"><table><thead><tr><th>Database</th><th>Table</th><th>Now</th><th>Backup</th></tr></thead><tbody>${rows}</tbody></table></div>${settings.included?`<p>${Number(settings.changed.length)} setting values change.</p>`:'<p>The backup has no settings; current settings stay.</p>'}${list('Secrets kept from this instance',settings.secrets_kept_from_this_instance)}${list('Secrets to enter again after the restore',settings.secrets_to_enter_again)}<p class="muted">${esc(result.effect)}</p><label>Type RESTORE THIS INSTANCE<input id="riRestoreConfirmation" autocomplete="off"/></label><div id="riRestoreApply"></div></div>`;
+    byId('riRestoreApply').append(action('Restore at the next start',()=>{
       if(byId('riRestoreConfirmation').value!=='RESTORE THIS INSTANCE')throw Error('Type RESTORE THIS INSTANCE to confirm.');
       return v1().applyBackupRestore({stage_id:staged.stage_id,preview_token:staged.preview_token,confirm:true});
-    },{danger:true,after:result=>status('Restore queued in Tasks ('+result.task_id+'). Restart AutoSourcarr when it is done (the integrated image restarts itself).')}));
+    },{danger:true,after:result=>{status(result.message);return refreshBackups();}}));
   }
-  function previewSaved(item){
-    return action(item.protected?'Restore (needs passphrase)':'Restore',()=>{
+  function previewSaved(item,label){
+    return action(label||(item.protected?'Restore (needs passphrase)':'Restore'),()=>{
       const passphrase=item.protected?byId('riRestorePassword').value:'';if(item.protected)byId('riRestorePassword').value='';
       return v1().previewBackupRestore(passphrase?{backup_id:item.id,passphrase}:{backup_id:item.id},{timeoutMs:600000});
     },{after:renderRestorePreview});
   }
-  function renderNotice(update,items){
-    const root=byId('riBackupNotice');root.replaceChildren();if(!update)return;
+  function noticeBox(title,lines){
     const box=document.createElement('div');box.className='notice';
-    box.innerHTML=`<strong>${update.status==='rolled-back'?'Update rolled back':'Updated to '+esc(update.to_version)}</strong><p>${esc(update.message)}</p>${update.error?'<p class="muted">'+esc(update.error)+'</p>':''}`;
-    const backup=items.find(item=>item.id===update.backup_id);
-    const actions=document.createElement('div');actions.className='riToolActions';
-    if(backup)actions.append(previewSaved({...backup,label:null}));
-    if(backup)actions.lastChild.textContent='Roll back to the backup from '+when(update.backup_created_at);
-    actions.append(action('Keep current',()=>v1().dismissBackupUpdateNotice(),{after:()=>refreshBackups()}));
-    box.append(actions);root.append(box);
+    box.innerHTML=`<strong>${esc(title)}</strong>`+lines.filter(Boolean).map(line=>'<p>'+esc(line)+'</p>').join('');
+    const actions=document.createElement('div');actions.className='riToolActions';box.append(actions);return {box,actions};
+  }
+  function renderNotices(result){
+    const root=byId('riBackupNotice');root.replaceChildren();
+    const safe=result.safe_mode;
+    if(safe){
+      const {box,actions}=noticeBox(safe.status==='rolled-back'?'Update rolled back — safe mode':'Update paused — safe mode',[safe.message,safe.previous_version_hint,safe.error,safe.retry_pending?'A retry is armed: restart AutoSourcarr to run the update again.':null]);
+      if(!safe.retry_pending)actions.append(action('Retry the update',()=>{
+        if(!confirm('Take a fresh backup now and run the update again at the next start?'))return;
+        return v1().retryBackupUpdate({confirm:true});
+      },{after:result=>{if(result)status(result.message);return refreshBackups();}}));
+      if((safe.actions||[]).includes('migrate-without-backup'))actions.append(action('Migrate without a backup',()=>{
+        if(!confirm('Migrate at the next start WITHOUT a backup? If the migration fails, there is nothing to roll back to.'))return;
+        return v1().migrateWithoutBackup({confirm:true,preview_token:safe.preview_token});
+      },{danger:true,after:result=>{if(result)status(result.message);return refreshBackups();}}));
+      root.append(box);
+    }
+    if(result.restore_pending){
+      const {box,actions}=noticeBox('Restore armed',['The backup from '+when(result.restore_pending.backup_created_at)+' is restored at the next start. Until then changes are refused.']);
+      actions.append(action('Cancel the restore',()=>v1().cancelBackupRestore(),{after:()=>refreshBackups()}));root.append(box);
+    }
+    if(result.restore){
+      const {box,actions}=noticeBox(result.restore.status==='restored'?'Backup restored':'Restore not applied',[result.restore.message,result.restore.error]);
+      actions.append(action('Keep current',()=>v1().dismissBackupUpdateNotice(),{after:()=>refreshBackups()}));root.append(box);
+    }
+    const update=result.update;
+    if(update){
+      const backup=result.items.find(item=>item.id===update.backup_id);
+      const lines=[update.message];
+      if(backup&&!backup.schema_matches_build)lines.push('This backup is at the database schema of '+(update.from_version||'the previous version')+'. To go back, run AutoSourcarr '+(update.from_version||'(the previous image)')+' again and restore this backup there; restoring it here would upgrade it again.');
+      const {box,actions}=noticeBox('Updated to '+update.to_version,lines);
+      if(backup&&backup.schema_matches_build)actions.append(previewSaved(backup,'Roll back to the backup from '+when(update.backup_created_at)));
+      else if(backup)actions.append(downloadLink(backup,'Download the backup from '+when(update.backup_created_at)));
+      actions.append(action('Keep current',()=>v1().dismissBackupUpdateNotice(),{after:()=>refreshBackups()}));
+      root.append(box);
+    }
   }
   async function refreshBackups(){
     const own=generation,result=await v1().listBackups({signal:read.signal,suppressClientError:true});if(own!==generation)return;
-    renderNotice(result.update,result.items);
+    renderNotices(result);
     const root=byId('riBackupList');root.replaceChildren();
     if(!result.items.length)root.textContent='No backups saved yet.';
     for(const item of result.items){
       const row=document.createElement('div');row.className='riBackupRow';row.innerHTML=`<span>${esc(when(item.created_at))} · ${esc(kindLabel(item.kind))} · ${(item.bytes/1048576).toFixed(1)} MiB · ${Number(item.entries)} entries${item.protected?' · password protected':''}</span>`;
-      row.append(action('Download',()=>api('/api/v1/backups/'+encodeURIComponent(item.id)+'/download',{responseType:'blob'}),{after:blob=>{
-        const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='autosourcarr-'+item.id+'.ascbackup';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-      }}));
+      row.append(downloadLink(item));
       row.append(previewSaved(item));
       row.append(action('Delete backup',async()=>{
         if(!confirm('Permanently delete this backup? Download a copy first if you need to keep it.'))return;

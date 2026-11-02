@@ -84,6 +84,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     /// <summary>Phase 12: the backup store, the start-time update check (SET-9) and the app folder for SET-3 cleanup.</summary>
     private AutoSourcarr.Core.Backup.InstanceBackupStore? _backups;
     private AutoSourcarr.Core.Backup.UpgradeOutcome? _upgrade;
+    private System.Text.Json.Nodes.JsonObject? _restoreResult;
     private readonly List<string> _upgradeLog = [];
     private string? _appRoot;
     internal AutoSourcarr.Core.Backup.UpgradeOutcome? Upgrade => _upgrade;
@@ -209,15 +210,22 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner.Privacy.RegisterPath("data", data); owner.Privacy.RegisterPath("config", startup.ConfigurationRoot);
                 owner.Privacy.RegisterPath("database", paths.Directory); owner.Privacy.RegisterPath("library", startup.Settings.LibraryDir);
                 owner._database = new(startup.Settings);
-                // SET-9: an automatic backup before every update or migration; a failed migration or post-update
-                // check puts both databases back from it and the app starts paused with a notice.
+                // Phase 12: before any database is opened, an interrupted swap is finished or undone and an armed restore
+                // is applied (journalled); then SET-9 takes an automatic backup before every update or migration. A failed
+                // migration swaps the databases back and the app starts in its minimal safe mode (no retry loop).
                 owner._backups = new AutoSourcarr.Core.Backup.InstanceBackupStore(data, startup.ConfigurationRoot, owner.Database, Version);
+                owner._restoreResult = owner._backups.ApplyAtStart(message => owner._upgradeLog.Add(message));
                 owner._upgrade = AutoSourcarr.Core.Backup.UpgradeGuard.Run(owner._backups, owner.Database,
                     () => new SchemaMigrator(owner.Database).Initialize(), message => owner._upgradeLog.Add(message));
-                owner._preferences = new(owner.Database);
+                if (!owner._upgrade.SafeMode) owner._preferences = new(owner.Database);
                 owner._logs = new(owner._logIo, owner.Identity, owner.Privacy, data);
                 return 0;
             }, cancellationToken).ConfigureAwait(false);
+            if (owner._upgrade?.SafeMode == true)
+            {
+                owner.OpenSafeMode(startup);
+                return owner;
+            }
             if (acceptInherited)
                 owner._native = await NativeSourceOwnerConnection.AcceptInheritedAsync(startup.SourceRequest, cancellationToken, owner.Logs).ConfigureAwait(false);
             var useHost = hosted && startup.Settings.SourceEngineMode == "integrated";
@@ -410,13 +418,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 CatalogueViews = matching.Reading.CatalogueViews, Tags = matching.Reading.Tags, ReaderExtension = readerExtension,
                 UiPreferences = new UiPreferencesV1Services { Preferences = owner.Preferences, Io = owner.Io },
                 InternalServices = owner.InternalServices,
-                Backups = new BackupV1Services
-                {
-                    Store = owner._backups!,
-                    SharePage = after => sharingExchange.Export(after, 5000),
-                    Cleanup = owner.OldFiles(),
-                    Invalidate = () => owner._duplicates?.Invalidate(),
-                },
+                Backups = owner.BackupServices(after => sharingExchange.Export(after, 5000)),
                 // An interrupted library monitoring pass re-runs its read-only observation (0.4.x library-monitor safe replay).
                 SafeRetries = new Dictionary<string, Func<TaskRecord, CancellationToken, Task<JsonObject>>>(StringComparer.Ordinal)
                 {
@@ -501,9 +503,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._sourceStateWatch = owner.WatchSourceStateAsync();
             await owner._source.StartAsync().ConfigureAwait(false);
             if (owner._raws is not null) await owner._raws.StartAsync(cancellationToken).ConfigureAwait(false);
-            // Safe state after an automatic rollback: no startup maintenance, upgrades or crawls run on the rolled-back data
-            // until the admin acts in System → Backups (the job queue stays open so the one-click rollback can run).
-            if (owner._upgrade?.RolledBack != true) owner.ScheduleStartupWork();
+            owner.ScheduleStartupWork();
             cancellationToken.ThrowIfCancellationRequested();
             return owner;
         }
@@ -525,6 +525,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         _static = new(Path.GetFullPath(staticRoot));
         _appRoot = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(_static.Root));
         app.Use(next => context => OwnRequestAsync(context, next));
+        // Phase 12: in safe mode, and while a restore is armed for the next start, changes are refused.
+        app.Use(next => context => WriteGateAsync(context, next));
         app.UseAutoSourcarrHttp(Version, () => Settings, RecordUnexpected, Admission, Lanes, Tasks, Privacy,
             prefix => Errors.ResolvePrefix(prefix), _access);
         app.UseStaticFiles(new StaticFileOptions { RequestPath = "/static", FileProvider = _static });
@@ -541,6 +543,12 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 context.Response.Headers.CacheControl = "no-store";
                 return Results.File(Path.Combine(_static.Root, "login.html"), "text/html; charset=utf-8");
             });
+            if (_upgrade?.SafeMode == true)
+            {
+                // Minimal safe mode: sign-in, status/health, diagnostics, settings reads and System → Backups only.
+                endpoints.MapApiV1(_apiV1!);
+                return;
+            }
             endpoints.MapUiPreferences(Preferences, Io, () => Settings);
             endpoints.MapErrors(Errors, Io, () => Settings);
             endpoints.MapEngineCompatibility(_source!.CapabilityService, _mainCapabilities, () => Settings, _admin);

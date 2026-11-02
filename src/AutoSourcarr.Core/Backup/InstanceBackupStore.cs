@@ -8,18 +8,24 @@ using System.Text.RegularExpressions;
 using AutoSourcarr.Core.Compatibility;
 using AutoSourcarr.Core.Persistence;
 using AutoSourcarr.Core.Settings;
+using Microsoft.Data.Sqlite;
 
 namespace AutoSourcarr.Core.Backup;
 
 /// <summary>One saved backup as the list shows it (no paths, no secrets).</summary>
 public sealed record BackupSummary(string Id, string CreatedAt, string AppVersion, string Kind, string? Reason, long Bytes, bool Protected,
-    int Files, long Entries, long Chapters, bool ShareExport, int FormatVersion)
+    int Files, long Entries, long Chapters, bool ShareExport, int FormatVersion, long CatalogMigration = 0, long OriginsMigration = 0)
 {
+    /// <summary>The databases are at this build's schema: restoring needs no migration.</summary>
+    public bool SchemaMatchesBuild => CatalogMigration == SchemaMigrator.LatestMigration(DatabaseFile.Catalog)
+        && OriginsMigration == SchemaMigrator.LatestMigration(DatabaseFile.Origins);
+
     public JsonObject ToJson() => new()
     {
         ["id"] = Id, ["created_at"] = CreatedAt, ["app_version"] = AppVersion, ["kind"] = Kind, ["reason"] = Reason, ["bytes"] = Bytes,
         ["protected"] = Protected, ["files"] = Files, ["entries"] = Entries, ["chapters"] = Chapters, ["share_export"] = ShareExport,
-        ["format_version"] = FormatVersion,
+        ["format_version"] = FormatVersion, ["catalog_migration"] = CatalogMigration, ["origins_migration"] = OriginsMigration,
+        ["schema_matches_build"] = SchemaMatchesBuild,
     };
 
     public static BackupSummary? FromJson(JsonObject? row)
@@ -30,7 +36,8 @@ public sealed record BackupSummary(string Id, string CreatedAt, string AppVersio
             return new(row["id"]!.GetValue<string>(), row["created_at"]!.GetValue<string>(), row["app_version"]?.GetValue<string>() ?? "",
                 row["kind"]?.GetValue<string>() ?? "manual", row["reason"]?.GetValue<string>(), row["bytes"]?.GetValue<long>() ?? 0,
                 row["protected"]?.GetValue<bool>() ?? false, row["files"]?.GetValue<int>() ?? 0, row["entries"]?.GetValue<long>() ?? 0,
-                row["chapters"]?.GetValue<long>() ?? 0, row["share_export"]?.GetValue<bool>() ?? false, row["format_version"]?.GetValue<int>() ?? 0);
+                row["chapters"]?.GetValue<long>() ?? 0, row["share_export"]?.GetValue<bool>() ?? false, row["format_version"]?.GetValue<int>() ?? 0,
+                row["catalog_migration"]?.GetValue<long>() ?? 0, row["origins_migration"]?.GetValue<long>() ?? 0);
         }
         catch (Exception error) when (error is InvalidOperationException or FormatException or NullReferenceException) { return null; }
     }
@@ -46,20 +53,29 @@ public sealed record BackupSummary(string Id, string CreatedAt, string AppVersio
 /// databases/chapter-origins.sqlite
 /// catalogue/share-0001.json …      the phase 9 portable catalogue share export (for sharing; restore uses the databases)
 /// </code>
-/// Optionally password protected (<see cref="BackupCrypto"/>). config.key, accounts, tokens, cookies, signing keys,
-/// source-host data, downloads, covers and logs are never included. A restore is previewed (what changes, version
-/// check, preview token), then applied as one job: background work stopped, a pre-restore backup kept, both databases
-/// swapped and checked, older schemas migrated, settings merged with this instance's secrets; any failure rolls back.
+/// Optionally password protected (<see cref="BackupCrypto"/>, container ASCBK4). Files stream through disk; nothing holds
+/// a whole backup in memory. config.key, accounts, tokens, cookies, signing keys, source-host data, downloads, covers
+/// and logs are never included.
+/// <para>A restore is previewed (what changes, version check, preview token over the staged manifest, config.json and
+/// the saved manual decisions), then armed. It is applied at the next start, before any database is opened (the 0.4.5
+/// design): a pre-restore backup, then <see cref="DatabaseSwap"/> replaces both databases and config.json with a journal,
+/// so a crash mid-swap is undone on the following start. Older schemas are migrated afterwards by the update check.</para>
 /// </summary>
 public sealed partial class InstanceBackupStore
 {
     public const string FormatName = "autosourcarr-instance-backup";
     public const int FormatVersion = 3;
     public const int MinReaderVersion = 3;
-    public const long MaxArchiveBytes = 1L << 30;
+    /// <summary>Largest total a staged backup may declare (its decoded files); free space is checked as well.</summary>
+    public const long MaxDeclaredBytes = 64L << 30;
+    /// <summary>Largest upload the restore preview accepts.</summary>
+    public const long MaxUploadBytes = 64L << 30;
     public const int ManualLimit = 10;
     public const int AutomaticKeep = 3;
     public const string Extension = ".ascbackup";
+    public const string PendingFile = "restore-pending.json";
+    public const string ResultFile = "restore-result.json";
+    private const long FreeSpaceMargin = 256L << 20;
     private const int MaxSharePages = 400;
 
     /// <summary>Profile tables exported to profiles/profiles.json (SET-8 "profiles"; they are inside catalog.sqlite too).</summary>
@@ -77,6 +93,14 @@ public sealed partial class InstanceBackupStore
         ["entries", "source_matches", "manual_match_groups", "manual_match_bindings", "manual_separate_records", "preferred_title_overrides",
          "duplicate_reviews", "import_runs", "matching_presets", "serving_profiles", "virtual_chapters", "chapter_candidates", "origin_history"];
 
+    /// <summary>The saved decisions a preview token covers (hard rule 1): a change after the preview invalidates it.</summary>
+    private static readonly (string Table, string Filter)[] DecisionTables =
+    [
+        ("manual_match_groups", ""), ("manual_match_bindings", ""), ("manual_separate_records", ""), ("preferred_title_overrides", ""),
+        ("manual_title_scopes", ""), ("duplicate_reviews", ""), ("import_match_rejections", ""), ("mixed_entry_reviews", ""),
+        ("source_matches", " WHERE match_type='manual' OR locked=1"),
+    ];
+
     private readonly object _gate = new();
     private readonly SqliteDatabase _database;
     private readonly TimeProvider _clock;
@@ -93,7 +117,8 @@ public sealed partial class InstanceBackupStore
     public string Root { get; }
     public string ConfigurationRoot { get; }
     public string AppVersion { get; }
-    private string Staged => Path.Combine(Root, "staged");
+    public SqliteDatabase Database => _database;
+    public string Staged => Path.Combine(Root, "staged");
     private string Now() => _clock.GetUtcNow().UtcDateTime.ToString("O", CultureInfo.InvariantCulture);
 
     [GeneratedRegex("^[0-9a-f]{32}$", RegexOptions.CultureInvariant)]
@@ -136,6 +161,8 @@ public sealed partial class InstanceBackupStore
         lock (_gate)
         {
             var path = FilePath(id);
+            if (PendingRestore()?["backup_id"]?.GetValue<string>() == id)
+                throw new BackupRefusedException("This backup is armed for a restore; cancel the restore first.", 409);
             File.Delete(path);
             File.Delete(Path.Combine(Root, id + ".json"));
         }
@@ -146,6 +173,7 @@ public sealed partial class InstanceBackupStore
     /// <summary>
     /// Takes a backup. <paramref name="kind"/> is manual, automatic (before an update/migration, SET-9) or pre-restore.
     /// The share export runs first (it records portable ids); then both databases are snapshotted in one drained lease.
+    /// Everything streams through files in a work folder; a full disk answers 507 and leaves nothing behind.
     /// </summary>
     public BackupSummary Create(string kind, string? reason = null, string? passphrase = null, Func<long, JsonObject>? sharePage = null,
         TimeSpan? drain = null, Action<string>? report = null)
@@ -159,131 +187,137 @@ public sealed partial class InstanceBackupStore
             var id = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
             var work = Path.Combine(Root, ".work-" + id);
             Directory.CreateDirectory(work);
-            try
-            {
-                var contents = new List<(string Entry, string File)>();
-                var notes = new List<string>();
-                var share = 0;
-                if (sharePage is not null)
-                {
-                    report?.Invoke("Exporting the portable catalogue");
-                    long after = 0;
-                    while (share < MaxSharePages)
-                    {
-                        var page = sharePage(after);
-                        share++;
-                        var file = Path.Combine(work, "share-" + share.ToString("D4", CultureInfo.InvariantCulture) + ".json");
-                        File.WriteAllText(file, page["catalogue"]?.ToJsonString() ?? "{}", Encoding.UTF8);
-                        contents.Add(("catalogue/share-" + share.ToString("D4", CultureInfo.InvariantCulture) + ".json", file));
-                        if (page["next_cursor"] is JsonValue next && next.TryGetValue<long>(out var cursor) && cursor > after) after = cursor;
-                        else break;
-                    }
-                }
-                else notes.Add("The portable catalogue share export is not included in this " + kind + " backup; the databases are.");
-
-                report?.Invoke("Copying both databases");
-                var facts = new Dictionary<string, DatabaseFacts>(StringComparer.Ordinal);
-                _database.Quiescent(paths =>
-                {
-                    foreach (var item in BackupDatabases.Files)
-                    {
-                        var source = BackupDatabases.PathOf(paths, item.File);
-                        if (!File.Exists(source)) throw new BackupRefusedException(item.Name + " does not exist yet; there is nothing to back up.", 409);
-                        BackupDatabases.Snapshot(source, Path.Combine(work, item.Name));
-                    }
-                    return 0;
-                }, drain ?? TimeSpan.FromSeconds(120));
-                foreach (var item in BackupDatabases.Files)
-                {
-                    var copy = Path.Combine(work, item.Name);
-                    if (item.File == DatabaseFile.Catalog) BackupDatabases.ScrubSecrets(copy);
-                    var fact = BackupDatabases.Facts(copy);
-                    if (!fact.Intact) throw new BackupRefusedException(item.Name + " failed SQLite's integrity check; no backup was written.", 409);
-                    facts[item.Name] = fact;
-                    contents.Add((item.Entry, copy));
-                }
-
-                var profiles = Path.Combine(work, "profiles.json");
-                var profileRows = BackupDatabases.TableRows(Path.Combine(work, "catalog.sqlite"), ProfileTables);
-                File.WriteAllText(profiles, new JsonObject
-                {
-                    ["format"] = "autosourcarr-profiles", ["profile_format"] = CompatibilityList.Current.ProfileFormat, ["tables"] = profileRows,
-                }.ToJsonString(), Encoding.UTF8);
-                contents.Add(("profiles/profiles.json", profiles));
-
-                var notIncluded = new List<string>();
-                ConfigDocument? config;
-                lock (SettingsEditor.Gate(ConfigurationRoot)) config = new ConfigStore(ConfigurationRoot).ReadDocument();
-                if (config is not null)
-                {
-                    var clean = BackupSettings.Sanitize(config);
-                    notIncluded.AddRange(clean.NotIncluded);
-                    var file = Path.Combine(work, "config.json");
-                    File.WriteAllBytes(file, BackupSettings.Serialize(clean.Document));
-                    contents.Add(("settings/config.json", file));
-                }
-                else notes.Add("This instance has no config.json yet; no settings are included.");
-
-                var compatibility = CompatibilityList.Current.ToJson();
-                var manifest = new JsonObject
-                {
-                    ["format"] = FormatName, ["format_version"] = FormatVersion, ["min_reader_version"] = MinReaderVersion,
-                    ["app_version"] = AppVersion, ["created_at"] = Now(), ["kind"] = kind, ["reason"] = reason,
-                    ["compatibility"] = compatibility,
-                    ["schema"] = new JsonObject
-                    {
-                        ["catalog"] = facts["catalog.sqlite"].ToJson(), ["origins"] = facts["chapter-origins.sqlite"].ToJson(),
-                    },
-                    ["contents"] = new JsonArray(contents.OrderBy(item => item.Entry, StringComparer.Ordinal).Select(item => (JsonNode?)new JsonObject
-                    {
-                        ["path"] = item.Entry, ["sha256"] = Sha256File(item.File), ["bytes"] = new FileInfo(item.File).Length,
-                    }).ToArray()),
-                    ["not_included"] = new JsonArray(notIncluded.Select(name => (JsonNode?)name).ToArray()),
-                    ["always_excluded"] = new JsonArray(AlwaysExcluded.Select(name => (JsonNode?)name).ToArray()),
-                    ["notes"] = new JsonArray(notes.Select(name => (JsonNode?)name).ToArray()),
-                };
-
-                report?.Invoke("Writing the backup file");
-                var archive = Path.Combine(work, "backup.zip");
-                using (var stream = new FileStream(archive, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                using (var zip = new ZipArchive(stream, ZipArchiveMode.Create))
-                {
-                    var entry = zip.CreateEntry("manifest.json", CompressionLevel.Optimal);
-                    using (var output = entry.Open()) output.Write(Encoding.UTF8.GetBytes(manifest.ToJsonString(new JsonSerializerOptions { WriteIndented = true })));
-                    foreach (var (name, file) in contents.OrderBy(item => item.Entry, StringComparer.Ordinal))
-                        zip.CreateEntryFromFile(file, name, CompressionLevel.Fastest);
-                }
-                var length = new FileInfo(archive).Length;
-                if (length > MaxArchiveBytes) throw new BackupRefusedException("The backup is larger than 1 GiB; this build cannot write it.", 413);
-                var target = Path.Combine(Root, id + Extension);
-                if (passphrase is not null)
-                {
-                    var sealedBytes = BackupCrypto.Protect(File.ReadAllBytes(archive), passphrase);
-                    WriteAtomic(target, sealedBytes);
-                    length = sealedBytes.Length;
-                }
-                else
-                {
-                    using (var stream = new FileStream(archive, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) stream.Flush(flushToDisk: true);
-                    File.Move(archive, target);
-                }
-                Private(target);
-                var summary = new BackupSummary(id, manifest["created_at"]!.GetValue<string>(), AppVersion, kind, reason, length, passphrase is not null,
-                    contents.Count, facts["catalog.sqlite"].Rows.GetValueOrDefault("entries"), facts["chapter-origins.sqlite"].Rows.GetValueOrDefault("virtual_chapters"),
-                    share > 0, FormatVersion);
-                WriteAtomic(Path.Combine(Root, id + ".json"), Encoding.UTF8.GetBytes(summary.ToJson().ToJsonString()));
-                Prune(kind);
-                return summary;
-            }
+            try { return CreateIn(work, id, kind, reason, passphrase, sharePage, drain, report); }
+            catch (IOException error) when (error is not FileNotFoundException and not DirectoryNotFoundException)
+            { throw new BackupRefusedException("The backup could not be written (" + error.Message + "). Check the free space of the data folder.", 507, error); }
             finally { TryDeleteDirectory(work); }
         }
+    }
+
+    private BackupSummary CreateIn(string work, string id, string kind, string? reason, string? passphrase, Func<long, JsonObject>? sharePage,
+        TimeSpan? drain, Action<string>? report)
+    {
+        var contents = new List<(string Entry, string File)>();
+        var notes = new List<string>();
+        var share = 0;
+        if (sharePage is not null)
+        {
+            report?.Invoke("Exporting the portable catalogue");
+            long after = 0;
+            while (share < MaxSharePages)
+            {
+                var page = sharePage(after);
+                share++;
+                var name = "share-" + share.ToString("D4", CultureInfo.InvariantCulture) + ".json";
+                var file = Path.Combine(work, name);
+                File.WriteAllText(file, page["catalogue"]?.ToJsonString() ?? "{}", Encoding.UTF8);
+                contents.Add(("catalogue/" + name, file));
+                if (page["next_cursor"] is JsonValue next && next.TryGetValue<long>(out var cursor) && cursor > after) after = cursor;
+                else break;
+            }
+        }
+        else notes.Add("The portable catalogue share export is not included in this " + kind + " backup; the databases are.");
+
+        report?.Invoke("Copying both databases");
+        var facts = new Dictionary<string, DatabaseFacts>(StringComparer.Ordinal);
+        _database.Quiescent(paths =>
+        {
+            foreach (var item in BackupDatabases.Files)
+            {
+                var source = BackupDatabases.PathOf(paths, item.File);
+                if (!File.Exists(source)) throw new BackupRefusedException(item.Name + " does not exist; there is nothing to back up.", 409);
+                BackupDatabases.Snapshot(source, Path.Combine(work, item.Name));
+            }
+            return 0;
+        }, drain ?? TimeSpan.FromSeconds(120));
+        foreach (var item in BackupDatabases.Files)
+        {
+            var copy = Path.Combine(work, item.Name);
+            if (item.File == DatabaseFile.Catalog) BackupDatabases.ScrubSecrets(copy);
+            var fact = BackupDatabases.Facts(copy);
+            if (!fact.Intact) throw new BackupRefusedException(item.Name + " failed SQLite's integrity check; no backup was written.", 409);
+            facts[item.Name] = fact;
+            contents.Add((item.Entry, copy));
+        }
+
+        var profiles = Path.Combine(work, "profiles.json");
+        File.WriteAllText(profiles, new JsonObject
+        {
+            ["format"] = "autosourcarr-profiles", ["profile_format"] = CompatibilityList.Current.ProfileFormat,
+            ["tables"] = BackupDatabases.TableRows(Path.Combine(work, "catalog.sqlite"), ProfileTables),
+        }.ToJsonString(), Encoding.UTF8);
+        contents.Add(("profiles/profiles.json", profiles));
+
+        var notIncluded = new List<string>();
+        ConfigDocument? config;
+        lock (SettingsEditor.Gate(ConfigurationRoot)) config = new ConfigStore(ConfigurationRoot).ReadDocument();
+        if (config is not null)
+        {
+            var clean = BackupSettings.Sanitize(config);
+            notIncluded.AddRange(clean.NotIncluded);
+            var file = Path.Combine(work, "config.json");
+            File.WriteAllBytes(file, BackupSettings.Serialize(clean.Document));
+            contents.Add(("settings/config.json", file));
+        }
+        else notes.Add("This instance has no config.json yet; no settings are included.");
+
+        var manifest = new JsonObject
+        {
+            ["format"] = FormatName, ["format_version"] = FormatVersion, ["min_reader_version"] = MinReaderVersion,
+            ["app_version"] = AppVersion, ["created_at"] = Now(), ["kind"] = kind, ["reason"] = reason,
+            ["compatibility"] = CompatibilityList.Current.ToJson(),
+            ["schema"] = new JsonObject { ["catalog"] = facts["catalog.sqlite"].ToJson(), ["origins"] = facts["chapter-origins.sqlite"].ToJson() },
+            ["contents"] = new JsonArray(contents.OrderBy(item => item.Entry, StringComparer.Ordinal).Select(item => (JsonNode?)new JsonObject
+            {
+                ["path"] = item.Entry, ["sha256"] = Sha256File(item.File), ["bytes"] = new FileInfo(item.File).Length,
+            }).ToArray()),
+            ["not_included"] = Names(notIncluded),
+            ["always_excluded"] = Names(AlwaysExcluded),
+            ["notes"] = Names(notes),
+        };
+
+        report?.Invoke("Writing the backup file");
+        var archive = Path.Combine(work, "backup.zip");
+        using (var stream = new FileStream(archive, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Create))
+        {
+            using (var output = zip.CreateEntry("manifest.json", CompressionLevel.Optimal).Open())
+                output.Write(Encoding.UTF8.GetBytes(manifest.ToJsonString(new JsonSerializerOptions { WriteIndented = true })));
+            foreach (var (name, file) in contents.OrderBy(item => item.Entry, StringComparer.Ordinal))
+                zip.CreateEntryFromFile(file, name, CompressionLevel.Fastest);
+        }
+        var target = Path.Combine(Root, id + Extension);
+        var pending = target + ".pending";
+        if (passphrase is not null)
+        {
+            using (var input = File.OpenRead(archive))
+            using (var output = new FileStream(pending, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                BackupCrypto.Encrypt(input, output, passphrase);
+                output.Flush(flushToDisk: true);
+            }
+        }
+        else
+        {
+            using (var stream = new FileStream(archive, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) stream.Flush(flushToDisk: true);
+            File.Move(archive, pending);
+        }
+        File.Move(pending, target, overwrite: true);
+        Private(target);
+        var summary = new BackupSummary(id, manifest["created_at"]!.GetValue<string>(), AppVersion, kind, reason, new FileInfo(target).Length, passphrase is not null,
+            contents.Count, facts["catalog.sqlite"].Rows.GetValueOrDefault("entries"), facts["chapter-origins.sqlite"].Rows.GetValueOrDefault("virtual_chapters"),
+            share > 0, FormatVersion, facts["catalog.sqlite"].Migration, facts["chapter-origins.sqlite"].Migration);
+        WriteAtomic(Path.Combine(Root, id + ".json"), Encoding.UTF8.GetBytes(summary.ToJson().ToJsonString()));
+        Prune(kind);
+        return summary;
     }
 
     /// <summary>Automatic and pre-restore backups keep the newest <see cref="AutomaticKeep"/> of their kind.</summary>
     private void Prune(string kind)
     {
         if (kind == "manual") return;
-        foreach (var old in List().Where(row => row.Kind == kind).Skip(AutomaticKeep))
+        var protectedId = PendingRestore()?["backup_id"]?.GetValue<string>();
+        foreach (var old in List().Where(row => row.Kind == kind && row.Id != protectedId).Skip(AutomaticKeep))
         {
             TryDelete(Path.Combine(Root, old.Id + Extension));
             TryDelete(Path.Combine(Root, old.Id + ".json"));
@@ -292,28 +326,22 @@ public sealed partial class InstanceBackupStore
 
     // ---- read / stage / preview -------------------------------------------------------------------------------
 
-    /// <summary>Decrypts (when protected) and checks the outer format; refuses 0.4.x files and anything that is not a backup.</summary>
-    public static byte[] Open(byte[] data, string? passphrase)
-    {
-        if (BackupCrypto.IsLegacy(data))
-            throw new BackupRefusedException("This is an AutoSourcarr 0.4.x instance backup (format 2). Restore it with the 0.4.x version that made it, then update; "
-                + CatalogueFormatMessage("0.4.5"));
-        var plain = BackupCrypto.IsProtected(data) ? BackupCrypto.Unprotect(data, passphrase) : data;
-        if (plain.Length < 4 || plain[0] != (byte)'P' || plain[1] != (byte)'K')
-            throw new BackupRefusedException("This file is not an AutoSourcarr backup.");
-        return plain;
-    }
-
     private static string CatalogueFormatMessage(string version) => Catalogue.Sharing.CatalogueFormat.MismatchMessage(version) + ".";
 
-    /// <summary>
-    /// Reads a backup into a fresh staging folder, checks every content hash, the format and schema versions, and
-    /// answers what a restore would change with its preview token. Only the newest staged backup is kept.
-    /// </summary>
-    public JsonObject Stage(byte[] data, string? passphrase, string source)
+    /// <summary>A fresh file name under staged/ for an upload the route streams to disk.</summary>
+    public string UploadPath()
     {
-        if (data.LongLength > MaxArchiveBytes + 64) throw new BackupRefusedException("The backup is larger than 1 GiB.", 413);
-        var plain = Open(data, passphrase);
+        Directory.CreateDirectory(Staged);
+        return Path.Combine(Staged, ".upload-" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)));
+    }
+
+    /// <summary>
+    /// Reads a backup file into a fresh staging folder, checks every content hash, the format and schema versions,
+    /// and answers what a restore would change with its preview token. Only the newest staged backup is kept.
+    /// With <paramref name="consume"/> the file (an upload) is moved or deleted; otherwise it is only read.
+    /// </summary>
+    public JsonObject Stage(string file, string? passphrase, string source, bool consume)
+    {
         lock (_gate)
         {
             var id = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
@@ -321,33 +349,72 @@ public sealed partial class InstanceBackupStore
             Directory.CreateDirectory(target);
             try
             {
-                var manifest = Extract(plain, target);
+                var container = BackupCrypto.Detect(file);
+                var zipPath = file;
+                switch (container)
+                {
+                    case BackupContainer.Legacy2:
+                        throw new BackupRefusedException("This is an AutoSourcarr 0.4.x instance backup (format 2). Restore it with the 0.4.x version that made it, then update; "
+                            + CatalogueFormatMessage("0.4.5"));
+                    case BackupContainer.Unknown:
+                        throw new BackupRefusedException("This file is not an AutoSourcarr backup.");
+                    case BackupContainer.Protected3 or BackupContainer.Protected4:
+                        zipPath = Path.Combine(target, "backup.zip");
+                        RequireSpace(target, new FileInfo(file).Length);
+                        BackupCrypto.Decrypt(file, zipPath, passphrase);
+                        if (consume) TryDelete(file);
+                        break;
+                    default:
+                        if (consume) { zipPath = Path.Combine(target, "backup.zip"); File.Move(file, zipPath); }
+                        break;
+                }
+                var manifest = Extract(zipPath, target);
+                if (!string.Equals(zipPath, file, StringComparison.Ordinal)) TryDelete(zipPath);
                 var facts = CheckDatabases(target, manifest);
                 var preview = Preview(id, target, manifest, facts, source);
                 File.WriteAllText(Path.Combine(target, "stage.json"), new JsonObject
                 {
                     ["id"] = id, ["token"] = preview["preview_token"]!.GetValue<string>(), ["source"] = source, ["created_at"] = Now(),
-                    ["manifest_sha256"] = Sha256File(Path.Combine(target, "manifest.json")),
+                    ["backup_id"] = source.StartsWith("backup:", StringComparison.Ordinal) ? source["backup:".Length..] : null,
                 }.ToJsonString());
-                foreach (var old in Directory.EnumerateDirectories(Staged).Where(path => !string.Equals(Path.GetFileName(path), id, StringComparison.Ordinal)))
+                var armed = PendingRestore()?["stage_id"]?.GetValue<string>();
+                foreach (var old in Directory.EnumerateDirectories(Staged).Where(path => Path.GetFileName(path) is var name && name != id && name != armed))
                     TryDeleteDirectory(old);
                 return preview;
             }
             catch
             {
                 TryDeleteDirectory(target);
+                if (consume) TryDelete(file);
                 throw;
             }
         }
     }
 
-    /// <summary>Stages one of the saved backups (the automatic one before an update, for the one-click rollback).</summary>
-    public JsonObject StageSaved(string backupId, string? passphrase) => Stage(File.ReadAllBytes(FilePath(backupId)), passphrase, "backup:" + backupId);
+    /// <summary>Stages one of the saved backups (read in place, never copied whole into memory).</summary>
+    public JsonObject StageSaved(string backupId, string? passphrase) => Stage(FilePath(backupId), passphrase, "backup:" + backupId, consume: false);
 
-    private static JsonObject Extract(byte[] plain, string target)
+    /// <summary>Test and tool helper: stages bytes through a temporary upload file.</summary>
+    public JsonObject Stage(byte[] data, string? passphrase, string source)
+    {
+        var upload = UploadPath();
+        File.WriteAllBytes(upload, data);
+        return Stage(upload, passphrase, source, consume: true);
+    }
+
+    private static void RequireSpace(string folder, long bytes)
+    {
+        long free;
+        try { free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(folder))!).AvailableFreeSpace; }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException) { return; }
+        if (free < bytes + FreeSpaceMargin)
+            throw new BackupRefusedException($"Not enough free space to stage this backup ({bytes / 1048576} MiB needed, {free / 1048576} MiB free).", 507);
+    }
+
+    private static JsonObject Extract(string zipPath, string target)
     {
         ZipArchive zip;
-        try { zip = new ZipArchive(new MemoryStream(plain, writable: false), ZipArchiveMode.Read); }
+        try { zip = ZipFile.OpenRead(zipPath); }
         catch (InvalidDataException error) { throw new BackupRefusedException("The backup file is damaged (not a readable zip).", 400, error); }
         using (zip)
         {
@@ -361,6 +428,7 @@ public sealed partial class InstanceBackupStore
             using (var buffer = new MemoryStream())
             {
                 stream.CopyTo(buffer);
+                if (buffer.Length > 8 * 1024 * 1024) throw new BackupRefusedException("The backup manifest is too large.");
                 File.WriteAllBytes(Path.Combine(target, "manifest.json"), buffer.ToArray());
                 try { manifest = JsonNode.Parse(buffer.ToArray()) as JsonObject ?? throw new BackupRefusedException("The backup manifest is not an object."); }
                 catch (JsonException error) { throw new BackupRefusedException("The backup manifest is not valid JSON.", 400, error); }
@@ -370,11 +438,18 @@ public sealed partial class InstanceBackupStore
             foreach (var row in manifest["contents"]!.AsArray().OfType<JsonObject>())
             {
                 var path = row["path"]?.GetValue<string>() ?? "";
-                if (!EntryPattern().IsMatch(path) || path == "manifest.json" || !listed.TryAdd(path, (row["sha256"]?.GetValue<string>() ?? "", row["bytes"]?.GetValue<long>() ?? -1)))
+                var bytes = row["bytes"]?.GetValue<long>() ?? -1;
+                if (!EntryPattern().IsMatch(path) || path == "manifest.json" || bytes < 0 || !listed.TryAdd(path, (row["sha256"]?.GetValue<string>() ?? "", bytes)))
                     throw new BackupRefusedException("The backup manifest lists an invalid file.");
             }
             if (!listed.Keys.Order(StringComparer.Ordinal).SequenceEqual(names.Where(name => name != "manifest.json").Order(StringComparer.Ordinal), StringComparer.Ordinal))
                 throw new BackupRefusedException("The backup does not contain exactly the files its manifest lists (tampered or incomplete).");
+            // Declared sizes are capped and must match the zip's own sizes before anything is written (no disk fill).
+            var declared = listed.Values.Sum(item => item.Bytes);
+            if (declared > MaxDeclaredBytes) throw new BackupRefusedException("The backup declares more than 64 GiB of content.", 413);
+            foreach (var entry in zip.Entries.Where(entry => entry.FullName != "manifest.json"))
+                if (entry.Length != listed[entry.FullName].Bytes) throw new BackupRefusedException("A file in the backup does not have the size its manifest says (tampered).");
+            RequireSpace(target, declared);
             foreach (var entry in zip.Entries.Where(entry => entry.FullName != "manifest.json"))
             {
                 var (sha, bytes) = listed[entry.FullName];
@@ -406,7 +481,7 @@ public sealed partial class InstanceBackupStore
 
     /// <summary>
     /// SET-8 version check (PIPE-4): a newer format is refused with "Version mismatch: version X required"; older
-    /// formats of this file kind are upgraded (their databases are migrated after the restore).
+    /// databases of this format are upgraded by the update check after the restore.
     /// </summary>
     public static void CheckManifest(JsonObject manifest)
     {
@@ -444,6 +519,58 @@ public sealed partial class InstanceBackupStore
         var path = Path.Combine(ConfigurationRoot, ConfigStore.FileName);
         return File.Exists(path) ? Sha256File(path) : "none";
     }
+
+    private static SqliteConnection ReadOnly(string path) => new(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString());
+
+    private static bool HasTable(SqliteConnection connection, string table)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name=$name";
+        command.Parameters.AddWithValue("$name", table);
+        return command.ExecuteScalar() is not null;
+    }
+
+    /// <summary>A digest of the saved manual decisions and the decision log of the live catalogue (preview token part).</summary>
+    public string DecisionDigest()
+    {
+        var path = _database.Paths.Catalog;
+        if (!File.Exists(path)) return "none";
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        using var connection = ReadOnly(path);
+        connection.Open();
+        foreach (var (table, filter) in DecisionTables.Append(("decision_log", "")))
+        {
+            if (!HasTable(connection, table)) continue;
+            using var command = connection.CreateCommand();
+            command.CommandText = table == "decision_log" ? "SELECT COUNT(*), MAX(id) FROM decision_log" : "SELECT * FROM \"" + table + "\"" + filter + " ORDER BY 1,2";
+            using var reader = command.ExecuteReader();
+            hash.AppendData(Encoding.UTF8.GetBytes(table + "\n"));
+            while (reader.Read())
+            {
+                for (var index = 0; index < reader.FieldCount; index++)
+                    hash.AppendData(Encoding.UTF8.GetBytes((reader.IsDBNull(index) ? "\u0000" : Convert.ToString(reader.GetValue(index), CultureInfo.InvariantCulture)) + "\u001f"));
+                hash.AppendData("\n"u8);
+            }
+        }
+        return Convert.ToHexStringLower(hash.GetHashAndReset());
+    }
+
+    /// <summary>Decisions made by a person (not automatic) after <paramref name="since"/>: a restore loses them.</summary>
+    private long DecisionsSince(string? since)
+    {
+        var path = _database.Paths.Catalog;
+        if (since is null || !File.Exists(path)) return 0;
+        using var connection = ReadOnly(path);
+        connection.Open();
+        if (!HasTable(connection, "decision_log")) return 0;
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM decision_log WHERE actor_kind<>'automatic' AND at>$at";
+        command.Parameters.AddWithValue("$at", since);
+        return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    private string Token(string id, string target) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+        id + "|" + Sha256File(Path.Combine(target, "manifest.json")) + "|" + CurrentConfigDigest() + "|" + DecisionDigest())));
 
     private JsonObject Preview(string id, string target, JsonObject manifest, Dictionary<string, DatabaseFacts> facts, string source)
     {
@@ -483,44 +610,54 @@ public sealed partial class InstanceBackupStore
             };
         }
         else settings = new JsonObject { ["included"] = false, ["changed"] = new JsonArray() };
-        var token = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(id + "|" + Sha256File(Path.Combine(target, "manifest.json")) + "|" + CurrentConfigDigest())));
         var writer = manifest["app_version"]?.GetValue<string>() ?? "";
+        var created = manifest["created_at"]?.GetValue<string>();
+        var newer = DecisionsSince(created);
         return new JsonObject
         {
-            ["stage_id"] = id, ["preview_token"] = token, ["source"] = source,
+            ["stage_id"] = id, ["preview_token"] = Token(id, target), ["source"] = source,
             ["backup"] = new JsonObject
             {
-                ["created_at"] = manifest["created_at"]?.DeepClone(), ["app_version"] = writer, ["kind"] = manifest["kind"]?.DeepClone(),
+                ["created_at"] = created, ["app_version"] = writer, ["kind"] = manifest["kind"]?.DeepClone(),
                 ["reason"] = manifest["reason"]?.DeepClone(), ["format_version"] = manifest["format_version"]?.DeepClone(),
                 ["compatibility"] = manifest["compatibility"]?.DeepClone(),
             },
             ["version_check"] = new JsonObject
             {
                 ["ok"] = true, ["upgrade"] = upgrade,
-                ["message"] = upgrade ? "This backup has an older database schema; its databases are upgraded right after the restore."
+                ["message"] = upgrade ? "This backup has an older database schema; after the restore, the next start takes an automatic backup and upgrades it."
                     : "This backup matches this version's database schema.",
             },
             ["integrity"] = "ok",
             ["databases"] = databases, ["settings"] = settings,
+            ["decisions_newer_than_backup"] = newer,
+            ["decisions_warning"] = newer > 0 ? $"{newer} manual decisions newer than the backup will be lost." : null,
             ["share_export"] = (manifest["contents"] as JsonArray ?? []).Any(row => row?["path"]?.GetValue<string>().StartsWith("catalogue/", StringComparison.Ordinal) == true),
-            ["not_included"] = new JsonArray(notIncluded.Select(name => (JsonNode?)name).ToArray()),
+            ["not_included"] = Names(notIncluded),
             ["always_excluded"] = manifest["always_excluded"]?.DeepClone() ?? new JsonArray(),
-            ["effect"] = "The restore replaces both databases (catalogue, manual decisions, chapter provenance, profiles) and the settings with the backup's. "
-                + "Background work stops, a pre-restore backup is kept, and any failure rolls this instance back. Secrets of this instance are kept.",
+            ["effect"] = "The restore is applied at the next start, before anything opens the databases: a pre-restore backup is taken, then both databases "
+                + "(catalogue, manual decisions, chapter provenance, profiles) and the settings are replaced; a crash or a failed check undoes it. "
+                + "Until the restart, changes are refused. Secrets of this instance are kept.",
             ["restart_required"] = true,
         };
     }
 
     private static JsonArray Names(IEnumerable<string> names) => new(names.Select(name => (JsonNode?)name).ToArray());
 
-    // ---- apply ----------------------------------------------------------------------------------------------
+    // ---- arm / apply at the next start --------------------------------------------------------------------------
+
+    public JsonObject? PendingRestore()
+    {
+        var path = Path.Combine(Root, PendingFile);
+        try { return File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path)) as JsonObject : null; }
+        catch (Exception error) when (error is JsonException or IOException) { _ = error; return null; }
+    }
 
     /// <summary>
-    /// Applies a staged backup (hard rule 1: only with its preview token; the caller asked for confirm and stopped
-    /// background work). Pre-restore backup → swap both databases → verify rows/stamp/integrity → migrate older
-    /// schemas → write merged settings. Any failure restores the pre-restore state and throws.
+    /// Arms a staged backup for the next start (hard rule 1: only with its preview token, and the token still matches
+    /// the staged manifest, config.json and the saved decisions). Nothing is replaced now.
     /// </summary>
-    public JsonObject Apply(string stageId, string token, Action<string>? report = null)
+    public JsonObject Arm(string stageId, string token)
     {
         if (!ValidId(stageId)) throw new BackupRefusedException("Unknown staged backup; preview it again.", 409);
         lock (_gate)
@@ -529,107 +666,139 @@ public sealed partial class InstanceBackupStore
             var stagePath = Path.Combine(target, "stage.json");
             if (!File.Exists(stagePath)) throw new BackupRefusedException("This staged backup is gone; preview it again.", 409);
             var stage = JsonNode.Parse(File.ReadAllText(stagePath))!.AsObject();
-            var manifestBytes = File.ReadAllBytes(Path.Combine(target, "manifest.json"));
-            var manifest = JsonNode.Parse(manifestBytes)!.AsObject();
-            var expected = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(stageId + "|" + Convert.ToHexStringLower(SHA256.HashData(manifestBytes)) + "|" + CurrentConfigDigest())));
-            if (!string.Equals(stage["token"]?.GetValue<string>(), token, StringComparison.Ordinal) || !string.Equals(expected, token, StringComparison.Ordinal))
-                throw new BackupRefusedException("The settings or the staged backup changed since the preview; open the preview again.", 409);
-            // The staged files are checked again: nothing may have changed them since the preview.
-            foreach (var row in manifest["contents"]!.AsArray().OfType<JsonObject>())
-            {
-                var file = Path.Combine(target, row["path"]!.GetValue<string>().Replace('/', Path.DirectorySeparatorChar));
-                if (!File.Exists(file) || Sha256File(file) != row["sha256"]!.GetValue<string>())
-                    throw new BackupRefusedException("A staged backup file changed since the preview; open the preview again.", 409);
-            }
-            var facts = CheckDatabases(target, manifest);
-            var configFile = Path.Combine(target, "settings", "config.json");
-            var configPath = Path.Combine(ConfigurationRoot, ConfigStore.FileName);
-            BackupSettings.Merged? merged = null;
-            if (File.Exists(configFile))
+            if (!string.Equals(stage["token"]?.GetValue<string>(), token, StringComparison.Ordinal) || !string.Equals(Token(stageId, target), token, StringComparison.Ordinal))
+                throw new BackupRefusedException("The settings, the saved decisions or the staged backup changed since the preview; open the preview again.", 409);
+            var manifest = Verify(target);
+            if (File.Exists(Path.Combine(target, "settings", "config.json")))
             {
                 ConfigDocument? current;
                 lock (SettingsEditor.Gate(ConfigurationRoot)) current = new ConfigStore(ConfigurationRoot).ReadDocument();
-                merged = BackupSettings.Merge(BackupSettings.Parse(File.ReadAllBytes(configFile)), current);
-                // The merged file must open with this instance's config.key before anything is replaced.
-                new ConfigStore(ConfigurationRoot).Load(merged.Document);
+                new ConfigStore(ConfigurationRoot).Load(BackupSettings.Merge(BackupSettings.Parse(File.ReadAllBytes(Path.Combine(target, "settings", "config.json"))), current).Document);
             }
-
-            report?.Invoke("Keeping a backup of the current state");
-            var before = Create("pre-restore", "Before restoring the backup from " + (manifest["created_at"]?.GetValue<string>() ?? "?"));
-            var oldConfig = File.Exists(configPath) ? File.ReadAllBytes(configPath) : null;
-            try
+            var pending = new JsonObject
             {
-                report?.Invoke("Replacing both databases");
-                _database.Quiescent(paths =>
-                {
-                    foreach (var item in BackupDatabases.Files)
-                        BackupDatabases.Place(Path.Combine(target, "databases", item.Name), BackupDatabases.PathOf(paths, item.File));
-                    foreach (var item in BackupDatabases.Files)
-                    {
-                        var placed = BackupDatabases.Facts(BackupDatabases.PathOf(paths, item.File));
-                        if (!placed.Intact || !placed.SameData(facts[item.Name]))
-                            throw new BackupRefusedException(item.Name + " did not verify after it was put in place.", 409);
-                        BackupDatabases.UseWal(BackupDatabases.PathOf(paths, item.File));
-                    }
-                    new SchemaMigrator(_database).Initialize();
-                    foreach (var item in BackupDatabases.Files)
-                    {
-                        var migrated = BackupDatabases.Facts(BackupDatabases.PathOf(paths, item.File));
-                        if (!migrated.Intact || migrated.Migration != SchemaMigrator.LatestMigration(item.File))
-                            throw new BackupRefusedException(item.Name + " did not pass the check after its upgrade.", 409);
-                    }
-                    return 0;
-                }, TimeSpan.FromSeconds(120));
-                if (merged is not null)
-                {
-                    report?.Invoke("Restoring the settings");
-                    lock (SettingsEditor.Gate(ConfigurationRoot)) new ConfigStore(ConfigurationRoot).WriteDocument(merged.Document);
-                }
-            }
-            catch (Exception error) when (error is not OutOfMemoryException)
-            {
-                report?.Invoke("The restore failed; rolling back");
-                RestoreDatabases(before.Id, migrate: true);
-                if (oldConfig is not null) lock (SettingsEditor.Gate(ConfigurationRoot)) ConfigFiles.WriteAtomic(configPath, oldConfig);
-                throw new BackupRefusedException("The restore failed and this instance was rolled back to its state before the restore: " + error.Message, 409, error);
-            }
-            TryDeleteDirectory(target);
-            return new JsonObject
-            {
-                ["restored"] = true, ["backup_created_at"] = manifest["created_at"]?.DeepClone(), ["pre_restore_backup"] = before.Id,
-                ["settings_restored"] = merged is not null,
-                ["secrets_kept_from_this_instance"] = Names(merged?.KeptSecrets ?? []),
-                ["entries"] = facts["catalog.sqlite"].Rows.GetValueOrDefault("entries"),
-                ["restart_required"] = true,
-                ["message"] = "Restored. Restart AutoSourcarr so every part uses the restored data and settings.",
+                ["stage_id"] = stageId, ["armed_at"] = Now(), ["backup_created_at"] = manifest["created_at"]?.DeepClone(),
+                ["backup_app_version"] = manifest["app_version"]?.DeepClone(), ["source"] = stage["source"]?.DeepClone(), ["backup_id"] = stage["backup_id"]?.DeepClone(),
             };
+            WriteAtomic(Path.Combine(Root, PendingFile), Encoding.UTF8.GetBytes(pending.ToJsonString()));
+            return pending;
         }
     }
 
-    /// <summary>
-    /// Puts the databases of a saved (unprotected) backup back in place in one drained lease: the rollback of a failed
-    /// restore (then migrated again) and of a failed update (SET-9, not migrated). Settings are not touched.
-    /// </summary>
-    public IReadOnlyDictionary<string, DatabaseFacts> RestoreDatabases(string backupId, bool migrate)
+    /// <summary>Cancels an armed restore before the restart.</summary>
+    public bool Disarm()
     {
-        var plain = Open(File.ReadAllBytes(FilePath(backupId)), null);
-        var work = Path.Combine(Root, ".rollback-" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(8)));
-        Directory.CreateDirectory(work);
-        try
+        lock (_gate)
         {
-            var manifest = Extract(plain, work);
-            var facts = CheckDatabases(work, manifest);
-            _database.Quiescent(paths =>
-            {
-                foreach (var item in BackupDatabases.Files)
-                    BackupDatabases.Place(Path.Combine(work, "databases", item.Name), BackupDatabases.PathOf(paths, item.File));
-                foreach (var item in BackupDatabases.Files) BackupDatabases.UseWal(BackupDatabases.PathOf(paths, item.File));
-                if (migrate) new SchemaMigrator(_database).Initialize();
-                return 0;
-            }, TimeSpan.FromSeconds(120));
-            return facts;
+            var path = Path.Combine(Root, PendingFile);
+            if (!File.Exists(path)) return false;
+            File.Delete(path);
+            return true;
         }
-        finally { TryDeleteDirectory(work); }
+    }
+
+    private static JsonObject Verify(string target)
+    {
+        var manifest = JsonNode.Parse(File.ReadAllBytes(Path.Combine(target, "manifest.json")))!.AsObject();
+        foreach (var row in manifest["contents"]!.AsArray().OfType<JsonObject>())
+        {
+            var file = Path.Combine(target, row["path"]!.GetValue<string>().Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(file) || Sha256File(file) != row["sha256"]!.GetValue<string>())
+                throw new BackupRefusedException("A staged backup file changed since the preview; open the preview again.", 409);
+        }
+        CheckDatabases(target, manifest);
+        return manifest;
+    }
+
+    /// <summary>
+    /// Start-time step (before any database is opened and before the update check): finishes or undoes an interrupted
+    /// swap, then applies an armed restore. Answers what happened (null when nothing was pending).
+    /// </summary>
+    public JsonObject? ApplyAtStart(Action<string>? log = null)
+    {
+        lock (_gate)
+        {
+            var recovered = DatabaseSwap.Recover(Root, _database.Paths, ConfigurationRoot);
+            if (recovered is not null) log?.Invoke(recovered);
+            var pending = PendingRestore();
+            if (pending is null)
+                return recovered is null ? null : Result(new JsonObject { ["status"] = "recovered", ["message"] = recovered });
+            var stageId = pending["stage_id"]?.GetValue<string>() ?? "";
+            var target = Path.Combine(Staged, stageId);
+            var created = pending["backup_created_at"]?.GetValue<string>();
+            JsonObject result;
+            string? before = null;
+            try
+            {
+                if (!ValidId(stageId) || !Directory.Exists(target)) throw new BackupRefusedException("The armed backup is no longer staged.", 409);
+                var manifest = Verify(target);
+                var facts = CheckDatabases(target, manifest);
+                byte[]? config = null;
+                var configFile = Path.Combine(target, "settings", "config.json");
+                if (File.Exists(configFile))
+                {
+                    ConfigDocument? current;
+                    lock (SettingsEditor.Gate(ConfigurationRoot)) current = new ConfigStore(ConfigurationRoot).ReadDocument();
+                    var merged = BackupSettings.Merge(BackupSettings.Parse(File.ReadAllBytes(configFile)), current);
+                    new ConfigStore(ConfigurationRoot).Load(merged.Document);
+                    config = ConfigStore.Serialize(merged.Document);
+                }
+                log?.Invoke("Applying the armed restore of the backup from " + created + ": taking a pre-restore backup.");
+                before = Create("pre-restore", "Before restoring the backup from " + created).Id;
+                var incoming = BackupDatabases.Files.ToDictionary(item => item.Name, item => Path.Combine(target, "databases", item.Name), StringComparer.Ordinal);
+                DatabaseSwap.Swap(Root, _database.Paths, ConfigurationRoot, incoming, config, "restore", () =>
+                {
+                    foreach (var item in BackupDatabases.Files)
+                    {
+                        var placed = BackupDatabases.Facts(BackupDatabases.PathOf(_database.Paths, item.File));
+                        if (!placed.Intact || !placed.SameData(facts[item.Name]))
+                            throw new BackupRefusedException(item.Name + " did not verify after it was put in place.", 409);
+                        BackupDatabases.UseWal(BackupDatabases.PathOf(_database.Paths, item.File));
+                    }
+                });
+                result = new JsonObject
+                {
+                    ["status"] = "restored", ["backup_created_at"] = created, ["pre_restore_backup"] = before, ["settings_restored"] = config is not null,
+                    ["message"] = "The backup from " + created + " was restored at this start. A backup of the state before it was kept.",
+                };
+            }
+            catch (Exception error) when (error is not OutOfMemoryException)
+            {
+                result = new JsonObject
+                {
+                    ["status"] = "failed", ["backup_created_at"] = created, ["pre_restore_backup"] = before, ["error"] = error.GetType().Name + ": " + error.Message,
+                    ["message"] = "The armed restore of the backup from " + created + " was not applied; the databases and settings are as they were.",
+                };
+                log?.Invoke("The armed restore failed and was undone (" + error.GetType().Name + ").");
+            }
+            TryDelete(Path.Combine(Root, PendingFile));
+            TryDeleteDirectory(target);
+            return Result(result);
+        }
+    }
+
+    private JsonObject Result(JsonObject result)
+    {
+        result["at"] = Now(); result["dismissed"] = false;
+        WriteAtomic(Path.Combine(Root, ResultFile), Encoding.UTF8.GetBytes(result.ToJsonString()));
+        return result;
+    }
+
+    /// <summary>The result of the last restore at start, until dismissed.</summary>
+    public JsonObject? RestoreNotice()
+    {
+        var path = Path.Combine(Root, ResultFile);
+        try { return File.Exists(path) && JsonNode.Parse(File.ReadAllText(path)) is JsonObject row && row["dismissed"]?.GetValue<bool>() != true ? row : null; }
+        catch (Exception error) when (error is JsonException or IOException) { _ = error; return null; }
+    }
+
+    public bool DismissRestoreNotice()
+    {
+        var row = RestoreNotice();
+        if (row is null) return false;
+        row["dismissed"] = true;
+        WriteAtomic(Path.Combine(Root, ResultFile), Encoding.UTF8.GetBytes(row.ToJsonString()));
+        return true;
     }
 
     // ---- helpers ----------------------------------------------------------------------------------------------
@@ -640,7 +809,7 @@ public sealed partial class InstanceBackupStore
         return Convert.ToHexStringLower(SHA256.HashData(stream));
     }
 
-    private static void WriteAtomic(string path, byte[] data)
+    internal static void WriteAtomic(string path, byte[] data)
     {
         var temporary = path + ".pending";
         using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -664,7 +833,7 @@ public sealed partial class InstanceBackupStore
         catch (UnauthorizedAccessException) { }
     }
 
-    private static void TryDeleteDirectory(string path)
+    internal static void TryDeleteDirectory(string path)
     {
         try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); }
         catch (IOException) { }

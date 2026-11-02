@@ -30,13 +30,19 @@ public sealed partial class OldFileCleanup(Func<string> appRoot, string configur
     [GeneratedRegex(@"^(?:autosourcarr-v(\d+\.\d+\.\d+)-(?:upgrade|regression-audit)|(?:UPGRADE|REGRESSION-AUDIT)-(\d+\.\d+\.\d+))\.md$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex Report();
 
-    [GeneratedRegex(@"^\.(?:config\.json|config\.key|accounts\.json)\.[0-9a-f]{32}\.tmp$|^\.autosourcarr-(?:snapshot|write-test)-[0-9a-f]{32}$|^(?:catalog|chapter-origins)\.sqlite\.restoring$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^\.(?:config\.json|accounts\.json)\.[0-9a-f]{32}\.tmp$|^\.autosourcarr-(?:snapshot|write-test)-[0-9a-f]{32}$|^(?:catalog|chapter-origins)\.sqlite\.restoring$", RegexOptions.CultureInvariant)]
     private static partial Regex Temporary();
 
     [GeneratedRegex(@"^\.(?:work|rollback)-[0-9a-f]{16,32}$", RegexOptions.CultureInvariant)]
     private static partial Regex WorkFolder();
 
-    public sealed record Candidate(string Area, string Relative, string Kind, long Bytes, string FullPath, bool Directory);
+    public sealed record Candidate(string Area, string Relative, string Kind, long Bytes, string FullPath, bool Directory, bool Delete = false);
+
+    /// <summary>Trash folders older than this are offered for deletion (they already waited in the trash).</summary>
+    public static readonly TimeSpan TrashAge = TimeSpan.FromDays(30);
+
+    [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}$", RegexOptions.CultureInvariant)]
+    private static partial Regex DayFolder();
 
     private string Trash => Path.Combine(Path.GetFullPath(dataDirectory), "trash");
 
@@ -48,7 +54,7 @@ public sealed partial class OldFileCleanup(Func<string> appRoot, string configur
         {
             ["items"] = new JsonArray(items.Select(item => (JsonNode?)new JsonObject
             {
-                ["path"] = item.Area + "/" + item.Relative, ["kind"] = item.Kind, ["bytes"] = item.Bytes,
+                ["path"] = item.Area + "/" + item.Relative, ["kind"] = item.Kind, ["bytes"] = item.Bytes, ["action"] = item.Delete ? "delete" : "move to trash",
             }).ToArray()),
             ["checked"] = checkedCount, ["limited"] = limited, ["preview_token"] = Token(items),
             ["trash"] = "trash/" + Day(), ["scope"] = Scope,
@@ -81,6 +87,13 @@ public sealed partial class OldFileCleanup(Func<string> appRoot, string configur
         }
     }
 
+    /// <summary>Marks a run as started, so the setup wizard shows "pending" instead of the previous run's result.</summary>
+    public void MarkPending(string trigger) => Save(new JsonObject
+    {
+        ["status"] = "pending", ["trigger"] = trigger, ["removed"] = new JsonArray(),
+        ["at"] = _clock.GetUtcNow().UtcDateTime.ToString("O", CultureInfo.InvariantCulture),
+    });
+
     /// <summary>The last cleanup result (the setup wizard's cleanup status), or null when none ran yet.</summary>
     public JsonObject? Last()
     {
@@ -90,8 +103,8 @@ public sealed partial class OldFileCleanup(Func<string> appRoot, string configur
     }
 
     public const string Scope = "Only files AutoSourcarr itself left: old release reports, orphaned Python bytecode and abandoned temporary files. "
-        + "They are moved to the trash folder under the data folder, not deleted. Databases, configuration, env files, source profiles, downloads, "
-        + "repair backups and unknown files are kept.";
+        + "They are moved to the trash folder under the data folder, not deleted; trash older than 30 days is deleted. Databases, configuration, "
+        + "config.key and its temporary copies, env files, source profiles, downloads, repair backups and unknown files are kept.";
 
     private JsonObject Move(List<Candidate> items, int checkedCount, bool limited, string trigger)
     {
@@ -105,6 +118,7 @@ public sealed partial class OldFileCleanup(Func<string> appRoot, string configur
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                 if (File.Exists(destination) || Directory.Exists(destination))
                     destination += "." + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
+                if (item.Delete) { Directory.Delete(item.FullPath, recursive: true); removed.Add(item.Area + "/" + item.Relative); continue; }
                 if (item.Directory) Directory.Move(item.FullPath, destination);
                 else
                 {
@@ -203,6 +217,23 @@ public sealed partial class OldFileCleanup(Func<string> appRoot, string configur
             foreach (var folder in new DirectoryInfo(backups).EnumerateDirectories())
                 if (folder.LinkTarget is null && WorkFolder().IsMatch(folder.Name) && folder.LastWriteTimeUtc < cutoff.UtcDateTime)
                     items.Add(new("data", "instance-backups/" + folder.Name, "abandoned backup work folder", 0, folder.FullName, true));
+        // Abandoned restore previews (never the one armed for the next start).
+        var staged = Path.Combine(backups, "staged");
+        string? armed = null;
+        try { armed = File.Exists(Path.Combine(backups, InstanceBackupStore.PendingFile)) ? JsonNode.Parse(File.ReadAllText(Path.Combine(backups, InstanceBackupStore.PendingFile)))?["stage_id"]?.GetValue<string>() : null; }
+        catch (Exception error) when (error is JsonException or IOException or InvalidOperationException) { armed = "unknown"; }
+        if (armed != "unknown" && System.IO.Directory.Exists(staged))
+            foreach (var folder in new DirectoryInfo(staged).EnumerateFileSystemInfos())
+                if (folder.LinkTarget is null && folder.Name != armed && folder.LastWriteTimeUtc < cutoff.UtcDateTime)
+                    items.Add(new("data", "instance-backups/staged/" + folder.Name, "abandoned restore preview", folder is FileInfo file ? file.Length : 0, folder.FullName, folder is DirectoryInfo));
+        // Expired trash: day folders older than TrashAge are deleted (they already waited there).
+        var trashCutoff = _clock.GetUtcNow().UtcDateTime - TrashAge;
+        if (System.IO.Directory.Exists(Trash))
+            foreach (var folder in new DirectoryInfo(Trash).EnumerateDirectories())
+                if (folder.LinkTarget is null && DayFolder().IsMatch(folder.Name)
+                    && DateTime.TryParseExact(folder.Name, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var day)
+                    && day < trashCutoff)
+                    items.Add(new("data", "trash/" + folder.Name, "expired trash (older than 30 days)", 0, folder.FullName, true, Delete: true));
         return (items.OrderBy(item => item.Area + "/" + item.Relative, StringComparer.Ordinal).ToList(), count, limited);
     }
 
