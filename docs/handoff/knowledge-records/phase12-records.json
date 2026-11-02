@@ -1,0 +1,70 @@
+{
+  "records": [
+    {
+      "id": "RELEASE-0.5.0-PHASE-12",
+      "kind": "release",
+      "state": "implemented",
+      "title": "Conversion phase 12: backup and rollback (branch conversion)",
+      "body": "{\"commits\": [\"eff800c\", \"fc14eb2\", \"93cf430\", \"1dd9a7d\"], \"scope\": \"versioned backup format 3 (SET-8, secrets excluded, ASCBK4 passphrase container), /api/v1/backups routes, restore armed and applied at next start with a swap journal, automatic backup before updates/migrations with rollback and safe mode (SET-9), old-file cleanup (SET-3), retired link settings (SET-4), full reset keeps config and library (SET-6)\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02 (conversion phase 12)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "VERIFY-20261102-PHASE-12",
+      "kind": "verification",
+      "state": "verified",
+      "title": "Phase 12 verified: restore on a clean instance and failed-update rollback tested, crash points at every step",
+      "body": "{\"local\": \"Windows C# 1221/1223 (two Windows-only), phase 12 tests 16/16, node backups UI tests, check-project sections 1-9\", \"probe\": \"80e4228 (at 6e92c5f) 1223/1223 and Playwright 156/0/24; the final phase 12 head is covered by the combined probe with phase 13 (see VERIFY-20261103-PHASE-13)\", \"done_when\": [\"backup restores on a clean instance (rows, decisions, profiles, chapter provenance equal; secrets excluded; target secrets kept)\", \"a real failing migration on an older schema rolls back, app starts in safe mode, no loop, retry works\"], \"not_run\": [\"safe mode under the 0.4.x native launcher image\", \"a multi-GB backup\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "tests/AutoSourcarr.Tests/Backup/BackupTests.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261102-RESTORE-AT-NEXT-START",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "Restores are armed and applied at the next start, before any database opens",
+      "body": "{\"why\": \"a live swap lost writes and could leave mixed databases after a crash (audit)\", \"how\": \"restore-pending.json marked applying, pre-restore backup, journalled rename-aside swap (swap-journal.json, *.swap-old), verify; the app refuses writes while a restore is armed\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "src/AutoSourcarr.Core/Backup/InstanceBackupStore.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261102-OWNER-ACCOUNT-CHOICES",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "Arming a restore, retrying an update and migrating without a backup need an owner or admin account",
+      "body": "{\"rule\": \"when the instance has accounts, the admin token and API keys get 403 for these three; token-only instances keep the admin token\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "src/AutoSourcarr.Api/Endpoints/BackupV1Endpoints.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "FINDING-20261102-PHASE12-AUDITS",
+      "kind": "finding",
+      "state": "resolved",
+      "title": "Phase 12 audits: 13 + 11 findings, all fixed",
+      "body": "{\"first\": [\"no safe mode after rollback (new code on old schema, restart loop)\", \"one-click rollback re-ran the failing migration\", \"failed automatic backup blocked startup\", \"live in-place restore without journal\", \"writes lost between snapshot and swap\", \"GB-sized buffers on upload\", \"preview token ignored new decisions\"], \"second\": [\"kill during migration or rollback not handled\", \"unfinished swap did not enter safe mode\", \"config.json not removed on undo\", \"raw errors and token in guest health\", \"live WAL deleted on undo\", \"armed restore applied twice\", \"copies deleted on rollback-failed\", \"decision digest gaps\", \"admin token could make owner choices\", \"corrupt marker retried silently\", \"retry inside the HTTP request\"], \"follow_up\": \"catalogue-only restore states the chapter provenance it replaces\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "docs/handoff/briefs/phase12-checklist.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "LIMIT-20261102-PHASE12",
+      "kind": "limitation",
+      "state": "open",
+      "title": "Phase 12 limits",
+      "body": "{\"items\": [\"SET-12 encrypted secrets with recovery codes and scheduled backups are phase 17 (0.6.0)\", \"free-space check uses DriveInfo of the path root (can name the wrong mount on Linux; skipped if it throws)\", \"restoring a catalogue-only backup replaces chapter provenance with an empty database (stated in the preview; kept in the pre-restore backup)\", \"in safe mode the full /api/v1 map stays registered; routes without services answer 503\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "CHANGELOG.md 0.5.0",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    }
+  ]
+}

@@ -8,14 +8,14 @@ BackupEndpoints 6 routes), and the phase 11 limit "instance backup routes answer
 
 | Item | State |
 | --- | --- |
-| Versioned backup format for settings, profiles and catalogues (secrets excluded; SET-12 encrypted secrets with recovery codes is phase 17) | |
-| One format, also used for sharing (SET-8; the catalogue part = the phase 9 share format) | |
-| Automatic backup before every update or migration (SET-9) | |
-| One-click rollback when an update or migration fails (SET-9) | |
-| Old-file removal (SET-3; `setup_cleanup.py`; automatic on image updates) | |
-| Their UI pages (Settings / System → Backups; instance tools dialog) on `/api/v1` | |
-| Done when: a backup restores on a clean instance | |
-| Done when: a failed update rolls back | |
+| Versioned backup format for settings, profiles and catalogues (secrets excluded; SET-12 encrypted secrets with recovery codes is phase 17) | done |
+| One format, also used for sharing (SET-8; the catalogue part = the phase 9 share format) | done |
+| Automatic backup before every update or migration (SET-9) | done |
+| One-click rollback when an update or migration fails (SET-9) | done |
+| Old-file removal (SET-3; `setup_cleanup.py`; automatic on image updates) | done |
+| Their UI pages (Settings / System → Backups; instance tools dialog) on `/api/v1` | done |
+| Done when: a backup restores on a clean instance | done |
+| Done when: a failed update rolls back | done |
 
 ## (b) Requirements
 
@@ -41,3 +41,5 @@ status is available"); System page backup list, create, download, delete, restor
 Green probe (build + all tests + Playwright) · local check-project + UI suites · independent audit, findings fixed or
 recorded · push `conversion`, green CI (run id) · ZIP + sha256 · knowledge records `phase12-records.json` · port-map
 ticks · PC sync · checkpoint (repo copy) · report.
+
+Result (2026-11-02): all rows done (commits eff800c, fc14eb2, 93cf430, 1dd9a7d); two independent audits, all findings fixed.

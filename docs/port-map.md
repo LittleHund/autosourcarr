@@ -233,6 +233,18 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | Carried: `CatalogueDiscovery.SourceResult` | done: `SourceResultTracker` (0.4.5 `_record_source_result`); local timeouts, deferrals, engine restarts never count |
 | Audit fixes (fresh-agent audit) | 15 findings: 12 fixed (Playwright per-account themes, matrix `discovery_outcomes` array, engine restarts as local, keyset on id, split review atomicity, ui_v090/092, CSS contrast sample, dead `/api/admin` action, repair verdict in health, select focus vs live refresh, long cursors, tag event ids); 3 recorded (bundle runs as one script, setup draft per browser, event key field fixed per topic) |
 
+### Phase 12 (backup and rollback), ticked 2026-11-02
+
+| Row | Result |
+| --- | --- |
+| `instance_backup.py` → Backup | done: InstanceBackupStore (format 3 zip: manifest with PIPE-4 compatibility, settings without secrets, profiles, both databases, share export), BackupCrypto (ASCBK4 chunked AES-256-GCM, PBKDF2 600k; ASCBK3 still read), streaming upload/download |
+| BackupEndpoints (6 routes) | done: `GET/POST /api/v1/backups`, `GET /backups/{id}/download`, `DELETE /backups/{id}`, `POST /backups/restore/preview`, `POST /backups/restore/apply` (arms; applied at next start); plus `DELETE /backups/restore/pending`, `POST /backups/safe-mode/retry`, `POST /backups/safe-mode/migrate-without-backup`, `POST /backups/update-notice/dismiss` |
+| SET-9 automatic backup + rollback | done: UpgradeGuard (marker migrating/rolling-back/rolled-back, `.pre-update` copies, swap journal, safe mode with a write gate, Retry as a job, migrate-without-backup for an owner account) |
+| `setup_cleanup.py` → Settings (SET-3) | done: OldFileCleanup (preview token, moves to `<data>/trash/<date>`, staged previews and 30-day trash pruning, wizard cleanup status) |
+| SET-4 / SET-6 | done: retired Komf/AI-dashboard links dropped; full reset keeps config and library (test) |
+| UI pages | done: instance tools backup dialog on `/api/v1` (plain download link, multipart passphrase, restore confirmation with decisions and chapter-provenance warnings) |
+| Audit fixes (two fresh-agent audits) | 13 + 11 findings, all fixed (safe mode, no migration loop, next-start restore with journal, crash points at 12 update and 7 restore steps, streaming, decision digest, account-only owner choices, unknown config keys kept) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
