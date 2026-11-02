@@ -1,4 +1,4 @@
-/* Private repair jobs never block catalog tabs; poll only the visible panel. */
+/* Private repair jobs never block catalog tabs; live job/task events refresh only the visible panel. */
 (()=>{
   const panel=document.getElementById('sourceMaintenancePanel');
   if(!panel)return;
@@ -40,7 +40,7 @@
         installedLoaded=true;
       }
     }catch(e){if(own===generation&&setupOwn===setupRevision){if(accountAtStart===controlPaintRevision)unavailableControls(e.message);byId('sourceRepairStatus').textContent=e.message;}}
-    finally{loading=false;if(visible())timer=setTimeout(load,controlBusy?2000:10000);}
+    finally{loading=false;}
   }
 
   let aiProvider='chatgpt';
@@ -66,9 +66,12 @@
   }
   function renderControl(data){
     ++controlPaintRevision;
+    const wasBusy=controlBusy;
     controlActionType=data.action||controlActionType;
     if(data.isolation){knownIsolation=data.isolation;byId('sourceRepairForm').querySelector('button[type=submit]').disabled=repairSubmitting||repairBlocked()||!!storageError;}
     controlBusy=!!data.busy;
+    // The account operation finished: refresh readiness once (it used to be picked up by a 2-second poll).
+    if(wasBusy&&!controlBusy&&visible())Promise.resolve().then(load);
     controlOperation=data.busy&&data.action==='login'?data.operation_id:null;
     if(!data.busy)loginAttempt=null;
     for(const id of ['repairLogin','repairCheckLogin','repairLogout'])byId(id).hidden=aiProvider!=='chatgpt';
@@ -232,6 +235,9 @@
     }catch(e){toast(e.message);}finally{repairSubmitting=false;submit.disabled=repairBlocked()||!!storageError;}
   });
   window.loadSourceRepairs=load;
+  // UI-13: repairs, installs and rollbacks are jobs/tasks; their events refresh this panel once per burst. The form
+  // keeps what the user typed (UI-12): while a field in it has focus the refresh waits.
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-repairs',topics:['jobs','tasks'],delayMs:1000,when:visible,busy:()=>globalThis.AutoSourcarrLive.userEditing(byId('sourceRepairForm')),refresh:()=>load()});
   byId('openSourceRepairTasks').addEventListener('click',()=>window.openSourceRepairTask());
   const visibilityChanged=()=>{
     if(!aiVisible())clearCode();

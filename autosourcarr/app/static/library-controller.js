@@ -64,5 +64,12 @@
       apiV1().retryTask(button.dataset.safeTaskRetry).then(()=>loadTasks()).catch(e=>toast(e.message)).finally(()=>{button.disabled=false;});
     }
   });
-  window.AutoSourcarrLibrary={load,render,hasData:()=>!!payload};
+  // UI-6: the page you were on survives a refresh. The cursor chain is kept with the filter signature it belongs to;
+  // a different filter set starts again at page 1 (load() compares signatures).
+  function position(){return cursor||previous.length?{signature,cursor,previous:previous.slice()}:null;}
+  function restorePosition(saved){
+    if(!saved||typeof saved.signature!=='string'||!Array.isArray(saved.previous)){signature='';cursor='';previous=[];pageNumber=1;return;}
+    signature=saved.signature;cursor=String(saved.cursor||'');previous=saved.previous.map(String);pageNumber=cursor?previous.length+1:1;
+  }
+  window.AutoSourcarrLibrary={load,render,hasData:()=>!!payload,position,restorePosition};
 })();

@@ -82,7 +82,8 @@
       if(generation!==state.generation)return;
       state.data=data;render();
     }catch(error){if(generation===state.generation){byId('sourceOrphanStatus').textContent='Unable to load archived sources: '+error.message;byId('sourceInstalledOrphanStatus').textContent='Unable to load installed orphans: '+error.message;}}
-    finally{if(generation===state.generation&&visible())state.timer=setTimeout(load,active()||state.data?.inventory_refreshing?4000:20000);}
+    // The installed-source inventory check publishes no event yet: one slow re-check while it runs.
+    finally{if(generation===state.generation&&visible()&&state.data?.inventory_refreshing)state.timer=setTimeout(load,globalThis.AutoSourcarrLive?.status().connected?10000:4000);}
   }
   byId('refreshSourceOrphans').onclick=async()=>{
     if(state.busy||state.data?.refresh?.state==='running')return;
@@ -95,6 +96,8 @@
   for(const id of ['sourceOrphanSearch','sourceInstalledOrphanSearch'])byId(id).oninput=render;
   byId('openOrphanRepairs').onclick=()=>window.openSourceRepairTask?.();
   window.loadSourceOrphans=load;
+  // UI-13: history collection and orphan repairs run as jobs; their events refresh the open panels (searches stay typed).
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-orphans',topics:['jobs','tasks'],delayMs:1500,when:visible,refresh:()=>load()});
   const observer=new MutationObserver(()=>{if(!visible())clearTimeout(state.timer);});
   for(const el of [byId('sources'),byId('sourceManagePanel'),panel,installedPanel])if(el)observer.observe(el,{attributes:true,attributeFilter:['class','open']});
   for(const section of [panel,installedPanel])section.addEventListener?.('toggle',()=>{if(visible())load();else clearTimeout(state.timer);});

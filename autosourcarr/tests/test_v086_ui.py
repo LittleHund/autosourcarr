@@ -23,7 +23,7 @@ def node(script):
 
 
 def test_tasks_polling_shares_one_request_preserves_snapshot_and_recovers():
-    code=block("async function loadTasks()","function startTaskPolling()")
+    code=block("async function loadTasks()","async function refreshTasksLive()")
     node('''const assert=require('assert');
       let tasksState={running:1,items:[{id:'keep'}]},tasksLoadPromise=null,tasksLastSuccess=0,tasksPollFailures=0;
       let calls=0,release;
@@ -91,7 +91,7 @@ def test_repairs_and_preparation_are_separate_from_general_and_health_tasks():
 
 
 def test_metadata_heartbeat_applies_every_row_even_after_first_row_changes():
-    code=block("async function refreshSparseEntryMetadata()","function scheduleMetadataLivePoll(")
+    code=block("async function refreshSparseEntryMetadata()","function subscribeEntryMetadataUpdates(")
     node('''const assert=require('assert');let seen=[];
       const sparseEntryIds=()=>[1,2,3];const requestSurfaceRender=()=>{};
       const api=async()=>({items:[{id:1},{id:2},{id:3}]});
