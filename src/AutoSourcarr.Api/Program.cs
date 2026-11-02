@@ -16,13 +16,13 @@ internal static class Program
         StopSignals? signals = null;
         try
         {
-            // Ordinary exec resets dumpability. Do this before environment,
-            // canonical configuration, host defaults or diagnostic construction.
-            // Phase 4: an image with the AutoSourcarr source host (AUTOSOURCARR_SOURCE_HOST_JAR set) has no native
-            // launcher; the app starts the host itself. The Suwayomi image keeps the native PID1 path until phase 13.
-            var hosted = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTOSOURCARR_SOURCE_HOST_JAR"));
-            if (!hosted) NativeSourceOwnerConnection.RequirePostExecPrivacyBeforeConfiguration();
-            else AutoSourcarr.Core.Sources.Runtime.SourceHostProcess.ProtectParentProcess();
+            // Ordinary exec resets dumpability. Do this before environment, canonical configuration, host defaults or
+            // diagnostic construction. Phase 13: the only path is the 0.5.0 image (tini -- dotnet; the native PID 1
+            // launcher is gone): the app starts its own source host in integrated mode.
+            // Outside Linux only an explicit development setup (AUTOSOURCARR_SOURCE_HOST_JAR) may start; nothing private is read first.
+            if (!OperatingSystem.IsLinux() && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AUTOSOURCARR_SOURCE_HOST_JAR")))
+                throw new PlatformNotSupportedException("AutoSourcarr runs in its Linux image; for development elsewhere set AUTOSOURCARR_SOURCE_HOST_JAR.");
+            SourceHostProcess.ProtectParentProcess();
             await using var processSignals = signals = new StopSignals();
             if (args.Length != 0) throw new InvalidOperationException("Unexpected application arguments.");
             var environment = new Dictionary<string, string?>(StringComparer.Ordinal);
@@ -42,8 +42,7 @@ internal static class Program
             if (notice is not null)
                 Console.WriteLine($"Updated from {notice.FromVersion} to {notice.ToVersion}: {notice.Items.Count} setting notice(s); see Settings.");
             ApplyTimeZone(startup.Settings, environment);
-            await using var runtime = await (hosted ? ApplicationRuntime.CreateHostedAsync(startup, environment, processSignals.Token)
-                : ApplicationRuntime.CreateNativeAsync(startup, environment, processSignals.Token)).ConfigureAwait(false);
+            await using var runtime = await ApplicationRuntime.CreateHostedAsync(startup, environment, processSignals.Token).ConfigureAwait(false);
             var host = new HostBuilder().UseConsoleLifetime()
                 .ConfigureLogging(logging => logging.ClearProviders())
                 .ConfigureServices(services => services.AddRouting())
