@@ -3,7 +3,13 @@
   'use strict';
   const $=selector=>document.querySelector(selector);
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const steps=[['welcome','Your AutoSourcarr','A guided review, one subject at a time.'],['library','Connect your library','Connect to the main Suwayomi for this instance.'],['sources','Sources and access','Choose where extensions come from and how access challenges are handled.'],['matching','Matching and discovery','Choose what runs automatically. Uncertain matches still need review.'],['readers','Reader extensions','Use different addresses for readers inside Docker and outside your network.'],['performance','Speed and capacity','Start with the current limits. Larger limits can overload websites and make requests slower.'],['tools','Translation and tools','Use the included tools or connect an existing translation server.'],['repair','Repair and AI','Choose a provider and connect its account here. API credentials are saved when you finish.'],['access','Access and identity','Keep account credentials separate from reader access.'],['links','Your other apps','Optional browser shortcuts. Each application keeps its own login.'],['review','Review and finish','Only changed values will replace their saved settings.']];
+  // SET-1: everything required comes first and cannot be skipped; optional and opt-in features follow and can be skipped.
+  const steps=[['welcome','Your AutoSourcarr','A guided review, one subject at a time.','required'],['library','Connect your library','Connect to the main Suwayomi for this instance.','required'],['sources','Sources and access','Choose where extensions come from and how access challenges are handled.','required'],['readers','Reader extensions','Use different addresses for readers inside Docker and outside your network.','required'],['access','Access and identity','Keep account credentials separate from reader access.','required'],['matching','Matching and discovery','Opt-in automation. Uncertain matches still need review.','optional'],['performance','Speed and capacity','Start with the current limits. Larger limits can overload websites and make requests slower.','optional'],['tools','Translation and tools','Use the included tools or connect an existing translation server.','optional'],['repair','Repair and AI','Choose a provider and connect its account here. API credentials are saved when you finish.','optional'],['links','Your other apps','Optional browser shortcuts. Each application keeps its own login.','optional'],['review','Review and finish','Only changed values will replace their saved settings.','review']];
+  const optional=index=>steps[index]?.[3]==='optional';
+  const stepIndex=name=>steps.findIndex(([key])=>key===name);
+  // SET-2: the unsaved draft survives Cancel and a page reload on this device. Keys and passwords are never kept.
+  const DRAFT_KEY='autosourcarr.setup.draft';
+  let restoredDraft=null;
   let snapshot=null,draft={},step=0,required=false,busy=false,completed=false,resolveFirst=null,previousFocus=null,transaction=null,opening=false;
   // REP-6: automatic orphan repair is the source maintenance watch switch, not a config.json setting; null hides the question.
   let autoRepair=null,autoRepairSaved=null,autoRepairAsked=false;
@@ -17,6 +23,45 @@
   const clone=value=>JSON.parse(JSON.stringify(value));
   const changes=()=>Object.fromEntries((snapshot?.fields||[]).filter(f=>cleared.has(f.key)||JSON.stringify(draft[f.key])!==JSON.stringify(f.value)).map(f=>[f.key,cleared.has(f.key)?'':draft[f.key]]));
   const error=message=>{$('#setupError').textContent=message||'';};
+  const sameValue=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  const sameType=(a,b)=>Array.isArray(a)?Array.isArray(b)&&b.every(v=>typeof v==='string'):typeof a===typeof b||typeof a==='number'&&b==='';
+  function clearDraft(){try{localStorage.removeItem(DRAFT_KEY);}catch(_){}}
+  function storeDraft(){
+    if(!snapshot||completed)return;
+    const values={},removed=[];
+    for(const field of snapshot.fields){
+      if(field.kind==='secret'){if(cleared.has(field.key))removed.push(field.key);continue;}
+      if(!sameValue(draft[field.key],field.value))values[field.key]={base:field.value,value:draft[field.key]};
+    }
+    try{
+      if(!Object.keys(values).length&&!removed.length)localStorage.removeItem(DRAFT_KEY);
+      else localStorage.setItem(DRAFT_KEY,JSON.stringify({version:1,step:steps[step][0],saved_at:new Date().toISOString(),values,removed}));
+    }catch(_){}
+  }
+  // A kept value comes back only while its saved value is still the one it was edited from.
+  function restoreDraft(data){
+    let saved=null;try{saved=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');}catch(_){saved=null;}
+    if(!saved||saved.version!==1||!saved.values||typeof saved.values!=='object')return null;
+    let kept=0,dropped=0;
+    for(const [key,entry] of Object.entries(saved.values)){
+      const field=data.fields.find(f=>f.key===key);
+      if(!field||field.kind==='secret'||!entry||typeof entry!=='object'||!sameValue(field.value,entry.base)||!sameType(field.value,entry.value)){dropped++;continue;}
+      draft[key]=clone(entry.value);kept++;
+    }
+    for(const key of Array.isArray(saved.removed)?saved.removed:[]){
+      const field=data.fields.find(f=>f.key===key);
+      if(field?.kind==='secret'&&field.configured){cleared.add(key);draft[key]='';kept++;}else dropped++;
+    }
+    if(!kept&&!dropped)return null;
+    if(!kept)clearDraft();
+    return {kept,dropped,step:stepIndex(saved.step)};
+  }
+  function progress(){
+    const group=steps[step][3];
+    if(group==='review')return `Review · step ${step+1} of ${steps.length}`;
+    const list=steps.filter(item=>item[3]===group);
+    return `${group==='required'?'Required':'Optional · can be skipped'} · ${list.indexOf(steps[step])+1} of ${list.length} · step ${step+1} of ${steps.length}`;
+  }
   function validReaderBuild(value){
     if(!value||typeof value.ready!=='boolean'||!Number.isInteger(value.exit_code)||!Array.isArray(value.errors)||!Array.isArray(value.warnings))return null;
     if([...value.errors,...value.warnings].some(item=>!item||typeof item.key!=='string'||!Number.isInteger(item.code)||typeof item.message!=='string'))return null;
@@ -75,7 +120,7 @@
       else draft[key]=input.value;
       if(field.kind==='secret'&&input.value)cleared.delete(key);
     });
-    if(previous!==JSON.stringify(changes()))invalidateReaderPreflight();
+    if(previous!==JSON.stringify(changes())){invalidateReaderPreflight();storeDraft();}
   }
   function fieldHtml(field){
     const value=draft[field.key],id='setup-'+field.key,desc=id+'-description',kind=field.kind;
@@ -113,14 +158,17 @@
   function render(){
     accountGeneration++;accountError='';loginOpened=null;clearTimeout(accountTimer);readerGeneration++;readerChecking=false;
     const [key,title,description]=steps[step];
-    $('#setupTitle').textContent=title;$('#setupProgress').textContent=`Step ${step+1} of ${steps.length}`;
+    $('#setupTitle').textContent=title;$('#setupProgress').textContent=progress();
     $('#setupBack').hidden=step===0;$('#setupNext').textContent=key==='review'?'Finish setup':'Continue';$('#setupCancel').hidden=required;
+    if($('#setupSkip'))$('#setupSkip').hidden=!optional(step);
     error('');$('#setupReload').hidden=true;
     let content=`<p class="muted">${escape(description)}</p>`;
-    if(key==='welcome') content+=`<div class="setupNotice"><strong>${snapshot.completed?'Review your current setup':'Welcome — let’s check your setup'}</strong><p>${snapshot.completed?'Your saved settings are prefilled. Cancel discards configuration edits. Completed account sign-in or sign-out remains in effect.':'Existing values are prefilled, including settings from older versions. Your library and source data stay in place.'}</p><p>Next and Back only edit a draft. Finish saves changes together; some changes need an app restart. Account actions are available in the Repair and AI step and take effect immediately. Closing cancels an unfinished sign-in.</p></div><details><summary>What will this guide cover?</summary><p>Library login and links, sources, metadata keys, reader access, performance, translation, repair AI and app access. Advanced options stay collapsed.</p><p>Appearance and individual source logins have shortcuts at the end. Optional integrations can be skipped and revisited with Run setup again.</p></details>`;
+    if(restoredDraft)content+=`<div class="setupNotice" id="setupDraftNotice"><strong>${restoredDraft.kept?'Unsaved setup draft restored':'Saved draft is out of date'}</strong><p>${restoredDraft.kept?`${restoredDraft.kept} unsaved ${restoredDraft.kept===1?'change was':'changes were'} restored from your last visit. Keys and passwords are never kept in a draft; enter them again if needed.`:''}${restoredDraft.dropped?` ${restoredDraft.dropped} ${restoredDraft.dropped===1?'change was':'changes were'} dropped because the saved setting changed in the meantime.`:''}</p>${restoredDraft.kept?'<button id="setupDiscardDraft" type="button">Discard draft</button>':''}</div>`;
+    if(optional(step))content+=`<p class="setupNotice" id="setupOptionalNotice">${step===steps.findIndex(item=>item[3]==='optional')?'Required settings are done. The remaining steps are optional and opt-in features. ':''}Skip this step to keep its saved values, or go straight to the review. <button id="setupJumpReview" type="button">Go to review</button></p>`;
+    if(key==='welcome') content+=`<div class="setupNotice"><strong>${snapshot.completed?'Review your current setup':'Welcome — let’s check your setup'}</strong><p>${snapshot.completed?'Your saved settings are prefilled. Cancel discards configuration edits. Completed account sign-in or sign-out remains in effect.':'Existing values are prefilled, including settings from older versions. Your library and source data stay in place.'}</p><p>Next and Back only edit a draft. Finish saves changes together; some changes need an app restart. Account actions are available in the Repair and AI step and take effect immediately. Closing cancels an unfinished sign-in.</p></div><details><summary>What will this guide cover?</summary><p>First the required settings: library connection, sources, reader access and app access. These steps cannot be skipped. Then the optional and opt-in features: matching automation and metadata keys, performance, translation, repair AI and app links. Each optional step can be skipped. Advanced options stay collapsed.</p><p>Cancel keeps your unsaved draft on this device (keys and passwords excepted); Run setup again continues from it.</p><p>Appearance and individual source logins have shortcuts at the end. Optional integrations can be skipped and revisited with Run setup again.</p></details>`;
     else if(key==='review'){
       const changed=changes();
-      content+=`<div class="setupNotice"><strong>${Object.keys(changed).length} settings changed</strong><ul>${snapshot.fields.filter(f=>f.key in changed).map(f=>`<li><strong>${escape(f.label)}</strong>: ${f.kind==='secret'?(cleared.has(f.key)?'saved credential will be removed':'replacement credential supplied'):escape(Array.isArray(changed[f.key])?changed[f.key].join(', '):typeof changed[f.key]==='boolean'?(changed[f.key]?'On':'Off'):changed[f.key]||'Disabled / empty')}</li>`).join('')||'<li>Keep current settings and complete the guide.</li>'}</ul></div><details><summary>Cleanup after setup</summary><p>A short scan removes recognizable obsolete app-generated reports and bytecode. It keeps databases, source profiles, downloads, signing keys, repair backups and unknown files. Host folders outside the container’s mounts cannot be scanned.</p></details><p>Reader address or key changes require a new extension build and reinstall from Status. Existing connections continue with their old settings until restart.</p>${'ADMIN_TOKEN' in changed?'<p class="setupNotice">Keep a copy of the new admin token before finishing. After restart, use it when the app asks you to authenticate.</p>':''}`;
+      content+=`<div class="setupNotice"><strong>${Object.keys(changed).length} settings changed</strong><ul>${snapshot.fields.filter(f=>f.key in changed).sort((a,b)=>Number(optional(stepIndex(a.step)))-Number(optional(stepIndex(b.step)))).map(f=>`<li><strong>${escape(f.label)}</strong> <small class="muted">${optional(stepIndex(f.step))?'optional':'required'}</small>: ${f.kind==='secret'?(cleared.has(f.key)?'saved credential will be removed':'replacement credential supplied'):escape(Array.isArray(changed[f.key])?changed[f.key].join(', '):typeof changed[f.key]==='boolean'?(changed[f.key]?'On':'Off'):changed[f.key]||'Disabled / empty')}</li>`).join('')||'<li>Keep current settings and complete the guide.</li>'}</ul></div><details><summary>Cleanup after setup</summary><p>A short scan removes recognizable obsolete app-generated reports and bytecode. It keeps databases, source profiles, downloads, signing keys, repair backups and unknown files. Host folders outside the container’s mounts cannot be scanned.</p></details><p>Reader address or key changes require a new extension build and reinstall from Status. Existing connections continue with their old settings until restart.</p>${'ADMIN_TOKEN' in changed?'<p class="setupNotice">Keep a copy of the new admin token before finishing. After restart, use it when the app asks you to authenticate.</p>':''}`;
       if(autoRepair!==null&&autoRepair!==autoRepairSaved)content+=`<p class="setupNotice">Automatic repair of moved sources will be turned ${autoRepair?'on':'off'}.</p>`;
       content+=readerPanel();
     }else{
@@ -163,8 +211,10 @@
       });
     });
     $('#setupReaderCheck')?.addEventListener('click',()=>checkReaderDraft());
+    $('#setupDiscardDraft')?.addEventListener('click',()=>{if(!busy&&!closing&&!completed&&!loginOwned)discardDraft();});
+    $('#setupJumpReview')?.addEventListener('click',()=>{if(busy||closing||completed||loginOwned)return;capture();if(invalidInput())return;restoredDraft=null;step=steps.length-1;render();});
     $('#setupAutoRepair')?.addEventListener('change',event=>{if(!busy&&!closing&&!completed)autoRepair=event.target.checked;});
-    updateReaderBuildStatus();
+    updateReaderBuildStatus();storeDraft();
     if(key==='review'&&rendered===readerGeneration)checkReaderDraft();
     $('#setup-REPAIR_AI_PROVIDER')?.addEventListener('change',()=>{
       if(busy||loginOwned)return;capture();const preset=providerPresets[draft.REPAIR_AI_PROVIDER];
@@ -187,10 +237,10 @@
     });
   }
   async function close(){
-    if(closing||busy)return false;closing=true;accountGeneration++;clearTimeout(accountTimer);invalidateReaderPreflight();
+    if(closing||busy)return false;storeDraft();closing=true;accountGeneration++;clearTimeout(accountTimer);invalidateReaderPreflight();
     if(loginOwned){const owned=loginOwned;loginOwned=false;try{await repair('/control/cancel-login',{method:'POST',body:JSON.stringify({operation_id:owned})});}catch(_){toast('Sign-in cancellation could not be confirmed. Check Source repairs before starting another login.');}}
     $('#setupModal').hidden=true;syncModalScrollLock();$('#setupBody').innerHTML='';error('');draft={};snapshot=null;transaction=null;completed=false;
-    cleared.clear();autoRepair=autoRepairSaved=null;closing=false;try{sessionStorage.removeItem('autosourcarr.setup.accounts');}catch(_){}
+    cleared.clear();autoRepair=autoRepairSaved=null;restoredDraft=null;closing=false;try{sessionStorage.removeItem('autosourcarr.setup.accounts');}catch(_){}
     if(resolveFirst){resolveFirst();resolveFirst=null;}previousFocus?.focus();return true;
   }
   function cancel(){
@@ -210,7 +260,9 @@
       if(first&&data.completed&&!resume){rememberComplete();return;}
       snapshot=data;required=first&&!data.completed;draft=Object.fromEntries(data.fields.map(f=>[f.key,clone(f.value)]));
       cleared.clear();readerGeneration++;readerChecking=false;readerProblem=false;readerResult=validReaderBuild(data.reader_build);readerResultSaved=true;
-      step=first?0:Math.max(0,steps.findIndex(([key])=>key===section));completed=false;transaction=requestId();
+      completed=false;restoredDraft=first&&data.completed?null:restoreDraft(data);
+      // Before the first Finish the required steps cannot be skipped, so a shortcut into a later step starts at the beginning.
+      step=section&&data.completed?Math.max(0,stepIndex(section)):!section&&restoredDraft?.step>0?restoredDraft.step:0;transaction=requestId();
       previousFocus=document.activeElement;$('#setupModal').hidden=false;syncModalScrollLock();render();
       if(first&&data.completed&&resume){completed=true;showCompletion(data,draft);draft={};snapshot=null;checkCleanup(transaction,0);}
       if(required)await new Promise(resolve=>{resolveFirst=resolve;});
@@ -229,7 +281,7 @@
         catch(e){toast('Automatic repair of moved sources could not be turned '+(enabled?'on':'off')+': '+e.message+' Change it in Sources → Repair.');}
       }
       const links=Object.fromEntries(snapshot.fields.filter(f=>f.key.endsWith('_BROWSER_URL')).map(f=>[f.key,draft[f.key]]));
-      completed=true;required=false;draft={};snapshot=null;rememberComplete();$('#setupReload').hidden=true;
+      completed=true;required=false;draft={};snapshot=null;restoredDraft=null;clearDraft();rememberComplete();$('#setupReload').hidden=true;
       if(typeof settingsState!=='undefined'){settingsState.data=null;settingsState.dirty=false;settingsState.editRevision++;}
       showCompletion(result,links);
       checkCleanup(transaction,0);
@@ -325,22 +377,42 @@
     try{sessionStorage.setItem('autosourcarr.setup.accounts','1');await setupApi().restartAfterSetup();button.textContent='Restart requested — refresh when ready to continue account setup';}
     catch(e){error(e.message);button.disabled=false;}
   }
-  $('#setupBack').onclick=()=>{if(busy||loginOwned)return;capture();step--;render();};
+  function invalidInput(){
+    const invalid=[...$('#setupBody').querySelectorAll('input')].find(input=>!input.checkValidity());
+    if(!invalid)return false;
+    let parent=invalid.parentElement;while(parent&&parent!==$('#setupBody')){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}
+    error('Check the highlighted setting before continuing.');invalid.focus();invalid.reportValidity();return true;
+  }
+  function discardDraft(){
+    clearDraft();restoredDraft=null;draft=Object.fromEntries(snapshot.fields.map(f=>[f.key,clone(f.value)]));cleared.clear();autoRepair=autoRepairSaved;
+    invalidateReaderPreflight();render();
+  }
+  $('#setupBack').onclick=()=>{if(busy||loginOwned)return;capture();restoredDraft=null;step--;render();};
   $('#setupNext').onclick=()=>{
     if(busy||loginOwned)return;if(completed){close();return;}
-    capture();const invalid=[...$('#setupBody').querySelectorAll('input')].find(input=>!input.checkValidity());
-    if(invalid){let parent=invalid.parentElement;while(parent&&parent!==$('#setupBody')){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}error('Check the highlighted setting before continuing.');invalid.focus();invalid.reportValidity();return;}
-    if(step===steps.length-1)finish();else{step++;render();}
+    capture();if(invalidInput())return;
+    restoredDraft=null;if(step===steps.length-1)finish();else{step++;render();}
+  };
+  // Skipping an optional step keeps that step's saved values; required steps have no Skip.
+  if($('#setupSkip'))$('#setupSkip').onclick=()=>{
+    if(busy||loginOwned||completed||!snapshot||!optional(step))return;
+    const key=steps[step][0];
+    for(const field of snapshot.fields.filter(f=>f.step===key)){draft[field.key]=clone(field.value);cleared.delete(field.key);}
+    if(key==='repair')autoRepair=autoRepairSaved;
+    invalidateReaderPreflight();restoredDraft=null;step++;render();
   };
   $('#setupReload').onclick=async()=>{
     if(busy||!confirm('Discard this setup draft and reload saved settings?'))return;
     busy=true;$('#setupReload').disabled=true;invalidateReaderPreflight();
-    try{const data=await setupApi().getSetup();snapshot=data;draft=Object.fromEntries(data.fields.map(f=>[f.key,clone(f.value)]));cleared.clear();readerResult=validReaderBuild(data.reader_build);readerResultSaved=true;step=0;transaction=requestId();render();}
+    try{const data=await setupApi().getSetup();clearDraft();restoredDraft=null;snapshot=data;draft=Object.fromEntries(data.fields.map(f=>[f.key,clone(f.value)]));cleared.clear();readerResult=validReaderBuild(data.reader_build);readerResultSaved=true;step=0;transaction=requestId();render();}
     catch(e){error('Could not reload: '+e.message);}
     finally{busy=false;$('#setupReload').disabled=false;}
   };
   $('#setupCancel').onclick=cancel;$('#runSetup').onclick=()=>open(false);
+  // UI-5: Escape and a click outside the dialog close it like Cancel (the draft is kept; first-run setup stays open).
+  $('#setupModal').addEventListener('click',event=>{if(event.target===$('#setupModal'))cancel();});
   $('#setupModal').addEventListener('keydown',event=>{
+    if(event.key==='Escape'){if(!event.defaultPrevented&&!event.target?.closest?.('dialog')){event.preventDefault();cancel();}return;}
     if(event.key!=='Tab')return;
     const controls=[...$('#setupModal').querySelectorAll('button,input,select,textarea,summary,[tabindex="0"]')].filter(el=>!el.disabled&&!el.hidden&&el.getClientRects().length);
     const first=controls[0],last=controls.at(-1);if(!first)return;

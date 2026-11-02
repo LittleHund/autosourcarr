@@ -5,7 +5,7 @@ const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {
 (async()=>{
  let h=harness();
  h.data.fields.push({key:'COMICVINE_API_KEY',kind:'secret',step:'matching',label:'Comic Vine',description:'key',value:'',configured:true});
- await h.context.AutoSourcarrSetup.open();await h.next();await h.next();await h.next();
+ await h.context.AutoSourcarrSetup.open();await h.toStep('Matching and discovery');
  h.nodes.get('setupClear-COMICVINE_API_KEY').events.click();
  await toReview(h);assert(h.nodes.get('setupBody').innerHTML.includes('saved credential will be removed'));await h.next();
  let payload=JSON.parse(h.calls.find(c=>c[0].endsWith('/finish'))[1].body);
@@ -15,7 +15,7 @@ const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {
  h=harness();h.data.fields.push(
   {key:'REPAIR_AI_PROVIDER',step:'repair',kind:'choice',label:'AI',options:[['chatgpt','ChatGPT'],['custom','Custom']],description:'',value:'chatgpt'},
   {key:'REPAIR_AI_API_KEY',step:'repair',kind:'secret',label:'AI key',description:'',value:'',configured:true});
- await h.context.AutoSourcarrSetup.open();for(let i=0;i<7;i++)await h.next();
+ await h.context.AutoSourcarrSetup.open();await h.toStep('Repair and AI');
  const select=h.nodes.get('setup-REPAIR_AI_PROVIDER');assert.equal(select.value,'chatgpt');
  select.value='custom';select.events.change();h.nodes.get('setup-REPAIR_AI_API_KEY').value='sensitive-draft';
  await h.next();h.context.AutoSourcarrSetup.cancel();
