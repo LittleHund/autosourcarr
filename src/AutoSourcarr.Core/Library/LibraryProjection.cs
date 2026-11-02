@@ -129,7 +129,7 @@ public static class LibraryProjection
             "matches" => ("source_count", "DESC", "<"),
             _ => ("updated_at", "DESC", "<"),
         };
-        var after = "";
+        var after = ""; long? carriedTotal = null;
         if (query.Cursor.Length > 0)
         {
             JsonObject? cursor;
@@ -144,12 +144,14 @@ public static class LibraryProjection
                 else if (keyValue.TryGetValue<long>(out var keyNumber)) afterKey = keyNumber;
             }
             parameters.Add(("$after_key", afterKey)); parameters.Add(("$after_id", afterId));
+            // PERF-5: the first page counted the matching works; later pages carry that count instead of counting again.
+            if (cursor["total"] is JsonValue totalValue && totalValue.TryGetValue<long>(out var counted) && counted >= 0) carriedTotal = counted;
             after = "WHERE (" + key + ",id) " + comparison + " ($after_key,$after_id)";
         }
         var (total, rows) = database.Read(DatabaseFile.Catalog, c =>
         {
             var all = parameters.ToArray();
-            var count = Convert.ToInt64(c.Scalar(records + filtered + "SELECT COUNT(*) FROM filtered", all) ?? 0L, CultureInfo.InvariantCulture);
+            var count = carriedTotal ?? Convert.ToInt64(c.Scalar(records + filtered + "SELECT COUNT(*) FROM filtered", all) ?? 0L, CultureInfo.InvariantCulture);
             var page = c.Query(records + filtered + "SELECT * FROM filtered " + after + " ORDER BY " + key + " " + direction + ",id " + direction + " LIMIT $limit", all);
             return (count, page);
         });
@@ -159,7 +161,7 @@ public static class LibraryProjection
         if (more && shown.Count > 0)
         {
             var last = shown[^1];
-            next = Base64Url(Encoding.UTF8.GetBytes(new JsonObject { ["stamp"] = stamp, ["key"] = last[key]?.DeepClone(), ["id"] = last["id"]!.DeepClone() }.ToJsonString()));
+            next = Base64Url(Encoding.UTF8.GetBytes(new JsonObject { ["stamp"] = stamp, ["key"] = last[key]?.DeepClone(), ["id"] = last["id"]!.DeepClone(), ["total"] = total }.ToJsonString()));
         }
         var pageIds = "[" + string.Join(',', shown.Select(row => row["id"]!.GetValue<long>().ToString(CultureInfo.InvariantCulture))) + "]";
         var (matches, clocks, complete, downloaded) = database.Read(DatabaseFile.Catalog, c => (

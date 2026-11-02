@@ -80,15 +80,24 @@ internal static class CatalogueV1Endpoints
                 context.Response.Headers.CacheControl = "no-store";
                 if (catalogue is null) return Unavailable();
                 int limit;
-                try { limit = ApiQuery.Integer(context.Request, "limit", 200, 1, 1000); }
+                try { limit = ApiQuery.Integer(context.Request, "limit", 50, 1, 1000); }
                 catch (ApiProblem error) { return Problem(error.StatusCode, error.Message); }
                 var search = context.Request.Query["search"].LastOrDefault() ?? "";
                 if (search.Length > 500) return Problem(422, "The search text is too long");
+                var cursor = context.Request.Query["cursor"].LastOrDefault() ?? "";
+                if (search.Trim().Length == 0)
+                {
+                    // PERF-5: page-first keyset read (no count, no full scan); next_cursor is null on the last page.
+                    CatalogueEntryPage page;
+                    try { page = await Task.Run(() => catalogue.Queries.ListPage(cursor, limit), context.RequestAborted).ConfigureAwait(false); }
+                    catch (ArgumentException error) { return Problem(400, error.Message); }
+                    return Answer(new JsonObject { ["items"] = Array(page.Items), ["next_cursor"] = page.NextCursor, ["has_more"] = page.NextCursor is not null });
+                }
                 var rows = await Task.Run(() => catalogue.Queries.List(search, limit), context.RequestAborted).ConfigureAwait(false);
-                return Answer(new JsonObject { ["items"] = Array(rows) });
+                return Answer(new JsonObject { ["items"] = Array(rows), ["next_cursor"] = null, ["has_more"] = false });
             }))
             .WithName("listCatalogueEntries")
-            .WithSummary("Catalogue entries as cards, newest first or matching the optional query 'search' (local titles only), at most 'limit' (default 200, at most 1000).")
+            .WithSummary("Catalogue entries as cards (PERF-5 page-first): newest first in pages of 'limit' (default 50, at most 1000) continued with 'cursor' (next_cursor of the previous page), or matching the optional query 'search' (local titles only, one page).")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status422UnprocessableEntity);
 
