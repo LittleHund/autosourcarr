@@ -1,213 +1,53 @@
-playwright 1.64.1: expected=9 unexpected=169 flaky=0 skipped=2 duration_s=624
+playwright 1.64.1: expected=144 unexpected=12 flaky=0 skipped=24 duration_s=559
 
 per project (passed/failed/flaky/skipped):
-  desktop-amber-dark: 0/5/0/0
-  desktop-amber-light: 0/5/0/0
+  desktop-amber-dark: 4/0/0/1
+  desktop-amber-light: 4/0/0/1
   desktop-blue-dark: 4/0/0/1
-  desktop-blue-light: 0/5/0/0
-  desktop-cyan-dark: 0/5/0/0
-  desktop-cyan-light: 0/5/0/0
-  desktop-emerald-dark: 0/5/0/0
-  desktop-emerald-light: 0/5/0/0
-  desktop-rose-dark: 0/5/0/0
-  desktop-rose-light: 0/5/0/0
-  desktop-violet-dark: 0/5/0/0
-  desktop-violet-light: 0/5/0/0
-  phone-amber-dark: 0/5/0/0
-  phone-amber-light: 0/5/0/0
-  phone-blue-dark: 2/3/0/0
-  phone-blue-light: 0/5/0/0
-  phone-cyan-dark: 0/5/0/0
-  phone-cyan-light: 0/5/0/0
-  phone-emerald-dark: 0/5/0/0
-  phone-emerald-light: 0/5/0/0
-  phone-rose-dark: 0/5/0/0
-  phone-rose-light: 0/5/0/0
-  phone-violet-dark: 0/5/0/0
-  phone-violet-light: 0/5/0/0
-  tablet-amber-dark: 0/5/0/0
-  tablet-amber-light: 0/5/0/0
+  desktop-blue-light: 4/0/0/1
+  desktop-cyan-dark: 4/0/0/1
+  desktop-cyan-light: 4/0/0/1
+  desktop-emerald-dark: 4/0/0/1
+  desktop-emerald-light: 4/0/0/1
+  desktop-rose-dark: 4/0/0/1
+  desktop-rose-light: 4/0/0/1
+  desktop-violet-dark: 4/0/0/1
+  desktop-violet-light: 4/0/0/1
+  phone-amber-dark: 5/0/0/0
+  phone-amber-light: 5/0/0/0
+  phone-blue-dark: 5/0/0/0
+  phone-blue-light: 5/0/0/0
+  phone-cyan-dark: 5/0/0/0
+  phone-cyan-light: 5/0/0/0
+  phone-emerald-dark: 5/0/0/0
+  phone-emerald-light: 5/0/0/0
+  phone-rose-dark: 5/0/0/0
+  phone-rose-light: 5/0/0/0
+  phone-violet-dark: 5/0/0/0
+  phone-violet-light: 5/0/0/0
+  tablet-amber-dark: 3/1/0/1
+  tablet-amber-light: 3/1/0/1
   tablet-blue-dark: 3/1/0/1
-  tablet-blue-light: 0/5/0/0
-  tablet-cyan-dark: 0/5/0/0
-  tablet-cyan-light: 0/5/0/0
-  tablet-emerald-dark: 0/5/0/0
-  tablet-emerald-light: 0/5/0/0
-  tablet-rose-dark: 0/5/0/0
-  tablet-rose-light: 0/5/0/0
-  tablet-violet-dark: 0/5/0/0
-  tablet-violet-light: 0/5/0/0
+  tablet-blue-light: 3/1/0/1
+  tablet-cyan-dark: 3/1/0/1
+  tablet-cyan-light: 3/1/0/1
+  tablet-emerald-dark: 3/1/0/1
+  tablet-emerald-light: 3/1/0/1
+  tablet-rose-dark: 3/1/0/1
+  tablet-rose-light: 3/1/0/1
+  tablet-violet-dark: 3/1/0/1
+  tablet-violet-light: 3/1/0/1
 
-notes:
-  slow: undefined
-
-failures (169):
-  FAIL [phone-blue-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: start page: 15 of 36 sampled controls are smaller than 44x44 px | expect(received).toEqual(expected) // deep equality | - Expected  -  1
-  FAIL [phone-blue-light] pages.spec.js > sidebar is reachable: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-amber-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-emerald-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-violet-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-rose-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-cyan-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-blue-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: start page: 26 of 60 sampled controls are smaller than 44x44 px | expect(received).toEqual(expected) // deep equality | - Expected  -  1
-  FAIL [tablet-blue-light] pages.spec.js > sidebar is reachable: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [tablet-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [tablet-amber-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-emerald-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-violet-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-rose-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-cyan-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-blue-light] pages.spec.js > sidebar is reachable: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-amber-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-emerald-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-violet-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-rose-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-cyan-dark] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-light] pages.spec.js > sidebar is reachable: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-light] pages.spec.js > every page and sub-tab keeps the layout: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-blue-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Test timeout of 120000ms exceeded.
-  FAIL [phone-blue-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: a click on the scrim closes the drawer | a click on the scrim closes the drawer | expect(received).toBe(expected) // Object.is equality
-  FAIL [phone-blue-light] popups.spec.js > search dialog closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-blue-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-blue-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-amber-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-amber-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [phone-emerald-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-emerald-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [phone-violet-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-violet-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [phone-rose-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-rose-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [phone-cyan-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [phone-cyan-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-blue-light] popups.spec.js > search dialog closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [tablet-blue-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [tablet-blue-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [tablet-amber-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-amber-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [tablet-emerald-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-emerald-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [tablet-violet-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-violet-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [tablet-rose-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-rose-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [tablet-cyan-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [tablet-cyan-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-blue-light] popups.spec.js > search dialog closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-amber-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-amber-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "amber"
-  FAIL [desktop-emerald-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-emerald-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "emerald"
-  FAIL [desktop-violet-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-violet-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "violet"
-  FAIL [desktop-rose-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-rose-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "rose"
-  FAIL [desktop-cyan-dark] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-light] popups.spec.js > search dialog closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
-  FAIL [desktop-cyan-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: theme accent applied | expect(received).toBe(expected) // Object.is equality | Expected: "cyan"
+failures (12):
+  FAIL [tablet-blue-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-amber-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-amber-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-emerald-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-emerald-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-violet-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-violet-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-rose-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-rose-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-cyan-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-cyan-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769

@@ -1,25 +1,53 @@
-playwright 1.64.1: expected=6 unexpected=13 flaky=0 skipped=1 duration_s=252
+playwright 1.64.1: expected=144 unexpected=12 flaky=0 skipped=24 duration_s=553
 
 per project (passed/failed/flaky/skipped):
+  desktop-amber-dark: 4/0/0/1
+  desktop-amber-light: 4/0/0/1
   desktop-blue-dark: 4/0/0/1
-  desktop-blue-light: 0/5/0/0
-  phone-blue-dark: 2/3/0/0
-  phone-blue-light: 0/5/0/0
+  desktop-blue-light: 4/0/0/1
+  desktop-cyan-dark: 4/0/0/1
+  desktop-cyan-light: 4/0/0/1
+  desktop-emerald-dark: 4/0/0/1
+  desktop-emerald-light: 4/0/0/1
+  desktop-rose-dark: 4/0/0/1
+  desktop-rose-light: 4/0/0/1
+  desktop-violet-dark: 4/0/0/1
+  desktop-violet-light: 4/0/0/1
+  phone-amber-dark: 5/0/0/0
+  phone-amber-light: 5/0/0/0
+  phone-blue-dark: 5/0/0/0
+  phone-blue-light: 5/0/0/0
+  phone-cyan-dark: 5/0/0/0
+  phone-cyan-light: 5/0/0/0
+  phone-emerald-dark: 5/0/0/0
+  phone-emerald-light: 5/0/0/0
+  phone-rose-dark: 5/0/0/0
+  phone-rose-light: 5/0/0/0
+  phone-violet-dark: 5/0/0/0
+  phone-violet-light: 5/0/0/0
+  tablet-amber-dark: 3/1/0/1
+  tablet-amber-light: 3/1/0/1
+  tablet-blue-dark: 3/1/0/1
+  tablet-blue-light: 3/1/0/1
+  tablet-cyan-dark: 3/1/0/1
+  tablet-cyan-light: 3/1/0/1
+  tablet-emerald-dark: 3/1/0/1
+  tablet-emerald-light: 3/1/0/1
+  tablet-rose-dark: 3/1/0/1
+  tablet-rose-light: 3/1/0/1
+  tablet-violet-dark: 3/1/0/1
+  tablet-violet-light: 3/1/0/1
 
-notes:
-  slow: undefined
-
-failures (13):
-  FAIL [phone-blue-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: start page: 15 of 36 sampled controls are smaller than 44x44 px | expect(received).toEqual(expected) // deep equality | - Expected  -  1
-  FAIL [phone-blue-light] pages.spec.js > sidebar is reachable: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] pages.spec.js > sidebar is reachable: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-blue-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Test timeout of 120000ms exceeded.
-  FAIL [phone-blue-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: a click on the scrim closes the drawer | a click on the scrim closes the drawer | expect(received).toBe(expected) // Object.is equality
-  FAIL [phone-blue-light] popups.spec.js > search dialog closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-blue-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [phone-blue-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] popups.spec.js > search dialog closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
-  FAIL [desktop-blue-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+failures (12):
+  FAIL [tablet-blue-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-amber-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-amber-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-emerald-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-emerald-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-violet-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-violet-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-rose-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-rose-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-cyan-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769
+  FAIL [tablet-cyan-light] pages.spec.js > every page and sub-tab keeps the layout: Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840 | expect(received).toBeLessThanOrEqual(expected) | Expected: <= 769

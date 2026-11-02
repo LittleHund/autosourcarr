@@ -1,133 +1,131 @@
-─────────────────────────────────────────────────────
-
-    Error Context: test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-blue-light/error-context.md
-
-    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-blue-light/trace.zip
+�───────────────────────────
+    test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-dark/trace.zip
     Usage:
 
-        npx playwright show-trace test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-blue-light/trace.zip
+        npx playwright show-trace test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-dark/trace.zip
 
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
 
-    Error: light/dark applied
+    Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840
 
-    expect(received).toBe(expected) // Object.is equality
+    expect(received).toBeLessThanOrEqual(expected)
 
-    Expected: "light"
-    Received: "dark"
+    Expected: <= 769
+    Received:    840
 
-       at fixtures.js:39
+       at fixtures.js:81
 
-      37 |     const applied = await appliedTheme(page);
-      38 |     base.expect(applied.accent, 'theme accent applied').toBe(theme.accent);
-    > 39 |     base.expect(applied.scheme, 'light/dark applied').toBe(theme.scheme);
-         |                                                       ^
-      40 |   }
-      41 | }
-      42 |
-        at signIn (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:39:55)
-        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/popups.spec.js:43:3
-
-    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-blue-light-retry1/test-failed-1.png
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-    Error Context: test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-blue-light-retry1/error-context.md
-
-    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-blue-light-retry1/trace.zip
-    Usage:
-
-        npx playwright show-trace test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-blue-light-retry1/trace.zip
-
-    ────────────────────────────────────────────────────────────────────────────────────────────────
-
-  13) [desktop-blue-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
-
-    Error: light/dark applied
-
-    expect(received).toBe(expected) // Object.is equality
-
-    Expected: "light"
-    Received: "dark"
-
-       at fixtures.js:39
-
-      37 |     const applied = await appliedTheme(page);
-      38 |     base.expect(applied.accent, 'theme accent applied').toBe(theme.accent);
-    > 39 |     base.expect(applied.scheme, 'light/dark applied').toBe(theme.scheme);
-         |                                                       ^
-      40 |   }
-      41 | }
-      42 |
-        at signIn (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:39:55)
-        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/popups.spec.js:60:3
+      79 |   }, page.viewportSize().width);
+      80 |   base.expect.soft(result.scrollWidth, `${where}: document is ${result.scrollWidth}px wide in a ${result.width}px viewport; widest: ${result.offenders.join(', ')}`)
+    > 81 |     .toBeLessThanOrEqual(result.width + 1);
+         |      ^
+      82 | }
+      83 |
+      84 | /** On a coarse pointer the visible controls are at least 44x44 px (their label counts for checkboxes). */
+        at expectNoHorizontalScroll (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:81:6)
+        at checkLayout (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/pages.spec.js:13:3)
+        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/pages.spec.js:49:5
 
     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light/test-failed-1.png
+    test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-dark-retry1/test-failed-1.png
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
-    Error Context: test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light/error-context.md
+    Error Context: test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-dark-retry1/error-context.md
 
     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light/trace.zip
+    test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-dark-retry1/trace.zip
     Usage:
 
-        npx playwright show-trace test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light/trace.zip
+        npx playwright show-trace test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-dark-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [tablet-cyan-light] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ─
+
+    Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 769
+    Received:    840
+
+       at fixtures.js:81
+
+      79 |   }, page.viewportSize().width);
+      80 |   base.expect.soft(result.scrollWidth, `${where}: document is ${result.scrollWidth}px wide in a ${result.width}px viewport; widest: ${result.offenders.join(', ')}`)
+    > 81 |     .toBeLessThanOrEqual(result.width + 1);
+         |      ^
+      82 | }
+      83 |
+      84 | /** On a coarse pointer the visible controls are at least 44x44 px (their label counts for checkboxes). */
+        at expectNoHorizontalScroll (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:81:6)
+        at checkLayout (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/pages.spec.js:13:3)
+        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/pages.spec.js:49:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light/trace.zip
 
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
 
-    Error: light/dark applied
+    Error: /system: document is 840px wide in a 768px viewport; widest: p#apkDownloadStatus right=840, p#apkBuildHelp.muted right=840
 
-    expect(received).toBe(expected) // Object.is equality
+    expect(received).toBeLessThanOrEqual(expected)
 
-    Expected: "light"
-    Received: "dark"
+    Expected: <= 769
+    Received:    840
 
-       at fixtures.js:39
+       at fixtures.js:81
 
-      37 |     const applied = await appliedTheme(page);
-      38 |     base.expect(applied.accent, 'theme accent applied').toBe(theme.accent);
-    > 39 |     base.expect(applied.scheme, 'light/dark applied').toBe(theme.scheme);
-         |                                                       ^
-      40 |   }
-      41 | }
-      42 |
-        at signIn (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:39:55)
-        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/popups.spec.js:60:3
+      79 |   }, page.viewportSize().width);
+      80 |   base.expect.soft(result.scrollWidth, `${where}: document is ${result.scrollWidth}px wide in a ${result.width}px viewport; widest: ${result.offenders.join(', ')}`)
+    > 81 |     .toBeLessThanOrEqual(result.width + 1);
+         |      ^
+      82 | }
+      83 |
+      84 | /** On a coarse pointer the visible controls are at least 44x44 px (their label counts for checkboxes). */
+        at expectNoHorizontalScroll (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:81:6)
+        at checkLayout (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/pages.spec.js:13:3)
+        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/pages.spec.js:49:5
 
     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
-    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light-retry1/test-failed-1.png
+    test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light-retry1/test-failed-1.png
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
-    Error Context: test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light-retry1/error-context.md
+    Error Context: test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light-retry1/error-context.md
 
     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
-    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light-retry1/trace.zip
+    test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light-retry1/trace.zip
     Usage:
 
-        npx playwright show-trace test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-blue-light-retry1/trace.zip
+        npx playwright show-trace test-results/pages-every-page-and-sub-tab-keeps-the-layout-tablet-cyan-light-retry1/trace.zip
 
     ────────────────────────────────────────────────────────────────────────────────────────────────
 
-  13 failed
-    [phone-blue-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─────
-    [phone-blue-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
-    [phone-blue-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
-    [phone-blue-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────────
-    [phone-blue-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
-    [phone-blue-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
-    [phone-blue-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
-    [phone-blue-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
-    [desktop-blue-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
-    [desktop-blue-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
-    [desktop-blue-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
-    [desktop-blue-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
-    [desktop-blue-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
-  1 skipped
-  6 passed (4.2m)
+  12 failed
+    [tablet-blue-dark] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ────
+    [tablet-blue-light] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ───
+    [tablet-amber-dark] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ───
+    [tablet-amber-light] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ──
+    [tablet-emerald-dark] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ─
+    [tablet-emerald-light] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout 
+    [tablet-violet-dark] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ──
+    [tablet-violet-light] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ─
+    [tablet-rose-dark] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ────
+    [tablet-rose-light] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ───
+    [tablet-cyan-dark] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ────
+    [tablet-cyan-light] › tests/e2e/pages.spec.js:34:1 › every page and sub-tab keeps the layout ───
+  24 skipped
+  144 passed (9.2m)

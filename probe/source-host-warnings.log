@@ -1,36 +1,37 @@
-17:38:02.416 [webview-start] INFO autosourcarr.host.WebViewEngine -- Downloading the WebView Chromium build (jbr-release-25.0.4b508.27)
-17:38:02.566 [main] INFO autosourcarr.host.Main -- AutoSourcarr source host 0.5.0 listening on 127.0.0.1:4567
-17:38:05.709 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 67 constructors that R8 removed (extension-12449764150606557843.apk)
-17:38:08.302 [webview-start] INFO autosourcarr.host.WebViewEngine -- Downloaded the WebView Chromium build
-[43719:43830:1102/173808.999006:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43830:1102/173809.080342:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43830:1102/173809.107634:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43830:1102/173809.125298:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43825:1102/173809.133941:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43830:1102/173809.134574:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43825:1102/173809.135146:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43825:1102/173809.138964:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43825:1102/173809.145904:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43830:1102/173809.146022:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-17:38:09.150 [webview-start] INFO autosourcarr.host.WebViewEngine -- WebView ready (Chromium 144.0.7559.172)
-[43719:43825:1102/173809.150858:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43825:1102/173809.153832:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43830:1102/173809.154272:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43825:1102/173809.155307:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.UPower was not provided by any .service files
-[43719:43825:1102/173809.158650:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43830:1102/173809.158759:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43825:1102/173809.160746:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-[43719:43830:1102/173809.162005:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
-[43719:43825:1102/173809.162052:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
-17:38:09.805 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 9 constructors that R8 removed (extension-3978348064501016401.apk)
-17:38:12.590 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 8 constructors that R8 removed (extension-14797456814083060774.apk)
-17:38:19.501 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 6 constructors that R8 removed (extension-16235313459593638316.apk)
-17:38:20.861 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 16 constructors that R8 removed (extension-14243091661787640015.apk)
-17:38:24.649 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 57 constructors that R8 removed (extension-16566629439979670457.apk)
-17:38:29.679 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 17 constructors that R8 removed (extension-7880258846611089573.apk)
-17:40:00.327 [OkHttp https://www.kakamanga.com/...] WARN autosourcarr.host.CloudflareWebViewSolver -- WebView did not pass the Cloudflare check for www.kakamanga.com within 1m 30s (page title: "Just a moment...")
-17:40:00.327 [OkHttp https://www.kakamanga.com/...] WARN eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor -- The WebView did not pass the Cloudflare check for www.kakamanga.com; trying the configured solvers
-17:40:00.330 [source-host-http] WARN autosourcarr.host.HostApi -- Request GET /v1/sources/2528986671771677900/mangas failed
+19:00:01.585 [webview-start] INFO autosourcarr.host.WebViewEngine -- Downloading the WebView Chromium build (jbr-release-25.0.4b508.27)
+19:00:01.677 [main] INFO autosourcarr.host.Main -- AutoSourcarr source host 0.5.0 listening on 127.0.0.1:4567
+19:00:04.943 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 67 constructors that R8 removed (extension-8930077597488457770.apk)
+19:00:07.731 [webview-start] INFO autosourcarr.host.WebViewEngine -- Downloaded the WebView Chromium build
+[30485:30599:1102/190008.655571:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30599:1102/190008.728482:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30599:1102/190008.756720:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30599:1102/190008.771065:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30595:1102/190008.774890:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[30485:30599:1102/190008.775000:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30595:1102/190008.775909:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[30485:30595:1102/190008.783132:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+19:00:08.788 [webview-start] INFO autosourcarr.host.WebViewEngine -- WebView ready (Chromium 144.0.7559.172)
+[30485:30595:1102/190008.788582:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[30485:30599:1102/190008.789275:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30595:1102/190008.794020:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[30485:30595:1102/190008.798088:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[30485:30599:1102/190008.798163:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30595:1102/190008.798504:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.Properties.GetAll: object_path= /org/freedesktop/UPower/devices/DisplayDevice: org.freedesktop.DBus.Error.ServiceUnknown: The name org.freedesktop.UPower was not provided by any .service files
+[30485:30595:1102/190008.803248:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[30485:30599:1102/190008.804053:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30595:1102/190008.805178:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+[30485:30599:1102/190008.805239:ERROR:dbus/bus.cc:405] Failed to connect to the bus: Could not parse server address: Unknown address type (examples of valid types are "tcp" and on UNIX "unix")
+[30485:30595:1102/190008.805828:ERROR:dbus/object_proxy.cc:572] Failed to call method: org.freedesktop.DBus.NameHasOwner: object_path= /org/freedesktop/DBus: unknown error type: 
+19:00:09.239 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 9 constructors that R8 removed (extension-2271001899701217412.apk)
+19:00:11.670 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 8 constructors that R8 removed (extension-16519787952788348093.apk)
+19:00:18.479 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 6 constructors that R8 removed (extension-17475877060136291186.apk)
+19:00:20.182 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 16 constructors that R8 removed (extension-4489248394538613619.apk)
+19:00:23.918 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 57 constructors that R8 removed (extension-14907232596826552075.apk)
+19:00:28.920 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 17 constructors that R8 removed (extension-5490823828844007931.apk)
+[30623:30639:1102/190031.176735:ERROR:net/socket/ssl_client_socket_impl.cc:924] handshake failed; returned -1, SSL error code 1, net_error -202
+19:01:59.664 [OkHttp https://www.kakamanga.com/...] WARN autosourcarr.host.CloudflareWebViewSolver -- WebView did not pass the Cloudflare check for www.kakamanga.com within 1m 30s (page title: "Just a moment...")
+19:01:59.665 [OkHttp https://www.kakamanga.com/...] WARN eu.kanade.tachiyomi.network.interceptor.CloudflareInterceptor -- The WebView did not pass the Cloudflare check for www.kakamanga.com; trying the configured solvers
+19:01:59.667 [source-host-http] WARN autosourcarr.host.HostApi -- Request GET /v1/sources/2528986671771677900/mangas failed
 java.io.IOException: The WebView could not pass the Cloudflare check for www.kakamanga.com
 	at e1.b(Unknown Source)
 	at a1.k(Unknown Source)
@@ -77,8 +78,8 @@ Caused by: java.io.IOException: The WebView could not pass the Cloudflare check 
 	at okhttp3.internal.connection.RealCall.getResponseWithInterceptorChain$okhttp(RealCall.kt:234)
 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:582)
 	... 3 common frames omitted
-17:40:00.759 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 45 constructors that R8 removed (extension-477216500720644952.apk)
-17:40:02.602 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 13 constructors that R8 removed (extension-5967783846946248942.apk)
+19:02:00.161 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 45 constructors that R8 removed (extension-1598324943349769096.apk)
+19:02:02.162 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 13 constructors that R8 removed (extension-11355065809409431102.apk)
 [To redirect Truffle log output to a file use one of the following options:
 * '--log.file=<path>' if the option is passed using a guest language launcher.
 * '-Dpolyglot.log.file=<path>' if the option is passed using the host Java launcher.
@@ -147,10 +148,10 @@ It is not recommended to disable version checks.
 
 For more information see: https://www.graalvm.org/latest/reference-manual/embed-languages/#runtime-optimization-support.
 To disable this warning use the '--engine.WarnInterpreterOnly=false' option or the '-Dpolyglot.engine.WarnInterpreterOnly=false' system property.
-17:40:10.935 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 10 constructors that R8 removed (extension-1025149725968375337.apk)
-17:40:14.519 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 39 constructors that R8 removed (extension-3363611886028513671.apk)
-17:40:19.814 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 26 constructors that R8 removed (extension-15748883414947046066.apk)
-17:40:24.924 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 9 constructors that R8 removed (extension-5180519546175720916.apk)
+19:02:10.559 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 10 constructors that R8 removed (extension-2437913517880688485.apk)
+19:02:14.119 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 39 constructors that R8 removed (extension-6932864944022018157.apk)
+19:02:19.050 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 26 constructors that R8 removed (extension-15234852529509030984.apk)
+19:02:24.403 [source-host-http] INFO suwayomi.tachidesk.manga.impl.util.PackageTools -- Added 9 constructors that R8 removed (extension-11767577938994959119.apk)
 [To redirect Truffle log output to a file use one of the following options:
 * '--log.file=<path>' if the option is passed using a guest language launcher.
 * '-Dpolyglot.log.file=<path>' if the option is passed using the host Java launcher.
@@ -188,9 +189,9 @@ To disable this warning use the '--engine.WarnInterpreterOnly=false' option or t
 made a Toast: "Restart Tachiyomi to apply new setting."
 made a Toast: "Restart Tachiyomi to apply new setting."
 made a Toast: "Restart Tachiyomi to apply new setting."
-17:40:31.620 [RxIoScheduler-3] ERROR android.util.Log -- [extension.all.komga]: error while decoding JSON for libraries filter
+19:02:38.280 [RxIoScheduler-2] ERROR android.util.Log -- [extension.all.komga]: error while decoding JSON for libraries filter
 kotlinx.serialization.json.JsonDecodingException: Unexpected JSON token at offset 0: Expected start of the array '[', but had '{' instead at path: $
-JSON input: {"timestamp":"2026-11-02T17:40:31.497+00:00","status":401,"error":"Unauthorized","message":"Unauthorized","path":"/api/v1/libraries"}
+JSON input: {"timestamp":"2026-11-02T19:02:38.177+00:00","status":401,"error":"Unauthorized","message":"Unauthorized","path":"/api/v1/libraries"}
 	at kotlinx.serialization.json.internal.JsonExceptionsKt.decodingExceptionOf(JsonExceptions.kt:48)
 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail(AbstractJsonLexer.kt:583)
 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail$default(AbstractJsonLexer.kt:582)
@@ -216,9 +217,9 @@ JSON input: {"timestamp":"2026-11-02T17:40:31.497+00:00","status":401,"error":"U
 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
-17:40:31.620 [RxIoScheduler-2] ERROR android.util.Log -- [extension.all.komga]: error while decoding JSON for libraries filter
+19:02:38.767 [RxIoScheduler-3] ERROR android.util.Log -- [extension.all.komga]: error while decoding JSON for libraries filter
 kotlinx.serialization.json.JsonDecodingException: Unexpected JSON token at offset 0: Expected start of the array '[', but had '{' instead at path: $
-JSON input: {"timestamp":"2026-11-02T17:40:31.517+00:00","status":401,"error":"Unauthorized","message":"Unauthorized","path":"/api/v1/libraries"}
+JSON input: {"timestamp":"2026-11-02T19:02:38.660+00:00","status":401,"error":"Unauthorized","message":"Unauthorized","path":"/api/v1/libraries"}
 	at kotlinx.serialization.json.internal.JsonExceptionsKt.decodingExceptionOf(JsonExceptions.kt:48)
 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail(AbstractJsonLexer.kt:583)
 	at kotlinx.serialization.json.internal.AbstractJsonLexer.fail$default(AbstractJsonLexer.kt:582)
@@ -244,4 +245,4 @@ JSON input: {"timestamp":"2026-11-02T17:40:31.517+00:00","status":401,"error":"U
 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
-17:40:45.229 [source-host-http] INFO autosourcarr.host.CloudflareWebViewSolver -- WebView passed the Cloudflare check for 127.0.0.1
+19:02:52.738 [source-host-http] INFO autosourcarr.host.CloudflareWebViewSolver -- WebView passed the Cloudflare check for 127.0.0.1
