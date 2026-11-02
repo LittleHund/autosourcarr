@@ -1,0 +1,304 @@
+name: release
+
+# Phase 13 (PIPE-1..9, PERF-7): one pipeline that builds the 0.5.0 image and the reader extension, boots the image,
+# measures its boot time, browser-checks it and publishes the compatibility list. Runs only by hand or on a version
+# tag, never on every push.
+#
+# Publishing to ghcr.io (hard rule 15) is an OWNER GATE: the push job runs only when the run was started by hand
+# with "publish" ticked (default off) AND the "release" environment approves it (configure the environment with the
+# owner as required reviewer in the repository settings). Never start it without the owner's go. Tag pushes never
+# publish.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Push the image to ghcr.io/littlehund/autosourcarr (owner only; also needs the release environment approval)"
+        type: boolean
+        default: false
+      force_playwright:
+        description: "Run the browser checks even when no UI file changed since the previous release tag"
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+  # PIPE-3 pin refresh: scripts/update-pins.py on a schedule, opening its diff for review. Off until the owner
+  # enables it (uncomment, and add a job that runs the script and opens a pull request with the diff).
+  # schedule:
+  #   - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/littlehund/autosourcarr
+  # The official Playwright image (PIPE-5), same version as package-lock.json, pinned by digest.
+  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.64.1-jammy@sha256:a3966b653e8d48a30901889081b616307fca73e0d843a117fadf6609397dac38
+  BOOT_PORT: "18282"
+
+jobs:
+  image:
+    name: Image build, boot time and browser checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Version, previous release and changed areas
+        id: meta
+        run: |
+          version=$(tr -d '\r\n' < VERSION)
+          previous=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)
+          ui=true
+          if [ -n "$previous" ] && git diff --quiet "$previous" HEAD -- autosourcarr/app/static tests/e2e playwright.config.js \
+               scripts/bundle-ui.mjs package-lock.json; then ui=false; fi
+          [ "${{ inputs.force_playwright }}" = true ] && ui=true
+          {
+            echo "version=$version"; echo "previous=$previous"; echo "ui_changed=$ui"
+          } >> "$GITHUB_OUTPUT"
+          echo "version $version, previous release ${previous:-none}, UI changed: $ui"
+
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Gradle cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-release-${{ hashFiles('source-host/**', 'scripts/build-source-host.sh', 'extension/module/**', 'extension/keiyoushi-default.lock', 'scripts/build-reader-extension.sh') }}
+          restore-keys: gradle-release-
+
+      # The Kotlin source host is rebuilt only when its sources or build script change (cache key on their hashes).
+      - name: Source host jar cache
+        id: host-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .build/source-host-out
+          key: source-host-jar-${{ hashFiles('source-host/**', 'scripts/build-source-host.sh') }}
+      - name: Build the source host (Suwayomi v2.4.2366 checkout)
+        if: steps.host-cache.outputs.cache-hit != 'true'
+        run: |
+          bash scripts/build-source-host.sh
+          mkdir -p .build/source-host-out
+          cp .build/autosourcarr-source-host.jar .build/source-host-out/
+
+      - name: Reader extension repository (READ-1)
+        env:
+          AUTOSOURCARR_EXT_KEYSTORE_B64: ${{ secrets.AUTOSOURCARR_EXT_KEYSTORE_B64 }}
+          AUTOSOURCARR_EXT_KEYSTORE_PASSWORD: ${{ secrets.AUTOSOURCARR_EXT_KEYSTORE_PASSWORD }}
+          AUTOSOURCARR_EXT_KEY_ALIAS: ${{ secrets.AUTOSOURCARR_EXT_KEY_ALIAS }}
+          AUTOSOURCARR_EXT_KEY_PASSWORD: ${{ secrets.AUTOSOURCARR_EXT_KEY_PASSWORD }}
+        run: |
+          bash scripts/build-reader-extension.sh .build/reader-extension
+          python3 -c "import json;b=json.load(open('.build/reader-extension/build.json'));print('signed_for_release=' + str(b['signed_for_release']).lower());print('fingerprint=' + b['signing_fingerprint'])" | tee reader-extension.txt
+          grep -q 'signed_for_release=true' reader-extension.txt || echo "::warning::UNSIGNED-FOR-RELEASE: the reader extension is signed with a throwaway key; add the AUTOSOURCARR_EXT_* secrets before releasing."
+
+      - name: Compatibility list (PIPE-4)
+        run: |
+          python3 scripts/print-compatibility.py --check
+          python3 scripts/print-compatibility.py > "compatibility-${{ steps.meta.outputs.version }}.json"
+      - name: Mihon backup-format watch (PIPE-9, report only)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          python3 scripts/mihon-backup-watch.py --fixtures > mihon-backup-watch.txt 2>&1; code=$?
+          echo "exit=$code" >> mihon-backup-watch.txt; cat mihon-backup-watch.txt
+          [ "$code" = 0 ] || echo "::warning::Mihon backup-format watch reported a change, a sample gap or a fetch problem (exit $code); see mihon-backup-watch.txt."
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      # Layer cache in the GitHub cache: the NuGet restore layer is reused while the lock files are unchanged, the apt
+      # layer is rebuilt on every release on purpose (fresh OS packages, PIPE-2).
+      - name: Build the image (no push)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: docker/Dockerfile
+          build-contexts: |
+            source-host=.build/source-host-out
+            reader-extension=.build/reader-extension
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            REVISION=${{ github.sha }}
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: autosourcarr:ci
+          cache-from: type=gha,scope=autosourcarr-0.5
+          cache-to: type=gha,scope=autosourcarr-0.5,mode=max
+
+      - name: Image contents
+        run: |
+          docker run --rm --entrypoint cat autosourcarr:ci /opt/autosourcarr-image-packages.txt > image-packages.txt
+          docker run --rm --entrypoint sh autosourcarr:ci -c 'cat /opt/source-host/aot/status.txt; cat /opt/source-jre/autosourcarr-modules.txt; ls -l /opt/autosourcarr-native; id' | tee image-contents.txt
+
+      - name: Boot time (PERF-7, budget 5 min, target 1 min)
+        id: boot
+        run: |
+          set +e
+          bash scripts/image-boot-check.sh autosourcarr:ci boot-time.txt "$BOOT_PORT" autosourcarr-boot; code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          grep -q 'result=pass-budget' boot-time.txt && echo "::warning::Boot is within the 5-minute budget but over the 1-minute target."
+          exit 0
+
+      - name: Contrast gate (palette table, every theme)
+        id: contrast
+        run: |
+          set +e
+          node autosourcarr/tests/ui_v050_theme_contrast.js > contrast.txt 2>&1; code=$?
+          cat contrast.txt; echo "code=$code" >> "$GITHUB_OUTPUT"; exit 0
+
+      - name: Browser checks against the running image (PIPE-5)
+        id: playwright
+        if: steps.meta.outputs.ui_changed == 'true' && steps.boot.outputs.code == '0'
+        run: |
+          set +e
+          node scripts/image-e2e-prepare.mjs "http://127.0.0.1:$BOOT_PORT" tests/e2e/fixtures/owner.json; prep=$?
+          code=$prep
+          if [ "$prep" = 0 ]; then
+            docker run --rm --network host --ipc=host -v "$PWD:/work" -w /work -e CI=1 \
+              -e E2E_BASE_URL="http://127.0.0.1:$BOOT_PORT" -e E2E_SCREENSHOT_DIR=/work/screenshots \
+              -e E2E_JSON=/work/test-results/playwright-image.json "$PLAYWRIGHT_IMAGE" \
+              bash -c 'npm ci --no-audit --no-fund && npx playwright test' > playwright-image.log 2>&1; code=$?
+            sudo chown -R "$(id -u):$(id -g)" . 2>/dev/null || true
+            node scripts/playwright-summary.mjs test-results/playwright-image.json > playwright-image.txt 2>&1
+            cat playwright-image.txt; tail -c 20000 playwright-image.log
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"; exit 0
+
+      - name: Screenshot diff against the previous release
+        if: steps.playwright.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous-screenshots
+          # Previous release = the newest successful tag run; a manual run is the fallback before the first tag.
+          runs="$(gh run list --workflow release.yml --status success --event push --limit 20 --json databaseId -q '.[].databaseId')
+          $(gh run list --workflow release.yml --status success --event workflow_dispatch --limit 20 --json databaseId -q '.[].databaseId')"
+          for id in $runs; do
+            [ "$id" = "${{ github.run_id }}" ] && continue
+            gh run download "$id" -n ui-screenshots -D previous-screenshots 2>/dev/null && { echo "previous screenshots: run $id"; break; }
+          done
+          node scripts/screenshot-diff.mjs previous-screenshots screenshots --out screenshot-diff | tee screenshot-diff.txt
+
+      - name: Stop the image
+        if: always()
+        run: docker rm -f autosourcarr-boot > /dev/null 2>&1 || true
+
+      - name: Upload screenshots (baseline of the next release)
+        if: steps.playwright.outputs.code == '0'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ui-screenshots
+          path: screenshots/
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Upload the compatibility list
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compatibility-list
+          path: compatibility-${{ steps.meta.outputs.version }}.json
+          retention-days: 90
+      - name: Upload the reader extension repository
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: reader-extension
+          path: .build/reader-extension/
+          retention-days: 30
+      - name: Upload the release report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-report
+          path: |
+            boot-time.txt
+            boot-time-container.log
+            contrast.txt
+            image-packages.txt
+            image-contents.txt
+            reader-extension.txt
+            mihon-backup-watch.txt
+            playwright-image.txt
+            screenshot-diff.txt
+            screenshot-diff/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Release gates (boot budget, contrast, layout)
+        run: |
+          fail=0
+          [ "${{ steps.boot.outputs.code }}" = 0 ] || { echo "::error::Boot-time gate failed (see boot-time.txt): ready not reached within 5 minutes."; fail=1; }
+          [ "${{ steps.contrast.outputs.code }}" = 0 ] || { echo "::error::Contrast gate failed (see contrast.txt)."; fail=1; }
+          if [ "${{ steps.meta.outputs.ui_changed }}" = true ]; then
+            [ "${{ steps.playwright.outputs.code }}" = 0 ] || { echo "::error::Browser/layout checks failed or did not run (see playwright-image.txt)."; fail=1; }
+          else
+            echo "No UI file changed since ${{ steps.meta.outputs.previous }}: browser checks skipped."
+          fi
+          exit $fail
+
+  publish:
+    name: Publish to ghcr.io (owner gate)
+    needs: image
+    # Hard rule 15: only a manual run with publish ticked, and only after the release environment is approved.
+    if: github.event_name == 'workflow_dispatch' && inputs.publish == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Source host jar (same cache entry as the tested build)
+        id: host-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .build/source-host-out
+          key: source-host-jar-${{ hashFiles('source-host/**', 'scripts/build-source-host.sh') }}
+          fail-on-cache-miss: true
+      - name: Reader extension (the tested build)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: reader-extension
+          path: .build/reader-extension
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Push the image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: docker/Dockerfile
+          build-contexts: |
+            source-host=.build/source-host-out
+            reader-extension=.build/reader-extension
+          build-args: |
+            VERSION=${{ needs.image.outputs.version }}
+            REVISION=${{ github.sha }}
+          platforms: linux/amd64
+          push: true
+          provenance: true
+          sbom: true
+          tags: |
+            ${{ env.IMAGE }}:${{ needs.image.outputs.version }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha,scope=autosourcarr-0.5
