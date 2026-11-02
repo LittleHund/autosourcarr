@@ -214,6 +214,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 // is applied (journalled); then SET-9 takes an automatic backup before every update or migration. A failed
                 // migration swaps the databases back and the app starts in its minimal safe mode (no retry loop).
                 owner._backups = new AutoSourcarr.Core.Backup.InstanceBackupStore(data, startup.ConfigurationRoot, owner.Database, Version);
+                owner._backups.Scrub = owner.Privacy.Text;
                 owner._restoreResult = owner._backups.ApplyAtStart(message => owner._upgradeLog.Add(message));
                 owner._upgrade = AutoSourcarr.Core.Backup.UpgradeGuard.Run(owner._backups, owner.Database,
                     () => new SchemaMigrator(owner.Database).Initialize(), message => owner._upgradeLog.Add(message));

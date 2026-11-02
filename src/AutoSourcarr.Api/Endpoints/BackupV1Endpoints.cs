@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Api.Http;
+using AutoSourcarr.Api.Security;
+using AutoSourcarr.Core.Accounts;
 using AutoSourcarr.Core.Backup;
 using AutoSourcarr.Core.Jobs;
 using Microsoft.AspNetCore.Builder;
@@ -42,6 +44,22 @@ internal static class BackupV1Endpoints
 {
     public static readonly JobType CreateJob = new("instance-backup", "Create backup", JobPriority.High,
         JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(1), Cancellable: false);
+    public static readonly JobType RetryJob = new("instance-update-retry", "Retry the update", JobPriority.High,
+        JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(1), Cancellable: false);
+
+    /// <summary>
+    /// Arming a restore, retrying an update and migrating without a backup are a person's explicit choice: when the
+    /// instance has accounts, only a signed-in owner or admin account may make it (not the admin token, not an API key).
+    /// A token-only instance without accounts keeps the admin token.
+    /// </summary>
+    internal static bool AccountChoice(HttpContext context, ApiV1Services services)
+    {
+        if (!MaintenanceV1Endpoints.OwnerOrAdmin(context)) return false;
+        if (services.Access?.Accounts.Accounts().Count is not > 0) return true;
+        if (!context.Items.ContainsKey(AccessControlMiddleware.CallerItem)) return false;
+        var caller = AccessControlMiddleware.CallerOf(context);
+        return caller.Role is Role.Owner or Role.Admin && caller.Via is "session" or "basic" or "external";
+    }
     private static readonly TimeSpan UploadDeadline = TimeSpan.FromMinutes(60);
     /// <summary>One restore preview at a time (each can stage gigabytes).</summary>
     private static readonly SemaphoreSlim PreviewGate = new(1, 1);
@@ -53,6 +71,7 @@ internal static class BackupV1Endpoints
         IResult Forbidden() => Problem(403, "Only the owner or an admin account can create, download, delete or restore backups.");
         IResult Answer(JsonObject value, int status = 200) => Results.Json(value, json.JsonObject, statusCode: status);
         bool Allowed(HttpContext context) => MaintenanceV1Endpoints.OwnerOrAdmin(context);
+        IResult NotAccount() => Problem(403, "Sign in with the owner or an admin account to make this choice; the admin token and API keys cannot.");
         async Task<IResult> Guard(Func<Task<IResult>> action)
         {
             try { return await action().ConfigureAwait(false); }
@@ -86,11 +105,14 @@ internal static class BackupV1Endpoints
                 context.Response.Headers.CacheControl = "no-store";
                 if (backups is null) return Unavailable();
                 var store = backups.Store;
+                var safe = UpgradeGuard.SafeModeNotice(store);
+                // The migrate-without-backup token goes only to an owner or admin who can use it.
+                if (safe is not null && !AccountChoice(context, services)) safe.Remove("preview_token");
                 return Answer(new JsonObject
                 {
                     ["items"] = new JsonArray(store.List().Select(row => (JsonNode?)row.ToJson()).ToArray()),
                     ["update"] = backups.SafeMode ? null : UpgradeGuard.Notice(store),
-                    ["safe_mode"] = UpgradeGuard.SafeModeNotice(store),
+                    ["safe_mode"] = safe,
                     ["restore"] = store.RestoreNotice(),
                     ["restore_pending"] = store.PendingRestore(),
                     ["limits"] = new JsonObject
@@ -210,6 +232,7 @@ internal static class BackupV1Endpoints
             {
                 if (backups is null) return Unavailable();
                 if (!Allowed(context)) return Forbidden();
+                if (!AccountChoice(context, services)) return NotAccount();
                 var body = await Body(context).ConfigureAwait(false);
                 var stage = BodyText(body, "stage_id"); var token = BodyText(body, "preview_token");
                 // Hard rule 1: never automatic; the confirm flag and the token of the preview the admin saw.
@@ -263,26 +286,41 @@ internal static class BackupV1Endpoints
             {
                 if (backups is null) return Unavailable();
                 if (!Allowed(context)) return Forbidden();
+                if (!AccountChoice(context, services)) return NotAccount();
                 var body = await Body(context).ConfigureAwait(false);
                 if (!BodyFlag(body, "confirm")) return Problem(400, "Confirm the retry: send {\"confirm\": true}.");
-                var backup = await Task.Run(() => UpgradeGuard.Retry(backups.Store)).ConfigureAwait(false);
-                Publish("update-retry", new JsonObject { ["backup_id"] = backup.Id });
-                return Answer(Restart(new JsonObject
+                if (services.Jobs is not { } jobs) return Problem(503, "The job queue is not available in this host.");
+                if (UpgradeGuard.Marker(backups.Store) is null) return Problem(409, "No update is waiting to be retried.");
+                var store = backups.Store;
+                // The fresh backup can take minutes: a job (Tasks shows it), then the restart.
+                var handle = jobs.Enqueue(RetryJob, "", async job =>
                 {
-                    ["retry"] = true, ["backup_id"] = backup.Id,
-                    ["message"] = "A fresh backup was taken. The next start runs the update again.",
-                }));
+                    await Task.Yield();
+                    job.Report(message: "Taking a fresh backup before the retry");
+                    var backup = UpgradeGuard.Retry(store);
+                    Publish("update-retry", new JsonObject { ["backup_id"] = backup.Id });
+                    var answer = Restart(new JsonObject());
+                    job.Result("Fresh backup " + backup.CreatedAt + " taken; " + (answer["restarting"]?.GetValue<bool>() == true
+                        ? "AutoSourcarr restarts and runs the update again." : "restart AutoSourcarr to run the update again."));
+                }, origin: "manual", title: "Retry the update");
+                return Answer(new JsonObject
+                {
+                    ["queued"] = true, ["task_id"] = handle.Id, ["merged"] = handle.Merged,
+                    ["message"] = "Taking a fresh backup (see Tasks); then the next start runs the update again.",
+                }, 202);
             })))
             .Accepts<JsonObject>("application/json")
             .WithName("retryBackupUpdate")
-            .WithSummary("\"Retry the update\" after a rolled-back or blocked update: takes a fresh backup now, then the next start migrates again (body {confirm: true}).")
-            .Produces<JsonObject>(StatusCodes.Status200OK)
+            .WithSummary("\"Retry the update\" after a rolled-back or blocked update, as a job (202 + task id): takes a fresh backup, then the next start migrates again (body {confirm: true}). Needs an owner or admin account when the instance has accounts.")
+            .Produces<JsonObject>(StatusCodes.Status202Accepted)
+            .Produces<ProblemResponse>(StatusCodes.Status403Forbidden)
             .Produces<ProblemResponse>(StatusCodes.Status409Conflict);
 
         group.MapPost("/backups/safe-mode/migrate-without-backup", (Func<HttpContext, Task<IResult>>)(context => Guard(async () =>
             {
                 if (backups is null) return Unavailable();
                 if (!Allowed(context)) return Forbidden();
+                if (!AccountChoice(context, services)) return NotAccount();
                 var body = await Body(context).ConfigureAwait(false);
                 var token = BodyText(body, "preview_token");
                 if (!BodyFlag(body, "confirm") || token.Length == 0)

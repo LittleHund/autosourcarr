@@ -116,5 +116,15 @@ const item={id:backupId,kind:'automatic',created_at:'2026-11-01T10:00:00Z',bytes
     await notice.children[0].children[0].onclick();await settle();
     assert.ok(state.cancelled);assert.equal(calls.find(call=>call.url==='/api/v1/backups/restore/pending').method,'DELETE');
   }
+  // 5. Rollback failed: the notice offers restoring the named backup, never a retry of half-migrated data.
+  {
+    const {node,calls}=await harness(()=>({items:[item],safe_mode:{status:'rollback-failed',message:'Putting the databases back did not finish.',backup_id:backupId,actions:['restore']},
+      limits:{manual:10,automatic_kept:3}}));
+    const buttons=node('riBackupNotice').children[0].children[0].children;
+    const labels=buttons.map(child=>child.textContent);
+    assert.ok(labels.some(label=>/^Restore the backup from/.test(label))&&!labels.includes('Retry the update'),'restore offered, retry not: '+labels.join(', '));
+    await buttons[0].onclick();await settle();
+    assert.deepEqual(JSON.parse(calls.find(call=>call.url==='/api/v1/backups/restore/preview').body),{backup_id:backupId});
+  }
   console.log('Backups UI: /api/v1 client, rollback only without migration, safe-mode actions, cancel armed restore, multipart passphrase, plain download links');
 })().catch(error=>{console.error(error);process.exitCode=1;});
