@@ -17,7 +17,7 @@ public static class PageFirstTests
             new SchemaMigrator(database).Initialize();
             foreach (var sql in new[]
             {
-                CatalogueQueries.FirstPageSql, CatalogueQueries.NextPageSql.Replace("@at", "'2026-01-01'", StringComparison.Ordinal).Replace("@id", "10", StringComparison.Ordinal),
+                CatalogueQueries.FirstPageSql, CatalogueQueries.NextPageSql.Replace("@before", "10", StringComparison.Ordinal),
                 LibraryStore.DownloadFirstPageSql, LibraryStore.DownloadNextPageSql.Replace("@before", "10", StringComparison.Ordinal),
                 "SELECT * FROM decision_log WHERE id<10 ORDER BY id DESC",
             })
@@ -25,14 +25,12 @@ public static class PageFirstTests
                 var plan = string.Join(" | ", database.Read(DatabaseFile.Catalog, c => c.Query("EXPLAIN QUERY PLAN " + sql + " LIMIT 51")).Select(row => row.Text("detail")));
                 // An in-order walk (index or rowid) stops after LIMIT rows; only an in-memory sort would read every row.
                 Check.True(!plan.Contains("TEMP B-TREE", StringComparison.Ordinal), "sorted in memory (reads every row): " + sql + " -> " + plan);
-                if (sql.Contains("FROM entries", StringComparison.Ordinal))
-                    Check.True(plan.Contains("idx_entries_updated_id", StringComparison.Ordinal), "catalogue pages read idx_entries_updated_id: " + plan);
-                if (sql.Contains("WHERE (updated_at, id)", StringComparison.Ordinal) || sql.Contains("WHERE id<", StringComparison.Ordinal))
+                if (sql.Contains("WHERE id<", StringComparison.Ordinal))
                     Check.True(plan.Contains("SEARCH", StringComparison.Ordinal), "the next page seeks, it does not skip rows: " + sql + " -> " + plan);
             }
         });
 
-        suite.Add("page-first lists (PERF-5): catalogue pages of 50 continue by cursor without repeats; a foreign cursor is refused", () =>
+        suite.Add("page-first lists (PERF-5): catalogue pages of 50 continue by cursor without repeats, also when an entry changes between pages; a foreign cursor is refused", () =>
         {
             using var temp = new Sandbox();
             using var database = new SqliteDatabase(new AutoSourcarrSettings { DataDir = temp.Path });
@@ -57,6 +55,21 @@ public static class PageFirstTests
             Check.Equal(120, seen.Count);
             Check.Equal(120, seen.Distinct().Count());
             Check.Throws<ArgumentException>(() => queries.ListPage("not-a-cursor", 50));
+
+            // Audit A4: an entry updated while a person pages (after page 1, before page 2) is still shown exactly once.
+            var first = queries.ListPage(null, 50);
+            var onPageTwo = 60L;
+            Check.True(!first.Items.Any(item => item["id"]!.GetValue<long>() == onPageTwo), "entry 60 belongs to page 2");
+            database.Write(DatabaseFile.Catalog, c => c.Execute("UPDATE entries SET updated_at='2099-01-01T00:00:00Z' WHERE id=$id", ("$id", onPageTwo)));
+            var rest = new List<long>(); cursor = first.NextCursor;
+            while (cursor is not null)
+            {
+                var page = queries.ListPage(cursor, 50);
+                rest.AddRange(page.Items.Select(item => item["id"]!.GetValue<long>()));
+                cursor = page.NextCursor;
+            }
+            Check.Equal(1, rest.Count(id => id == onPageTwo));
+            Check.Equal(120, first.Items.Count + rest.Count);
         });
     }
 }

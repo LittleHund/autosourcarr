@@ -209,6 +209,25 @@ public static class DuplicateTests
             var created = N(split["new_entry_id"]);
             Check.True(created != entry, "split happened");
             Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM decision_log WHERE kind='split' AND entries_json LIKE '%" + created.ToString(CultureInfo.InvariantCulture) + "%'"));
+
+            // Audit A5: unbind and separate write their not-duplicate review inside the split; a failing review write leaves no split.
+            var other = f.Entry(["The Bronze Harbor Tales"], ["Kai Ren"], 2019);
+            var automatic = f.Attach(other, "Totally Different Mecha Story");
+            f.Attach(other, "The Bronze Harbor Tales", "manual", locked: true);
+            var before = f.Scalar("SELECT COUNT(*) FROM entries"); var rows = f.Scalar("SELECT COUNT(*) FROM decision_log");
+            f.Database.Write(DatabaseFile.Catalog, c => c.Execute("ALTER TABLE duplicate_review_history RENAME TO duplicate_review_history_gone"));
+            Check.Throws<Microsoft.Data.Sqlite.SqliteException>(() => duplicates.UnbindAutomaticRecords(other, Person));
+            Check.Equal(before, f.Scalar("SELECT COUNT(*) FROM entries"));
+            Check.Equal(rows, f.Scalar("SELECT COUNT(*) FROM decision_log"));
+            Check.Equal(other, f.Database.Read(DatabaseFile.Catalog, c => c.Query("SELECT entry_id FROM source_matches WHERE source_id=$p0 AND source_manga_id=$p1 AND active=1 UNION ALL SELECT entry_id FROM source_variants WHERE source_id=$p0 AND source_manga_id=$p1 AND active=1",
+                ("$p0", automatic.SourceId), ("$p1", automatic.MangaId)).Single().Integer("entry_id")));
+            Check.Throws<Microsoft.Data.Sqlite.SqliteException>(() => duplicates.SeparateSourceRecord(other, automatic.SourceId, automatic.MangaId, "Totally Different Mecha Story", Person));
+            Check.Equal(before, f.Scalar("SELECT COUNT(*) FROM entries"));
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM manual_separate_records WHERE target_entry_id=" + other.ToString(CultureInfo.InvariantCulture)));
+            f.Database.Write(DatabaseFile.Catalog, c => c.Execute("ALTER TABLE duplicate_review_history_gone RENAME TO duplicate_review_history"));
+            var unbound = duplicates.UnbindAutomaticRecords(other, Person);
+            Check.Equal(1L, N(unbound["split_records"]));
+            Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM decision_log WHERE kind='review.duplicate'"));
         });
 
         suite.Add("duplicates: unmatch, unbind and redo split records without touching manual ones", () =>

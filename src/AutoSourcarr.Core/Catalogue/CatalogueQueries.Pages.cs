@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Core.Persistence;
 
@@ -10,55 +9,39 @@ public sealed record CatalogueEntryPage(IReadOnlyList<JsonObject> Items, string?
 
 public sealed partial class CatalogueQueries
 {
-    /// <summary>The first page reads only the newest rows of idx_entries_updated_id (no count, no full scan).</summary>
-    internal const string FirstPageSql = "SELECT id AS Id, updated_at AS UpdatedAt FROM entries ORDER BY updated_at DESC, id DESC";
-    /// <summary>Later pages continue strictly after the last card by the same index key (keyset, no OFFSET).</summary>
-    internal const string NextPageSql = "SELECT id AS Id, updated_at AS UpdatedAt FROM entries WHERE (updated_at, id) < (@at, @id) ORDER BY updated_at DESC, id DESC";
+    /// <summary>
+    /// The first page: the newest-added entries by their immutable id (the rowid order, no index or sort needed).
+    /// The order is "newest added first", not "recently updated first" (the 0.4.5 List order): an updated_at key moves
+    /// while a person pages, so an entry updated after page 1 would jump ahead of the cursor and never be shown.
+    /// </summary>
+    internal const string FirstPageSql = "SELECT id FROM entries ORDER BY id DESC";
+    /// <summary>Later pages continue strictly below the last id (keyset seek on the primary key, no OFFSET).</summary>
+    internal const string NextPageSql = "SELECT id FROM entries WHERE id<@before ORDER BY id DESC";
 
     /// <summary>
-    /// PERF-5 page-first catalogue list: newest first, <paramref name="limit"/> cards per page through
-    /// <see cref="DatabaseSession.QueryPage{T}"/>; <paramref name="cursor"/> is the previous page's next cursor.
+    /// PERF-5 page-first catalogue list: newest added first, <paramref name="limit"/> cards per page through
+    /// <see cref="DatabaseSession.QueryPage{T}"/>; <paramref name="cursor"/> is the previous page's next cursor (the
+    /// last id shown). Every entry that exists when its page is read is shown exactly once, however often it changes.
     /// A cursor this method did not issue is refused with <see cref="ArgumentException"/>.
     /// </summary>
     public CatalogueEntryPage ListPage(string? cursor, int limit)
     {
-        var after = DecodeCursor(cursor);
+        var before = DecodeCursor(cursor);
         lock (sourceWriteGate) return database.Read(DatabaseFile.Catalog, session =>
         {
-            var page = after is { } key
-                ? session.QueryPage<EntryKey>(NextPageSql, new { at = key.UpdatedAt, id = key.Id }, limit)
-                : session.QueryPage<EntryKey>(FirstPageSql, null, limit);
-            var ids = page.Items.Select(item => item.Id).ToArray();
-            var cards = ids.Length == 0 ? [] : Summaries(session, ids);
-            var next = page.HasMore && page.Items.Count > 0 ? EncodeCursor(page.Items[^1]) : null;
+            var page = before is { } id
+                ? session.QueryPage<long>(NextPageSql, new { before = id }, limit)
+                : session.QueryPage<long>(FirstPageSql, null, limit);
+            var cards = page.Items.Count == 0 ? [] : Summaries(session, page.Items);
+            var next = page.HasMore && page.Items.Count > 0 ? page.Items[^1].ToString(CultureInfo.InvariantCulture) : null;
             return new CatalogueEntryPage(cards, next);
         });
     }
 
-    internal sealed class EntryKey
-    {
-        public long Id { get; set; }
-        public string? UpdatedAt { get; set; }
-    }
-
-    private static string EncodeCursor(EntryKey key) =>
-        Convert.ToBase64String(Encoding.UTF8.GetBytes((key.UpdatedAt ?? "") + "\n" + key.Id.ToString(CultureInfo.InvariantCulture)))
-            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-
-    private static EntryKey? DecodeCursor(string? cursor)
+    private static long? DecodeCursor(string? cursor)
     {
         if (string.IsNullOrEmpty(cursor)) return null;
-        if (cursor.Length > 512) throw new ArgumentException("The page cursor is not valid; start again from the first page.");
-        try
-        {
-            var padded = cursor.Replace('-', '+').Replace('_', '/');
-            padded += new string('=', (4 - padded.Length % 4) % 4);
-            var text = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
-            var split = text.LastIndexOf('\n');
-            if (split < 0 || !long.TryParse(text[(split + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
-                throw new FormatException();
-            return new EntryKey { Id = id, UpdatedAt = text[..split] };
-        }
-        catch (FormatException) { throw new ArgumentException("The page cursor is not valid; start again from the first page."); }
+        return cursor.Length <= 20 && long.TryParse(cursor, NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id > 0 ? id
+            : throw new ArgumentException("The page cursor is not valid; start again from the first page.");
     }
 }

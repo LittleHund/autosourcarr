@@ -2,7 +2,7 @@
 (()=>{
   const byId=id=>document.getElementById(id);
   const labels={repair:'Source repair',builder:'Reader extension builder',translation:'Title translation',solver:'Challenge handling'};
-  let loading=null,timer=null,mode=null,actions=null,generation=0,readerReady=false,builderBusy=false,builderActionPending=false,builderButtons=[],builderPreflights=[];
+  let loading=null,timer=null,mode=null,generation=0,readerReady=false,builderPreflights=[];
   const visible=()=>!document.hidden&&(byId('about')?.classList.contains('active')||(byId('settings')?.classList.contains('active')&&!byId('settingsServicesPane')?.hidden));
   function readerBuildStatus(target,value){
     const valid=value&&typeof value.ready==='boolean'&&Number.isInteger(value.exit_code)&&Array.isArray(value.errors)&&Array.isArray(value.warnings)
@@ -31,19 +31,14 @@
     readerReady=false;readerBuildStatus(byId('readerBuildPreflight'),null);
     for(const panel of builderPreflights)readerBuildStatus(panel,null);
   }
+  // 0.5.0 has no in-app reader build (the prebuilt extension is served from /api/reader/repo/) and no service to start
+  // from this panel: Build and Cancel stay hidden and nothing is ever posted (the 0.4.x /api/admin/services actions are gone).
   function updateBuilderControls(){
-    const disabled=mode!=='integrated'||!readerReady||builderBusy||builderActionPending||!canAct('builder');
-    byId('buildReaderExtensions').disabled=disabled;
-    for(const button of builderButtons)button.disabled=disabled;
-    byId('cancelReaderBuild').hidden=!builderBusy;
-    byId('cancelReaderBuild').disabled=builderActionPending;
+    for(const id of ['buildReaderExtensions','cancelReaderBuild']){byId(id).disabled=true;byId(id).hidden=true;}
   }
-  // 0.5.0 (/api/v1/internal-services) lists the app's own services with a label each and the actions it offers
-  // (none: everything starts with the app); without an actions list every built-in tool keeps its 0.4.x action.
-  const canAct=name=>name==='repair'||!Array.isArray(actions)||actions.includes(name);
   function render(data){
-    mode=data.mode;actions=Array.isArray(data.actions)?data.actions:null;const integrated=mode==='integrated';
-    const box=byId('internalServices');box.replaceChildren();builderButtons=[];builderPreflights=[];
+    mode=data.mode;const integrated=mode==='integrated';
+    const box=byId('internalServices');box.replaceChildren();builderPreflights=[];
     readerReady=readerBuildStatus(byId('readerBuildPreflight'),data.reader_build);
     if(!integrated){const p=document.createElement('p');p.textContent='External compatibility mode. Rebuild and redeploy the integrated image to use built-in tools.';box.append(p);}
     const names=data.services&&Object.keys(data.services).length?Object.keys(data.services):Object.keys(labels);
@@ -53,42 +48,20 @@
       const message=document.createElement('p');message.textContent=state.message||'Starts when needed';
       const badge=document.createElement('span');badge.className='publicationPill';badge.textContent=state.state||'idle';
       card.append(title,badge,message);
-      const button=document.createElement('button');button.type='button';
-      button.textContent=name==='builder'?'Build extensions':name==='repair'?'Open repair tools & account':name==='translation'?'Prepare translation':'Start / check handler';
-      button.disabled=!integrated||!canAct(name)||(name!=='repair'&&['running','queued','starting','ready'].includes(state.state));
-      button.hidden=!canAct(name)||!(name in labels);
-      button.onclick=()=>{if(name==='repair'){switchTab('sources');setSourceSubtab('maintenance');byId('repairSetupPanel').open=true;}else action(name,'start');};
+      if(name==='repair'){
+        // Navigation only: repair jobs live under Tasks → Repairs.
+        const button=document.createElement('button');button.type='button';button.textContent='Open repair tools & account';button.disabled=!integrated;
+        button.onclick=()=>{switchTab('sources');setSourceSubtab('maintenance');byId('repairSetupPanel').open=true;};card.append(button);
+      }
       if(name==='builder'){
-        builderButtons.push(button);
         const preflight=document.createElement('div');builderPreflights.push(preflight);readerBuildStatus(preflight,data.reader_build);card.append(preflight);
         const configure=document.createElement('button');configure.type='button';configure.textContent='Review reader settings';configure.onclick=readerSettings;card.append(configure);
       }
-      card.append(button);box.append(card);
+      box.append(card);
     }
-    const builder=data.services?.builder||{};builderBusy=['queued','running','starting'].includes(builder.state);
-    byId('readerBuildStatus').textContent=builder.message||'';
+    byId('readerBuildStatus').textContent=data.services?.builder?.message||'';
     updateBuilderControls();
     byId('openSolverSettings').hidden=integrated;
-  }
-  async function action(name,verb){
-    if(name==='builder'){
-      if(builderActionPending||verb==='start'&&(mode!=='integrated'||!readerReady||builderBusy||!canAct('builder')))return;
-      builderActionPending=true;updateBuilderControls();
-    }
-    const own=++generation;clearTimeout(timer);
-    try{
-      const data=await api('/api/admin/services/'+name+'/'+verb,{method:'POST',suppressClientError:true,noMutationRefresh:true});
-      if(own===generation)render(data);
-    }catch(error){
-      if(own===generation){
-        if(name==='builder')readerCheckUnavailable();
-        toast(name==='builder'?'Reader build request could not be completed. Refresh Status to check the configuration and current build.':error.message);
-      }
-    }
-    finally{
-      if(name==='builder'){builderActionPending=false;updateBuilderControls();}
-      await load({force:true});
-    }
   }
   async function load({force=false}={}){
     if(loading&&!force)return loading;
@@ -116,8 +89,7 @@
     finally{if(loading===request)loading=null;}
   }
   byId('refreshInternalServices').onclick=load;
-  byId('buildReaderExtensions').onclick=()=>action('builder','start');
-  byId('cancelReaderBuild').onclick=()=>action('builder','cancel');
+  updateBuilderControls();
   byId('configureReaderBuild').onclick=readerSettings;
   byId('downloadJar').onclick=async()=>{
     const button=byId('downloadJar');if(button.disabled)return;button.disabled=true;

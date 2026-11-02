@@ -39,7 +39,8 @@ public static class TagCatalogueTests
             MatchingFixtures.Record(database, entry, "1", 11, "Planetes");
             database.Write(DatabaseFile.Catalog, c => c.Execute("INSERT INTO source_record_tags VALUES('1',11,1),('1',11,3)"));
             var log = new MemoryDecisionLog(); var changed = 0;
-            var tags = new TagCatalogue(database, new object(), log) { Changed = () => changed++ };
+            var affected = new List<IReadOnlyList<long>?>();
+            var tags = new TagCatalogue(database, new object(), log) { Changed = () => changed++, EntriesChanged = ids => affected.Add(ids) };
 
             var page = tags.List();
             Check.Equal(6, page["total"]!.GetValue<int>());
@@ -58,6 +59,9 @@ public static class TagCatalogueTests
 
             tags.Review(2, 1, "same", DecisionActor.User("owner"));
             Check.Equal(1, changed);
+            // Audit A15b: the live catalogue event names the entries with a reviewed tag (tag 1 is on entry's record).
+            Check.Equal(1, affected.Count);
+            Check.Equal(entry.ToString(System.Globalization.CultureInfo.InvariantCulture), string.Join(",", affected[0]!));
             Check.Equal("tags.review", log.Events.Single().Kind);
             Check.Equal("owner", log.Events.Single().Actor.Name);
             Check.Equal(0, tags.Suggestions()["items"]!.AsArray().Count);

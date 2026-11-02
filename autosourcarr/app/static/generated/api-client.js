@@ -980,7 +980,7 @@
        */
       getMatchingPresets(options) { return call('GET', '/api/v1/matching-presets', undefined, options); },
       /**
-       * The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page continued with 'cursor' = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.
+       * The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page, newest added first, continued with 'cursor' = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.
        * GET /api/v1/matrix
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -1332,7 +1332,7 @@
        */
       listCatalogueDecisions(options) { return call('GET', '/api/v1/catalog-sharing/decisions', undefined, options); },
       /**
-       * Catalogue entries as cards (PERF-5 page-first): newest first in pages of 'limit' (default 50, at most 1000) continued with 'cursor' (next_cursor of the previous page), or matching the optional query 'search' (local titles only, one page).
+       * Catalogue entries as cards (PERF-5 page-first): newest added first (by id, stable while paging) in pages of 'limit' (default 50, at most 1000) continued with 'cursor' (next_cursor of the previous page), or matching the optional query 'search' (local titles only, one page).
        * GET /api/v1/catalogue/entries
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}

@@ -205,16 +205,24 @@ public sealed partial class DuplicateMatching
             Invalidate();
             return new JsonObject { ["decision"] = decision, ["canonical_entry_id"] = canonical, ["merged"] = true, ["manual_group_id"] = group["manual_group_id"]?.DeepClone(), ["manual_group_members"] = records.Length };
         }
-        var prior = Write(c =>
-        {
-            var old = c.Scalar("SELECT decision FROM duplicate_reviews WHERE left_entry_id=$p0 AND right_entry_id=$p1", P(left, right)) as string ?? "";
-            c.Execute("INSERT INTO duplicate_review_history(left_entry_id,right_entry_id,decision,reviewed_at) VALUES($p0,$p1,$p2,$p3)", P(left, right, decision, stamp));
-            c.Execute("INSERT INTO duplicate_reviews(left_entry_id,right_entry_id,decision,reviewed_at) VALUES($p0,$p1,$p2,$p3) ON CONFLICT(left_entry_id,right_entry_id) DO UPDATE SET decision=excluded.decision,reviewed_at=excluded.reviewed_at", P(left, right, decision, stamp));
-            return old;
-        });
-        _decisions.Record(new DecisionEvent("review.duplicate", actor, [left, right], [], why, new JsonObject { ["decision"] = prior }, new JsonObject { ["decision"] = decision }));
+        Write(c => { ReviewIn(c, left, right, decision, actor, why, stamp); return 0; });
         Invalidate();
         return new JsonObject { ["decision"] = decision, ["left_entry_id"] = left, ["right_entry_id"] = right, ["merged"] = false };
+    }
+
+    /// <summary>
+    /// A review that is not a merge (not_duplicate, …) written inside the caller's catalogue session with its decision row,
+    /// so a split and its "kept separate" review commit together (hard rule 1).
+    /// </summary>
+    private void ReviewIn(DatabaseSession c, long leftId, long rightId, string decision, DecisionActor actor, string why, string? stamp = null)
+    {
+        var (left, right) = Pair(DuplicateEvidence.Canonical(c, leftId), DuplicateEvidence.Canonical(c, rightId));
+        if (left == right) return;
+        stamp ??= Stamp();
+        var old = c.Scalar("SELECT decision FROM duplicate_reviews WHERE left_entry_id=$p0 AND right_entry_id=$p1", P(left, right)) as string ?? "";
+        c.Execute("INSERT INTO duplicate_review_history(left_entry_id,right_entry_id,decision,reviewed_at) VALUES($p0,$p1,$p2,$p3)", P(left, right, decision, stamp));
+        c.Execute("INSERT INTO duplicate_reviews(left_entry_id,right_entry_id,decision,reviewed_at) VALUES($p0,$p1,$p2,$p3) ON CONFLICT(left_entry_id,right_entry_id) DO UPDATE SET decision=excluded.decision,reviewed_at=excluded.reviewed_at", P(left, right, decision, stamp));
+        _decisions.Record(new DecisionEvent("review.duplicate", actor, [left, right], [], why, new JsonObject { ["decision"] = old }, new JsonObject { ["decision"] = decision }));
     }
 
     // ---- separate / allow a source record (allow_source_record_match / separate_source_record) ----
@@ -258,22 +266,28 @@ public sealed partial class DuplicateMatching
             if (owner == target)
             {
                 if (Read(c => ActiveRecords(c, target).Count) <= 1) throw new InvalidOperationException("This is the entry's only source record, so it cannot be split away from itself");
-                // The decision row of a split commits with the split itself.
-                separate = _structure.SplitRecords(target, [record], manual: true, "split-duplicate", (_, from, created) =>
-                    _decisions.Record(new DecisionEvent("separate", actor, [from, created], [Key(record)], "Keep source record separate", null, new JsonObject { ["separate_entry_id"] = created })));
+                // The split, its separate-record memory, the not-duplicate review and the decision rows commit together.
+                separate = _structure.SplitRecords(target, [record], manual: true, "split-duplicate", (c, from, created) =>
+                {
+                    RememberSeparateIn(c, from, record, created, sourceTitle);
+                    ReviewIn(c, from, created, "not_duplicate", actor, "Separate source record");
+                    _decisions.Record(new DecisionEvent("separate", actor, [from, created], [Key(record)], "Keep source record separate", null, new JsonObject { ["separate_entry_id"] = created }));
+                });
                 logged = true;
             }
             else if (owner is { } existing) separate = existing;
             else separate = createUnowned?.Invoke() ?? throw new InvalidOperationException("Source record is not in the catalogue yet; open it from a source first");
-            if (separate != 0 && separate != target)
+            if (!logged && separate != 0 && separate != target)
             {
-                var stamp = Stamp();
-                Write(c => c.Execute("""
-                    INSERT INTO manual_separate_records(target_entry_id,source_id,source_manga_id,separate_entry_id_hint,source_title,created_at,updated_at) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p5)
-                    ON CONFLICT(target_entry_id,source_id,source_manga_id) DO UPDATE SET separate_entry_id_hint=COALESCE(excluded.separate_entry_id_hint,manual_separate_records.separate_entry_id_hint),
-                      source_title=CASE WHEN excluded.source_title<>'' THEN excluded.source_title ELSE manual_separate_records.source_title END,updated_at=excluded.updated_at
-                    """, P(target, sourceId, sourceMangaId, separate, sourceTitle, stamp)));
-                ReviewLocked(target, separate, "not_duplicate", actor, "Separate source record");
+                // No split: the separation, its review and the decision row are one write.
+                Write(c =>
+                {
+                    RememberSeparateIn(c, target, record, separate, sourceTitle);
+                    ReviewIn(c, target, separate, "not_duplicate", actor, "Separate source record");
+                    _decisions.Record(new DecisionEvent("separate", actor, [target, separate], [Key(record)], "Keep source record separate", null, new JsonObject { ["separate_entry_id"] = separate }));
+                    return 0;
+                });
+                logged = true;
             }
             if (!logged)
                 _decisions.Record(new DecisionEvent("separate", actor, [target, separate], [Key(record)], "Keep source record separate", null, new JsonObject { ["separate_entry_id"] = separate }));
@@ -281,6 +295,12 @@ public sealed partial class DuplicateMatching
             return new JsonObject { ["entry_id"] = target, ["separate_entry_id"] = separate, ["source_id"] = sourceId, ["source_manga_id"] = sourceMangaId, ["separate"] = true };
         }
     }
+
+    private void RememberSeparateIn(DatabaseSession c, long target, NativeSourceRecord record, long separate, string sourceTitle) => c.Execute("""
+        INSERT INTO manual_separate_records(target_entry_id,source_id,source_manga_id,separate_entry_id_hint,source_title,created_at,updated_at) VALUES($p0,$p1,$p2,$p3,$p4,$p5,$p5)
+        ON CONFLICT(target_entry_id,source_id,source_manga_id) DO UPDATE SET separate_entry_id_hint=COALESCE(excluded.separate_entry_id_hint,manual_separate_records.separate_entry_id_hint),
+          source_title=CASE WHEN excluded.source_title<>'' THEN excluded.source_title ELSE manual_separate_records.source_title END,updated_at=excluded.updated_at
+        """, P(target, record.SourceId, record.MangaId, separate, sourceTitle, Stamp()));
 
     // ---- automatic merge evidence (_auto_merge_group_evidence / _auto_merge_evidence / _merge_entries_automatic) ----
 

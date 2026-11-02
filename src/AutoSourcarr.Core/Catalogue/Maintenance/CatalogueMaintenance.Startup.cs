@@ -125,16 +125,17 @@ public sealed partial class CatalogueMaintenance
                 var genericCollision = title >= 0.985 && !Truth(evidence["distinctive_title"]) && summary < 0.82 && author < 0.90;
                 if (!(clearlyForeign || genericCollision)) continue;
                 long split;
-                try { split = operations.SplitRecords(entry, [new NativeSourceRecord(row.Text("source_id"), row.Integer("source_manga_id"))]); }
-                catch (Exception error) when (error is KeyNotFoundException or ArgumentException or InvalidOperationException) { continue; }
-                if (split > 0)
-                    Write(c =>
+                // The split, its not-duplicate review and the decision row commit in one transaction (hard rule 1).
+                try
+                {
+                    split = operations.SplitRecords(entry, [new NativeSourceRecord(row.Text("source_id"), row.Integer("source_manga_id"))], (c, from, created) =>
                     {
-                        _manual.ReviewPair(c, entry, split, "not_duplicate");
-                        Log("split.automatic.repair", DecisionActor.Upgrade("automatic-source-attachment-repair-0.2.69"), [entry, split],
+                        _manual.ReviewPair(c, from, created, "not_duplicate");
+                        Log("split.automatic.repair", DecisionActor.Upgrade("automatic-source-attachment-repair-0.2.69"), [from, created],
                             [RecordKey(row.Text("source_id"), row.Integer("source_manga_id"))], clearlyForeign ? "Clearly foreign automatic record split away" : "Generic exact-title collision split away");
-                        return 0;
                     });
+                }
+                catch (Exception error) when (error is KeyNotFoundException or ArgumentException or InvalidOperationException) { continue; }
                 splitRecords++; changed = true;
             }
             if (changed) repairedEntries++;

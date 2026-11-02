@@ -26,8 +26,9 @@ public sealed class ChaptersV1Services
     public ChapterRefresh? Refresh { get; init; }
     /// <summary>The last main-library (Subbed) snapshot for the Matrix subbed view: {ok, entry_ids, …}.</summary>
     public Func<JsonObject>? Subscription { get; init; }
-    /// <summary>source_discovery_outcomes for the Matrix rows (owned by discovery); null answers {}.</summary>
-    public Func<IReadOnlyList<long>, JsonObject>? DiscoveryOutcomes { get; init; }
+    /// <summary>source_discovery_outcomes rows for the Matrix entries (0.4.5 shape: entry_id, source_id, state, message,
+    /// candidate_entry_id, checked_at); null answers [].</summary>
+    public Func<IReadOnlyList<long>, JsonArray>? DiscoveryOutcomes { get; init; }
     /// <summary>CoverCache.ClearKeys for refresh-all.</summary>
     public Func<IReadOnlyList<string>, int>? ClearCovers { get; init; }
     /// <summary>Queues a metadata refresh of one record (NativeMetadataHydration.Schedule) for refresh-all.</summary>
@@ -110,7 +111,7 @@ internal static class ChaptersV1Endpoints
                 return Answer(result);
             }))
             .WithName("getMatrix")
-            .WithSummary("The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page continued with 'cursor' = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.")
+            .WithSummary("The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page, newest added first, continued with 'cursor' = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status503ServiceUnavailable);
 
@@ -265,11 +266,38 @@ internal static class ChaptersV1Endpoints
             ["matches"] = new JsonArray(matches.Select(row => (JsonNode)row).ToArray()),
             ["variants"] = new JsonArray(variants.Select(row => (JsonNode)row).ToArray()),
             ["duplicates"] = new JsonObject(), ["duplicates_pending"] = entryIds.Length > 0,
-            ["discovery_outcomes"] = chapters.DiscoveryOutcomes?.Invoke(entryIds) ?? new JsonObject(),
+            ["discovery_outcomes"] = chapters.DiscoveryOutcomes?.Invoke(entryIds) ?? new JsonArray(),
             ["subscription"] = subscription,
             ["next_cursor"] = nextCursor, ["has_more"] = nextCursor is not null,
         };
         if (!includeStats) result["chapter_stats_pending"] = entryIds.Length > 0;
+        return result;
+    }
+
+    /// <summary>
+    /// 0.4.5 source_discovery_outcomes(entry_ids): the stored per-source discovery outcome of each listed entry, as an array
+    /// of {entry_id, source_id, state, message, candidate_entry_id, checked_at} (the Matrix keys them by entry_id|source_id).
+    /// Read 400 ids at a time, like 0.4.5.
+    /// </summary>
+    public static JsonArray StoredDiscoveryOutcomes(SqliteDatabase database, IReadOnlyList<long> entryIds)
+    {
+        var result = new JsonArray();
+        if (entryIds.Count == 0) return result;
+        database.Read(DatabaseFile.Catalog, session =>
+        {
+            foreach (var chunk in entryIds.Distinct().Chunk(400))
+                foreach (var row in session.Query("""
+                    SELECT entry_id,source_id,state,message,candidate_entry_id,checked_at FROM source_discovery_outcomes
+                     WHERE entry_id IN (SELECT value FROM json_each($ids)) ORDER BY entry_id,source_id
+                    """, ("$ids", "[" + string.Join(',', chunk.Select(id => id.ToString(CultureInfo.InvariantCulture))) + "]")))
+                    result.Add(new JsonObject
+                    {
+                        ["entry_id"] = row.Integer("entry_id"), ["source_id"] = row.Text("source_id"), ["state"] = row.Text("state"),
+                        ["message"] = row.Text("message"), ["candidate_entry_id"] = row["candidate_entry_id"] is null ? null : row.Integer("candidate_entry_id"),
+                        ["checked_at"] = row.Text("checked_at"),
+                    });
+            return 0;
+        });
         return result;
     }
 
