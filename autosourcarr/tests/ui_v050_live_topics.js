@@ -65,6 +65,8 @@ test('source pages use source-health, orphans, repairs and sources topics',()=>{
   assert.match(repairs,/name:'source-repairs',topics:\['repairs','tasks','sources'\]/);
   assert.match(services,/name:'internal-services',topics:\['sources','connections','tasks'\]/);
   assert.match(workbench,/name:'source-browser',topics:\['sources','connections'\]/);
+  assert.ok(health.includes("hint:globalThis.AutoSourcarrLive?.hintButton?.(()=>byId('sourceHealthStatus'))"),'Source health shows an Updated hint while a refresh waits');
+  assert.ok(repairs.includes("hint:globalThis.AutoSourcarrLive?.hintButton?.(()=>byId('sourceRepairStatus'))"),'and so does source repairs');
 });
 
 test('no re-check timers remain for library membership, duplicate membership or the orphan inventory',()=>{

@@ -238,7 +238,8 @@
   // UI-13: repairs, installs and rollbacks are jobs/tasks; their events refresh this panel once per burst. The form
   // keeps what the user typed (UI-12): while a field in it has focus the refresh waits.
   // Repair reports/feedback have topic repairs; the repair runs themselves are tasks (no more precise topic).
-  globalThis.AutoSourcarrLive?.subscribe({name:'source-repairs',topics:['repairs','tasks','sources'],delayMs:1000,when:visible,busy:()=>globalThis.AutoSourcarrLive.userEditing(byId('sourceRepairForm')),refresh:()=>load()});
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-repairs',topics:['repairs','tasks','sources'],delayMs:1000,when:visible,busy:()=>globalThis.AutoSourcarrLive.userEditing(byId('sourceRepairForm')),
+    hint:globalThis.AutoSourcarrLive?.hintButton?.(()=>byId('sourceRepairStatus')),refresh:()=>load()});
   byId('openSourceRepairTasks').addEventListener('click',()=>window.openSourceRepairTask());
   const visibilityChanged=()=>{
     if(!aiVisible())clearCode();
