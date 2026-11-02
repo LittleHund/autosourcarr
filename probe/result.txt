@@ -1,4 +1,4 @@
-sha=2aa83e00876fba5f6a34b76fcaecae3be2b996b7
+sha=f0a582d9e0ce4d27321fa5c515af22470f40f588
 restore=0
 build=0
 test=0
@@ -10,6 +10,6 @@ source_host_csharp=0
 repair_runner=exit=0
 kavita=0
 reader_extension_build=0
-playwright=1
-playwright_bundle=1
+playwright=0
+playwright_bundle=0
 ui_bundle=0
