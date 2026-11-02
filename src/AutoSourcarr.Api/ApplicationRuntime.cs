@@ -186,6 +186,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner._dataDirectory = data;
                 var paths = DatabasePaths.Resolve(startup.Settings);
                 owner._roots = InstanceRoots.Acquire([data, startup.ConfigurationRoot, paths.Directory]);
+                // PERF-9: diagnostics name the instance folders, never their absolute paths.
+                owner.Privacy.RegisterPath("data", data); owner.Privacy.RegisterPath("config", startup.ConfigurationRoot);
+                owner.Privacy.RegisterPath("database", paths.Directory); owner.Privacy.RegisterPath("library", startup.Settings.LibraryDir);
                 owner._database = new(startup.Settings);
                 new SchemaMigrator(owner.Database).Initialize();
                 owner._preferences = new(owner.Database);
@@ -919,9 +922,14 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             // Job keys can hold paths or titles; the download keeps type, state and timing only.
             foreach (var list in new[] { jobs["running"]!.AsArray(), jobs["queued"]!.AsArray() })
                 foreach (var row in list) row!.AsObject().Remove("key");
-            var source = new JsonObject { ["mode"] = owner.Settings.SourceEngineMode, ["checked"] = false,
-                ["note"] = "Source engine health returns with conversion phase 4." };
-            var services = new JsonObject { ["jobs"] = jobs };
+            JsonObject source, services;
+            try { source = owner.SourceEngineJson(); }
+            catch (InvalidOperationException) { source = new JsonObject { ["mode"] = owner.Settings.SourceEngineMode, ["state"] = "unknown" }; }
+            // Phase 11: the Status page's internal services (cached state), next to the job queue.
+            try { services = owner.InternalServices(); }
+            catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
+            { services = new JsonObject { ["state"] = "unknown", ["error"] = error.GetType().Name }; }
+            services["jobs"] = jobs;
             return new(runtime, null, source, services, owner.Jobs.Annotate(owner.Tasks.Snapshot()));
         }
         public JsonObject ImportContext(JsonArray errors) => new() { ["note"] = "Import diagnostics are kept per import row (Imports page); none are added here." };

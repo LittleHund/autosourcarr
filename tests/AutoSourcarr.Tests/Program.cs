@@ -155,4 +155,5 @@ AutoSourcarr.Tests.Catalogue.Hydration.HydrationTests.Register(suite);
 AutoSourcarr.Tests.ReaderExtension.ReaderExtensionTests.Register(suite);
 AutoSourcarr.Tests.ReaderExtension.ReaderExtensionSourceHostTests.Register(suite);
 AutoSourcarr.Tests.Matching.Phase10WiringTests.Register(suite);
+Phase11WiringTests.Register(suite);
 return suite.Run(filters);
