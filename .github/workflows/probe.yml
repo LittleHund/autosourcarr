@@ -134,8 +134,22 @@ jobs:
               fi
             fi
           fi
-          # Phase 13: the 0.5.0 image (docker/Dockerfile, no push), boot time (PERF-7) and Playwright against it (PIPE-5).
-          ib=skipped; boot=none; ipw=skipped
+          # Phase 13 (area R + P): source host sandbox proof, Linux runtime tests, performance benchmark (PIPE-8),
+          # then the 0.5.0 image (docker/Dockerfile, no push), boot time + sandbox/WebView runtime check (PERF-7,
+          # SRC-5) and Playwright against the running image (PIPE-5).
+          sbx=skipped; lrt=skipped; bm=skipped; ib=skipped; boot=none; ipw=skipped
+          bash scripts/source-host-sandbox-check.sh > probe/source-host-sandbox.txt 2>&1; sbx=$?
+          if [ "$b" = 0 ]; then
+            nbin=$RUNNER_TEMP/native; mkdir -p "$nbin"
+            nflags="-O2 -Wall -Werror -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -fPIE -static-pie -Wl,-z,relro,-z,now,-z,noexecstack"
+            if gcc $nflags -o "$nbin/repair-runner" native/repair-runner.c > probe/linux-runtime.txt 2>&1 \
+               && gcc $nflags -o "$nbin/source-host-sandbox" native/source-host-sandbox.c >> probe/linux-runtime.txt 2>&1; then
+              AUTOSOURCARR_REPAIR_RUNNER=$nbin/repair-runner AUTOSOURCARR_SOURCE_HOST_SANDBOX=$nbin/source-host-sandbox \
+                timeout 900 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- \
+                --filter "repair isolation (linux)" --filter "source host sandbox (linux)" >> probe/linux-runtime.txt 2>&1; lrt=$?
+            else lrt=compile; fi
+            timeout 900 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --benchmark probe/benchmark.json --gate > probe/benchmark.txt 2>&1; bm=$?
+          fi
           if [ -f docker/Dockerfile ] && [ "$h" = 0 ] && [ "$rx" = 0 ]; then
             mkdir -p .build/source-host-out && cp .build/autosourcarr-source-host.jar .build/source-host-out/
             start_build=$(date +%s)
@@ -154,9 +168,10 @@ jobs:
             } > probe/image-build.txt 2>&1
             rm -f probe/image-build.log
             if [ "$ib" = 0 ]; then
-              bash scripts/image-boot-check.sh autosourcarr:probe probe/boot-time.txt 18282 autosourcarr-probe > /dev/null 2>&1
+              # Exit 0 = boot + runtime OK, 1 = boot over budget, 2 = start error, 3 = booted but sandbox/WebView check failed.
+              bash scripts/image-boot-check.sh autosourcarr:probe probe/boot-time.txt 18282 autosourcarr-probe > /dev/null 2>&1; bootcode=$?
               boot=$(grep -o '^ready_seconds=.*' probe/boot-time.txt | cut -d= -f2)
-              if grep -q '^result=pass' probe/boot-time.txt; then
+              if [ "$bootcode" = 0 ] || [ "$bootcode" = 3 ]; then
                 node scripts/image-e2e-prepare.mjs http://127.0.0.1:18282 tests/e2e/fixtures/owner.json > probe/image-playwright.log 2>&1; prep=$?
                 ipw=$prep
                 if [ "$prep" = 0 ]; then
@@ -183,7 +198,7 @@ jobs:
           # Repair runner isolation (phase 6e).
           { uname -r; python3 -c 'import ctypes; print("landlock abi", ctypes.CDLL(None).syscall(444, None, 0, 1))'; cat /proc/sys/kernel/yama/ptrace_scope; bash scripts/repair-runner-check.sh; echo "exit=$?"; } > probe/repair-runner-check.txt 2>&1
           rr=$(grep -o 'exit=[0-9]*' probe/repair-runner-check.txt | tail -1)
-          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\nkavita=%s\nreader_extension_build=%s\nplaywright=%s\nplaywright_bundle=%s\nui_bundle=%s\nimage_build=%s\nboot_seconds=%s\nimage_playwright=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" "$kv" "$rx" "$pw" "$pwb" "$ub" "$ib" "$boot" "$ipw" > probe/result.txt
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\nkavita=%s\nreader_extension_build=%s\nplaywright=%s\nplaywright_bundle=%s\nui_bundle=%s\nsandbox_check=%s\nlinux_runtime=%s\nbenchmark=%s\nimage_build=%s\nboot_seconds=%s\nimage_playwright=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" "$kv" "$rx" "$pw" "$pwb" "$ub" "$sbx" "$lrt" "$bm" "$ib" "$boot" "$ipw" > probe/result.txt
           cat probe/result.txt
       - name: Commit results
         if: always()
