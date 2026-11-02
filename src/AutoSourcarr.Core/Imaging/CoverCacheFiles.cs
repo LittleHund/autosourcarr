@@ -68,6 +68,60 @@ internal sealed class CoverCacheFiles
         AtomicSourceFiles.Write(paths.Image, value.Content.ToArray(), CoverCache.MaximumImageBytes);
         AtomicSourceFiles.Write(paths.Metadata, metadata, 64 * 1024); return true;
     }
+    /// <summary>How often a read marks a cover as recently used (the metadata file's time; the image's time is its TTL).</summary>
+    internal static readonly TimeSpan UseResolution = TimeSpan.FromMinutes(10);
+
+    /// <summary>PERF-4: records that a cached cover was used, at most once per <see cref="UseResolution"/>.</summary>
+    public void MarkUsed(string key, DateTimeOffset now)
+    {
+        try
+        {
+            var path = Paths(key).Metadata;
+            if (!File.Exists(path) || new FileInfo(path).LinkTarget is not null) return;
+            if (now.UtcDateTime - File.GetLastWriteTimeUtc(path) >= UseResolution) File.SetLastWriteTimeUtc(path, now.UtcDateTime);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { _ = error; }
+    }
+
+    /// <summary>Bytes of the cached covers (images and their metadata).</summary>
+    public long Size()
+    {
+        PrivateDocumentStore.ValidateDirectory(_root); long total = 0;
+        foreach (var file in new DirectoryInfo(_root).EnumerateFiles())
+            if (file.Extension is ".img" or ".json" && file.LinkTarget is null) total += file.Length;
+        return total;
+    }
+
+    /// <summary>
+    /// PERF-4: removes the least recently used covers until the cache is at most <paramref name="targetBytes"/>. A cover's
+    /// last use is its metadata file's time (written with the cover, renewed by <see cref="MarkUsed"/>). The cover named
+    /// by <paramref name="keep"/> (just written) stays. Returns the cache size afterwards and how many covers were removed.
+    /// </summary>
+    public (long Bytes, int Removed) Trim(long targetBytes, string? keep)
+    {
+        PrivateDocumentStore.ValidateDirectory(_root);
+        var kept = keep is null ? null : SafeKey(keep);
+        // The metadata file's time is the last use; a cover without one counts from its image's time.
+        var covers = new Dictionary<string, (long Bytes, DateTime Used, bool Marked)>(StringComparer.Ordinal);
+        foreach (var file in new DirectoryInfo(_root).EnumerateFiles())
+        {
+            if (file.Extension is not (".img" or ".json") || file.LinkTarget is not null) continue;
+            var stem = Path.GetFileNameWithoutExtension(file.Name); var marked = file.Extension == ".json";
+            covers[stem] = !covers.TryGetValue(stem, out var known) ? (file.Length, file.LastWriteTimeUtc, marked)
+                : (known.Bytes + file.Length, marked || !known.Marked ? file.LastWriteTimeUtc : known.Used, marked || known.Marked);
+        }
+        var total = covers.Values.Sum(cover => cover.Bytes); var removed = 0;
+        foreach (var (stem, cover) in covers.OrderBy(pair => pair.Value.Used).ThenBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            if (total <= targetBytes) break;
+            if (stem == kept) continue;
+            var deleted = Delete(Path.Combine(_root, stem + ".img")) + Delete(Path.Combine(_root, stem + ".json"));
+            if (deleted == 0) continue;
+            total -= cover.Bytes; removed++;
+        }
+        return (total, removed);
+    }
+
     public int Clear(IReadOnlyList<string> keys)
     {
         PrivateDocumentStore.ValidateDirectory(_root); var count = 0;

@@ -159,7 +159,10 @@ public sealed partial class CatalogueStructure
         ["policies"] = new JsonArray(c.Query("SELECT * FROM gallery_policies ORDER BY source_id").Select(row => (JsonNode)Json(row)).ToArray())
     });
 
-    private long Split(long original, IReadOnlyList<NativeSourceRecord> requested, bool manual, string splitMatchType = "split-duplicate", Func<DatabaseSession, bool>? precondition = null)
+    /// <param name="commit">Runs inside the split's own catalogue transaction with (original, new entry), so the caller's
+    /// decision-log row (and other bookkeeping) commits or fails together with the split.</param>
+    private long Split(long original, IReadOnlyList<NativeSourceRecord> requested, bool manual, string splitMatchType = "split-duplicate", Func<DatabaseSession, bool>? precondition = null,
+        Action<DatabaseSession, long, long>? commit = null)
     {
         var result = _database.Write(DatabaseFile.Catalog, c =>
         {
@@ -196,7 +199,9 @@ public sealed partial class CatalogueStructure
             if (manual) RememberManualSplit(c, original, id, records, selected, stamp);
             PersistEdition(c, original); PersistEdition(c, id);
             c.Execute("INSERT INTO pending_entry_splits(original_entry_id,new_entry_id,records_json,created_at,last_error) VALUES($p0,$p1,$p2,$p3,'')", P(original, id, CanonicalJson.Text(pairs), stamp)); var journal = Convert.ToInt64(c.Scalar("SELECT last_insert_rowid()"), CultureInfo.InvariantCulture);
-            CatalogueIdentity.Split(c, original, id, wanted.Select(key => (key.SourceId, key.MangaId)).ToHashSet()); return (NewId: id, Journal: journal);
+            CatalogueIdentity.Split(c, original, id, wanted.Select(key => (key.SourceId, key.MangaId)).ToHashSet());
+            commit?.Invoke(c, original, id);
+            return (NewId: id, Journal: journal);
         });
         FinishSplit(result.Journal); return result.NewId;
     }

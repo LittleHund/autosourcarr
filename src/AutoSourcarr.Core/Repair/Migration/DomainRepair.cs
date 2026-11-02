@@ -62,6 +62,9 @@ public sealed record DomainRepairOptions(string? NewHost = null, string? OldHost
 /// </summary>
 public sealed class DomainRepair
 {
+    /// <summary>Raised with the package after a repair report was written (live UI topic <c>repairs</c>).</summary>
+    public Action<string>? ReportWritten { get; set; }
+
     public const int KeptPerPackage = 5;
     private static readonly Regex Package = new(@"\A[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*){1,20}\z", RegexOptions.CultureInvariant);
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
@@ -574,8 +577,11 @@ public sealed class DomainRepair
 
     // ------------------------------------------------------------------ helpers
 
-    private void SaveReport(string packageName, JsonObject report) =>
+    private void SaveReport(string packageName, JsonObject report)
+    {
         ConfigFiles.WriteAtomic(ReportPath(packageName), Encoding.UTF8.GetBytes(report.ToJsonString(Indented)));
+        ReportWritten?.Invoke(packageName);
+    }
 
     private string Now() => _time.GetUtcNow().ToString("O", CultureInfo.InvariantCulture);
 

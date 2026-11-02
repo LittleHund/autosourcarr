@@ -100,14 +100,17 @@ internal static class ChaptersV1Endpoints
                 if (chapters is null) return Unavailable();
                 var request = context.Request;
                 var search = request.Query["search"].LastOrDefault() ?? "";
-                var limit = int.TryParse(request.Query["limit"].LastOrDefault(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) ? Math.Clamp(parsed, 1, 500) : 100;
+                var limit = int.TryParse(request.Query["limit"].LastOrDefault(), NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) ? Math.Clamp(parsed, 1, 500) : 50;
                 var subbed = Flag(context, "subbed", false); var stats = Flag(context, "include_chapter_stats", true);
                 var sourceId = request.Query["source_id"].LastOrDefault() ?? "";
-                var result = await Task.Run(() => Matrix(chapters, search, limit, subbed, stats, sourceId), context.RequestAborted).ConfigureAwait(false);
+                var cursor = request.Query["cursor"].LastOrDefault() ?? "";
+                JsonObject result;
+                try { result = await Task.Run(() => Matrix(chapters, search, limit, subbed, stats, sourceId, cursor), context.RequestAborted).ConfigureAwait(false); }
+                catch (ArgumentException error) { return Problem(400, error.Message); }
                 return Answer(result);
             }))
             .WithName("getMatrix")
-            .WithSummary("The catalogue Matrix from stored data: entries (optional query search, limit 1-500, subbed, source_id, include_chapter_stats), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.")
+            .WithSummary("The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page continued with 'cursor' = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status503ServiceUnavailable);
 
@@ -210,8 +213,9 @@ internal static class ChaptersV1Endpoints
         return new JsonObject { ["entry_stats"] = entries, ["record_stats"] = records };
     }
 
-    private static JsonObject Matrix(ChaptersV1Services chapters, string search, int limit, bool subbed, bool includeStats, string sourceId)
+    private static JsonObject Matrix(ChaptersV1Services chapters, string search, int limit, bool subbed, bool includeStats, string sourceId, string cursor = "")
     {
+        string? nextCursor = null;
         var queries = chapters.Queries;
         var subscription = chapters.Subscription?.Invoke() ?? new JsonObject { ["ok"] = null, ["entry_ids"] = new JsonArray() };
         var subscribed = subbed ? (subscription["entry_ids"] as JsonArray ?? new JsonArray()).OfType<JsonValue>()
@@ -223,6 +227,12 @@ internal static class ChaptersV1Endpoints
             var ids = search.Trim().Length > 0 ? queries.SearchEntryIds(search, limit, subscribed, sources)
                 : queries.SourceScopedEntryIds(subscribed ?? SourceEntries(chapters.Database, sourceId, limit), sources).Take(limit).ToArray();
             entries = queries.Summaries(ids);
+        }
+        else if (subscribed is null && search.Trim().Length == 0)
+        {
+            // PERF-5: the unfiltered Matrix reads one keyset page of the newest entries (no count, no full scan).
+            var page = queries.ListPage(cursor, limit);
+            entries = page.Items; nextCursor = page.NextCursor;
         }
         else entries = subscribed is not null ? queries.ByIds(subscribed, search, limit) : queries.List(search, limit);
         var entryIds = entries.Select(entry => ReaderValue.Integer(entry, "id")).Where(id => id > 0).Distinct().ToArray();
@@ -257,6 +267,7 @@ internal static class ChaptersV1Endpoints
             ["duplicates"] = new JsonObject(), ["duplicates_pending"] = entryIds.Length > 0,
             ["discovery_outcomes"] = chapters.DiscoveryOutcomes?.Invoke(entryIds) ?? new JsonObject(),
             ["subscription"] = subscription,
+            ["next_cursor"] = nextCursor, ["has_more"] = nextCursor is not null,
         };
         if (!includeStats) result["chapter_stats_pending"] = entryIds.Length > 0;
         return result;

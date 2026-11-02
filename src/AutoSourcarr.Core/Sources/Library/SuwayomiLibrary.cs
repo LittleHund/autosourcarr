@@ -29,6 +29,8 @@ public sealed record DownloadWalkLimits(int MaxEntries, TimeSpan MaxDuration)
 /// </remarks>
 public sealed partial class SuwayomiLibrary : IAsyncDisposable
 {
+    /// <summary>Raised when a background status refresh finished (live UI topic <c>library</c>).</summary>
+    public Action? StatusRefreshed { get; set; }
     public const string DisplaySnapshotKey = "subbed_display_snapshot_v1";
     /// <summary>Private search token the reader source resolves from the local catalogue without contacting any source.</summary>
     public const string EntryIdToken = "__autosourcarr_entry_id__:";
@@ -395,6 +397,7 @@ public sealed partial class SuwayomiLibrary : IAsyncDisposable
         {
             await SubbedEntryIdsAsync(force, cancellationToken).ConfigureAwait(false);
             await DownloadSizeStatusAsync(force, cancellationToken).ConfigureAwait(false);
+            StatusRefreshed?.Invoke();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         catch (WorkDeferredException) { } // IO queue is full: the next health poll tries again

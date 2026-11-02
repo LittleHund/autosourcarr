@@ -137,12 +137,16 @@ internal static class LibraryDownloadsV1Endpoints
                 var offset = int.TryParse(query["offset"].LastOrDefault(), NumberStyles.None, CultureInfo.InvariantCulture, out var start) ? start : 0;
                 var limit = int.TryParse(query["limit"].LastOrDefault(), NumberStyles.None, CultureInfo.InvariantCulture, out var size) ? size : 50;
                 if (offset is < 0 or > 300 || limit is < 1 or > 100) throw new ApiProblem(400, "offset 0-300 and limit 1-100");
+                long? before = null;
+                if (query["downloads_before"].LastOrDefault() is { Length: > 0 } text)
+                    before = long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id > 0 ? id : throw new ApiProblem(400, "downloads_before must be a download event id");
                 var result = services.Tasks?.History(offset, limit) ?? new JsonObject { ["items"] = new JsonArray(), ["total"] = 0, ["offset"] = offset, ["limit"] = limit, ["note"] = "No task history in this host." };
-                result["downloads"] = manager.Store.DownloadHistory(0, 50);
+                // PERF-5: one keyset page of download events (no count); downloads_before = next_before continues.
+                result["downloads"] = manager.Store.DownloadHistoryPage(before, 50);
                 return Task.FromResult(Answer(result));
             })))
             .WithName("getActivityHistory")
-            .WithSummary("Finished general tasks (up to 300, seven days; query offset and limit) plus the 50 newest download events (downloaded, failed, removed).")
+            .WithSummary("Finished general tasks (up to 300, seven days; query offset and limit) plus one page of 50 download events (downloaded, failed, removed), newest first; query downloads_before = downloads.next_before continues (page-first, no count).")
             .Produces<JsonObject>(StatusCodes.Status200OK);
     }
 

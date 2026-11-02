@@ -238,6 +238,7 @@ public sealed partial class DuplicateMatching
                     return _snapshot is { } newer ? (JsonArray)newer.Groups.DeepClone() : [];
                 }
                 _snapshot = (_clock.GetTimestamp(), (JsonArray)ordered.DeepClone()); _snapshotStale = false;
+                Changed?.Invoke("snapshot");
             }
             try { _stored.Set(SnapshotSetting, new JsonObject { ["saved_at"] = _clock.GetUtcNow().ToUnixTimeMilliseconds() / 1000.0, ["groups"] = ordered.DeepClone() }); }
             catch (Exception error) when (error is Microsoft.Data.Sqlite.SqliteException or InvalidOperationException or IOException) { }
@@ -280,6 +281,7 @@ public sealed partial class DuplicateMatching
     public void Invalidate()
     {
         lock (_snapshotLock) { _snapshotRevision++; _snapshotStale = true; }
+        Changed?.Invoke("stale");
     }
 
     /// <summary>Restores the persisted snapshot at startup as stale, dropping dead, absorbed or since-reviewed pairs.</summary>

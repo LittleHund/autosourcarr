@@ -155,6 +155,7 @@ Precedence, lowest first: built-in default, `config.json`, Compose environment v
 
 | Variable | Type | Default | Description | Compose | Wizard step |
 | --- | --- | --- | --- | --- | --- |
+| `COVER_CACHE_MAX_MB` | integer | `2048` | Largest size of the cover cache, in MB (PERF-4). When it is full, the least recently used covers are removed first. 0 means no limit. |  |  |
 | `COVER_CACHE_TTL_SECONDS` | integer | `604800` | How long a downloaded cover is kept before it is checked again, in seconds. |  |  |
 | `COVER_FETCH_CONCURRENCY` | integer | `4` | How many covers are downloaded at the same time. |  |  |
 | `COVER_FETCH_TIMEOUT` | number | `5` | Time limit for downloading a cover, in seconds. |  |  |

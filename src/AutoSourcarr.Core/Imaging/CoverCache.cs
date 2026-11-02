@@ -25,6 +25,9 @@ public sealed class CoverCache : IAsyncDisposable
     private readonly int _maximumPending;
     private readonly TimeSpan _loaderDeadline;
     private long _epoch;
+    /// <summary>PERF-4: the cache size as last counted plus what was written since (-1: not counted yet). Guarded by _write.</summary>
+    private long _bytes = -1;
+    private int _evicted;
     private int _pending, _active;
     private bool _clearing, _closed;
     /// <summary>Whether shutdown has reached the cache (fills that finish now write nothing).</summary>
@@ -44,6 +47,8 @@ public sealed class CoverCache : IAsyncDisposable
     }
     public (int Pending, int Active, int Failed, int Presence) Snapshot
     { get { lock (_gate) return (_pending, _active, _failures.Count, _presence.Count); } }
+    /// <summary>Covers removed by the size limit since start (PERF-4).</summary>
+    public int Evicted { get { lock (_gate) return _evicted; } }
 
     public CoverData? Read(string key)
     {
@@ -51,7 +56,12 @@ public sealed class CoverCache : IAsyncDisposable
     }
     public Task<CoverData?> ReadAsync(string key, CancellationToken cancellationToken = default) =>
         OwnedIoAsync(() => ReadCore(key), cancellationToken);
-    private CoverData? ReadCore(string key) => _files.Read(key, _settings().CoverCacheTtlSeconds, _clock.GetUtcNow());
+    private CoverData? ReadCore(string key)
+    {
+        var now = _clock.GetUtcNow(); var value = _files.Read(key, _settings().CoverCacheTtlSeconds, now);
+        if (value is not null && _settings().CoverCacheMaxMb > 0) _files.MarkUsed(key, now);
+        return value;
+    }
 
     public void Write(string key, CoverData value)
     {
@@ -63,6 +73,27 @@ public sealed class CoverCache : IAsyncDisposable
     {
         if (!_files.Write(key, value)) return;
         lock (_gate) { _epoch++; var ttl = _settings().CoverCacheTtlSeconds; Remember(key, true, Math.Min(30, ttl), ttl); }
+        EnforceLimit(key, value.Content.Length);
+    }
+
+    /// <summary>
+    /// PERF-4 (COVER_CACHE_MAX_MB): when the cache grows past its limit, the least recently used covers are removed until
+    /// it is at 90 % of the limit. The size is counted once and then estimated from writes (a replaced cover counts twice
+    /// until the next count, so the estimate only errs towards counting early). Caller holds _write.
+    /// </summary>
+    private void EnforceLimit(string written, int bytes)
+    {
+        var limit = (long)_settings().CoverCacheMaxMb * 1024 * 1024;
+        if (limit <= 0) { _bytes = -1; return; }
+        try
+        {
+            _bytes = _bytes < 0 ? _files.Size() : _bytes + bytes + 64;
+            if (_bytes <= limit) return;
+            var (remaining, removed) = _files.Trim(limit / 10 * 9, written);
+            _bytes = remaining;
+            if (removed > 0) lock (_gate) { _evicted += removed; _presence.Clear(); _epoch++; }
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException) { _bytes = -1; }
     }
 
     /// <summary>A short-lived card hint only. Actual reads still validate their own regular file, bytes and TTL.</summary>
@@ -160,7 +191,7 @@ public sealed class CoverCache : IAsyncDisposable
         lock (_write)
         {
             lock (_gate) { foreach (var key in keys) { _generations.Remove(key); _failures.Remove(key); _presence.Remove(key); } _epoch++; }
-            var removed = _files.Clear(keys);
+            var removed = _files.Clear(keys); _bytes = -1;
             lock (_gate) { _epoch++; foreach (var key in keys) Remember(key, false, 5, _settings().CoverCacheTtlSeconds); }
             return removed;
         }
@@ -193,7 +224,7 @@ public sealed class CoverCache : IAsyncDisposable
             Fill[] captured;
             lock (_gate) { _clearing = true; captured = _tasks.Values.ToArray(); _tasks.Clear(); _generations.Clear(); _failures.Clear(); _presence.Clear(); _epoch++; }
             var errors = await CancelAndDrainAsync(captured).ConfigureAwait(false);
-            var result = await _io.RunAsync(() => { lock (_write) { var removed = _files.ClearAll(); lock (_gate) { _presence.Clear(); _epoch++; } return removed; } }, CancellationToken.None).ConfigureAwait(false);
+            var result = await _io.RunAsync(() => { lock (_write) { var removed = _files.ClearAll(); _bytes = -1; lock (_gate) { _presence.Clear(); _epoch++; } return removed; } }, CancellationToken.None).ConfigureAwait(false);
             if (errors.Count != 0) throw new AggregateException("Cover reset drained work with cancellation errors", errors);
             cancellationToken.ThrowIfCancellationRequested(); return result;
         }

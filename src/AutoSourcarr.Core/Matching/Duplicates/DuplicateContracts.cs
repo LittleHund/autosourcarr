@@ -63,6 +63,10 @@ public interface IDuplicateStructure
     long MergeEntries(long left, long right, string reason, bool automatic, Action<DatabaseSession, long, long> commit);
     /// <summary>Moves the records to one new entry; <paramref name="manual"/> also persists the user's split decision.</summary>
     long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, bool manual, string matchType);
+    /// <summary>Splits like <see cref="SplitRecords(long, IReadOnlyList{NativeSourceRecord}, bool, string)"/> and runs
+    /// <paramref name="commit"/> (session, original, new entry) inside the split's own catalogue transaction, so the
+    /// caller's decision-log row commits or fails together with the split (as merges do).</summary>
+    long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, bool manual, string matchType, Action<DatabaseSession, long, long> commit);
     /// <summary>Retries committed merges/splits whose chapter work is still pending.</summary>
     void ReconcilePending(CancellationToken cancellationToken);
 }

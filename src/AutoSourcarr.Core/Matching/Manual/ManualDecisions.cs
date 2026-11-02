@@ -200,13 +200,21 @@ public sealed partial class ManualDecisions
                 var count = Convert.ToInt64(c.Scalar("SELECT COUNT(*) FROM (SELECT 1 FROM source_matches WHERE entry_id=$p0 AND active=1 UNION ALL SELECT 1 FROM source_variants WHERE entry_id=$p0 AND active=1)", P(id)), CultureInfo.InvariantCulture);
                 return (id, Owner(c, sourceId, sourceMangaId) ?? 0, count);
             });
-            var separate = owner;
+            var separate = owner; var split = false;
             if (separate == target)
             {
                 if (records <= 1) throw new ManualDecisionConflictException("This is the entry's only source record, so it cannot be split away from itself");
                 var operations = RequireOperations();
                 Write(c => ForgetBinding(c, sourceId, sourceMangaId, dissolveSmallGroup: true));
-                separate = operations.SplitRecords(target, [new NativeSourceRecord(sourceId, sourceMangaId)]);
+                // The separate-record bookkeeping and its decision row commit with the split itself.
+                separate = operations.SplitRecords(target, [new NativeSourceRecord(sourceId, sourceMangaId)], (c, from, created) =>
+                {
+                    RememberSeparate(c, from, sourceId, sourceMangaId, created, Text(candidate["title"]));
+                    ReviewPair(c, from, created, "not_duplicate");
+                    Log("separate", actor, [from, created], [RecordKey(sourceId, sourceMangaId)], "Kept the source record as a separate entry",
+                        after: new JsonObject { ["target_entry_id"] = from, ["separate_entry_id"] = created });
+                });
+                split = true;
             }
             else if (separate <= 0)
             {
@@ -216,7 +224,7 @@ public sealed partial class ManualDecisions
                 operations.UpsertPrimary(separate, sourceId, manga, 1.0, "separate-anchor", false);
                 operations.ChooseMetadata(separate);
             }
-            if (separate > 0 && separate != target)
+            if (!split && separate > 0 && separate != target)
             {
                 Write(c =>
                 {

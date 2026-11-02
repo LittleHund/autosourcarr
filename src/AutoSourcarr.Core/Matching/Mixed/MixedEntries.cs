@@ -22,6 +22,11 @@ public interface IEditionSplitter
     /// review may have arrived since the proposal); false refuses with InvalidOperationException and changes nothing.</summary>
     (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
         Func<DatabaseSession, bool> stillAllowed, CancellationToken cancellationToken);
+
+    /// <summary>As the split above; <paramref name="commit"/> (session, original, new entry) runs inside the split's own
+    /// catalogue transaction, so the decision-log row commits or fails together with the split.</summary>
+    (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
+        Func<DatabaseSession, bool> stillAllowed, Action<DatabaseSession, long, long> commit, CancellationToken cancellationToken);
 }
 
 /// <summary>What an automatic edition split would do. <see cref="Blocked"/> proposals are left for review (manual,
@@ -298,7 +303,13 @@ public sealed class MixedEntries
         bool StillAllowed(DatabaseSession c) => !KeptTogether(c, entryId) && ProposeSplit(c, entryId, axis) is { Blocked: false } current
             && current.EntryId == proposedEntry && planned.SetEquals(current.Move);
         (long OriginalEntryId, long NewEntryId) result;
-        try { result = _splitter.SplitAutomatic(proposal.EntryId, proposal.Move, "split-duplicate", StillAllowed, cancellationToken); }
+        // The decision row is written inside the split's own transaction (split and log commit together).
+        void Log(DatabaseSession _, long original, long created) =>
+            _decisions.Record(new DecisionEvent("split.edition", DecisionActor.Automatic, [original, created],
+                proposal.Move.Select(item => item.SourceId + ":" + item.MangaId.ToString(CultureInfo.InvariantCulture)).ToArray(),
+                "Automatic " + axis + " edition split: kept " + proposal.KeepMode, proposal.Json(),
+                new JsonObject { ["original_entry_id"] = original, ["new_entry_id"] = created }));
+        try { result = _splitter.SplitAutomatic(proposal.EntryId, proposal.Move, "split-duplicate", StillAllowed, Log, cancellationToken); }
         catch (Exception error) when (error is InvalidOperationException or KeyNotFoundException) { return null; }
         _database.Write(DatabaseFile.Catalog, c =>
         {
@@ -310,10 +321,6 @@ public sealed class MixedEntries
                 if (axis == "media") _metadata?.SyncRelatedMediaTitles(c, id, stamp);
                 EditionProfiles.SyncColoredTitleLabel(c, id, stamp);
             }
-            _decisions.Record(new DecisionEvent("split.edition", DecisionActor.Automatic, [result.OriginalEntryId, result.NewEntryId],
-                proposal.Move.Select(item => item.SourceId + ":" + item.MangaId.ToString(CultureInfo.InvariantCulture)).ToArray(),
-                "Automatic " + axis + " edition split: kept " + proposal.KeepMode, proposal.Json(),
-                new JsonObject { ["original_entry_id"] = result.OriginalEntryId, ["new_entry_id"] = result.NewEntryId }));
             return 0;
         });
         return new JsonObject { ["original_entry_id"] = result.OriginalEntryId, ["new_entry_id"] = result.NewEntryId, ["axis"] = axis, ["kept"] = proposal.KeepMode };
@@ -345,11 +352,14 @@ public sealed class MixedEntries
                 return (Entry: id, Move: move.Length >= rows.Count ? Array.Empty<(string, long)>() : move);
             });
             if (plan.Move.Length == 0) continue;
-            try { _splitter.SplitAutomatic(plan.Entry, plan.Move, "split-duplicate", cancellationToken); }
+            try
+            {
+                _splitter.SplitAutomatic(plan.Entry, plan.Move, "split-duplicate", _ => true, (_, _, _) => _decisions.Record(new DecisionEvent("split.legacy-color",
+                    DecisionActor.Upgrade("legacy-color-false-attachments"), [plan.Entry],
+                    plan.Move.Select(item => item.Item1 + ":" + item.Item2.ToString(CultureInfo.InvariantCulture)).ToArray(), "Record attached by the removed bare color-word matcher")), cancellationToken);
+            }
             catch (Exception error) when (error is InvalidOperationException or KeyNotFoundException) { continue; }
             entries++; records += plan.Move.Length;
-            _database.Write(DatabaseFile.Catalog, c => _decisions.Record(new DecisionEvent("split.legacy-color", DecisionActor.Upgrade("legacy-color-false-attachments"), [plan.Entry],
-                plan.Move.Select(item => item.Item1 + ":" + item.Item2.ToString(CultureInfo.InvariantCulture)).ToArray(), "Record attached by the removed bare color-word matcher")));
         }
         return new JsonObject { ["split_entries"] = entries, ["split_records"] = records };
     }

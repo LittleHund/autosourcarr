@@ -2,7 +2,7 @@
 (()=>{
   const byId=id=>document.getElementById(id);
   const labels={repair:'Source repair',builder:'Reader extension builder',translation:'Title translation',solver:'Challenge handling'};
-  let loading=null,timer=null,mode=null,generation=0,readerReady=false,builderBusy=false,builderActionPending=false,builderButtons=[],builderPreflights=[];
+  let loading=null,timer=null,mode=null,actions=null,generation=0,readerReady=false,builderBusy=false,builderActionPending=false,builderButtons=[],builderPreflights=[];
   const visible=()=>!document.hidden&&(byId('about')?.classList.contains('active')||(byId('settings')?.classList.contains('active')&&!byId('settingsServicesPane')?.hidden));
   function readerBuildStatus(target,value){
     const valid=value&&typeof value.ready==='boolean'&&Number.isInteger(value.exit_code)&&Array.isArray(value.errors)&&Array.isArray(value.warnings)
@@ -32,26 +32,31 @@
     for(const panel of builderPreflights)readerBuildStatus(panel,null);
   }
   function updateBuilderControls(){
-    const disabled=mode!=='integrated'||!readerReady||builderBusy||builderActionPending;
+    const disabled=mode!=='integrated'||!readerReady||builderBusy||builderActionPending||!canAct('builder');
     byId('buildReaderExtensions').disabled=disabled;
     for(const button of builderButtons)button.disabled=disabled;
     byId('cancelReaderBuild').hidden=!builderBusy;
     byId('cancelReaderBuild').disabled=builderActionPending;
   }
+  // 0.5.0 (/api/v1/internal-services) lists the app's own services with a label each and the actions it offers
+  // (none: everything starts with the app); without an actions list every built-in tool keeps its 0.4.x action.
+  const canAct=name=>name==='repair'||!Array.isArray(actions)||actions.includes(name);
   function render(data){
-    mode=data.mode;const integrated=mode==='integrated';
+    mode=data.mode;actions=Array.isArray(data.actions)?data.actions:null;const integrated=mode==='integrated';
     const box=byId('internalServices');box.replaceChildren();builderButtons=[];builderPreflights=[];
     readerReady=readerBuildStatus(byId('readerBuildPreflight'),data.reader_build);
     if(!integrated){const p=document.createElement('p');p.textContent='External compatibility mode. Rebuild and redeploy the integrated image to use built-in tools.';box.append(p);}
-    for(const [name,label] of Object.entries(labels)){
-      const state=data.services?.[name]||{},card=document.createElement('article');card.className='statusPanel';
+    const names=data.services&&Object.keys(data.services).length?Object.keys(data.services):Object.keys(labels);
+    for(const name of names){
+      const state=data.services?.[name]||{},label=state.label||labels[name]||name,card=document.createElement('article');card.className='statusPanel';
       const title=document.createElement('h3');title.textContent=label;
       const message=document.createElement('p');message.textContent=state.message||'Starts when needed';
       const badge=document.createElement('span');badge.className='publicationPill';badge.textContent=state.state||'idle';
       card.append(title,badge,message);
       const button=document.createElement('button');button.type='button';
       button.textContent=name==='builder'?'Build extensions':name==='repair'?'Open repair tools & account':name==='translation'?'Prepare translation':'Start / check handler';
-      button.disabled=!integrated||(name!=='repair'&&['running','queued','starting','ready'].includes(state.state));
+      button.disabled=!integrated||!canAct(name)||(name!=='repair'&&['running','queued','starting','ready'].includes(state.state));
+      button.hidden=!canAct(name)||!(name in labels);
       button.onclick=()=>{if(name==='repair'){switchTab('sources');setSourceSubtab('maintenance');byId('repairSetupPanel').open=true;}else action(name,'start');};
       if(name==='builder'){
         builderButtons.push(button);
@@ -67,7 +72,7 @@
   }
   async function action(name,verb){
     if(name==='builder'){
-      if(builderActionPending||verb==='start'&&(mode!=='integrated'||!readerReady||builderBusy))return;
+      if(builderActionPending||verb==='start'&&(mode!=='integrated'||!readerReady||builderBusy||!canAct('builder')))return;
       builderActionPending=true;updateBuilderControls();
     }
     const own=++generation;clearTimeout(timer);
@@ -90,7 +95,7 @@
     clearTimeout(timer);
     const own=++generation;
     const request=(async()=>{
-      const data=await api('/api/admin/services',{timeoutMs:5000,suppressClientError:true,noMutationRefresh:true});
+      const data=await api('/api/v1/internal-services',{timeoutMs:5000,suppressClientError:true,noMutationRefresh:true});
       if(own!==generation)return;
       render(data);
       if(byId('about')?.classList.contains('active')){

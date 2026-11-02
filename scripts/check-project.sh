@@ -207,7 +207,7 @@ grep -q 'CREATE TABLE IF NOT EXISTS manual_title_scopes' autosourcarr/app/db.py
   grep -q 'id="sourceExtensionUpdatesSection"' autosourcarr/app/static/index.html
   grep -q 'id="sourceExtensionInstalledSection"' autosourcarr/app/static/index.html
   grep -q 'id="sourceExtensionAvailableSection"' autosourcarr/app/static/index.html
-  grep -q '/api/admin/ui-preferences' autosourcarr/app/static/app.js
+  grep -q '/api/v1/ui-preferences' autosourcarr/app/static/app.js
   grep -q '/api/v1/source-extension-icon/' autosourcarr/app/static/app.js
   grep -q 'data-theme="emerald"' autosourcarr/app/static/index.html
   grep -q 'data-settings-subtab="customization"' autosourcarr/app/static/index.html
