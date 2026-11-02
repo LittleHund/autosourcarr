@@ -205,7 +205,8 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 | --- | --- | --- |
 | 2026-11-01 | Phase 10 wired, audited and green (probe b772773); a recheck of phases 0–9 fixed the startup sequence, reset previews, pacing deferral and orphan APK checks; the remaining items have an owner in `docs/handoff/briefs/phase10-checklist.md`. | resolved |
 | 2026-11-01 | This PC has a .NET 10 SDK and nuget access: build and test locally first, then one ci-probe per round (owner decision). | decision |
-| 2026-11-01 | Open owner decisions: stricter match-on-ingest (15 identical-title pairs); import gate title 0.80 + summary 0.90; MAT-11/MAT-22/Komf/AUTH-8; AI repair worker port target; AUTH-7/9 marked 0.6.0. | open |
+| 2026-11-02 | Ingest and import gate decided (option C): a title alone never matches automatically, summaries never admit below 0.94, duplicates rescored after hydration (877306c). | resolved |
+| 2026-11-01 | Open owner decisions: MAT-11/MAT-22/Komf/AUTH-8; AI repair worker port target; AUTH-7/9 marked 0.6.0. | open |
 | 2026-11-01 | `duplicate-pairs.user.json` (2,680 pairs from the user's decisions) committed locally for CI; user agreed it need not be private but **must be removed once everything functions**. | open (remove before cutover) |
 | 2026-11-01 | Reader extension signing: user must add GitHub secrets `AUTOSOURCARR_EXT_KEYSTORE_B64`, `_KEYSTORE_PASSWORD`, `_KEY_PASSWORD`, `_KEY_ALIAS` (= `autosourcarr`); without them CI signs with a throwaway key. | waiting on user |
 | 2026-11-01 | Reader extension slot count is fixed at build time (5); "add more from Mihon" is not possible with the Keiyoushi plugin. | limitation |

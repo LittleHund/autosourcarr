@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "id": "DECISION-20261102-INGEST-NO-TITLE-ALONE",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "Automatic matching never attaches on a title alone; summaries never admit a title below 0.94",
+      "body": "{\"decision\": \"Owner chose option C on 2026-11-02 (of A current, B long titles only, C never title alone, D sweep rule).\", \"ingest\": \"EntryIngest.Evidence blocks an automatic attach without agreeing creator, cover or summary evidence (year alone never admits); applies to match-on-ingest, discovery attaches and reset-hint revalidation.\", \"import\": \"CandidateEvidence: a title at the floor needs a summary >= 0.82, a creator >= 0.92 or the backup-source reference; title-only candidates (TitleOnly) take part in the exact-cover check, which then decides with a single match; summary paths below the floor no longer admit (hard rule 2). MetadataCandidateScore: title at the floor plus a summary >= 0.82 or a creator >= 0.92.\", \"rescore\": \"After native hydration applies, the duplicate snapshot is invalidated and refreshed (one coalesced job), which starts the automatic sweep only when it finds an eligible pair (0.4.5 did this after identity hydration).\", \"measured\": \"User duplicate set, 300-pair sample: ingest wrong merges 15 -> 0, ingest recall 63.2% -> 53.0%; sweep unchanged (0 wrong, 75.2%). The sample has titles and some creators only, no summaries or covers.\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "src/AutoSourcarr.Core/Matching/Ingest/EntryIngest.cs; src/AutoSourcarr.Core/Imports/ImportRuns.Resolution.cs; src/AutoSourcarr.Api/ApplicationRuntime.Matching.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "FINDING-20261101-INGEST-TITLE-ONLY",
+      "kind": "finding",
+      "state": "resolved",
+      "title": "Match-on-ingest attaches identical-title works the owner marked different",
+      "body": "{\"resolution\": \"DECISION-20261102-INGEST-NO-TITLE-ALONE\", \"test\": \"duplicates: user duplicate test set scores no wrong merges on the automatic sweep or on ingest (asserted)\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "tests/AutoSourcarr.Tests/Matching/Duplicates/DuplicateTests.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "LIMIT-20261102-INGEST-GATE",
+      "kind": "limitation",
+      "state": "open",
+      "title": "Ingest gate: recall on real records and the hydration rescore are not measured live",
+      "body": "{\"not_run\": [\"recall with real summaries and covers (the test set has neither)\", \"the hydration rescore path has no automated test (it is wiring in ApplicationRuntime.Matching)\", \"a real backup import against a live catalogue\"], \"effect\": \"More records than before become separate entries until hydration; the sweep merges them only on corroborating evidence.\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "CHANGELOG.md 0.5.0",
+      "applies_to": "Conversion plan",
+      "confidence": "medium"
+    }
+  ]
+}

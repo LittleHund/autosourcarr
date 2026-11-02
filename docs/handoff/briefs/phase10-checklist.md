@@ -85,5 +85,5 @@ Not fixed here, with an owner:
 | Postgres CI service unused | phase 16 |
 | AI code-repair worker (`repair-worker/`) has no port target | owner decision (0.6.0?) |
 | MAT-11 scaled mixed check; MAT-22 profile-change check; Komf as metadata provider; AUTH-8 log location | owner decision |
-| Match-on-ingest title-only attaches (15 of 66 different-work pairs); import evidence gate passes title 0.80 + summary 0.90 | owner decision |
+| Match-on-ingest title-only attaches (15 of 66 different-work pairs); import evidence gate passes title 0.80 + summary 0.90 | decided 2026-11-02 (option C), fixed in 877306c |
 | AUTH-7/AUTH-9 not marked 0.6.0 in their requirement rows | requirements update (owner) |
