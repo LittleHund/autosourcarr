@@ -148,7 +148,7 @@ test('library controller resumes the saved cursor and starts again at page 1 whe
   const context={console,JSON,Number,Object,Array,Map,Promise,URLSearchParams,AbortController,
     document:{documentElement:{dataset:{}},getElementById:node,addEventListener(){}},Option:class extends Node{constructor(text,value){super('','option');this.textContent=text;this.value=value;}},
     workbenchState:{libraryScope:'all'},subbedData:null,
-    api:async url=>{requests.push(new URL('http://x'+url).searchParams);return {entries:[],sources:[],total:0,next_cursor:'',subscription:{ok:true}};},
+    api:async url=>{requests.push(new URL('http://x'+url).searchParams);return context.reply||{entries:[],sources:[],total:0,next_cursor:'',subscription:{ok:true}};},
     esc:String,apiV1:()=>({}),loadTasks:async()=>{},toast(){},queueMicrotask:fn=>fn()};
   context.window=context;vm.createContext(context);vm.runInContext(libraryController,context);
   const library=context.AutoSourcarrLibrary;
@@ -160,6 +160,9 @@ test('library controller resumes the saved cursor and starts again at page 1 whe
   library.restorePosition({signature,cursor:'c3',previous:['','c2']});node('subbedSearch').value='naruto';await library.load();
   assert.equal(requests.at(-1).get('cursor'),'','Different filters start at page 1');assert.equal(library.position(),null);
   library.restorePosition(null);assert.equal(library.position(),null);
+  // A2: object list fields from the server read as empty lists instead of throwing.
+  context.reply={entries:{},sources:{},matches:{},total:0,next_cursor:'',subscription:{ok:true}};node('subbedSearch').value='';
+  await library.load({reset:true});assert.equal(Array.isArray(context.subbedData.entries)&&context.subbedData.entries.length,0);assert.match(node('subbedCount').textContent,/^0 shown/);
 });
 
 (async()=>{

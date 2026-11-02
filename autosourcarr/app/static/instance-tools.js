@@ -72,7 +72,7 @@
     // already shown, so nothing above moves (UI-12). Paging the task list keeps the download pages already loaded.
     let downloads=null;
     const downloadRow=row=>`<tr><td>${esc(row.event)}</td><td>Entry ${Number(row.entry_id)} · chapter ${Number(row.chapter_id)}${row.detail?'<br><span class="muted">'+esc(row.detail)+'</span>':''}</td><td>${esc(row.created_at?new Date(row.created_at).toLocaleString():'')}</td></tr>`;
-    const downloadPage=page=>({items:[...(page?.items||[])],next:page?.has_more&&page.next_before!=null?String(page.next_before):null});
+    const downloadPage=page=>({items:[...(Array.isArray(page?.items)?page.items:[])],next:page?.has_more&&page.next_before!=null?String(page.next_before):null});
     function downloadPager(offset){
       const pager=byId('riDownloadPager'),rows=byId('riDownloadRows');if(!pager||!rows)return;
       pager.replaceChildren();if(!downloads.next)return;
@@ -85,6 +85,7 @@
     async function load(offset=0){
       const own=generation,result=await api('/api/v1/activity/history?offset='+offset+'&limit=50',{signal:read.signal,suppressClientError:true});
       if(own!==generation)return;
+      if(!Array.isArray(result.items))result.items=[];
       if(!downloads)downloads=downloadPage(result.downloads);
       body.innerHTML='<p class="muted">'+esc(result.note)+'</p><div class="riTableScroll"><table><thead><tr><th>Task</th><th>Outcome</th><th>Updated</th></tr></thead><tbody>'+result.items.map(row=>`<tr><td><strong>${esc(row.name)}</strong><br>${esc(row.message||row.error||'')}</td><td>${esc(row.interrupted?'Interrupted':row.cancel_requested?'Cancelled':row.state)}</td><td>${esc(new Date(row.updated_at).toLocaleString())}</td></tr>`).join('')+'</tbody></table></div><div id="riHistoryPager" class="riToolActions"></div>'
         +'<h3>Downloads</h3><div class="riTableScroll"><table><thead><tr><th>Event</th><th>Chapter</th><th>When</th></tr></thead><tbody id="riDownloadRows">'
