@@ -138,6 +138,22 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     /// <summary>Set by the host: asks the web host to stop normally (setup restart in the integrated image).</summary>
     internal Action? RequestStop { get; set; }
 
+    /// <summary>
+    /// Phase 13 (no native launcher): the exit code of a restart the app asked for itself (setup restart, armed restore).
+    /// 75 (EX_TEMPFAIL) is non-zero on purpose, so a container restart policy of "on-failure" restarts it as well as
+    /// "unless-stopped"/"always"; under tini (PID 1) the app's exit ends the container and the policy starts it again.
+    /// </summary>
+    internal const int RestartExitCode = 75;
+    private int _restartRequested;
+    internal bool RestartRequested => Volatile.Read(ref _restartRequested) == 1;
+
+    /// <summary>Stops normally (every cleanup step runs) and makes the process exit with <see cref="RestartExitCode"/>.</summary>
+    internal void RequestRestart()
+    {
+        Interlocked.Exchange(ref _restartRequested, 1);
+        RequestStop?.Invoke();
+    }
+
     internal static Task<ApplicationRuntime> CreateNativeAsync(StartupConfigurationSnapshot startup,
         IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken = default)
     {
@@ -387,7 +403,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings,
                     duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }, pausedSources: owner.SourceResults.PausedCount),
-                () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
+                owner.RequestRestart, health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
                 moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory),
                     claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))))
             {

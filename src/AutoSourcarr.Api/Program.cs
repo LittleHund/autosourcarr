@@ -63,7 +63,7 @@ internal static class Program
                 await watchStop.CancelAsync().ConfigureAwait(false);
                 await fatal.ConfigureAwait(false);
             }
-            return runtime.FatalFailure.IsCompleted ? 78 : 0;
+            return runtime.FatalFailure.IsCompleted ? 78 : runtime.RestartRequested ? ApplicationRuntime.RestartExitCode : 0;
         }
         catch (OperationCanceledException) when (signals?.Token.IsCancellationRequested == true) { return 0; }
         catch (ConfigurationException error)

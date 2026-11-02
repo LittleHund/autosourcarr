@@ -126,13 +126,88 @@ public static class EgressProxyTests
                 client.Connect(IPAddress.Loopback, proxy.Port);
                 client.ReceiveTimeout = 10_000;
                 var stream = client.GetStream();
-                stream.Write(Encoding.ASCII.GetBytes($"CONNECT allowed.test:{origin.Port} HTTP/1.1\r\n\r\nping"));
+                stream.Write(Encoding.ASCII.GetBytes($"CONNECT allowed.test:{origin.Port} HTTP/1.1\r\n\r\n").Concat(ClientHello("allowed.test")).ToArray());
                 var text = ReadUntil(stream, "pong");
                 Check.True(text.StartsWith("HTTP/1.1 200 Connection established\r\n\r\n", StringComparison.Ordinal), text);
-                Check.Equal("ping", origin.Request());
+                Check.True(origin.Request().StartsWith("\x16\x03", StringComparison.Ordinal), "the ClientHello reached the origin");
                 Check.Equal(1L, proxy.Allowed);
             }
             finally { proxy.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        });
+
+        suite.Add("egress proxy: a tunnel whose TLS server name (SNI) is another host, or no TLS at all, is closed before the origin gets a byte", () =>
+        {
+            foreach (var (label, payload) in new[] { ("other SNI", ClientHello("evil.test")), ("no SNI", ClientHello(null)), ("not TLS", Encoding.ASCII.GetBytes("GET / HTTP/1.1\r\n\r\n")) })
+            {
+                using var origin = new Origin("pong", rawEcho: true);
+                var proxy = LoopbackProxy();
+                try
+                {
+                    using var client = new TcpClient();
+                    client.Connect(IPAddress.Loopback, proxy.Port);
+                    client.ReceiveTimeout = 15_000;
+                    var stream = client.GetStream();
+                    stream.Write(Encoding.ASCII.GetBytes($"CONNECT allowed.test:{origin.Port} HTTP/1.1\r\n\r\n").Concat(payload).ToArray());
+                    var text = ReadUntil(stream, "pong");
+                    Check.True(text.StartsWith("HTTP/1.1 200 ", StringComparison.Ordinal) && !text.Contains("pong", StringComparison.Ordinal), label + ": the tunnel was relayed: " + text);
+                    Check.Equal(1L, proxy.Refused);
+                    Check.Equal("", origin.Request());
+                }
+                finally { proxy.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+            }
+        });
+
+        suite.Add("egress proxy: TLS ClientHello parser reads the server name and refuses malformed or cut records", () =>
+        {
+            Check.Equal("allowed.test", TlsClientHello.ServerName(ClientHello("allowed.test")));
+            Check.True(TlsClientHello.ServerName(ClientHello(null)) is null, "no server_name extension");
+            var hello = ClientHello("allowed.test");
+            Check.True(TlsClientHello.ServerName(hello.AsSpan(0, hello.Length - 3)) is null, "a cut record");
+            var broken = (byte[])hello.Clone(); broken[5] = 2;
+            Check.True(TlsClientHello.ServerName(broken) is null, "not a ClientHello");
+            Check.True(TlsClientHello.RecordLength("GET /"u8) is null, "plain text is no TLS record");
+        });
+
+        suite.Add("egress proxy: a host is resolved once and pinned; private answers pass only for listed private hosts", () =>
+        {
+            var lookups = 0;
+            // A rebinding resolver: the first answer is loopback, later answers would point elsewhere.
+            Task<IPAddress[]> Resolve(string host, CancellationToken token) =>
+                Task.FromResult(Interlocked.Increment(ref lookups) == 1 ? new[] { IPAddress.Loopback } : new[] { IPAddress.Parse("10.9.9.9") });
+            var proxy = EgressProxy.StartAsync(["allowed.test"], Agent, null, new EgressTestHooks(Resolve: Resolve, AllowAnyPort: true),
+                new EgressOptions(PrivateHosts: ["allowed.test"])).GetAwaiter().GetResult();
+            try
+            {
+                for (var round = 0; round < 2; round++)
+                {
+                    using var origin = new Origin("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok");
+                    var response = Exchange(proxy.Port, $"GET http://allowed.test:{origin.Port}/ HTTP/1.1\r\n\r\n");
+                    Check.True(response.StartsWith("HTTP/1.1 200 ", StringComparison.Ordinal), "round " + round + ": " + response);
+                }
+                Check.Equal(1, lookups);
+                Check.Equal(1, proxy.PinnedHosts);
+            }
+            finally { proxy.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        });
+
+        suite.Add("egress proxy: Set-Cookie for a public suffix or a foreign domain is dropped, host and own-domain cookies pass", () =>
+        {
+            using var origin = new Origin("HTTP/1.1 200 OK\r\nSet-Cookie: a=1; Domain=test\r\nSet-Cookie: b=2; Domain=.allowed.test; Path=/\r\n" +
+                "Set-Cookie: c=3\r\nSet-Cookie: d=4; Domain=other.test\r\nContent-Length: 2\r\n\r\nok");
+            var proxy = LoopbackProxy();
+            try
+            {
+                var response = Exchange(proxy.Port, $"GET http://allowed.test:{origin.Port}/ HTTP/1.1\r\n\r\n");
+                Check.True(response.Contains("Set-Cookie: b=2", StringComparison.Ordinal) && response.Contains("Set-Cookie: c=3", StringComparison.Ordinal), response);
+                Check.True(!response.Contains("a=1", StringComparison.Ordinal) && !response.Contains("d=4", StringComparison.Ordinal), response);
+            }
+            finally { proxy.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+            Check.True(PublicSuffix.IsPublicSuffix("com") && PublicSuffix.IsPublicSuffix("co.uk") && PublicSuffix.IsPublicSuffix("github.io"));
+            Check.True(!PublicSuffix.IsPublicSuffix("example.co.uk") && !PublicSuffix.IsPublicSuffix("mangadex.org"));
+            Check.True(PublicSuffix.CookieDomainAllowed("www.example.co.uk", ".example.co.uk"));
+            Check.True(!PublicSuffix.CookieDomainAllowed("www.example.co.uk", ".co.uk"));
+            Check.True(!PublicSuffix.CookieDomainAllowed("user.github.io", "github.io"));
+            Check.True(PublicSuffix.CookieDomainAllowed("site.test", null));
         });
 
         suite.Add("isolated runner proof: exact evidence parses; weakened or foreign evidence is refused", () =>
@@ -154,6 +229,31 @@ public static class EgressProxyTests
             Check.True(IsolatedRunner.ParseProof("AUTOSOURCARR_SANDBOX_V2 " + Job + " " + Body, 42, 568, 7, Job, 40000) is null, "launcher proof accepted");
         });
     }
+
+    /// <summary>A minimal ClientHello in one TLS record, with a server_name extension when <paramref name="host"/> is set.</summary>
+    internal static byte[] ClientHello(string? host)
+    {
+        var extensions = new List<byte>();
+        if (host is not null)
+        {
+            var name = Encoding.ASCII.GetBytes(host);
+            var list = new List<byte> { 0 }; list.AddRange(U16(name.Length)); list.AddRange(name);
+            var data = new List<byte>(); data.AddRange(U16(list.Count)); data.AddRange(list);
+            extensions.AddRange(new byte[] { 0, 0 }); extensions.AddRange(U16(data.Count)); extensions.AddRange(data);
+        }
+        extensions.AddRange(new byte[] { 0, 0x0b, 0, 2, 1, 0 }); // ec_point_formats
+        var hello = new List<byte> { 3, 3 };
+        hello.AddRange(new byte[32]);
+        hello.Add(0);
+        hello.AddRange(new byte[] { 0, 2, 0x13, 0x01 });
+        hello.AddRange(new byte[] { 1, 0 });
+        hello.AddRange(U16(extensions.Count)); hello.AddRange(extensions);
+        var handshake = new List<byte> { 1, 0 }; handshake.AddRange(U16(hello.Count)); handshake.AddRange(hello);
+        var record = new List<byte> { 0x16, 3, 1 }; record.AddRange(U16(handshake.Count)); record.AddRange(handshake);
+        return [.. record];
+    }
+
+    private static byte[] U16(int value) => [(byte)(value >> 8), (byte)value];
 
     private static EgressProxy LoopbackProxy() =>
         EgressProxy.StartAsync(["allowed.test"], Agent, null, new EgressTestHooks(
@@ -222,7 +322,7 @@ public static class EgressProxyTests
                 if (read == 0) break;
                 received.Append(Encoding.Latin1.GetString(buffer, 0, read));
             }
-            stream.Write(Encoding.Latin1.GetBytes(reply));
+            try { stream.Write(Encoding.Latin1.GetBytes(reply)); } catch (IOException) { /* the proxy closed the tunnel */ }
             if (!rawEcho)
             {
                 // Ignore the request's Connection: close for a moment to prove the proxy closes anyway.

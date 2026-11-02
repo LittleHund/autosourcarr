@@ -174,6 +174,8 @@ internal sealed partial class ApplicationRuntime
             RepairColoredDisplayTitles = () => new JsonObject { ["changed"] = editionsLate!.RepairColoredDisplayTitles() },
             RepairLegacyColorMarkerProfiles = () => editionsLate!.RepairLegacyColorMarkerProfiles(),
             RepairLegacyColorFalseAttachments = ids => mixedLate!.RepairLegacyColorFalseAttachments(ids),
+            // Phase 13: _refresh_media_variants (manga/webtoon modes, automatic media splits, title labels).
+            RefreshMediaVariants = () => mixedLate!.RefreshMediaVariants(),
             // A reset's rebuild hints are replayed as a job (schedule_reset_hint_replay).
             ScheduleHintReplay = path => structure.ScheduleResetHintReplay(owner.Jobs, path, hintIngest) is not null,
             ClearCovers = catalogue.Covers.ClearAllAsync,

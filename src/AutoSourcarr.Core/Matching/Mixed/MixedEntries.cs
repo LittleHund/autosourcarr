@@ -326,6 +326,37 @@ public sealed class MixedEntries
         return new JsonObject { ["original_entry_id"] = result.OriginalEntryId, ["new_entry_id"] = result.NewEntryId, ["axis"] = axis, ["kept"] = proposal.KeepMode };
     }
 
+    /// <summary>
+    /// 0.4.5 _refresh_media_variants (one-time startup catalogue maintenance): recomputes every entry's manga/webtoon mode;
+    /// a "mixed" entry gets the automatic media split (<see cref="AutoSplit"/>: manual, locked and kept-together entries are
+    /// never split), every other entry has its "(manga)"/"(webtoon)" title labels synced. One entry failing does not stop
+    /// the run. Returns {changed: splits, checked: entries}.
+    /// </summary>
+    public JsonObject RefreshMediaVariants(CancellationToken cancellationToken = default)
+    {
+        if (_metadata is not { } metadata) return new JsonObject { ["changed"] = 0, ["checked"] = 0, ["skipped"] = "metadata unavailable" };
+        var ids = _database.Read(DatabaseFile.Catalog, c => c.QueryAs<long>("SELECT id FROM entries ORDER BY id"));
+        var changed = 0; var checkedEntries = 0;
+        foreach (var id in ids)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                var mode = _database.Write(DatabaseFile.Catalog, c => c.Scalar("SELECT 1 FROM entries WHERE id=$id", ("$id", id)) is null ? null : metadata.RecomputeMedia(c, id));
+                if (mode is null) continue;
+                checkedEntries++;
+                if (mode == "mixed" && AutoSplit(id, "media", cancellationToken) is not null) { changed++; continue; }
+                _database.Write(DatabaseFile.Catalog, c =>
+                {
+                    if (c.Scalar("SELECT 1 FROM entries WHERE id=$id", ("$id", id)) is not null) metadata.SyncRelatedMediaTitles(c, id, Stamp());
+                    return 0;
+                });
+            }
+            catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException or InvalidDataException) { _ = error; }
+        }
+        return new JsonObject { ["changed"] = changed, ["checked"] = checkedEntries };
+    }
+
     /// <summary>_repair_legacy_color_false_attachments: splits only records attached by the old bare-color-word bug
     /// (one coherent group per entry; manual/locked records are never moved).</summary>
     public JsonObject RepairLegacyColorFalseAttachments(IEnumerable<long> entryIds, CancellationToken cancellationToken = default)
