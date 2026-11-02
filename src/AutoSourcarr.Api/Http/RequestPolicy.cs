@@ -43,7 +43,9 @@ public static class RequestPolicy
             // Phase 7: connections live in config.json, not the catalogue; a test may wait up to 15 s on a remote service.
             "/api/v1/connections",
             // Phase 10 moved library, downloads, serving profiles and upgrades to /api/v1 (same admission as their /api/admin routes).
-            "/api/v1/library/", "/api/v1/profiles/", "/api/v1/downloads", "/api/v1/serving-upgrades/")
+            "/api/v1/library/", "/api/v1/profiles/", "/api/v1/downloads", "/api/v1/serving-upgrades/",
+            // Phase 12: backups and restore drain storage themselves (exclusive jobs); they must not hold catalogue admission.
+            "/api/v1/backups", "/api/v1/maintenance/old-files")
             || (path.StartsWith("/api/admin/candidates/", StringComparison.Ordinal) || path.StartsWith("/api/v1/candidates/", StringComparison.Ordinal))
                 && path.EndsWith("/quality", StringComparison.Ordinal)
             || (path.StartsWith("/api/admin/tasks/", StringComparison.Ordinal) || path.StartsWith("/api/v1/tasks/", StringComparison.Ordinal)) && path.EndsWith("/retry-safe", StringComparison.Ordinal));

@@ -375,6 +375,279 @@
         }
       }
     },
+    "/api/v1/backups": {
+      "get": {
+        "operationId": "listBackups",
+        "summary": "Saved backups (manual, automatic before an update, pre-restore), newest first; the update notice of SET-9 while it is not dismissed.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createBackup",
+        "summary": "Create a backup as a job (body {passphrase?}: 12 to 1024 characters protects it with AES-GCM; never stored). Answers 202 with the task id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/backups/restore/apply": {
+      "post": {
+        "operationId": "applyBackupRestore",
+        "summary": "Restore a previewed backup as an exclusive job (body {stage_id, preview_token, confirm: true}): background work stops, a pre-restore backup is kept, both databases are swapped and checked, older schemas upgraded, settings merged (this instance\u0027s secrets kept); any failure rolls back. Answers 202 with the task id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/backups/restore/preview": {
+      "post": {
+        "operationId": "previewBackupRestore",
+        "summary": "Check a backup and show what a restore would change: upload the file as the body (optional header X-Backup-Passphrase, base64), or send {backup_id, passphrase?} for a saved one. Refuses damaged, tampered, wrong-passphrase and newer-format files (\u0022Version mismatch: version X required\u0022). Answers stage_id and preview_token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            },
+            "application/octet-stream": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/backups/update-notice/dismiss": {
+      "post": {
+        "operationId": "dismissBackupUpdateNotice",
+        "summary": "\u0022Keep current\u0022: hide the notice of the last update or rollback (SET-9); the automatic backup stays in the list.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/backups/{backupId}": {
+      "delete": {
+        "operationId": "deleteBackup",
+        "summary": "Delete one saved backup file.",
+        "parameters": [
+          {
+            "name": "backupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/backups/{backupId}/download": {
+      "get": {
+        "operationId": "downloadBackup",
+        "summary": "Download one backup file (.ascbackup).",
+        "parameters": [
+          {
+            "name": "backupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/candidates/{candidateId}/quality": {
       "post": {
         "operationId": "sampleCandidateQuality",
@@ -5481,6 +5754,66 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/maintenance/old-files": {
+      "get": {
+        "operationId": "previewOldFileCleanup",
+        "summary": "SET-3: old files the app itself left (old reports, orphaned bytecode, abandoned temporary files) and the preview_token to move them to the trash.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      },
+      "post": {
+        "operationId": "applyOldFileCleanup",
+        "summary": "Move the previewed old files to trash/\u003Cdate\u003E under the data folder (body {confirm: true, preview_token}); nothing is deleted.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
                 }
               }
             }

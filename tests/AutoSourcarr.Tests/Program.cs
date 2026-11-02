@@ -158,6 +158,8 @@ AutoSourcarr.Tests.ReaderExtension.ReaderExtensionTests.Register(suite);
 AutoSourcarr.Tests.ReaderExtension.ReaderExtensionSourceHostTests.Register(suite);
 AutoSourcarr.Tests.Matching.Phase10WiringTests.Register(suite);
 Phase11WiringTests.Register(suite);
+// Phase 12 "Backup and rollback" (SET-3, SET-4, SET-6, SET-8, SET-9).
+AutoSourcarr.Tests.Backup.BackupTests.Register(suite);
 SourceResultTrackerTests.Register(suite);
 PageFirstTests.Register(suite);
 LiveTopicTests.Register(suite);

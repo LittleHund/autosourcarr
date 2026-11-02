@@ -44,7 +44,7 @@ def build():
     problems = []
     if data['extension_api']['version'] != lib_version():
         problems.append(f"extension_api.version {data['extension_api']['version']} != libVersion {lib_version()}")
-    for name in ('share_format', 'profile_format'):
+    for name in ('share_format', 'profile_format', 'backup_format'):
         section = data[name]
         if section['version'] not in {row['version'] for row in section['readers']}:
             problems.append(f'{name}.version has no reader row')
@@ -60,6 +60,8 @@ def build():
         'extension_api': {'version': data['extension_api']['version']},
         'profile_format': {'version': data['profile_format']['version'],
                            'readers': [{'version': r['version'], 'app_version': r['app_version']} for r in data['profile_format']['readers']]},
+        'backup_format': {'version': data['backup_format']['version'],
+                          'readers': [{'version': r['version'], 'app_version': r['app_version']} for r in data['backup_format']['readers']]},
     }
     return result, problems
 

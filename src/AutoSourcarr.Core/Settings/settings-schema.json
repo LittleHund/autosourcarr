@@ -45,19 +45,11 @@
       "group": "Security",
       "compose": "allowed"
     },
-    "REPAIR_AI_BROWSER_URL": {
-      "group": "Security",
-      "compose": "allowed"
-    },
     "SUWAYOMI_BROWSER_URL": {
       "group": "Security",
       "compose": "allowed"
     },
     "KOMGA_BROWSER_URL": {
-      "group": "Security",
-      "compose": "allowed"
-    },
-    "KOMF_BROWSER_URL": {
       "group": "Security",
       "compose": "allowed"
     },

@@ -38,6 +38,13 @@ internal sealed partial class ApplicationRuntime
     /// </summary>
     private void ScheduleStartupWork()
     {
+        // SET-3: the first start of a new version moves the app's own old files to the trash (0.4.x did this after setup).
+        if (_upgrade?.Status == "updated")
+            After(TimeSpan.FromSeconds(30), () => _ = Task.Run(() =>
+            {
+                try { OldFiles()?.RunAutomatic("update"); }
+                catch (Exception error) when (error is not OutOfMemoryException) { Logs.Record("Cleanup", "Old-file cleanup after the update failed (" + error.GetType().Name + ")."); }
+            }));
         if (_startup is not { } work) return;
         var settings = Settings;
         if (work.Structure.PendingEntryOriginCount() > 0)

@@ -201,6 +201,8 @@ public sealed class ApiV1Services
     public UiPreferencesV1Services? UiPreferences { get; init; }
     /// <summary>Phase 11 Status page internal services (the app's own parts); null answers 503.</summary>
     public Func<JsonObject>? InternalServices { get; init; }
+    /// <summary>Phase 12 backups, restore, update rollback (SET-8/9) and old-file removal (SET-3); null answers 503.</summary>
+    public BackupV1Services? Backups { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -288,7 +290,7 @@ public sealed class ApiV1Services
             }
             fields.Add(field);
         }
-        return new(state?.Completed == true, revision, fields, null, state?.RestartRequired == true,
+        return new(state?.Completed == true, revision, fields, state?.Completed == true ? Backups?.Cleanup?.Last() : null, state?.RestartRequired == true,
             Settings().AppServicesMode == "integrated", CanRestart, Reader(effective));
     }
 
@@ -452,6 +454,9 @@ public static class ApiV1Endpoints
                     if (changes.Keys.Any(key => !SetupFields.ByKey.ContainsKey(key)))
                         throw new SettingsValidationException("Setup contains an unsupported setting.");
                     var result = services.Editor.Save(changes, body.Revision, body.Transaction);
+                    // SET-3: the 0.4.x cleanup_after_setup; the app's own old files move to the trash (never blocks setup).
+                    if (services.Backups?.Cleanup is { } cleanup)
+                        _ = Task.Run(() => { try { cleanup.RunAutomatic("setup"); } catch (Exception error) when (error is not OutOfMemoryException) { _ = error; } });
                     return Results.Json(new SetupFinishResponse(true, result.ChangedKeys, result.RestartRequired, body.Transaction,
                         services.Reader(services.Editor.Effective()), services.CanRestart, Changes(result)), json.SetupFinishResponse);
                 });
@@ -592,6 +597,8 @@ public static class ApiV1Endpoints
         // Phase 11 "Web UI finish".
         UiPreferencesV1Endpoints.Map(group, services, json, services.UiPreferences);
         InternalServicesV1Endpoints.Map(group, json, services.InternalServices);
+        // Phase 12 "Backup and rollback".
+        BackupV1Endpoints.Map(group, services, json, services.Backups);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),
