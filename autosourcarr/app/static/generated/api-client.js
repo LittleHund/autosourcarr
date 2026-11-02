@@ -916,6 +916,13 @@
        */
       getInstalledSourceExtensions(options) { return call('GET', '/api/v1/source-maintenance/installed', undefined, options); },
       /**
+       * Status page: the app's own services (source host, WebView, challenge handling, repair runner and egress proxy, translation, metadata providers, main Suwayomi, reader extension) as {mode, actions, services: {name: {label, state, message}}, reader_build}; read from cached state, never waits on the network.
+       * GET /api/v1/internal-services
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getInternalServices(options) { return call('GET', '/api/v1/internal-services', undefined, options); },
+      /**
        * Job queue: workers, running and queued jobs with ETA, and per-type run limit, average time, failures and freezes.
        * GET /api/v1/jobs
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1263,6 +1270,13 @@
        * @returns {Promise<JsonObject>}
        */
       getTasks(options) { return call('GET', '/api/v1/tasks', undefined, options); },
+      /**
+       * Your UI preferences (layout, sorting, columns, theme) and whose profile they are: the signed-in account, else the proxy identity.
+       * GET /api/v1/ui-preferences
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getUiPreferences(options) { return call('GET', '/api/v1/ui-preferences', undefined, options); },
       /**
        * What the last update changed in your settings, until dismissed.
        * GET /api/v1/settings/update-notice
@@ -2031,6 +2045,14 @@
        * @returns {Promise<JsonObject>}
        */
       saveTagSynonyms(body, options) { return call('PUT', '/api/v1/tag-synonyms', body, options); },
+      /**
+       * Merge changed UI preferences into your profile (body: values {name: value}); at most 64 KiB per profile.
+       * PUT /api/v1/ui-preferences
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveUiPreferences(body, options) { return call('PUT', '/api/v1/ui-preferences', body, options); },
       /**
        * Manual search: {query, source_id?, page?, all_names?}. With source_id, search that source live with the typed query and (all_names, default true) the entry's names; results are ranked by the matching scorer against the entry and show their current owner. Without source_id, search the catalogue.
        * POST /api/v1/entries/{entryId}/manual-search

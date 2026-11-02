@@ -21,6 +21,7 @@ public static class CoverCacheTests
         suite.Add("cover cache: failure cooldown expires and owned write/clear changes presence immediately", () => Cooldown().GetAwaiter().GetResult());
         suite.Add("cover cache: oversized/corrupt/special cache files never become image responses", UnsafeFiles);
         suite.Add("cover cache: presence/LRU bounds and reset preserve unrelated files", Bounds);
+        suite.Add("cover cache: PERF-4 size limit removes the least recently used covers first and keeps the new one", SizeLimit);
     }
     private static readonly CoverData Image = new(Encoding.ASCII.GetBytes("synthetic-cover"), "image/png");
     private static JsonObject Data() => JsonNode.Parse(File.ReadAllText(ConfigurationTests.Fixture("cover-cache.json")))!.AsObject();
@@ -144,6 +145,36 @@ public static class CoverCacheTests
         var lru = new BoundedLruCache<string, int>(2); lru.Set("a", 1); lru.Set("b", 2); Check.True(lru.TryGet("a", out _)); lru.Set("c", 3);
         Check.True(!lru.TryGet("b", out _)); Check.Equal(2, lru.Count); Check.True(lru.Remove("a")); Check.True(!lru.Remove("absent")); lru.Clear(); Check.Equal(0, lru.Count);
     }
+    private static void SizeLimit()
+    {
+        using var temp = new Sandbox(); var io = new BoundedWorkScheduler(2, 32); var now = DateTimeOffset.UtcNow; var limit = 1;
+        var clock = new MovingClock { Now = now };
+        var cache = new CoverCache(temp.Path, () => new AutoSourcarrSettings { CoverFetchConcurrency = 1, CoverCacheTtlSeconds = 86400, CoverCacheMaxMb = limit }, io, clock: clock);
+        var root = Path.Combine(temp.Path, "cover-cache");
+        try
+        {
+            CoverData Cover(byte fill) => new(Enumerable.Repeat(fill, 300 * 1024).ToArray(), "image/jpeg");
+            void Used(string key, TimeSpan ago) => File.SetLastWriteTimeUtc(Path.Combine(root, key + ".json"), (now - ago).UtcDateTime);
+            cache.Write("a", Cover(1)); cache.Write("b", Cover(2)); cache.Write("c", Cover(3));
+            Check.Equal(0, cache.Evicted);
+            Used("a", TimeSpan.FromHours(3)); Used("b", TimeSpan.FromHours(2)); Used("c", TimeSpan.FromHours(1));
+            // Reading "a" makes it the most recently used; "b" is now the oldest.
+            Check.True(cache.Read("a") is not null);
+            Check.True(File.GetLastWriteTimeUtc(Path.Combine(root, "a.json")) > (now - TimeSpan.FromMinutes(1)).UtcDateTime, "a read marks the cover used");
+            cache.Write("d", Cover(4));
+            Check.Equal(1, cache.Evicted);
+            Check.True(!File.Exists(Path.Combine(root, "b.img")) && !File.Exists(Path.Combine(root, "b.json")), "the least recently used cover is removed");
+            foreach (var kept in new[] { "a", "c", "d" }) Check.True(cache.Read(kept) is not null, kept + " stays");
+            Check.True(Directory.EnumerateFiles(root, "*.img").Sum(file => new FileInfo(file).Length) <= 1024 * 1024 / 10 * 9, "trimmed to 90 % of the limit");
+            // A single cover larger than the limit stays (the one just written is never removed); the others go.
+            limit = 0; cache.Write("e", Cover(5)); Check.Equal(1, cache.Evicted);
+            limit = 1; cache.Write("big", new CoverData(Enumerable.Repeat((byte)9, 1200 * 1024).ToArray(), "image/jpeg"));
+            Check.True(cache.Read("big") is not null, "the new cover is kept even above the limit");
+            Check.Equal(0, Directory.EnumerateFiles(root, "*.img").Count(file => Path.GetFileName(file) != "big.img"));
+        }
+        finally { cache.DisposeAsync().AsTask().GetAwaiter().GetResult(); io.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+    }
+    private sealed class MovingClock : TimeProvider { public DateTimeOffset Now; public override DateTimeOffset GetUtcNow() => Now; }
     private sealed class FixedClock(double unix) : TimeProvider
     { public override DateTimeOffset GetUtcNow() => DateTimeOffset.FromUnixTimeMilliseconds(checked((long)(unix * 1000))); }
     private sealed class Fixture : IDisposable

@@ -289,6 +289,9 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("cover_cache_ttl_seconds")]
     public int CoverCacheTtlSeconds { get; init; } = 604800;
 
+    [System.Text.Json.Serialization.JsonPropertyName("cover_cache_max_mb")]
+    public int CoverCacheMaxMb { get; init; } = 2048;
+
     [System.Text.Json.Serialization.JsonPropertyName("cover_fetch_concurrency")]
     public int CoverFetchConcurrency { get; init; } = 4;
 
@@ -580,6 +583,7 @@ public sealed partial record AutoSourcarrSettings
         new("COVER_FETCH_TIMEOUT", nameof(CoverFetchTimeout), SettingKind.Number, false, []),
         new("COVER_INLINE_WAIT", nameof(CoverInlineWait), SettingKind.Number, false, []),
         new("COVER_CACHE_TTL_SECONDS", nameof(CoverCacheTtlSeconds), SettingKind.Integer, false, []),
+        new("COVER_CACHE_MAX_MB", nameof(CoverCacheMaxMb), SettingKind.Integer, false, []),
         new("COVER_FETCH_CONCURRENCY", nameof(CoverFetchConcurrency), SettingKind.Integer, false, []),
         new("METADATA_ENRICHMENT_ENTRIES_PER_FEED", nameof(MetadataEnrichmentEntriesPerFeed), SettingKind.Integer, false, []),
         new("METADATA_ENRICHMENT_CONCURRENCY", nameof(MetadataEnrichmentConcurrency), SettingKind.Integer, false, []),
