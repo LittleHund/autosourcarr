@@ -213,6 +213,26 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | Done when | CI probe b772773: a downloaded two-chapter series opens in Kavita 0.8.9 (1 series, 2 chapters) and passes check-cbz-library.py; the built reader extension JAR, loaded in the source host, reads two AutoSourcarr servers with separate device keys. Not run: Mihon on a phone (local source and the APK) |
 | Audit fixes (fresh-agent audit) | 13 findings: 8 fixed (library on merge/reset, UI APK/JAR downloads, gallery policy during a pass, local deferral as failure, tie-break floor, duplicates filter, slot id quotes, translation bounds/health text); 5 kept as limitations (image build of the reader extension → phase 13; download lane keyed by the enqueue-time source; restore re-activates like 0.4.5; no symlink check under the image-owned repo root; synchronous refresh-metadata/discover-additional bypass Tasks) |
 
+### Phase 11 (Web UI finish), ticked 2026-11-02
+
+| Row | Result |
+| --- | --- |
+| StaticEndpoints `/` | exists; the minified bundle (`scripts/bundle-ui.mjs`, `dist/`) is built in CI and served by the image from phase 13 |
+| UiPreferencesEndpoints (2 routes) | done: `GET/PUT /api/v1/ui-preferences` (per account; owner inherits `local:default`; external sign-ins keep `authelia:<name>`) |
+| `/api/admin/services` (internal services panel) | done: `GET /api/v1/internal-services` (0.5.0 status page from runtime state; no build/start actions: the reader extension is prebuilt) |
+| Theme module (UI-3) | done: `theme.js` palette table, 6 accents × dark/light, device default, AA contrast test (`ui_v050_theme_contrast.js`) and a computed-style sample in Playwright |
+| Responsive / touch (UI-1, UI-14) | done: `responsive.css`; Playwright phone/tablet/desktop × 12 themes |
+| Live UI (UI-13, PERF-8) | done: `live-events.js` on `/api/v1/events`; topics catalogue, library, orphans, sources, duplicates, imports, repairs, source-health published by the server |
+| UI-6 refresh restore | done for page, sub-tabs, filters, open entry, library page chain, matrix rows loaded; not restored: the Manage-work dialog tabs and scroll inside an open inspector |
+| Wizard (SET-1, SET-2) | done: required then optional steps, skip, draft kept on Cancel (no secrets), Finish writes only changes |
+| PERF-4 cover cache limit | done: `COVER_CACHE_MAX_MB`, LRU eviction to 90 % |
+| PERF-5 page-first lists | done: catalogue entries and unfiltered matrix keyset on id; download history keyset; library pages after the first reuse the total |
+| PERF-9 diagnostics download | done (phase 3) + path labels, cookie and signing-key scrubbing, leak test |
+| Carried: hard rule 6 "Fixed" | done: `RepairConfirmations` (task + jar sha256, survives restart), shown in Tasks → Repairs and Sources → Health |
+| Carried: split atomicity | done: split, decision-log rows and not-duplicate reviews in one transaction |
+| Carried: `CatalogueDiscovery.SourceResult` | done: `SourceResultTracker` (0.4.5 `_record_source_result`); local timeouts, deferrals, engine restarts never count |
+| Audit fixes (fresh-agent audit) | 15 findings: 12 fixed (Playwright per-account themes, matrix `discovery_outcomes` array, engine restarts as local, keyset on id, split review atomicity, ui_v090/092, CSS contrast sample, dead `/api/admin` action, repair verdict in health, select focus vs live refresh, long cursors, tag event ids); 3 recorded (bundle runs as one script, setup draft per browser, event key field fixed per topic) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
