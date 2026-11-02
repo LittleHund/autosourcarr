@@ -141,7 +141,7 @@ internal sealed partial class ApplicationRuntime
                 await handle.Completion.WaitAsync(stop).ConfigureAwait(false);
                 if (crawler.StoppedByUser) return;
                 do await Task.Delay(TimeSpan.FromSeconds(5), stop).ConfigureAwait(false);
-                while (Jobs.Paused);
+                while (Jobs.Paused || Jobs.ExclusivePending);
                 ScheduleCrawler(crawler);
             }
             catch (Exception error) when (error is OperationCanceledException or ObjectDisposedException) { }

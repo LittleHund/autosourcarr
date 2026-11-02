@@ -66,6 +66,8 @@ public sealed class ContinuousCatalogueCrawler
     {
         ArgumentNullException.ThrowIfNull(jobs);
         if (!_settings().ContinuousCatalogDiscovery) return null;
+        // An endless job must not hold back exclusive work (backup, reset): its run ends when one is waiting.
+        _release ??= () => jobs.ExclusivePending;
         return jobs.Enqueue(Job, "catalogue", RunAsync, origin: origin);
     }
 
@@ -80,21 +82,27 @@ public sealed class ContinuousCatalogueCrawler
     /// <summary>A person cancelled the crawler in Tasks: it is not started again until the next app start.</summary>
     public bool StoppedByUser { get; private set; }
 
+    private Func<bool>? _release;
+    /// <summary>When true the current run ends (completed) at its next check; the owner starts it again later.</summary>
+    public Func<bool>? Release { get => _release; init => _release = value; }
+
     private async Task RunPassesAsync(JobContext job)
     {
         var token = job.CancellationToken;
         job.Report(message: "Waiting for the source engine to settle");
-        await WaitAsync(job, TimeSpan.FromSeconds(Math.Max(2.0, _settings().StartupRefreshDelaySeconds)), token).ConfigureAwait(false);
+        if (!await WaitAsync(job, TimeSpan.FromSeconds(Math.Max(2.0, _settings().StartupRefreshDelaySeconds)), token).ConfigureAwait(false))
+        { job.Result("Paused for exclusive work"); return; }
         long passes = 0, items = 0, added = 0;
         while (!token.IsCancellationRequested)
         {
             if (!_settings().ContinuousCatalogDiscovery) { job.Result("Switched off (CONTINUOUS_CATALOG_DISCOVERY)"); return; }
+            if (_release?.Invoke() == true) { job.Result("Paused for exclusive work after " + passes.ToString(CultureInfo.InvariantCulture) + " passes"); return; }
             var step = await StepAsync(token).ConfigureAwait(false);
             passes++; items += step.Items; added += step.NewItems;
             job.Report(message: Describe(step) + " · " + added.ToString(CultureInfo.InvariantCulture) + " new records so far");
             job.Result(passes.ToString(CultureInfo.InvariantCulture) + " passes, " + items.ToString(CultureInfo.InvariantCulture) + " records read, "
                 + added.ToString(CultureInfo.InvariantCulture) + " new");
-            await WaitAsync(job, step.Delay, token).ConfigureAwait(false);
+            if (!await WaitAsync(job, step.Delay, token).ConfigureAwait(false)) { job.Result("Paused for exclusive work after " + passes.ToString(CultureInfo.InvariantCulture) + " passes"); return; }
         }
         token.ThrowIfCancellationRequested();
     }
@@ -249,16 +257,18 @@ public sealed class ContinuousCatalogueCrawler
         _ => step.Outcome,
     };
 
-    /// <summary>Waits in short slices with heartbeats, so long intervals never look frozen to the watchdog.</summary>
-    private static async Task WaitAsync(JobContext job, TimeSpan delay, CancellationToken token)
+    /// <summary>Waits in one-second slices with heartbeats (long intervals never look frozen); false when the run must end for exclusive work.</summary>
+    private async Task<bool> WaitAsync(JobContext job, TimeSpan delay, CancellationToken token)
     {
         var remaining = delay;
         while (remaining > TimeSpan.Zero)
         {
-            var slice = remaining < TimeSpan.FromSeconds(30) ? remaining : TimeSpan.FromSeconds(30);
+            if (_release?.Invoke() == true) return false;
+            var slice = remaining < TimeSpan.FromSeconds(1) ? remaining : TimeSpan.FromSeconds(1);
             await Task.Delay(slice, token).ConfigureAwait(false);
             job.Heartbeat();
             remaining -= slice;
         }
+        return _release?.Invoke() != true;
     }
 }

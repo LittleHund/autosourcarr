@@ -267,7 +267,11 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 // Built for every launch: a restarted host gets the saved browser identity and repositories.
                 var process = new SourceHostProcess(java, jar, Path.Combine(owner._dataDirectory!, "source-host"), 4567,
                     () => SourceHostEnvironment(owner.Settings, launch, environment, owner.EnabledSolvers()),
-                    line => owner.Logs.Record("Source host", line));
+                    line => owner.Logs.Record("Source host", line))
+                {
+                    // Phase 13 (SRC-5): Landlock sandbox launcher, optional low-rights user (AUTOSOURCARR_SOURCE_HOST_*).
+                    Sandbox = SourceHostSandboxOptions.FromEnvironment(environment),
+                };
                 owner._hostProcess = process;
                 owner._webView = new AutoSourcarr.Core.Sources.WebView.SourceWebViewBroker(() => process.Running
                     ? new AutoSourcarr.Core.Sources.WebView.SourceHostEndpoint(new Uri(process.BaseUrl), process.Token) : null);
@@ -331,7 +335,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._health = new SourceHealthCoordinator(healthStore, owner._source.Client, owner.Io, owner.Lanes,
                 owner.Tasks, new RepairConfirmationObservations(repairConfirmations, domainRepair), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
                 onWorking: package => domainRepair.QueueKeepLastWorking(package, error => owner.Errors.Record("Source repair",
-                    "Keeping the last working jar of " + package + " failed: " + error.Message, "source-last-working|" + error.GetType().Name)));
+                    "Keeping the last working jar of " + package + " failed: " + error.Message, "source-last-working|" + error.GetType().Name)))
+            { Jobs = owner.Jobs };
             if (useHost)
             {
                 owner._autoRepair = AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher.Create(maintenanceRoot, maintenance, healthStore, orphans, domainRepair,
@@ -374,7 +379,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     owner._raws = new AutoSourcarr.Core.Repair.SourceRawService(
                         () => new AutoSourcarr.Core.Repair.SourceRawCatalog(rawShared, rawPrivate, rawRequests, repositories, owner._publicFetcher!),
                         owner._rawInstalled, owner._admin, ConfiguredIndexes, () => new JsonArray(),
-                        owner.Io, owner.Lanes, owner.Tasks, owner.Privacy, message => owner.Logs.Record("Source code", message), repairHistory);
+                        owner.Io, owner.Lanes, owner.Tasks, owner.Privacy, message => owner.Logs.Record("Source code", message), repairHistory) { Jobs = owner.Jobs };
                     owner._baselines = new AutoSourcarr.Core.Sources.Inventory.SourceBaselineStore(owner._rawInstalled, maintenanceRoot, owner.Io);
                     rawRoutes = new SourceRawRoutes
                     {
@@ -400,7 +405,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 galleryEvidence: sharingGallery.CatalogueAdapter, structure: owner.Catalogue.Structure, invalidate: () => owner._duplicates?.Invalidate())
             { Log = matching.Decisions };
             var identities = new AutoSourcarr.Core.Catalogue.Sharing.PortableIdentityResolver(owner.Database);
-            var catalogueReviews = new AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks(sharingExchange, owner.Tasks, owner.Lanes, owner.Io);
+            var catalogueReviews = new AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks(sharingExchange, owner.Tasks, owner.Lanes, owner.Io) { Jobs = owner.Jobs };
             owner._catalogueReviews = catalogueReviews;
             var readerExtension = OpenReaderExtension(owner, environment);
             var libraryManager = owner._libraryManager!;
@@ -777,6 +782,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             ["captured_at"] = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
             ["instance_id"] = Identity.InstanceId,
             ["source_host"] = source,
+            // SRC-5 / phase 13: what the source host and its WebView run under (Landlock sandbox, user); never blocks sources.
+            ["source_sandbox"] = _hostProcess?.SandboxState.Json(),
+            ["repair_isolation"] = _repairIsolation?.Probe().Json(),
             ["main_suwayomi"] = MainSuwayomiHealth(settings),
             ["translation"] = _translationHealth?.Snapshot(_healthStop.Token)
                 ?? NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "10"),

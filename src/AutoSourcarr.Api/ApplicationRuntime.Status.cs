@@ -19,6 +19,7 @@ internal sealed partial class ApplicationRuntime
         var services = new JsonObject
         {
             ["source_host"] = SourceHostService(),
+            ["source_sandbox"] = SourceSandboxService(),
             ["webview"] = WebViewService(),
             ["solver"] = SolverService(),
             ["repair"] = RepairService(integrated),
@@ -55,6 +56,14 @@ internal sealed partial class ApplicationRuntime
             ? Service("Source host", "running", "The built-in source host (extension sources) is running." + restarts)
             : Service("Source host", _hostProcess.Running ? "starting" : "degraded",
                 (_hostProcess.Running ? "The source host is starting" : "The source host is not running; it is restarted automatically") + Error(status.Error) + "." + restarts);
+    }
+
+    /// <summary>SRC-5: the source host (and its WebView) in the Landlock sandbox, or "degraded" when it runs without one.</summary>
+    private JsonObject SourceSandboxService()
+    {
+        if (_hostProcess is not { } host) return Service("Source host sandbox", "unavailable", "The sandbox applies to the built-in source host (integrated mode only).");
+        var state = host.SandboxState;
+        return Service("Source host sandbox", state.State switch { "sandboxed" => "ready", "unsandboxed" => "degraded", _ => "idle" }, state.Message());
     }
 
     private string Error(string? error) => string.IsNullOrWhiteSpace(error) ? "" : " (" + Privacy.Text(error) + ")";

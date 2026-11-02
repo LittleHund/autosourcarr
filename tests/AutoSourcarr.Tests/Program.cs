@@ -11,6 +11,8 @@ if (args.Length == 2 && args[0] == "--raster-scratch-reject-probe") return Raste
 // Phase 8 matching tools: score labelled title pairs (8A) and run a duplicate test set through the automatic gate (8C).
 if (args is ["--score-pairs", var pairFile]) return AutoSourcarr.Tests.Matching.PairScoringTool.Run(pairFile, Console.Out);
 if (args.Length == 2 && args[0] == "--duplicate-test-set") return AutoSourcarr.Tests.Matching.DuplicateTestSet.Run(args[1], Console.Out);
+// Phase 13 PIPE-8 / PERF-2: large-library page load and job queue under load (--gate fails over budget).
+if (args.Length >= 1 && args[0] == "--benchmark") return AutoSourcarr.Tests.Benchmarks.PerformanceBenchmark.Run(args[1..], Console.Out);
 
 var filters = new List<string>();
 for (var index = 0; index < args.Length; index += 2)
@@ -30,9 +32,11 @@ StorageTests.Register(suite);
 AutoSourcarr.Tests.Jobs.JobQueueTests.Register(suite);
 AutoSourcarr.Tests.Jobs.EventStreamTests.Register(suite);
 AutoSourcarr.Tests.Jobs.DueSchedulerTests.Register(suite);
+AutoSourcarr.Tests.Jobs.JobResourceTests.Register(suite);
 AutoSourcarr.Tests.Jobs.LiveEventsHttpTests.Register(suite);
 AutoSourcarr.Tests.Sources.SourceHostIntegrationTests.Register(suite);
 AutoSourcarr.Tests.Sources.SourceBrowserPreferencesTests.Register(suite);
+AutoSourcarr.Tests.Sources.SourceHostSandboxTests.Register(suite);
 AutoSourcarr.Tests.Api.SourceRuntimeApiTests.Register(suite);
 AutoSourcarr.Tests.Api.AccessControlTests.Register(suite);
 AutoSourcarr.Tests.Repair.ApkInspectionTests.Register(suite);
