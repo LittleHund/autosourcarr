@@ -81,6 +81,12 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Translation.TranslationClient? _translator;
     private AutoSourcarr.Core.Translation.TranslationHealthCheck? _translationHealth;
     private string? _dataDirectory;
+    /// <summary>Phase 12: the backup store, the start-time update check (SET-9) and the app folder for SET-3 cleanup.</summary>
+    private AutoSourcarr.Core.Backup.InstanceBackupStore? _backups;
+    private AutoSourcarr.Core.Backup.UpgradeOutcome? _upgrade;
+    private readonly List<string> _upgradeLog = [];
+    private string? _appRoot;
+    internal AutoSourcarr.Core.Backup.UpgradeOutcome? Upgrade => _upgrade;
     private SuwayomiClient? _main;
     private SourceEngineCapabilityContract? _mainCapabilities;
     private PhysicalFileProvider? _static;
@@ -203,7 +209,11 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner.Privacy.RegisterPath("data", data); owner.Privacy.RegisterPath("config", startup.ConfigurationRoot);
                 owner.Privacy.RegisterPath("database", paths.Directory); owner.Privacy.RegisterPath("library", startup.Settings.LibraryDir);
                 owner._database = new(startup.Settings);
-                new SchemaMigrator(owner.Database).Initialize();
+                // SET-9: an automatic backup before every update or migration; a failed migration or post-update
+                // check puts both databases back from it and the app starts paused with a notice.
+                owner._backups = new AutoSourcarr.Core.Backup.InstanceBackupStore(data, startup.ConfigurationRoot, owner.Database, Version);
+                owner._upgrade = AutoSourcarr.Core.Backup.UpgradeGuard.Run(owner._backups, owner.Database,
+                    () => new SchemaMigrator(owner.Database).Initialize(), message => owner._upgradeLog.Add(message));
                 owner._preferences = new(owner.Database);
                 owner._logs = new(owner._logIo, owner.Identity, owner.Privacy, data);
                 return 0;
@@ -257,6 +267,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             // Task history survives restarts (0.4.x task_journal): finished tasks are reloaded, interrupted ones are marked.
             owner._journal = new TaskJournal(owner.Database, owner.Tasks, owner.Io, owner.Privacy);
             await owner._journal.StartAsync(cancellationToken).ConfigureAwait(false);
+            owner.RecordUpgrade();
             owner._attention = new(owner.Database, owner.Io, privacy: owner.Privacy);
             owner._source.Client.Attention = owner._attention;
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
@@ -399,6 +410,13 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 CatalogueViews = matching.Reading.CatalogueViews, Tags = matching.Reading.Tags, ReaderExtension = readerExtension,
                 UiPreferences = new UiPreferencesV1Services { Preferences = owner.Preferences, Io = owner.Io },
                 InternalServices = owner.InternalServices,
+                Backups = new BackupV1Services
+                {
+                    Store = owner._backups!,
+                    SharePage = after => sharingExchange.Export(after, 5000),
+                    Cleanup = owner.OldFiles(),
+                    Invalidate = () => owner._duplicates?.Invalidate(),
+                },
                 // An interrupted library monitoring pass re-runs its read-only observation (0.4.x library-monitor safe replay).
                 SafeRetries = new Dictionary<string, Func<TaskRecord, CancellationToken, Task<JsonObject>>>(StringComparer.Ordinal)
                 {
@@ -483,7 +501,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._sourceStateWatch = owner.WatchSourceStateAsync();
             await owner._source.StartAsync().ConfigureAwait(false);
             if (owner._raws is not null) await owner._raws.StartAsync(cancellationToken).ConfigureAwait(false);
-            owner.ScheduleStartupWork();
+            // Safe state after an automatic rollback: no startup maintenance, upgrades or crawls run on the rolled-back data
+            // until the admin acts in System → Backups (the job queue stays open so the one-click rollback can run).
+            if (owner._upgrade?.RolledBack != true) owner.ScheduleStartupWork();
             cancellationToken.ThrowIfCancellationRequested();
             return owner;
         }
@@ -503,6 +523,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         if (_configured || Stopping) throw new InvalidOperationException("The application HTTP lifetime cannot be configured again.");
         _configured = true;
         _static = new(Path.GetFullPath(staticRoot));
+        _appRoot = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(_static.Root));
         app.Use(next => context => OwnRequestAsync(context, next));
         app.UseAutoSourcarrHttp(Version, () => Settings, RecordUnexpected, Admission, Lanes, Tasks, Privacy,
             prefix => Errors.ResolvePrefix(prefix), _access);

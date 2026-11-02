@@ -112,39 +112,72 @@
     }
     status(`${queue.queue.length} queued chapters · ${queue.state==='STARTED'?'Downloader running':'Downloader paused'}`);
   }
+  // Phase 12 (SET-8/SET-9): backups live on /api/v1 through the generated client; only the file upload and the
+  // file download use api() directly, because the generated client sends JSON bodies and parses JSON answers.
+  const v1=()=>(window.AutoSourcarrApi||globalThis.AutoSourcarrApi).createClient({request:(path,options)=>api(path,options)});
+  const when=value=>value?new Date(value).toLocaleString():'unknown time';
+  const kindLabel=kind=>({manual:'Manual',automatic:'Automatic (before update)','pre-restore':'Before a restore'}[kind]||kind);
   async function openBackups(){
-    if(!show('Instance backup & restore'))return;
-    body.innerHTML='<p>Back up both app databases, saved decisions, settings, signing identity and retained instance state. Downloads, logs and replaceable runtime/cache directories are excluded.</p><p class="muted">Creating a consistent snapshot briefly pauses and drains automatic work. Finish manual tasks first. Encrypted exports require this passphrase to restore; the app does not save it. Limits: 128 MiB encrypted archive, 512 MiB selected state.</p><label>Backup passphrase<input id="riBackupPassword" type="password" autocomplete="new-password" minlength="12"/></label><div id="riBackupCreate" class="riToolActions"></div><h3>Saved backups</h3><div id="riBackupList"></div><h3>Verify a restore</h3><label>Encrypted backup<input id="riRestoreFile" type="file" accept=".ascbackup"/></label><label>Restore passphrase<input id="riRestorePassword" type="password" autocomplete="off"/></label><div id="riRestoreActions" class="riToolActions"></div><div id="riRestorePreview"></div>';
-    byId('riBackupCreate').append(action('Create encrypted backup',()=>{
+    if(!show('Backup & restore'))return;
+    body.innerHTML='<div id="riBackupNotice"></div><p>A backup is one file with both databases (catalogue, manual decisions, chapter provenance), the settings without secrets, matching/serving/source profiles and the portable catalogue export. It can also be shared: secrets, accounts, keys, cookies and downloads are never included.</p><p class="muted">The passphrase is optional (12 to 1024 characters) and never saved; without it the file is not encrypted. An automatic backup is taken before every update or database migration.</p><label>Backup passphrase (optional)<input id="riBackupPassword" type="password" autocomplete="new-password" minlength="12"/></label><div id="riBackupCreate" class="riToolActions"></div><h3>Saved backups</h3><div id="riBackupList"></div><h3>Restore from a file</h3><label>Backup file<input id="riRestoreFile" type="file" accept=".ascbackup"/></label><label>Its passphrase (if protected)<input id="riRestorePassword" type="password" autocomplete="off"/></label><div id="riRestoreActions" class="riToolActions"></div><div id="riRestorePreview"></div>';
+    byId('riBackupCreate').append(action('Create backup',()=>{
       const passphrase=byId('riBackupPassword').value;byId('riBackupPassword').value='';
-      return api('/api/admin/instance/backups',{method:'POST',body:JSON.stringify({passphrase}),timeoutMs:150000});
-    },{after:()=>refreshBackups()}));
-    byId('riRestoreActions').append(action('Check integrity & preview',async()=>{
+      return v1().createBackup(passphrase?{passphrase}:{}, {timeoutMs:30000});
+    },{after:result=>{status('Backup queued in Tasks ('+result.task_id+'). Refresh this list when it is done.');return refreshBackups();}}));
+    byId('riRestoreActions').append(action('Check backup & preview restore',async()=>{
       const file=byId('riRestoreFile').files[0],password=byId('riRestorePassword').value;byId('riRestorePassword').value='';
-      if(!file)throw Error('Select an encrypted backup first');if(file.size>128*1024*1024+64)throw Error('Backup exceeds 128 MiB');
-      const encoded=btoa(String.fromCharCode(...new TextEncoder().encode(password)));
-      return api('/api/admin/instance/restore/preview',{method:'POST',body:file,headers:{'Content-Type':'application/octet-stream','X-Backup-Passphrase':encoded},timeoutMs:120000});
-    },{after:result=>{
-      staged=result;byId('riRestorePreview').innerHTML=`<div class="notice"><strong>Integrity verified</strong><p>${Number(result.files)} files · ${Number(result.databases)} databases · version ${esc(result.version)}</p><p>${esc(result.includes.join(' · '))}</p><p>The restore replaces this instance’s selected state and restarts it. A private rollback copy is retained. Your normal container paths must match.</p><label>Type RESTORE THIS INSTANCE<input id="riRestoreConfirmation" autocomplete="off"/></label><div id="riRestoreApply"></div></div>`;
-      byId('riRestoreApply').append(action('Restore & restart instance',()=>api('/api/admin/instance/restore/apply',{method:'POST',body:JSON.stringify({id:staged.id,revision:staged.revision,confirmation:byId('riRestoreConfirmation').value})}),{danger:true,after:()=>status('Verified restore staged. The instance is restarting; reload after it returns.')}));
-    }}));
+      if(!file)throw Error('Select a backup file first');if(file.size>1024*1024*1024+64)throw Error('Backup exceeds 1 GiB');
+      const headers={'Content-Type':'application/octet-stream'};
+      if(password)headers['X-Backup-Passphrase']=btoa(String.fromCharCode(...new TextEncoder().encode(password)));
+      return api('/api/v1/backups/restore/preview',{method:'POST',body:file,headers,timeoutMs:600000});
+    },{after:renderRestorePreview}));
     await refreshBackups();
   }
+  function renderRestorePreview(result){
+    staged=result;
+    const rows=(result.databases||[]).flatMap(db=>db.tables.map(t=>`<tr><td>${esc(db.name)}</td><td>${esc(t.table)}</td><td>${t.current??'—'}</td><td>${t.backup??'—'}</td></tr>`)).join('');
+    const list=(title,items)=>items&&items.length?`<p><strong>${esc(title)}</strong>: ${items.map(esc).join(', ')}</p>`:'';
+    const settings=result.settings||{};
+    byId('riRestorePreview').innerHTML=`<div class="notice"><strong>Backup checked</strong><p>From ${esc(when(result.backup?.created_at))} · AutoSourcarr ${esc(result.backup?.app_version)} · format ${Number(result.backup?.format_version)}</p><p>${esc(result.version_check?.message)}</p><div class="riTableScroll"><table><thead><tr><th>Database</th><th>Table</th><th>Now</th><th>Backup</th></tr></thead><tbody>${rows}</tbody></table></div>${settings.included?`<p>${Number(settings.changed.length)} setting values change.</p>`:'<p>The backup has no settings; current settings stay.</p>'}${list('Secrets kept from this instance',settings.secrets_kept_from_this_instance)}${list('Secrets to enter again after the restore',settings.secrets_to_enter_again)}<p class="muted">${esc(result.effect)}</p><label>Type RESTORE THIS INSTANCE<input id="riRestoreConfirmation" autocomplete="off"/></label><div id="riRestoreApply"></div></div>`;
+    byId('riRestoreApply').append(action('Restore this backup',()=>{
+      if(byId('riRestoreConfirmation').value!=='RESTORE THIS INSTANCE')throw Error('Type RESTORE THIS INSTANCE to confirm.');
+      return v1().applyBackupRestore({stage_id:staged.stage_id,preview_token:staged.preview_token,confirm:true});
+    },{danger:true,after:result=>status('Restore queued in Tasks ('+result.task_id+'). Restart AutoSourcarr when it is done (the integrated image restarts itself).')}));
+  }
+  function previewSaved(item){
+    return action(item.protected?'Restore (needs passphrase)':'Restore',()=>{
+      const passphrase=item.protected?byId('riRestorePassword').value:'';if(item.protected)byId('riRestorePassword').value='';
+      return v1().previewBackupRestore(passphrase?{backup_id:item.id,passphrase}:{backup_id:item.id},{timeoutMs:600000});
+    },{after:renderRestorePreview});
+  }
+  function renderNotice(update,items){
+    const root=byId('riBackupNotice');root.replaceChildren();if(!update)return;
+    const box=document.createElement('div');box.className='notice';
+    box.innerHTML=`<strong>${update.status==='rolled-back'?'Update rolled back':'Updated to '+esc(update.to_version)}</strong><p>${esc(update.message)}</p>${update.error?'<p class="muted">'+esc(update.error)+'</p>':''}`;
+    const backup=items.find(item=>item.id===update.backup_id);
+    const actions=document.createElement('div');actions.className='riToolActions';
+    if(backup)actions.append(previewSaved({...backup,label:null}));
+    if(backup)actions.lastChild.textContent='Roll back to the backup from '+when(update.backup_created_at);
+    actions.append(action('Keep current',()=>v1().dismissBackupUpdateNotice(),{after:()=>refreshBackups()}));
+    box.append(actions);root.append(box);
+  }
   async function refreshBackups(){
-    const own=generation,result=await api('/api/admin/instance/backups',{signal:read.signal,suppressClientError:true});if(own!==generation)return;
+    const own=generation,result=await v1().listBackups({signal:read.signal,suppressClientError:true});if(own!==generation)return;
+    renderNotice(result.update,result.items);
     const root=byId('riBackupList');root.replaceChildren();
-    if(!result.items.length)root.textContent='No instance backups saved yet.';
+    if(!result.items.length)root.textContent='No backups saved yet.';
     for(const item of result.items){
-      const row=document.createElement('div');row.className='riBackupRow';row.innerHTML=`<span>${esc(new Date(item.created_at).toLocaleString())} · ${(item.bytes/1048576).toFixed(1)} MiB · ${Number(item.files)} files</span>`;
-      row.append(action('Download encrypted backup',()=>api('/api/admin/instance/backups/'+item.id+'/download',{responseType:'blob'}),{after:blob=>{
+      const row=document.createElement('div');row.className='riBackupRow';row.innerHTML=`<span>${esc(when(item.created_at))} · ${esc(kindLabel(item.kind))} · ${(item.bytes/1048576).toFixed(1)} MiB · ${Number(item.entries)} entries${item.protected?' · password protected':''}</span>`;
+      row.append(action('Download',()=>api('/api/v1/backups/'+encodeURIComponent(item.id)+'/download',{responseType:'blob'}),{after:blob=>{
         const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='autosourcarr-'+item.id+'.ascbackup';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
       }}));
+      row.append(previewSaved(item));
       row.append(action('Delete backup',async()=>{
-        if(!confirm('Permanently delete this encrypted backup? Download a copy first if you need to retain it.'))return;
-        return api('/api/admin/instance/backups/'+item.id,{method:'DELETE'});
+        if(!confirm('Permanently delete this backup? Download a copy first if you need to keep it.'))return;
+        return v1().deleteBackup(item.id);
       },{danger:true,after:()=>refreshBackups()}));root.append(row);
     }
-    status(result.pending_restore?'A verified restore is pending restart.':'Backups are private to this instance.');
+    status(`${result.items.length} backups · manual backups kept: up to ${Number(result.limits?.manual)} · automatic: newest ${Number(result.limits?.automatic_kept)}`);
   }
   async function openReview(){
     if(!show('Matching evidence & reviewed decisions'))return;

@@ -357,15 +357,6 @@
     "description": "Optional for a workspace-scoped Claude key; required for a multi-workspace key. Copy the ID from Claude Console → Settings → Workspaces. This selects the API billing workspace, not your chat account."
   },
   {
-    "key": "REPAIR_AI_BROWSER_URL",
-    "step": "repair",
-    "label": "AI server / account dashboard",
-    "kind": "url",
-    "allow_empty": true,
-    "advanced": true,
-    "description": "Optional browser link to your AI server or provider dashboard. This does not change the API address or sign you in."
-  },
-  {
     "key": "TRANSLATION_MODE",
     "step": "tools",
     "label": "Translation connection",
@@ -406,14 +397,6 @@
     "kind": "url",
     "allow_empty": true,
     "description": "Optional shortcut to your Komga library. Sign in on Komga itself; this does not configure a metadata integration."
-  },
-  {
-    "key": "KOMF_BROWSER_URL",
-    "step": "links",
-    "label": "Komf browser address",
-    "kind": "url",
-    "allow_empty": true,
-    "description": "Optional shortcut to an existing Komf web interface. Komf stays separate and uses its own configuration and credentials."
   },
   {
     "key": "TRANSLATION_BROWSER_URL",

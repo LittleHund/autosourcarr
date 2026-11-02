@@ -53,6 +53,29 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   - Browser tests (Playwright) run at phone, tablet and desktop size in all 12 themes.
   - Limits: the instance backup routes come in phase 12, and the Matrix with a search or source filter still loads up to 500 rows at once.
 
+- Phase 12 (Backup and rollback):
+  - Backups (SET-8) are one `.ascbackup` file, format 3: a zip with `manifest.json` (format, app and schema versions, the
+    PIPE-4 compatibility list, created time, every file with its sha256), `settings/config.json` without any secret,
+    `profiles/profiles.json`, both databases (taken together while database work is paused) and the portable catalogue
+    export. Secret fields are left out and listed by name; `config.key`, accounts, tokens, cookies, signing keys,
+    downloads and covers are never included. An optional passphrase (12–1024 characters) encrypts the file (AES-GCM,
+    PBKDF2-SHA256 600,000 rounds); it is never saved. The compatibility list now names `backup_format`.
+  - System → Backup & restore runs on `/api/v1/backups`: create (a job), download, delete, restore preview (upload or a
+    saved backup) and restore (preview token and typed confirmation). A restore stops background work, keeps a
+    pre-restore backup, swaps and checks both databases, upgrades older schemas, merges the settings and keeps this
+    instance's secrets; any failure rolls back. Restart afterwards (the integrated image restarts itself).
+  - A newer backup is refused with "Version mismatch: version X required"; a 0.4.x instance backup (format 2) must be
+    restored with 0.4.x.
+  - Automatic backup before every update or migration (SET-9); the newest 3 are kept. If a migration or the start check
+    after it fails, both databases are put back from that backup, startup maintenance does not run, and System → Backups
+    shows the notice with "Roll back to the backup from …" and "Keep current". Both are recorded in Tasks.
+  - Old files (SET-3): old release reports, orphaned Python bytecode and the app's own abandoned temporary files move to
+    `trash/<date>/` under the data folder after setup, on the first start of a new version, or from
+    `/api/v1/maintenance/old-files` (preview first). Env files are not touched (the app still reads them).
+  - `KOMF_BROWSER_URL` and `REPAIR_AI_BROWSER_URL` are removed (SET-4); a saved value is dropped from `config.json`
+    without a notice. A Komf connection (Settings → Connections) is unaffected.
+  - Limits: after a restore, in-memory caches stay stale until the restart; a backup larger than 1 GiB is refused.
+
 ## Unreleased
 
 - Reader extension sources moved from `extension/module/src/eu/kanade/tachiyomi/extension/all/autosourcarr/`

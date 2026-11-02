@@ -36,17 +36,11 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("repair_ai_workspace_id")]
     public string RepairAiWorkspaceId { get; init; } = "";
 
-    [System.Text.Json.Serialization.JsonPropertyName("repair_ai_browser_url")]
-    public string RepairAiBrowserUrl { get; init; } = "";
-
     [System.Text.Json.Serialization.JsonPropertyName("suwayomi_browser_url")]
     public string SuwayomiBrowserUrl { get; init; } = "";
 
     [System.Text.Json.Serialization.JsonPropertyName("komga_browser_url")]
     public string KomgaBrowserUrl { get; init; } = "";
-
-    [System.Text.Json.Serialization.JsonPropertyName("komf_browser_url")]
-    public string KomfBrowserUrl { get; init; } = "";
 
     [System.Text.Json.Serialization.JsonPropertyName("translation_browser_url")]
     public string TranslationBrowserUrl { get; init; } = "";
@@ -500,10 +494,8 @@ public sealed partial record AutoSourcarrSettings
         new("REPAIR_AI_MODEL", nameof(RepairAiModel), SettingKind.Text, false, []),
         new("REPAIR_AI_API_KEY", nameof(RepairAiApiKey), SettingKind.Text, true, []),
         new("REPAIR_AI_WORKSPACE_ID", nameof(RepairAiWorkspaceId), SettingKind.Text, false, []),
-        new("REPAIR_AI_BROWSER_URL", nameof(RepairAiBrowserUrl), SettingKind.Text, false, []),
         new("SUWAYOMI_BROWSER_URL", nameof(SuwayomiBrowserUrl), SettingKind.Text, false, []),
         new("KOMGA_BROWSER_URL", nameof(KomgaBrowserUrl), SettingKind.Text, false, []),
-        new("KOMF_BROWSER_URL", nameof(KomfBrowserUrl), SettingKind.Text, false, []),
         new("TRANSLATION_BROWSER_URL", nameof(TranslationBrowserUrl), SettingKind.Text, false, []),
         new("AUTHELIA_BROWSER_URL", nameof(AutheliaBrowserUrl), SettingKind.Text, false, []),
         new("MAIN_SUWAYOMI_USERNAME", nameof(MainSuwayomiUsername), SettingKind.Text, false, []),

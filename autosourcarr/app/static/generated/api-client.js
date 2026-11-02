@@ -261,6 +261,14 @@
        */
       allowSourceRecordMatch(entryId, sourceId, sourceMangaId, options) { return call('DELETE', `/api/v1/entries/${encodeURIComponent(entryId)}/separate-source/${encodeURIComponent(sourceId)}/${encodeURIComponent(sourceMangaId)}`, undefined, options); },
       /**
+       * Restore a previewed backup as an exclusive job (body {stage_id, preview_token, confirm: true}): background work stops, a pre-restore backup is kept, both databases are swapped and checked, older schemas upgraded, settings merged (this instance's secrets kept); any failure rolls back. Answers 202 with the task id.
+       * POST /api/v1/backups/restore/apply
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      applyBackupRestore(body, options) { return call('POST', '/api/v1/backups/restore/apply', body, options); },
+      /**
        * Add a staged catalogue file in one transaction (all or nothing). Never merges or splits; existing manual choices win. Body: id, revision (from the preview), include_decisions.
        * POST /api/v1/catalog-sharing/apply
        * @param {JsonObject} body
@@ -276,6 +284,14 @@
        * @returns {Promise<JsonObject>}
        */
       applyGalleryPolicy(sourceId, options) { return call('POST', `/api/v1/gallery-policies/${encodeURIComponent(sourceId)}/apply`, undefined, options); },
+      /**
+       * Move the previewed old files to trash/<date> under the data folder (body {confirm: true, preview_token}); nothing is deleted.
+       * POST /api/v1/maintenance/old-files
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      applyOldFileCleanup(body, options) { return call('POST', '/api/v1/maintenance/old-files', body, options); },
       /**
        * Save the previewed policy when rules and evidence are unchanged; nothing is merged or split now. Logged with the signed-in actor.
        * POST /api/v1/policy-simulator/apply
@@ -503,6 +519,14 @@
        */
       createAccount(body, options) { return call('POST', '/api/v1/accounts', body, options); },
       /**
+       * Create a backup as a job (body {passphrase?}: 12 to 1024 characters protects it with AES-GCM; never stored). Answers 202 with the task id.
+       * POST /api/v1/backups
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      createBackup(body, options) { return call('POST', '/api/v1/backups', body, options); },
+      /**
        * Create a key (kind admin, reader or script; scripts are admin or guest). The secret is shown only in this answer.
        * POST /api/v1/keys
        * @param {JsonObject} body
@@ -550,6 +574,14 @@
        * @returns {Promise<JsonObject>}
        */
       deleteAccount(accountId, options) { return call('DELETE', `/api/v1/accounts/${encodeURIComponent(accountId)}`, undefined, options); },
+      /**
+       * Delete one saved backup file.
+       * DELETE /api/v1/backups/{backupId}
+       * @param {string} backupId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      deleteBackup(backupId, options) { return call('DELETE', `/api/v1/backups/${encodeURIComponent(backupId)}`, undefined, options); },
       /**
        * Delete an entry and suppress its source records so a refresh does not bring it back (owner or admin). Refused for main-library subscriptions unless the body says {force: true}.
        * DELETE /api/v1/entries/{entryId}
@@ -618,12 +650,27 @@
        */
       discoverSourceRawOrigin(package_, body, options) { return call('POST', `/api/v1/source-maintenance/raws/${encodeURIComponent(package_)}/discover`, body, options); },
       /**
+       * "Keep current": hide the notice of the last update or rollback (SET-9); the automatic backup stays in the list.
+       * POST /api/v1/backups/update-notice/dismiss
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      dismissBackupUpdateNotice(options) { return call('POST', '/api/v1/backups/update-notice/dismiss', undefined, options); },
+      /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<UpdateNoticeResponse>}
        */
       dismissUpdateNotice(options) { return call('POST', '/api/v1/settings/update-notice/dismiss', undefined, options); },
+      /**
+       * Download one backup file (.ascbackup).
+       * GET /api/v1/backups/{backupId}/download
+       * @param {string} backupId
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<null>}
+       */
+      downloadBackup(backupId, options) { return call('GET', `/api/v1/backups/${encodeURIComponent(backupId)}/download`, undefined, options); },
       /**
        * Queue every chapter of the work that has no CBZ yet (failed ones are retried); answers queued and remaining.
        * POST /api/v1/library/{entryId}/download
@@ -1325,6 +1372,13 @@
        */
       linkCatalogueRecord(body, options) { return call('POST', '/api/v1/catalog-sharing/records/link', body, options); },
       /**
+       * Saved backups (manual, automatic before an update, pre-restore), newest first; the update notice of SET-9 while it is not dismissed.
+       * GET /api/v1/backups
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      listBackups(options) { return call('GET', '/api/v1/backups', undefined, options); },
+      /**
        * Retained shared choices with their local state, mapped entries and revision. Optional query for the UI: offset, limit (1-50).
        * GET /api/v1/catalog-sharing/decisions
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1509,6 +1563,14 @@
        */
       previewAllManualActionsReset(options) { return call('GET', '/api/v1/maintenance/reset-all-manual-actions', undefined, options); },
       /**
+       * Check a backup and show what a restore would change: upload the file as the body (optional header X-Backup-Passphrase, base64), or send {backup_id, passphrase?} for a saved one. Refuses damaged, tampered, wrong-passphrase and newer-format files ("Version mismatch: version X required"). Answers stage_id and preview_token.
+       * POST /api/v1/backups/restore/preview
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewBackupRestore(body, options) { return call('POST', '/api/v1/backups/restore/preview', body, options); },
+      /**
        * Stage a catalogue file (the body is the file, up to 64 MiB) and show what adding it would do. A file needing a newer reader answers 409 "Version mismatch: version X required"; nothing is staged.
        * POST /api/v1/catalog-sharing/preview
        * @param {JsonObject} body
@@ -1558,6 +1620,13 @@
        * @returns {Promise<JsonObject>}
        */
       previewManualMatchesReset(options) { return call('GET', '/api/v1/maintenance/reset-manual-matches', undefined, options); },
+      /**
+       * SET-3: old files the app itself left (old reports, orphaned bytecode, abandoned temporary files) and the preview_token to move them to the trash.
+       * GET /api/v1/maintenance/old-files
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      previewOldFileCleanup(options) { return call('GET', '/api/v1/maintenance/old-files', undefined, options); },
       /**
        * Run the real matcher with the current and a draft policy: chosen pairs or a catalogue page at once, or the whole catalogue as a task (scan); lists works that would merge or split.
        * POST /api/v1/policy-simulator/preview

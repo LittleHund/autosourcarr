@@ -16,12 +16,33 @@ public static class UpdateNotices
             return CheckCore(root, appVersion, now);
     }
 
+    /// <summary>
+    /// SET-4: link settings the app does not need (Komf and AI-dashboard shortcuts, removed in 0.5.0). A saved value is
+    /// dropped silently from config.json (settings, extra and managed_keys); a Compose variable of that name is ignored.
+    /// </summary>
+    public static readonly IReadOnlyList<string> RetiredLinkSettings = ["KOMF_BROWSER_URL", "REPAIR_AI_BROWSER_URL"];
+
+    /// <summary>Removes <see cref="RetiredLinkSettings"/> from a document; true when something was removed.</summary>
+    public static bool DropRetiredLinks(ConfigDocument document)
+    {
+        var changed = false;
+        foreach (var key in RetiredLinkSettings)
+        {
+            changed |= document.Settings.Values.Remove(key);
+            changed |= document.Extra.Values.Remove(key);
+            changed |= document.ManagedKeys.RemoveAll(name => name == key) > 0;
+        }
+        return changed;
+    }
+
     private static UpdateNotice? CheckCore(string root, string appVersion, DateTimeOffset? now)
     {
         var store = new ConfigStore(root);
         var document = store.ReadDocument();
         if (document is null)
             return null; // no config.json yet: nothing of yours to keep or report
+        if (DropRetiredLinks(document))
+            store.WriteDocument(document);
         var defaults = SettingsSchema.Entries.Where(entry => !entry.Secret)
             .ToDictionary(entry => entry.Key, entry => entry.Default ?? "", StringComparer.Ordinal);
         var previous = document.Update;
