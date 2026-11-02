@@ -1,0 +1,19 @@
+{
+  "name": "autosourcarr-ui-tooling",
+  "private": true,
+  "description": "Build and browser-test tooling for the AutoSourcarr Web UI. The app itself has no npm runtime dependencies.",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "bundle": "node scripts/bundle-ui.mjs",
+    "bundle:check": "node scripts/bundle-ui.mjs --check",
+    "e2e": "playwright test",
+    "e2e:list": "playwright test --list"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "esbuild": "0.28.2"
+  }
+}

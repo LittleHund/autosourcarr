@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]/'autosourcarr/app/static'
-SOURCES=('style.css','workbench.css','reimagined.css','library.css')
+SOURCES=('style.css','workbench.css','reimagined.css','library.css','responsive.css')
 
 
 def build():
@@ -18,4 +18,4 @@ if __name__=='__main__':
     if args.check:
         if not target.exists() or target.read_text(encoding='utf-8')!=content:raise SystemExit('UI stylesheet is stale; run scripts/build-ui-styles.py')
         print('Single UI stylesheet is current')
-    else:target.write_text(content,encoding='utf-8');print('Built ui.css from four maintained component sources')
+    else:target.write_text(content,encoding='utf-8',newline='\n');print('Built ui.css from five maintained component sources')

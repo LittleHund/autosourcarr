@@ -84,7 +84,9 @@ internal sealed class ManualFakeCatalogueOperations(SqliteDatabase database) : I
         });
     }
 
-    public long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records)
+    public long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records) => SplitRecords(entryId, records, (_, _, _) => { });
+
+    public long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, Action<DatabaseSession, long, long> commit)
     {
         Calls.Add("split " + entryId.ToString(CultureInfo.InvariantCulture));
         return database.Write(DatabaseFile.Catalog, c =>
@@ -96,6 +98,7 @@ internal sealed class ManualFakeCatalogueOperations(SqliteDatabase database) : I
                 c.Execute("UPDATE source_matches SET entry_id=$n WHERE entry_id=$e AND source_id=$s AND source_manga_id=$m", ("$n", created), ("$e", entryId), ("$s", record.SourceId), ("$m", record.MangaId));
                 c.Execute("UPDATE source_variants SET entry_id=$n WHERE entry_id=$e AND source_id=$s AND source_manga_id=$m", ("$n", created), ("$e", entryId), ("$s", record.SourceId), ("$m", record.MangaId));
             }
+            commit(c, entryId, created);
             return created;
         });
     }

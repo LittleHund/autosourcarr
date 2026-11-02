@@ -151,6 +151,65 @@ public static class RepairV1EndpointsTests
             Check.Equal(200 - lines.Length, JsonNode.Parse(lines[0])!["n"]!.GetValue<int>());
         });
 
+        suite.Add("repair v1: hard rule 6: only the user's Fixed makes a repair Fixed; installed-and-checked stays weaker; the verdict is bound to the jar and survives a restart", () =>
+        {
+            using var setup = new Setup();
+            var sha = new string('b', 64);
+            var id = setup.Tasks.Create("Repair source domain " + Package, context: Package, origin: "manual", kind: SourceRepairV1Endpoints.DomainRepairJob.Name);
+            void Report(string installed)
+            {
+                var path = setup.Domain.ReportPath(Package); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, new JsonObject
+                {
+                    ["kind"] = "domain-repair", ["package"] = Package, ["state"] = "repaired", ["installed_sha256"] = installed,
+                    ["started_at"] = DateTimeOffset.UtcNow.ToString("O"), ["finished_at"] = DateTimeOffset.UtcNow.ToString("O"),
+                    ["message"] = "Repaired: the content check passed.",
+                }.ToJsonString());
+            }
+            Report(sha);
+            setup.Tasks.Complete(id, "Repaired");
+            JsonObject Row() => Body(setup.Send(HttpMethod.Get, "/api/v1/tasks"), HttpStatusCode.OK)["items"]!.AsArray().OfType<JsonObject>().Single(item => item["id"]!.GetValue<string>() == id);
+
+            // Installed and content-checked: not Fixed until the user says so.
+            var row = Row();
+            Check.Equal("repaired", row["repair_state"]!.GetValue<string>());
+            Check.Equal("unconfirmed", row["repair_confirmation"]!.GetValue<string>());
+            Check.True(row["repair_working_at"] is null, "no confirmed-working time yet");
+            Check.Equal(true, row["repair_can_feedback"]!.GetValue<bool>());
+
+            var answer = Body(setup.Send(HttpMethod.Post, Root + "/jobs/" + id + "/feedback", new JsonObject { ["action"] = "fixed", ["installed_sha256"] = sha }), HttpStatusCode.Accepted);
+            Check.Equal("fixed", answer["repair_state"]!.GetValue<string>());
+            row = Row();
+            Check.Equal("fixed", row["repair_state"]!.GetValue<string>());
+            Check.Equal("fixed", row["repair_confirmation"]!.GetValue<string>());
+            Check.True(row["repair_working_at"]!.GetValue<double>() > 0, "confirmed-working time");
+            // Retry and Revert stay available after Fixed.
+            Check.Equal(true, row["repair_can_feedback"]!.GetValue<bool>());
+            // Persisted: a new store over the same folder (a restart) reads the same verdict.
+            var reloaded = new RepairConfirmations(setup.Maintenance).All();
+            Check.Equal(RepairConfirmations.Fixed, reloaded[Package].Verdict);
+            Check.Equal(id, reloaded[Package].TaskId);
+
+            // Another jar installed for the same task is not covered by the old Fixed.
+            Report(new string('c', 64));
+            row = Row();
+            Check.Equal("repaired", row["repair_state"]!.GetValue<string>());
+            Check.Equal("unconfirmed", row["repair_confirmation"]!.GetValue<string>());
+            Report(sha);
+            Check.Equal("fixed", Row()["repair_state"]!.GetValue<string>());
+
+            // "Doesn't work" replaces Fixed.
+            Body(setup.Send(HttpMethod.Post, Root + "/jobs/" + id + "/feedback", new JsonObject { ["action"] = "retry", ["installed_sha256"] = sha, ["feedback"] = "chapters empty" }), HttpStatusCode.Accepted);
+            row = Row();
+            Check.Equal("repaired", row["repair_state"]!.GetValue<string>());
+            Check.Equal("not-working", row["repair_confirmation"]!.GetValue<string>());
+            Check.True(row["repair_working_at"] is null, "not confirmed working any more");
+
+            // A damaged store never shows anything as Fixed.
+            File.WriteAllText(Path.Combine(setup.Maintenance, "confirmations", "repair-confirmations.json"), "{not json");
+            Check.Equal(0, new RepairConfirmations(setup.Maintenance).All().Count);
+        });
+
         suite.Add("repair v1: every source-maintenance route needs an admin; the access policy keeps them admin-only", () =>
         {
             using var setup = new Setup();
@@ -208,7 +267,7 @@ public static class RepairV1EndpointsTests
             {
                 Tasks = Tasks, Jobs = Jobs,
                 SourceRepair = new SourceRepairServices { Domain = Domain },
-                Repair = new RepairV1Services { MaintenanceRoot = Maintenance, RunnerCheck = runnerCheck },
+                Repair = new RepairV1Services { MaintenanceRoot = Maintenance, RunnerCheck = runnerCheck, Confirmations = new RepairConfirmations(Maintenance) },
                 SourceInventory = new SourceInventoryServices
                 {
                     Orphans = new SourceOrphans(Maintenance, _client, new NoFetcher()), Maintenance = new SourceMaintenanceState(Maintenance, _temp.Path),

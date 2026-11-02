@@ -33,13 +33,22 @@ namespace AutoSourcarr.Core.Catalogue.Structure
         }
 
         long IDuplicateStructure.SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, bool manual, string matchType)
+            => SplitRecordsCore(entryId, records, manual, matchType, null);
+
+        long IDuplicateStructure.SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, bool manual, string matchType, Action<DatabaseSession, long, long> commit)
+        {
+            ArgumentNullException.ThrowIfNull(commit);
+            return SplitRecordsCore(entryId, records, manual, matchType, commit);
+        }
+
+        private long SplitRecordsCore(long entryId, IReadOnlyList<NativeSourceRecord> records, bool manual, string matchType, Action<DatabaseSession, long, long>? commit)
         {
             ArgumentNullException.ThrowIfNull(records);
             lock (_gate)
             {
                 if (_database.HasCurrentThreadSession(DatabaseFile.Catalog) || _database.HasCurrentThreadSession(DatabaseFile.Origins))
                     throw new InvalidOperationException("Entry splits require standalone catalogue work.");
-                return Split(entryId, records, manual, matchType);
+                return Split(entryId, records, manual, matchType, commit: commit);
             }
         }
 

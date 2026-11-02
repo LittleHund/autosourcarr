@@ -197,11 +197,14 @@ public static class MixedEntriesTests
         public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType, CancellationToken cancellationToken) =>
             SplitAutomatic(entryId, records, splitMatchType, _ => true, cancellationToken);
         public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
-            Func<DatabaseSession, bool> stillAllowed, CancellationToken cancellationToken)
+            Func<DatabaseSession, bool> stillAllowed, CancellationToken cancellationToken) => SplitAutomatic(entryId, records, splitMatchType, stillAllowed, (_, _, _) => { }, cancellationToken);
+        public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
+            Func<DatabaseSession, bool> stillAllowed, Action<DatabaseSession, long, long> commit, CancellationToken cancellationToken)
         {
             BeforeCheck?.Invoke();
             if (!database.Read(DatabaseFile.Catalog, stillAllowed)) throw new InvalidOperationException("The automatic split is no longer allowed");
             Splits++;
+            database.Write(DatabaseFile.Catalog, c => { commit(c, entryId, 0); return 0; });
             return (entryId, 0);
         }
     }

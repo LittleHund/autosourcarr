@@ -66,6 +66,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Sources.Inventory.SourceBaselineStore? _baselines;
     private readonly CancellationTokenSource _healthStop = new();
     internal AutoSourcarr.Api.Security.AccessControlServices? Access => _access;
+    /// <summary>The /api/v1 composition (tests reach the owned services through it).</summary>
+    internal ApiV1Services? ApiV1 => _apiV1;
     private CatalogueRuntime? _catalogue;
     /// <summary>Phase 8 duplicate review: kept for the status counts (read lazily) and the matching cache invalidations.</summary>
     private AutoSourcarr.Core.Matching.Duplicates.DuplicateMatching? _duplicates;
@@ -84,7 +86,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private PhysicalFileProvider? _static;
     private ApiV1Services? _apiV1;
     private TaskJournal? _journal;
-    private Task? _writer, _sourceWatch, _close;
+    private Task? _writer, _sourceWatch, _sourceStateWatch, _close;
     private bool _configured;
 
     private ApplicationRuntime(AutoSourcarrSettings settings)
@@ -95,8 +97,18 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         Tasks.Changed += () => Events.Pulse("tasks", TimeSpan.FromMilliseconds(250));
         Errors.Changed += () => Events.Pulse("errors", TimeSpan.FromMilliseconds(500));
         Jobs = new(Tasks, Events, Errors);
+        SourceResults = new(() => Settings);
+        SourceResults.Changed += id => Events.PulseKeys("source-health", LiveWindow, "source_ids", [JsonValue.Create(id)!], "results");
     }
+
+    /// <summary>UI-13/PERF-8: changes inside this window reach the browser as one event per topic.</summary>
+    internal static readonly TimeSpan LiveWindow = TimeSpan.FromMilliseconds(750);
+
+    /// <summary>Live topic <c>catalogue</c>: the entry ids changed in the last window (metadata, titles, identity, tags).</summary>
+    internal void CatalogueChanged(long entryId, string change) => Events.PulseEntries("catalogue", LiveWindow, [entryId], change);
     internal EventStream Events { get; } = new();
+    /// <summary>What discovery learned about each source (0.4.5 _record_source_result; local timeouts/deferrals ignored).</summary>
+    internal AutoSourcarr.Core.Sources.SourceResultTracker SourceResults { get; }
     internal JobQueue Jobs { get; }
     internal AutoSourcarrSettings Settings { get; }
     internal RuntimeIdentity Identity { get; }
@@ -186,6 +198,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner._dataDirectory = data;
                 var paths = DatabasePaths.Resolve(startup.Settings);
                 owner._roots = InstanceRoots.Acquire([data, startup.ConfigurationRoot, paths.Directory]);
+                // PERF-9: diagnostics name the instance folders, never their absolute paths.
+                owner.Privacy.RegisterPath("data", data); owner.Privacy.RegisterPath("config", startup.ConfigurationRoot);
+                owner.Privacy.RegisterPath("database", paths.Directory); owner.Privacy.RegisterPath("library", startup.Settings.LibraryDir);
                 owner._database = new(startup.Settings);
                 new SchemaMigrator(owner.Database).Initialize();
                 owner._preferences = new(owner.Database);
@@ -256,9 +271,12 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._publicFetcher = new();
             owner._repositoryPreview = new(owner._publicFetcher);
             var maintenanceRoot = Path.Combine(owner._dataDirectory!, "source-maintenance");
-            var healthStore = new SourceHealthStore(owner.Database, owner.Privacy);
+            // Live topic source-health: one event per window with the checked source ids.
+            var healthStore = new SourceHealthStore(owner.Database, owner.Privacy, record: row =>
+                owner.Events.PulseKeys("source-health", LiveWindow, "source_ids", [JsonValue.Create(row["source_id"]?.ToString() ?? "")!], "check"));
             var orphans = new AutoSourcarr.Core.Sources.Inventory.SourceOrphans(maintenanceRoot, owner._source.Client, owner._publicFetcher!,
-                SourceInventoryServices.BundledSeed, scrub: owner.Privacy.Text);
+                SourceInventoryServices.BundledSeed, scrub: owner.Privacy.Text)
+            { InventoryChanged = () => owner.Events.Debounce("orphans", LiveWindow, "inventory") };
             // SRC-8: before a repair, a newer version listed by a configured repository replaces it (same listing rule as the orphan labels).
             var domainRepair = new AutoSourcarr.Core.Repair.Migration.DomainRepair(maintenanceRoot, owner._source.Client, owner._admin, owner._publicFetcher,
                 officialReplacement: async (package, token) =>
@@ -269,6 +287,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     var configured = owner._apiV1 is { } api ? SourceInventoryV1Endpoints.ConfiguredRepositories(api) : null;
                     return AutoSourcarr.Core.Sources.Inventory.SourceOrphans.MaintainedVersion(rows, package, configured);
                 });
+            domainRepair.ReportWritten = package => owner.Events.PulseKeys("repairs", LiveWindow, "packages", [JsonValue.Create(package)!], "report");
             var maintenance = new AutoSourcarr.Core.Sources.Inventory.SourceMaintenanceState(maintenanceRoot, startup.ConfigurationRoot);
             owner._health = new SourceHealthCoordinator(healthStore, owner._source.Client, owner.Io, owner.Lanes,
                 owner.Tasks, new NoRepairObservations(), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
@@ -331,6 +350,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner._healthStop.Token));
             owner._library = new AutoSourcarr.Core.Sources.Library.SuwayomiLibrary(owner.Database, owner.Preferences, () => owner.Settings,
                 () => owner._main, owner.Io, error => owner.Logs.Record("Main library", error.Message));
+            owner._library.StatusRefreshed = () => owner.Events.Debounce("library", LiveWindow, "status");
             var matching = OpenMatching(owner, owner._library);
             // Phase 9B: catalogue sharing and portable identities record on the same decision log as matching.
             var sharingGallery = new AutoSourcarr.Core.Catalogue.Gallery.GalleryEvidenceService(owner.Database, owner._catalogueWriteGate);
@@ -344,7 +364,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             var libraryManager = owner._libraryManager!;
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings,
-                    duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }),
+                    duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }, pausedSources: owner.SourceResults.PausedCount),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
                 moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory),
                     claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))))
@@ -374,6 +394,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 Metadata = matching.Metadata, Discovery = matching.Discovery, Imports = matching.Imports,
                 Chapters = matching.Reading.Chapters, Serving = matching.Reading.Serving, LibraryDownloads = matching.Reading.LibraryDownloads,
                 CatalogueViews = matching.Reading.CatalogueViews, Tags = matching.Reading.Tags, ReaderExtension = readerExtension,
+                UiPreferences = new UiPreferencesV1Services { Preferences = owner.Preferences, Io = owner.Io },
+                InternalServices = owner.InternalServices,
                 // An interrupted library monitoring pass re-runs its read-only observation (0.4.x library-monitor safe replay).
                 SafeRetries = new Dictionary<string, Func<TaskRecord, CancellationToken, Task<JsonObject>>>(StringComparer.Ordinal)
                 {
@@ -396,6 +418,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     MaintenanceRoot = maintenanceRoot,
                     ReadInstalledJar = (package, token) => owner._source.Client.ReadExtensionJarAsync(package, token),
                     Raws = rawRoutes,
+                    // Hard rule 6: the user-confirmed "Fixed" verdicts survive restarts (Tasks → Repairs).
+                    Confirmations = new AutoSourcarr.Core.Repair.RepairConfirmations(maintenanceRoot),
                 },
                 Sources = new SourceServices
                 {
@@ -453,6 +477,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             cancellationToken.ThrowIfCancellationRequested();
             owner._writer = owner.WriteLogsAsync();
             owner._sourceWatch = owner.WatchSourceAsync();
+            owner._sourceStateWatch = owner.WatchSourceStateAsync();
             await owner._source.StartAsync().ConfigureAwait(false);
             if (owner._raws is not null) await owner._raws.StartAsync(cancellationToken).ConfigureAwait(false);
             owner.ScheduleStartupWork();
@@ -803,6 +828,38 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             $"unhandled|{context.Request.Method}|{context.Request.Path}|{error.GetType().Name}|{error.Message}",
             path: context.Request.Path.Value ?? "", method: context.Request.Method, errorType: error.GetType().Name, exception: error);
     }
+    /// <summary>
+    /// Live topic <c>sources</c>: the source engine's state (mode, state, ready, restarts) is published whenever it changes,
+    /// checked every 2 seconds from the cached status (no request to the engine).
+    /// </summary>
+    private async Task WatchSourceStateAsync()
+    {
+        string? last = null;
+        try
+        {
+            while (!_watchStop.IsCancellationRequested)
+            {
+                if (_source is not null)
+                {
+                    var engine = SourceEngineJson();
+                    var key = engine.ToJsonString();
+                    if (key != last)
+                    {
+                        if (last is not null) Events.Publish("sources", new JsonObject
+                        {
+                            ["change"] = "engine", ["mode"] = engine["mode"]?.DeepClone(), ["state"] = engine["state"]?.DeepClone(),
+                            ["ready"] = engine["ready"]?.DeepClone(), ["restarts"] = engine["restarts"]?.DeepClone(),
+                        });
+                        last = key;
+                    }
+                }
+                await Task.Delay(TimeSpan.FromSeconds(2), _watchStop.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (_watchStop.IsCancellationRequested) { }
+        catch (InvalidOperationException) { } // the source runtime is gone (shutdown)
+    }
+
     private async Task WatchSourceAsync()
     {
         try { _fatal.TrySetResult(await _source!.FatalFailure.WaitAsync(_watchStop.Token).ConfigureAwait(false)); }
@@ -877,6 +934,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         if (_native is not null) await Attempt("Native lifetime", () => _native.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Source status watch cancellation", () => _watchStop.CancelAsync()).ConfigureAwait(false);
         if (_sourceWatch is not null) await Attempt("Source status watch", () => _sourceWatch).ConfigureAwait(false);
+        if (_sourceStateWatch is not null) await Attempt("Source state events", () => _sourceStateWatch).ConfigureAwait(false);
         // Last task changes (stopped jobs, finished lifetimes) are flushed before the I/O lane and the database close.
         if (_journal is not null) await Attempt("Task history", () => _journal.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("General physical I/O", () => Io.DisposeAsync().AsTask()).ConfigureAwait(false);
@@ -917,9 +975,14 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             // Job keys can hold paths or titles; the download keeps type, state and timing only.
             foreach (var list in new[] { jobs["running"]!.AsArray(), jobs["queued"]!.AsArray() })
                 foreach (var row in list) row!.AsObject().Remove("key");
-            var source = new JsonObject { ["mode"] = owner.Settings.SourceEngineMode, ["checked"] = false,
-                ["note"] = "Source engine health returns with conversion phase 4." };
-            var services = new JsonObject { ["jobs"] = jobs };
+            JsonObject source, services;
+            try { source = owner.SourceEngineJson(); }
+            catch (InvalidOperationException) { source = new JsonObject { ["mode"] = owner.Settings.SourceEngineMode, ["state"] = "unknown" }; }
+            // Phase 11: the Status page's internal services (cached state), next to the job queue.
+            try { services = owner.InternalServices(); }
+            catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
+            { services = new JsonObject { ["state"] = "unknown", ["error"] = error.GetType().Name }; }
+            services["jobs"] = jobs;
             return new(runtime, null, source, services, owner.Jobs.Annotate(owner.Tasks.Snapshot()));
         }
         public JsonObject ImportContext(JsonArray errors) => new() { ["note"] = "Import diagnostics are kept per import row (Imports page); none are added here." };

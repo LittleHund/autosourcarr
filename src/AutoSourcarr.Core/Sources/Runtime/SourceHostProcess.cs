@@ -51,6 +51,15 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     public int Restarts { get { lock (_gate) return _restarts; } }
     public string LastError { get { lock (_gate) return _lastError; } }
     public bool Running { get { lock (_gate) return _process is { HasExited: false }; } }  // _process is never a disposed instance
+    /// <summary>The X display the host's WebView uses: the app's own Xvfb, else the app's DISPLAY, or null (WebView unavailable).</summary>
+    public string? Display
+    {
+        get
+        {
+            lock (_gate) if (_displayName is { Length: > 0 } own && _display is { HasExited: false }) return own;
+            return System.Environment.GetEnvironmentVariable("DISPLAY") is { Length: > 0 } inherited ? inherited : null;
+        }
+    }
 
     /// <summary>Default deployment paths; AUTOSOURCARR_JAVA and AUTOSOURCARR_SOURCE_HOST_JAR override them.</summary>
     public static (string Java, string Jar) Locate(IReadOnlyDictionary<string, string?> environment)

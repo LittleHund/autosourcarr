@@ -29,6 +29,9 @@ public sealed class DiagnosticExporter(BoundedWorkScheduler readLane, RuntimeIde
     {
         var current = settings();
         logs.Privacy.Register(SettingsLoader.ToEnvironment(current, includeSecrets: true).ToDictionary(pair => pair.Key, pair => (string?)pair.Value, StringComparer.Ordinal));
+        // PERF-9: the configured folders appear as [data], [config], [database] and [library], never as absolute paths.
+        foreach (var (label, path) in new[] { ("data", current.DataDir), ("config", current.SettingsConfigDir), ("database", current.DatabaseDir), ("library", current.LibraryDir) })
+            logs.Privacy.RegisterPath(label, path);
         var context = await readLane.RunAsync(() => BuildContext(current), cancellationToken).ConfigureAwait(false);
         context["logs"] = await logs.SnapshotAsync(cancellationToken).ConfigureAwait(false);
         return context;

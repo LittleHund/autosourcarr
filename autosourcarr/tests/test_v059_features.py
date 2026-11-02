@@ -118,7 +118,7 @@ def test_text_selection_blocks_periodic_surface_replacement():
     assert "document.addEventListener('selectionchange'" in text
     assert "requestSurfaceRender('imports')" in text
     assert "requestSurfaceRender('tasks')" in text
-    assert "if(structuralRenderBlocked('imports')){scheduleImportsPoll();return;}" in text
+    assert "if(structuralRenderBlocked('imports')){scheduleImportsRetry();return;}" in text
 
 
 def test_v059_requeues_existing_unresolved_imports():

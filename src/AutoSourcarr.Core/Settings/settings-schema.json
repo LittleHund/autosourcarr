@@ -431,6 +431,11 @@
       "description": "How long a downloaded cover is kept before it is checked again, in seconds.",
       "compose": "allowed"
     },
+    "COVER_CACHE_MAX_MB": {
+      "group": "Metadata & covers",
+      "description": "Largest size of the cover cache, in MB (PERF-4). When it is full, the least recently used covers are removed first. 0 means no limit.",
+      "compose": "allowed"
+    },
     "COVER_FETCH_CONCURRENCY": {
       "group": "Metadata & covers",
       "description": "How many covers are downloaded at the same time.",

@@ -1,6 +1,8 @@
-/* Remember only safe view state: safe view state, not form/session/credential persistence.
- * Load after all other static scripts. Credentials and edit drafts are excluded.
- * Public contract: initialize/beforeSwitch/afterSwitch/filtersReady/rendered/save.
+/* UI-6: a refresh returns to the same place. Remembers only safe view state (tab, sub-tabs, filters, scroll, library
+ * page, open entry), never form/session/credential contents. Load after all other static scripts.
+ * Public contract: initialize/beforeSwitch/afterSwitch/filtersReady/rendered/save/isRestore.
+ * The open entry is reopened once, after its list has rendered, with a private restore token: background updates can
+ * never open or close an entry (UI-12), and the first real click or key press cancels a restore still waiting.
  */
 (() => {
   'use strict';
@@ -13,7 +15,7 @@
     ...['matrix','subbed'].flatMap(kind => ['Search','Source','MinMatches','EntryMatches','TitleState','Status','PublicationStatus','Sort'].map(suffix => kind+suffix)),
     'duplicateSearch','duplicateSize','mixedSearch','mixedFilter','manualActionSearch',
     'sourceAvailability','sourceExtensionSearch','sourceExtensionLanguage','sourceOrphanSearch','sourceInstalledOrphanSearch',
-    'settingsSearch',
+    'settingsSearch','sourceHealthFilter','tagCatalogSearch','riLibraryPageSize',
   ];
   // Only these selects legitimately have no matching <option> until data loads.
   const DEFERRED_OPTIONS = new Set(['browseSource','browseConnectedSource','browseLanguage','browseMatchCount','matrixSource','subbedSource','matrixMinMatches','subbedMinMatches','matrixEntryMatches','subbedEntryMatches','sourceExtensionLanguage']);
@@ -24,6 +26,9 @@
     importFilters:'#imports details.importAdvancedFilters',
   };
   const DETAIL_SECTIONS = new Set(['titles','tags','metadata','matches','chapters','history','served']);
+  const ENTRY_TABS = ['browse','matrix','subbed'];
+  // Library cursors are opaque server tokens: printable ASCII only, bounded.
+  const cursorText = value => typeof value === 'string' && /^[\x21-\x7e]{0,512}$/.test(value) ? value : '';
   const own = (object,key) => Object.prototype.hasOwnProperty.call(object,key);
   const plain = value => value && typeof value === 'object' && !Array.isArray(value);
   const text = (value,max=300) => typeof value === 'string' ? value.slice(0,max) : '';
@@ -55,6 +60,11 @@
     result.settingsSubtab=choice(raw.settingsSubtab,['customization','configuration','browser','services','connections','security'],'customization');
     result.taskLane=choice(raw.taskLane,['all','manual','automatic'],'all');
     result.libraryScope=choice(raw.libraryScope,['all','unmatched','missing','missing_downloads','source_gaps','verification','monitored','catalog'],'all');
+    result.matrixLoaded=Math.ceil(integer(raw.matrixLoaded,50,500,50)/50)*50;
+    result.open={};for(const tab of ENTRY_TABS){const entry=id(raw.open?.[tab]);if(entry)result.open[tab]=entry;}
+    const library=raw.library;
+    result.library=plain(library)&&typeof library.signature==='string'&&Array.isArray(library.previous)&&library.previous.length<=50
+      ?{signature:text(library.signature,2000),cursor:cursorText(library.cursor),previous:library.previous.map(cursorText)}:null;
     return result;
   }
   function owner() {try{return localStorage.getItem('autosourcarr.preferenceOwner')||'';}catch(_){return '';}}
@@ -64,6 +74,7 @@
   let saved=null, booted=false, started=false, applying=false, lastTab='browse';
   let pendingScroll=null, scheduled=null, saveTimer=null, sourceRestorePending=false;
   let revision=0;
+  const RESTORE=Object.freeze({restore:true});let restoreOpen=null;
   let initialControls={};const touchedControls=new Set();
   function cancelPositionRestore(){revision++;pendingScroll=null;if(scheduled!==null){cancelAnimationFrame(scheduled);scheduled=null;}}
   function scheduleSave(){if(!started || applying)return;clearTimeout(saveTimer);saveTimer=setTimeout(save,200);}
@@ -88,6 +99,14 @@
     result.sourceSubtab=readLocalUiPreference('sourcesSubtab')||'installed';
     result.settingsSubtab=readLocalUiPreference('settingsSubtab')||'customization';
     result.taskLane=workbenchState.taskLane;result.libraryScope=workbenchState.libraryScope;
+    // An entry still waiting to be reopened counts as open; otherwise the live inspectors decide.
+    result.open={};
+    const browseOpen=typeof browseInspectorIsOpen==='function'&&browseInspectorIsOpen()?id(browseState.selectedEntryId):null;
+    if(browseOpen)result.open.browse=browseOpen;
+    if(typeof activeInspector!=='undefined')for(const kind of ['matrix','subbed']){const entry=id(activeInspector?.[kind]);if(entry)result.open[kind]=entry;}
+    if(restoreOpen)for(const [tab,entry] of Object.entries(restoreOpen))if(!own(result.open,tab))result.open[tab]=entry;
+    result.library=globalThis.AutoSourcarrLibrary?.position?.()||null;
+    if(typeof matrixPaging!=='undefined')result.matrixLoaded=matrixPaging.loaded;
     return normalize(result);
   }
   function save(){if(!started || applying)return;saved=capture();try{sessionStorage.setItem(KEY,JSON.stringify(saved));}catch(_){}}
@@ -126,20 +145,24 @@
       // These setters must be side-effect-free when their parent tab is inactive.
       setManualActionsSubtab(saved.manualSubtab);setSourceSubtab(saved.sourceSubtab,false);setSettingsSubtab(saved.settingsSubtab,false);
       applyReadOnlyDetails();
+      globalThis.AutoSourcarrLibrary?.restorePosition?.(saved.library);
+      // PERF-5: the Matrix reloads as many page-first rows as were loaded before the refresh.
+      if(typeof matrixPaging!=='undefined')matrixPaging.loaded=saved.matrixLoaded;
+      if(Object.keys(saved.open).length)restoreOpen={...saved.open};
       lastTab=saved.tab;
       if(saved.scroll[lastTab])pendingScroll={tab:lastTab,position:saved.scroll[lastTab],revision};
       sourceRestorePending=true;
     } else saved=normalize({version:VERSION,owner:owner()});
     applying=false;
     // Trusted interaction cancels late scroll restoration, never a background poll.
-    for(const type of ['pointerdown','keydown','wheel','touchstart'])document.addEventListener(type,event=>{if(event.isTrusted)cancelPositionRestore();},{capture:true,passive:true});
+    for(const type of ['pointerdown','keydown','wheel','touchstart'])document.addEventListener(type,event=>{if(event.isTrusted){cancelPositionRestore();if(type!=='wheel')restoreOpen=null;}},{capture:true,passive:true});
     // Capture only allowlisted controls; never serialize arbitrary form contents.
     for(const type of ['input','change'])document.addEventListener(type,event=>{if(CONTROL_IDS.includes(event.target?.id)){revision++;touchedControls.add(event.target.id);scheduleSave();}},{capture:true});
     document.addEventListener('click',()=>queueMicrotask(scheduleSave));
     document.addEventListener('toggle',event=>{if(event.target?.matches?.('details'))scheduleSave();},{capture:true});
     window.addEventListener('scroll',scheduleSave,{passive:true});
     window.addEventListener('pagehide',save);
-    new MutationObserver(()=>{if(pendingScroll)rendered();}).observe(document.querySelector('main'),{subtree:true,childList:true,attributes:true,attributeFilter:['aria-busy']});
+    new MutationObserver(()=>{if(pendingScroll)position(currentTab(),false);}).observe(document.querySelector('main'),{subtree:true,childList:true,attributes:true,attributeFilter:['aria-busy']});
     return {tab:lastTab,needsSourceInventory:lastTab==='browse' && !element('browseConnectedSource')?.value && !!(element('browseSource')?.value || element('browseLanguage')?.value)};
   }
 
@@ -153,7 +176,7 @@
     lastTab=tab;booted=true;saved.tab=tab;
     if(!pendingScroll && saved.scroll[tab])pendingScroll={tab,position:saved.scroll[tab],revision};
     if(!pendingScroll && !saved.scroll[tab])pendingScroll={tab,position:{x:0,y:0},revision};
-    rendered(tab);scheduleSave();
+    position(tab,false);scheduleSave();
   }
   function filtersReady() {
     if(!sourceRestorePending || !saved)return;
@@ -161,19 +184,39 @@
     for(const key of DEFERRED_OPTIONS)if(own(initialControls,key) && !touchedControls.has(key))restoreControl(key,initialControls[key],{placeholder:true});
     syncBrowseConnectionControls();applying=false;sourceRestorePending=false;
   }
-  function rendered(tab=currentTab()) {
-    // Call after asynchronous lists/tables finish, not only after their request.
-    if(!pendingScroll || pendingScroll.tab!==tab || currentTab()!==tab || pendingScroll.revision!==revision)return;
-    if(document.querySelector('#'+tab+' [aria-busy="true"]'))return;
+  // Pages call this after their asynchronous lists/tables finish, not only after their request; only then may the entry
+  // that was open be reopened (a tab switch or DOM change alone only retries the scroll position).
+  function rendered(tab=currentTab()) {position(tab,true);}
+  function position(tab,allowReopen) {
+    if(currentTab()!==tab || document.querySelector('#'+tab+' [aria-busy="true"]'))return;
+    const scrolling=!!pendingScroll && pendingScroll.tab===tab && pendingScroll.revision===revision;
+    const reopening=allowReopen && !!restoreOpen && own(restoreOpen,tab);
+    if(!scrolling && !reopening)return;
     if(scheduled!==null)cancelAnimationFrame(scheduled);
     scheduled=requestAnimationFrame(()=>{
-      scheduled=null;if(!pendingScroll || currentTab()!==tab || pendingScroll.revision!==revision)return;
-      const {x,y}=pendingScroll.position;
-      window.scrollTo({left:x,top:y,behavior:'instant'});
-      // Retain the request when height is still growing; a later render retries.
-      if(Math.abs((window.scrollY||0)-y)<=2)pendingScroll=null;
+      scheduled=null;if(currentTab()!==tab)return;
+      if(pendingScroll && pendingScroll.tab===tab && pendingScroll.revision===revision){
+        const {x,y}=pendingScroll.position;
+        window.scrollTo({left:x,top:y,behavior:'instant'});
+        // Retain the request when height is still growing; a later render retries.
+        if(Math.abs((window.scrollY||0)-y)<=2)pendingScroll=null;
+      }
+      // The list is in place under the saved position: reopen the entry that was open (it owns the view from here).
+      if(reopening && reopen(tab))pendingScroll=null;
     });
   }
+  function reopen(tab) {
+    if(!restoreOpen || !own(restoreOpen,tab))return false;
+    const entry=restoreOpen[tab];delete restoreOpen[tab];
+    try{
+      if(tab==='browse')window.openBrowseEntry?.(entry,RESTORE);
+      else window.openInlineEntry?.(tab,entry,RESTORE);
+    }catch(_){}
+    if(!Object.keys(restoreOpen).length)restoreOpen=null;
+    return true;
+  }
+  // True only for this module's own one-time restore of an entry the user had open before the refresh.
+  function isRestore(event) {return event===RESTORE;}
   function entrySectionsRendered(kind) {
     // Restores section expansion only; deliberately does not reopen dialogs or
     // forge the isTrusted event required by existing inspector-open controls.
@@ -183,7 +226,7 @@
   }
   function identityChanged(newOwner) {
     if(!saved || !saved.owner || saved.owner===newOwner){if(saved)saved.owner=text(newOwner,512);return;}
-    cancelPositionRestore();sourceRestorePending=false;
+    cancelPositionRestore();sourceRestorePending=false;restoreOpen=null;globalThis.AutoSourcarrLibrary?.restorePosition?.(null);
     try{sessionStorage.removeItem(KEY);}catch(_){}
     // Root should also clear restored search controls if identity differs before
     // results are presented. This method must not issue requests or wipe drafts.
@@ -195,5 +238,5 @@
     if(typeof mixedEntriesState!=='undefined')Object.assign(mixedEntriesState,{offset:0,selected:null});
     saved=normalize({version:VERSION,owner:newOwner,tab:currentTab()});
   }
-  window.AutoSourcarrNavigation={get started(){return started;},initialize,beforeSwitch,afterSwitch,filtersReady,rendered,entrySectionsRendered,identityChanged,save,normalize};
+  window.AutoSourcarrNavigation={get started(){return started;},initialize,beforeSwitch,afterSwitch,filtersReady,rendered,entrySectionsRendered,identityChanged,save,normalize,isRestore};
 })();

@@ -199,19 +199,6 @@
     switchTab('browse',{load:false});window.openBrowseEntry(id,event);
   }
 
-  const originalPalette=applyAppearancePalette;
-  applyAppearancePalette=function(style,theme,...rest) {
-    originalPalette(style,theme,...rest);
-    const light=style==='paper',root=document.documentElement;
-    root.dataset.riLight=String(light);
-    const colors=light?{bg:'oklch(97% .010 260)',panel:'oklch(94% .011 260)',panel2:'oklch(91% .012 260)',chrome:'oklch(88% .014 260)',control:'oklch(94% .011 260)','control-hover':'oklch(88% .014 260)',line:'oklch(84% .012 260)',text:'oklch(18% .014 260)',muted:'oklch(44% .012 260)',good:'oklch(46% .115 148)',warn:'oklch(48% .100 75)',bad:'oklch(50% .165 28)'}:
-      {bg:'oklch(24% .014 260)',panel:'oklch(29% .015 260)',panel2:'oklch(27% .014 260)',chrome:'oklch(20% .015 260)',control:'oklch(29% .015 260)','control-hover':'oklch(33% .015 260)',line:'oklch(36% .016 260)',text:'oklch(90% .007 260)',muted:'oklch(68% .011 260)',good:'oklch(72% .115 148)',warn:'oklch(82% .150 80)',bad:'oklch(74% .150 28)'};
-    if(['neutral','paper'].includes(style)) {
-      for(const [key,value] of Object.entries(colors))root.style.setProperty('--'+key,value);
-      if(theme==='blue')for(const [key,value] of Object.entries({'accent':light?'oklch(44% .130 215)':'oklch(82% .115 215)','accent-text':light?'oklch(44% .130 215)':'oklch(82% .115 215)','accent-border':light?'oklch(60% .130 215)':'oklch(70% .130 215)','accent-soft':light?'oklch(91% .025 215)':'oklch(30% .035 215)','on-accent':light?'#fff':'#10252b','progress':light?'oklch(50% .130 215)':'oklch(70% .115 215)'}))root.style.setProperty('--'+key,value);
-    }
-  };
-
   function initialize() {
     createToolbars();applyTheme(readLocalUiPreference('theme')||'blue',readLocalUiPreference('customColor'));
     for(const button of document.querySelectorAll('.appNav [data-route]'))button.onclick=event=>navigate(button.dataset.route,{event}).catch(error=>toast(error.message));
@@ -231,7 +218,7 @@
     });
     byId('riMenuToggle').onclick=()=>document.documentElement.classList.contains('riSidebarOpen')?closeSidebar():openSidebar();
     byId('riSidebarScrim').onclick=()=>closeSidebar();
-    byId('riThemeToggle').onclick=()=>applyThemeStyle(document.documentElement.dataset.themeStyle==='paper'?'neutral':'paper',true);
+    byId('riThemeToggle').onclick=()=>applyColorMode(document.documentElement.dataset.colorMode==='light'?'dark':'light',true);
     byId('riRefreshStatistics').onclick=()=>health().catch(error=>toast(error.message));
     byId('riSearchOpen').onclick=openSearch;
     byId('riSearchDialog').addEventListener('close',()=>{searchGeneration++;clearTimeout(searchTimer);searchRequest?.abort();});

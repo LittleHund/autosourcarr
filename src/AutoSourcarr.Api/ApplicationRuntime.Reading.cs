@@ -111,7 +111,10 @@ internal sealed partial class ApplicationRuntime
         });
         _ = new TranslationEnrichment(database, () => owner.Settings, translatedNames, id => ingest.ExpandedSearchNames(id)).ScheduleStartup(owner.Jobs);
         _ = new OrphanIdentityRepair(database, () => owner.Settings, identity.ResolveAsync, () => providers.Current().Count > 0).Schedule(owner.Jobs);
-        var tagCatalogue = new TagCatalogue(database, writeGate, decisions) { Changed = () => owner._duplicates?.Invalidate() };
+        var tagCatalogue = new TagCatalogue(database, writeGate, decisions)
+        {
+            Changed = () => { owner._duplicates?.Invalidate(); owner.Events.PulseEntries("catalogue", LiveWindow, [], "tags"); },
+        };
         var tagStore = new NativeTagStore(database, writeGate);
         if (!tagCatalogue.IndexCurrent()) _ = tagCatalogue.QueueReindex(owner.Jobs, tagStore, "automatic");
         var queries = new CatalogueQueries(database, writeGate, id => catalogue.Covers.IsCached(FormattableString.Invariant($"entry-{id}")));

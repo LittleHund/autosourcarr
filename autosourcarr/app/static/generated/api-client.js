@@ -704,7 +704,7 @@
        */
       getAccounts(options) { return call('GET', '/api/v1/accounts', undefined, options); },
       /**
-       * Finished general tasks (up to 300, seven days; query offset and limit) plus the 50 newest download events (downloaded, failed, removed).
+       * Finished general tasks (up to 300, seven days; query offset and limit) plus one page of 50 download events (downloaded, failed, removed), newest first; query downloads_before = downloads.next_before continues (page-first, no count).
        * GET /api/v1/activity/history
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -916,6 +916,13 @@
        */
       getInstalledSourceExtensions(options) { return call('GET', '/api/v1/source-maintenance/installed', undefined, options); },
       /**
+       * Status page: the app's own services (source host, WebView, challenge handling, repair runner and egress proxy, translation, metadata providers, main Suwayomi, reader extension) as {mode, actions, services: {name: {label, state, message}}, reader_build}; read from cached state, never waits on the network.
+       * GET /api/v1/internal-services
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getInternalServices(options) { return call('GET', '/api/v1/internal-services', undefined, options); },
+      /**
        * Job queue: workers, running and queued jobs with ETA, and per-type run limit, average time, failures and freezes.
        * GET /api/v1/jobs
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -973,7 +980,7 @@
        */
       getMatchingPresets(options) { return call('GET', '/api/v1/matching-presets', undefined, options); },
       /**
-       * The catalogue Matrix from stored data: entries (optional query search, limit 1-500, subbed, source_id, include_chapter_stats), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.
+       * The catalogue Matrix from stored data: entries (optional query search, limit 1-500 default 50, subbed, source_id, include_chapter_stats; without search, subbed or source_id the entries are a page-first keyset page continued with 'cursor' = next_cursor), their primary and additional records with chapter coverage, the sources and the last main-library snapshot. Duplicate scores load separately.
        * GET /api/v1/matrix
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -1264,6 +1271,13 @@
        */
       getTasks(options) { return call('GET', '/api/v1/tasks', undefined, options); },
       /**
+       * Your UI preferences (layout, sorting, columns, theme) and whose profile they are: the signed-in account, else the proxy identity.
+       * GET /api/v1/ui-preferences
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getUiPreferences(options) { return call('GET', '/api/v1/ui-preferences', undefined, options); },
+      /**
        * What the last update changed in your settings, until dismissed.
        * GET /api/v1/settings/update-notice
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
@@ -1318,7 +1332,7 @@
        */
       listCatalogueDecisions(options) { return call('GET', '/api/v1/catalog-sharing/decisions', undefined, options); },
       /**
-       * Catalogue entries as cards, newest first or matching the optional query 'search' (local titles only), at most 'limit' (default 200, at most 1000).
+       * Catalogue entries as cards (PERF-5 page-first): newest first in pages of 'limit' (default 50, at most 1000) continued with 'cursor' (next_cursor of the previous page), or matching the optional query 'search' (local titles only, one page).
        * GET /api/v1/catalogue/entries
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
        * @returns {Promise<JsonObject>}
@@ -2032,6 +2046,14 @@
        */
       saveTagSynonyms(body, options) { return call('PUT', '/api/v1/tag-synonyms', body, options); },
       /**
+       * Merge changed UI preferences into your profile (body: values {name: value}); at most 64 KiB per profile.
+       * PUT /api/v1/ui-preferences
+       * @param {JsonObject} body
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      saveUiPreferences(body, options) { return call('PUT', '/api/v1/ui-preferences', body, options); },
+      /**
        * Manual search: {query, source_id?, page?, all_names?}. With source_id, search that source live with the typed query and (all_names, default true) the entry's names; results are ranked by the matching scorer against the entry and show their current owner. Without source_id, search the catalogue.
        * POST /api/v1/entries/{entryId}/manual-search
        * @param {string} entryId
@@ -2060,7 +2082,7 @@
        */
       searchManualGroupCandidates(groupId, body, options) { return call('POST', `/api/v1/manual-groups/${encodeURIComponent(groupId)}/candidates`, body, options); },
       /**
-       * Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Kept in feedback.jsonl (bounded); revert queues a rollback.
+       * Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Fixed (user-confirmed working, hard rule 6) and retry (not working) are kept per package for that jar across restarts; revert queues a rollback. Also kept in feedback.jsonl (bounded).
        * POST /api/v1/source-maintenance/jobs/{jobId}/feedback
        * @param {string} jobId
        * @param {JsonObject} body

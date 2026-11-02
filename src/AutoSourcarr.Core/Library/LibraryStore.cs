@@ -284,6 +284,38 @@ public sealed class LibraryStore
         };
     });
 
+    /// <summary>The newest download events first; later pages continue below the primary key (keyset, no OFFSET).</summary>
+    internal const string DownloadFirstPageSql = "SELECT id AS Id,entry_id AS EntryId,chapter_id AS ChapterId,event AS Event,detail AS Detail,created_at AS CreatedAt FROM download_history ORDER BY id DESC";
+    internal const string DownloadNextPageSql = "SELECT id AS Id,entry_id AS EntryId,chapter_id AS ChapterId,event AS Event,detail AS Detail,created_at AS CreatedAt FROM download_history WHERE id<@before ORDER BY id DESC";
+
+    /// <summary>
+    /// PERF-5 page-first download history: one page of <paramref name="limit"/> events below <paramref name="before"/>
+    /// (null: the newest) through <see cref="DatabaseSession.QueryPage{T}"/>; no count. <c>next_before</c> continues.
+    /// </summary>
+    public JsonObject DownloadHistoryPage(long? before, int limit) => database.Read(DatabaseFile.Catalog, c =>
+    {
+        var page = before is { } id ? c.QueryPage<DownloadEvent>(DownloadNextPageSql, new { before = id }, limit) : c.QueryPage<DownloadEvent>(DownloadFirstPageSql, null, limit);
+        return new JsonObject
+        {
+            ["items"] = new JsonArray(page.Items.Select(row => (JsonNode?)new JsonObject
+            {
+                ["id"] = row.Id, ["entry_id"] = row.EntryId, ["chapter_id"] = row.ChapterId,
+                ["event"] = row.Event ?? "", ["detail"] = row.Detail ?? "", ["created_at"] = row.CreatedAt ?? "",
+            }).ToArray()),
+            ["has_more"] = page.HasMore, ["next_before"] = page.HasMore && page.Items.Count > 0 ? page.Items[^1].Id : null, ["limit"] = limit,
+        };
+    });
+
+    internal sealed class DownloadEvent
+    {
+        public long Id { get; set; }
+        public long EntryId { get; set; }
+        public long ChapterId { get; set; }
+        public string? Event { get; set; }
+        public string? Detail { get; set; }
+        public string? CreatedAt { get; set; }
+    }
+
     // ---- state -----------------------------------------------------------------------------------------------------
 
     public bool Paused

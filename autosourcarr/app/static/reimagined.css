@@ -6,19 +6,18 @@
 @font-face{font-family:Fraunces;src:url('/static/fonts/fraunces-latin-400-italic.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap}
 @font-face{font-family:'JetBrains Mono';src:url('/static/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 
-html[data-ui=reimagined]{--ri-sidebar-width:220px;--header-height:56px;--activity-height:36px;--ri-header:oklch(42% .085 228);--ri-sidebar:oklch(20% .015 260);--ri-toolbar:oklch(27% .014 260);--ri-sidebar-active:oklch(29% .015 260);--ri-page-pad:32px;scroll-padding-top:120px;min-height:100%;background:var(--bg)}
-html[data-ui=reimagined][data-ri-light=true]{--ri-header:oklch(61.5% .108 227);--ri-sidebar:oklch(86% .013 260);--ri-toolbar:oklch(91% .012 260);--ri-sidebar-active:oklch(95% .008 250)}
+html[data-ui=reimagined]{--ri-sidebar-width:220px;--header-height:56px;--activity-height:36px;--ri-header:var(--header);--ri-sidebar:var(--sidebar);--ri-toolbar:var(--toolbar);--ri-sidebar-active:var(--sidebar-active);--ri-page-pad:32px;scroll-padding-top:120px;min-height:100%;background:var(--bg)}
 html[data-ui=reimagined] body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:13px;line-height:1.55;min-width:0;min-height:100vh}
 html[data-ui=reimagined] *,html[data-ui=reimagined] *::before,html[data-ui=reimagined] *::after{box-sizing:border-box}
 html[data-ui=reimagined] button,html[data-ui=reimagined] input,html[data-ui=reimagined] select,html[data-ui=reimagined] textarea{font-family:inherit;font-size:12px;border-radius:6px;min-height:34px}
-html[data-ui=reimagined] button{padding:6px 11px;background:var(--control);border:1px solid var(--line);color:var(--text);font-weight:500;cursor:pointer;transition:background-color 160ms,color 160ms,border-color 160ms}
+html[data-ui=reimagined] button{padding:6px 11px;background:var(--control);border:1px solid var(--control-border);color:var(--text);font-weight:500;cursor:pointer;transition:background-color 160ms,color 160ms,border-color 160ms}
 html[data-ui=reimagined] button:hover{background:var(--control-hover);border-color:var(--accent-border)}
 html[data-ui=reimagined] button:disabled{cursor:not-allowed;opacity:.5}
-html[data-ui=reimagined] button.primaryAction,html[data-ui=reimagined] button.goodAction{background:var(--control-hover)!important;color:var(--text)!important;border-color:var(--line)!important}
+html[data-ui=reimagined] button.primaryAction,html[data-ui=reimagined] button.goodAction{background:var(--control-hover)!important;color:var(--text)!important;border-color:var(--control-border)!important}
 html[data-ui=reimagined] button.primaryAction:hover,html[data-ui=reimagined] button.goodAction:hover{border-color:var(--accent)!important;color:var(--accent)!important}
-html[data-ui=reimagined] input:not([type=range]):not([type=checkbox]):not([type=radio]),html[data-ui=reimagined] select,html[data-ui=reimagined] textarea{background:var(--panel2);color:var(--text);border:1px solid color-mix(in srgb,var(--muted) 35%,var(--line));padding:7px 10px;min-width:0;max-width:100%}
+html[data-ui=reimagined] input:not([type=range]):not([type=checkbox]):not([type=radio]),html[data-ui=reimagined] select,html[data-ui=reimagined] textarea{background:var(--panel2);color:var(--text);border:1px solid var(--control-border);padding:7px 10px;min-width:0;max-width:100%}
 html[data-ui=reimagined] input::placeholder{color:var(--muted);opacity:.8}
-html[data-ui=reimagined] :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+html[data-ui=reimagined] :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:3px}
 html[data-ui=reimagined] a{color:var(--accent);text-decoration:none}
 html[data-ui=reimagined] a:hover{text-decoration:underline}
 .riSymbols{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
@@ -27,21 +26,21 @@ html[data-ui=reimagined] a:hover{text-decoration:underline}
 .riSkip{position:fixed;z-index:500;top:-100px;left:16px;background:var(--panel);border:2px solid var(--accent);padding:10px 18px;border-radius:5px}
 .riSkip:focus{top:8px}
 
-html[data-ui=reimagined] .appHeader.riHeader{display:flex;position:fixed;inset:0 0 auto;height:56px;min-height:56px;padding:0 20px 0 0;gap:0;border-bottom:1px solid oklch(36% .075 228);background:var(--ri-header)!important;color:#f4fbfc;z-index:60;flex-wrap:nowrap}
+html[data-ui=reimagined] .appHeader.riHeader{display:flex;position:fixed;inset:0 0 auto;height:56px;min-height:56px;padding:0 20px 0 0;gap:0;border-bottom:1px solid var(--header-line);background:var(--ri-header)!important;color:var(--header-text);z-index:60;flex-wrap:nowrap}
 .riBrand{display:flex;align-items:center;flex:0 0 var(--ri-sidebar-width);padding:0 18px;gap:8px;height:100%}
-.riBrandLink{display:inline-flex;align-items:center;gap:10px;white-space:nowrap;color:#f4fbfc!important;text-decoration:none!important}
+.riBrandLink{display:inline-flex;align-items:center;gap:10px;white-space:nowrap;color:var(--header-text)!important;text-decoration:none!important}
 .riBrandLink>.riAppIcon{width:32px;height:32px;object-fit:contain;flex:0 0 32px}
 html[data-ui=reimagined] .riBrand h1{font-size:15px;letter-spacing:-.025em;font-weight:600;margin:0;color:inherit}
-html[data-ui=reimagined] .riHeader button.riGlobalSearch{display:flex;align-items:center;gap:9px;width:320px;max-width:38vw;min-height:32px;padding:5px 10px;border:1px solid transparent!important;border-radius:6px;background:oklch(20% .015 260 / .4)!important;color:#d9eff2!important;font-size:12px;font-weight:400;text-align:left}
+html[data-ui=reimagined] .riHeader button.riGlobalSearch{display:flex;align-items:center;gap:9px;width:320px;max-width:38vw;min-height:32px;padding:5px 10px;border:1px solid transparent!important;border-radius:6px;background:#00000033!important;color:var(--header-muted)!important;font-size:12px;font-weight:400;text-align:left}
 .riGlobalSearch .riIcon{width:16px;height:16px;opacity:.85}
-.riGlobalSearch kbd{margin-left:auto;border:1px solid #ffffff45;border-radius:4px;min-width:19px;height:20px;text-align:center;font:11px/18px Inter,sans-serif;color:#d9eff2}
-html[data-ui=reimagined] .riHeader button.riGlobalSearch:hover{background:oklch(20% .015 260 / .6)!important}
+.riGlobalSearch kbd{margin-left:auto;border:1px solid #ffffff45;border-radius:4px;min-width:19px;height:20px;text-align:center;font:11px/18px Inter,sans-serif;color:var(--header-muted)}
+html[data-ui=reimagined] .riHeader button.riGlobalSearch:hover{background:#0000004d!important}
 .riHeaderRight{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex:1;min-width:0;margin-left:20px}
-.riExperiment{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#b4d3df;border:1px solid #ffffff30;border-radius:5px;padding:3px 7px}
+.riExperiment{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--header-muted);border:1px solid #ffffff30;border-radius:5px;padding:3px 7px}
 html[data-ui=reimagined] .riHeader .riIconButton{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:0;color:inherit;border:0;background:transparent!important}
 html[data-ui=reimagined] .riHeader .riIconButton:hover{background:#ffffff1a!important}
-html[data-ui=reimagined] #health{margin:0;padding:5px 8px;min-height:28px;max-width:160px;border:0!important;border-radius:5px;background:#00000020!important;color:#e3f3f5!important;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#riPreviewBadge{font-size:10px;white-space:nowrap;color:#dcf5df}
+html[data-ui=reimagined] #health{margin:0;padding:5px 8px;min-height:28px;max-width:160px;border:0!important;border-radius:5px;background:#00000020!important;color:var(--header-text)!important;font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#riPreviewBadge{font-size:10px;white-space:nowrap;color:var(--header-muted)}
 html[data-ui=reimagined] #riMenuToggle{display:none}
 
 .riSidebar{position:fixed;top:56px;bottom:0;left:0;width:var(--ri-sidebar-width);background:var(--ri-sidebar);border-right:1px solid color-mix(in srgb,var(--line) 50%,transparent);z-index:55;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}

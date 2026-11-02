@@ -15,11 +15,13 @@ public sealed class SupportPrivacy
     private readonly byte[] _salt = RandomNumberGenerator.GetBytes(32);
     private readonly object _gate = new();
     private readonly HashSet<string> _secrets = new(StringComparer.Ordinal);
+    /// <summary>PERF-9: the instance's own folders (data, config, databases, library) by their absolute path.</summary>
+    private readonly Dictionary<string, string> _paths = new(StringComparer.Ordinal);
     private int _secretCharacters;
     private bool _capacityExceeded;
     private static readonly ConcurrentDictionary<(string Pattern, RegexOptions Options), Regex> Expressions = new();
     private const RegexOptions IgnoreCase = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
-    private static readonly Regex PrivateKey = R(@"^(?:authorization|proxy[-_]authorization|(?:set[-_])?cookie|(?:.*[-_])?(?:password|passwd|passphrase|secret|token|api[-_]?key|access[-_]?key|credential|session(?:[-_]?id)?|csrf(?:[-_]?token)?|device[-_]?code|user[-_]?code|user[-_]?name|email|account[-_]?id|workspace[-_]?id|private[-_]?key))$", IgnoreCase);
+    private static readonly Regex PrivateKey = R(@"^(?:authorization|proxy[-_]authorization|(?:set[-_])?cookie|(?:.*[-_])?(?:password|passwd|passphrase|secret|token|api[-_]?key|access[-_]?key|credential|session(?:[-_]?id)?|csrf(?:[-_]?token)?|device[-_]?code|user[-_]?code|user[-_]?name|email|account[-_]?id|workspace[-_]?id|private[-_]?key|(?:signing|encryption|master|secret|config)[-_]?key|key[-_]?store|key[-_]?alias|cf[-_]clearance|__cf[-_]?bm|phpsessid|jsessionid|connect\.sid|remember[-_]?me))$", IgnoreCase);
     private static readonly Regex PersonalKey = R(@"^(?:user|host(?:name)?|ip|client_ip|remote_addr|title|preferred_title|backup_title|source_title|query|search_query)$", IgnoreCase);
     private static readonly Regex Url = R("\\b(?:https?|wss?)://[^\\s<>\"']+", IgnoreCase);
     private static readonly Regex Assignment = R("([A-Za-z_][A-Za-z0-9_-]*)([\"']?\\s*[:=]\\s*)(?:\"[^\"\\r\\n]*\"|'[^'\\r\\n]*'|[^\\s,;&{}\\[\\]]+)", RegexOptions.NonBacktracking);
@@ -55,17 +57,37 @@ public sealed class SupportPrivacy
         }
     }
 
+    /// <summary>
+    /// PERF-9: an absolute folder of this instance (data, config, database, library) is shown as <c>[label]</c> in every
+    /// diagnostic, with either separator; the root folder and relative paths are ignored.
+    /// </summary>
+    public void RegisterPath(string label, string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path)) return;
+        string full;
+        try { full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path)); }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or PathTooLongException) { return; }
+        if (full.Length < 4 || full.Length > 4096) return;
+        lock (_gate)
+            foreach (var variant in new[] { full, full.Replace('\\', '/'), full.Replace('/', '\\') }.Distinct(StringComparer.Ordinal))
+                if (_paths.Count < 64) _paths[variant] = "[" + label + "]";
+    }
+
     public string Text(string? value)
     {
         var text = value ?? "";
         if (text.Length > 65536) return "[oversize diagnostic omitted]";
-        string[] secrets;
+        string[] secrets; KeyValuePair<string, string>[] paths;
         lock (_gate)
         {
             if (_capacityExceeded) return "[diagnostic omitted: secret registry capacity]";
             secrets = _secrets.OrderByDescending(secret => secret.Length).ToArray();
+            paths = _paths.OrderByDescending(path => path.Key.Length).ToArray();
         }
         foreach (var secret in secrets) text = text.Replace(secret, Redacted, StringComparison.Ordinal);
+        // Whole path components only: "/data" never changes "/database" or "/x/data".
+        foreach (var (path, label) in paths)
+            text = R(@"(?<![\w.-])" + Regex.Escape(path) + @"(?![\w.-])", OperatingSystem.IsWindows() ? IgnoreCase : RegexOptions.CultureInvariant).Replace(text, label);
         text = R(@"\x1b\[[0-?]*[ -/]*[@-~]").Replace(text, "");
         text = R(@"-----BEGIN [^-]*PRIVATE KEY-----.*?(?:-----END [^-]*PRIVATE KEY-----|$)", RegexOptions.Singleline).Replace(text, "[private key omitted]");
         text = R(@"(https?://)[^\s/\?#@]+@", IgnoreCase).Replace(text, "$1[redacted]@");
@@ -90,7 +112,8 @@ public sealed class SupportPrivacy
         text = Ipv4.Replace(text, Address);
         text = Ipv6.Replace(text, Address);
         text = R("[A-Za-z]:\\\\[^\\r\\n\"<>|]*").Replace(text, match => "[path]/" + match.Value.TrimEnd(' ', '.').Split('\\')[^1]);
-        text = R("(?<![\\w:/])/(?:home|Users|mnt|config|data|tmp)/[^\\s\"']+").Replace(text, match => "[path]/" + match.Value.TrimEnd('/').Split('/')[^1]);
+        // Common data roots on NAS and Linux hosts (TrueNAS /mnt, Synology /volume1, /srv, /media, /var/lib, /root).
+        text = R("(?<![\\w:/])/(?:home|Users|mnt|config|data|tmp|srv|media|root|opt/data|var/lib|volume\\d+|share|storage|pool)/[^\\s\"']+").Replace(text, match => "[path]/" + match.Value.TrimEnd('/').Split('/')[^1]);
         return text;
     }
 

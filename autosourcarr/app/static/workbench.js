@@ -7,92 +7,7 @@ function updatePreferenceSaveState(){
   const retry=document.querySelector('#retryPreferenceSave');if(retry)retry.hidden=!s.saveFailures;
   el.textContent=s.saveFailures?'Server save failed · changes are kept on this browser':s.saving||Object.keys(s.pending||{}).length?'Saving your appearance…':s.loaded?'Saved for '+(s.user||'local profile'):'Loading saved appearance…';
 }
-// Color placement and accent are independent, persisted user preferences.
-function normalizeThemeStyle(value){return ['neutral','tonal','dual','paper','graphite','aurora'].includes(value)?value:'neutral';}
-function colorLuminance(c){const f=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);}
-function colorContrast(a,b){const x=colorLuminance(a),y=colorLuminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
-function readableColor(color,surfaces,light=false){
-  let safe={...color};const target=light?{r:0,g:0,b:0}:{r:255,g:255,b:255};
-  for(let i=0;i<100&&surfaces.some(bg=>colorContrast(safe,bg)<4.5);i++)safe=mixRgb(safe,target,.09);
-  return safe;
-}
-function normalizeAccentStrength(value){const n=Number(value);return Number.isFinite(n)&&n>=10&&n<=50?n:25;}
-function normalizeCardFill(value){return value==='neutral'?'neutral':'accent';}
-function appearancePalette(style,accent,secondary,strength=25,cardFill='accent',tertiary=secondary){
-  const intensity=normalizeAccentStrength(strength)/100;
-  style=normalizeThemeStyle(style);const light=style==='paper';
-  const p=light?{bg:'#F2F0EA',panel:'#FFFEFA',panel2:'#E8E5DC',chrome:'#EAE7DF',control:'#E3E0D7','control-hover':'#D8D4CA',line:'#CAC5B9',text:'#242C30',muted:'#565E60',good:'#216441',warn:'#775208',bad:'#A12F3D'}
-    :{bg:'#101217',panel:'#171A20',panel2:'#1D2129',chrome:'#13161C',control:'#222731','control-hover':'#2B3240',line:'#303540',text:'#EEF1F5',muted:'#A5AFBD',good:'#70DBA0',warn:'#F1C65C',bad:'#FF9199'};
-  if(style==='graphite')Object.assign(p,{bg:'#08090B',panel:'#101216',panel2:'#171A1F',chrome:'#0B0D10',control:'#202329','control-hover':'#292D35',line:'#333740'});
-  const tint=(base,color,n)=>rgbToHex(...Object.values(mixRgb(hexToRgb(base),color,n)));
-  // Cards have their own color role in every style. Tint from the neutral base,
-  // not an already tinted panel, so changing style does not compound the color.
-  p.card=normalizeCardFill(cardFill)==='accent'?tint(p.panel,secondary,intensity):p.panel;
-  p['card-secondary']=p.card;
-  p['evidence-card']=style==='dual'&&normalizeCardFill(cardFill)==='accent'?tint(p.panel,tertiary,intensity):p.card;
-  if(style==='tonal'||style==='aurora'){
-    p.panel=tint(p.panel,secondary,style==='tonal'?intensity:intensity*.5);
-    p.panel2=tint(p.panel2,secondary,style==='tonal'?Math.min(.55,intensity+.05):intensity*.65);
-    p.chrome=tint(p.chrome,accent,.08);
-  }
-  p['secondary-soft']=tint(p.panel,secondary,style==='dual'?intensity*.65:(light?.06:.10));
-  p['accent-soft']=tint(p.panel,accent,light?intensity*.35:intensity*.65);
-  const surfaceKeys=['bg','panel','panel2','chrome','control','control-hover','accent-soft','secondary-soft','card','card-secondary','evidence-card'];
-  // Strong white/black tints must not make a dark/light panel unreadable.
-  const surfaceTarget=hexToRgb(p.bg),baseText=hexToRgb(p.text);
-  for(const key of surfaceKeys){let shade=hexToRgb(p[key]);for(let i=0;i<100&&colorContrast(baseText,shade)<4.7;i++)shade=mixRgb(shade,surfaceTarget,.08);p[key]=rgbToHex(shade.r,shade.g,shade.b);}
-  const surfaces=surfaceKeys.map(k=>hexToRgb(p[k]));
-  const safe=readableColor(accent,surfaces,light),second=readableColor(secondary,surfaces,light);
-  p.accent=rgbCss(safe);p['accent-text']=p.accent;p.secondary=rgbCss(second);p.tertiary=rgbCss(readableColor(tertiary,surfaces,light));
-  p['accent-fill']=rgbCss(accent);p['on-accent-fill']=colorContrast(accent,{r:0,g:0,b:0})>=colorContrast(accent,{r:255,g:255,b:255})?'#000000':'#FFFFFF';
-  p['on-accent']=colorContrast(safe,{r:16,g:18,b:23})>=4.5?'#101217':'#FFFFFF';
-  // Primary is the exact chosen border/action hue, independent of card tint.
-  p['accent-border']=rgbCss(accent);
-  p['accent-chip']=p['accent-soft'];p['surface-highlight']=p['accent-soft'];p.progress=p.accent;
-  for(const k of ['text','muted','good','warn','bad'])p[k]=rgbCss(readableColor(hexToRgb(p[k]),[...surfaces,hexToRgb(p['accent-soft']),hexToRgb(p['secondary-soft'])],light));
-  return p;
-}
-function applyAppearancePalette(style,theme,custom,secondary){
-  const presets={blue:'#7DB0FF',amber:'#F1BD55',emerald:'#61D49A',violet:'#B69AFF',rose:'#F08CA5',cyan:'#62D4DF'};
-  style=normalizeThemeStyle(style);const root=document.documentElement;
-  const primary=hexToRgb(theme==='custom'?custom:presets[theme])||hexToRgb('#7DB0FF');
-  const migrated=Number(readLocalUiPreference('colorRolesVersion'))>=2;
-  const second=migrated?(normalizeHexColor(secondary)||rgbToHex(primary.r,primary.g,primary.b)):rgbToHex(primary.r,primary.g,primary.b);
-  const third=normalizeHexColor(migrated?readLocalUiPreference('tertiaryColor'):secondary)||'#EEB392';
-  const strength=normalizeAccentStrength(readLocalUiPreference('accentStrength'));
-  const cardFill=normalizeCardFill(readLocalUiPreference('cardFill'));
-  const palette=appearancePalette(style,primary,hexToRgb(second),strength,cardFill,hexToRgb(third));
-  root.dataset.cardFill=cardFill;
-  const fillControl=document.querySelector('#cardFill');if(fillControl)fillControl.value=cardFill;
-  const slider=document.querySelector('#accentStrength'),label=document.querySelector('#accentStrengthValue');if(slider)slider.value=String(strength);if(label)label.textContent=strength+'%';
-  for(const [key,value] of Object.entries(palette))root.style.setProperty('--'+key,value);
-  root.style.setProperty('--danger','var(--bad)');root.style.setProperty('--border','var(--line)');
-  root.style.colorScheme=style==='paper'?'light':'dark';root.dataset.themeStyle=style;
-  document.querySelectorAll('.styleChoice[data-theme-style]').forEach(b=>{const on=b.dataset.themeStyle===style;b.classList.toggle('active',on);b.setAttribute('aria-checked',String(on));});
-  const panel=document.querySelector('#secondaryThemeControls');if(panel)panel.hidden=false;
-  const thirdPanel=document.querySelector('#tertiaryThemeControls');if(thirdPanel)thirdPanel.hidden=style!=='dual';
-  for(const id of ['#tertiaryThemePicker','#tertiaryThemeHex']){const el=document.querySelector(id);if(el)el.value=third;}
-  for(const id of ['#secondaryThemePicker','#secondaryThemeHex']){const el=document.querySelector(id);if(el)el.value=second;}
-}
-function commitSecondaryColor(value){
-  const hex=normalizeHexColor(value);if(!hex){toast('Enter a valid secondary HEX color.');return;}
-  ensureColorRoles();writeLocalUiPreference('secondaryColor',hex);applyTheme(readLocalUiPreference('theme'),readLocalUiPreference('customColor'));queueUiPreferenceSave('secondaryColor',hex);
-}
-function ensureColorRoles(){
-  if(Number(readLocalUiPreference('colorRolesVersion'))>=2)return;
-  const colors=migrateColorRoles({theme:readLocalUiPreference('theme'),customColor:readLocalUiPreference('customColor'),secondaryColor:readLocalUiPreference('secondaryColor')});
-  for(const key of ['secondaryColor','tertiaryColor','colorRolesVersion']){writeLocalUiPreference(key,colors[key]);queueUiPreferenceSave(key,colors[key]);}
-}
-function migrateColorRoles(values){
-  if(Number(values.colorRolesVersion)>=2)return values;
-  const presets={blue:'#7DB0FF',amber:'#F1BD55',emerald:'#61D49A',violet:'#B69AFF',rose:'#F08CA5',cyan:'#62D4DF'};
-  const primary=values.theme==='custom'?(normalizeHexColor(values.customColor)||'#FF2D78'):(presets[values.theme]||presets.blue);
-  return {...values,secondaryColor:primary,tertiaryColor:normalizeHexColor(values.secondaryColor)||'#EEB392',colorRolesVersion:2};
-}
-function commitTertiaryColor(value){
-  const hex=normalizeHexColor(value);if(!hex){toast('Enter a valid tertiary HEX color.');return;}
-  ensureColorRoles();writeLocalUiPreference('tertiaryColor',hex);applyTheme(readLocalUiPreference('theme'),readLocalUiPreference('customColor'));queueUiPreferenceSave('tertiaryColor',hex);
-}
+// Palette, colour roles and their controls live in theme.js.
 function applyCustomizationSections(){
   const values=readLocalUiPreference('customizationSections')||{};
   document.querySelectorAll('[data-customization-section]').forEach(el=>{el.open=Object.hasOwn(values,el.dataset.customizationSection)?!!values[el.dataset.customizationSection]:el.dataset.defaultOpen==='true';});
@@ -467,23 +382,17 @@ function initializeOverlayDismissal(){
 
 function initializeWorkbench(){
   initializeOverlayDismissal();
-  for(const id of ['#tertiaryThemePicker','#tertiaryThemeHex'])document.querySelector(id)?.addEventListener(id.endsWith('Picker')?'input':'change',event=>commitTertiaryColor(event.target.value));
+  bindThemeControls();
   document.querySelectorAll('[data-customization-section]').forEach(el=>el.addEventListener('toggle',()=>{if(!uiPreferencesState.loaded)return;const values=readLocalUiPreference('customizationSections')||{},key=el.dataset.customizationSection;if(values[key]===el.open)return;queueUiPreferenceSave('customizationSections',{...values,[key]:el.open});}));
   applyThumbnailSizes();
   for(const key of ['thumbnailScale','matchedThumbnailScale'])document.getElementById(key)?.addEventListener('input',event=>{const n=normalizeThumbnailScale(event.target.value,key);writeLocalUiPreference(key,n);applyThumbnailSizes();queueUiPreferenceSave(key,n);});
   document.querySelector('#resetThumbnailSizes')?.addEventListener('click',()=>{for(const [key,n] of [['thumbnailScale',100],['matchedThumbnailScale',125]]){writeLocalUiPreference(key,n);queueUiPreferenceSave(key,n);}applyThumbnailSizes();});
-  document.querySelector('#accentStrength')?.addEventListener('input',event=>{const n=normalizeAccentStrength(event.target.value);writeLocalUiPreference('accentStrength',n);applyTheme(readLocalUiPreference('theme'),readLocalUiPreference('customColor'));queueUiPreferenceSave('accentStrength',n);});
-  document.querySelector('#cardFill')?.addEventListener('change',event=>{const value=normalizeCardFill(event.target.value);writeLocalUiPreference('cardFill',value);applyTheme(readLocalUiPreference('theme'),readLocalUiPreference('customColor'));queueUiPreferenceSave('cardFill',value);});
   document.querySelector('#openSourceWebview')?.addEventListener('click',()=>openSourceWebview());
   document.querySelector('#errorList')?.addEventListener('click',event=>{const b=event.target.closest('[data-error-webview]');if(b){const e=[...(lastBackendErrors.groups||[]),...(lastBackendErrors.items||[])].find(x=>x.id===b.dataset.errorWebview);if(e)openDiagnosticWebview(e);}});
   document.querySelector('[data-tab=about]')?.addEventListener('click',loadSourceEngine);
   document.querySelector('#downloadApk')?.addEventListener('click',downloadCurrentApk);
   document.querySelector('#exportErrors')?.addEventListener('click',exportErrors);
   document.querySelector('#downloadDiagnostics')?.addEventListener('click',()=>{openErrors();exportErrors();});
-  document.querySelectorAll('.styleChoice[data-theme-style]').forEach(b=>b.addEventListener('click',()=>applyThemeStyle(b.dataset.themeStyle,true)));
-  document.querySelector('#customThemePicker')?.addEventListener('input',event=>commitCustomThemeColor(event.target.value));
-  document.querySelector('#secondaryThemePicker')?.addEventListener('input',event=>commitSecondaryColor(event.target.value));
-  document.querySelector('#secondaryThemeHex')?.addEventListener('change',event=>commitSecondaryColor(event.target.value));
   document.querySelector('#retryPreferenceSave')?.addEventListener('click',()=>{uiPreferencesState.saveFailures=0;flushUiPreferenceSave();});
   document.querySelectorAll('.themePicker,.themeStylePicker,[aria-label="Interface density"]').forEach(group=>group.addEventListener('keydown',event=>{
     if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
@@ -593,7 +502,7 @@ async function loadSourceBrowser(){
   sourceBrowserUi.loading=(async()=>{
     try{sourceBrowserUi.snapshot=await apiV1({timeoutMs:6000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'}).getSourceBrowser();renderSourceBrowser();}
     catch(e){document.querySelector('#sourceBrowserOperation').textContent='Unable to refresh browser status: '+e.message;}
-    finally{sourceBrowserUi.loading=null;if(sourceBrowserVisible())sourceBrowserUi.timer=setTimeout(loadSourceBrowser,sourceBrowserUi.snapshot?.busy?1500:5000);}
+    finally{sourceBrowserUi.loading=null;}
   })();return sourceBrowserUi.loading;
 }
 async function changeSourceBrowser(action,reset=false){
@@ -629,6 +538,10 @@ async function openSolverSettings(){
   }catch(e){toast(e.message);}
 }
 function initializeSourceBrowser(){
+  // UI-13: source engine restarts (topic sources) and connection changes refresh this pane; no timer. The identity
+  // draft is never overwritten (renderSourceBrowser keeps it while dirty) and a focused field holds the refresh (UI-12).
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-browser',topics:['sources','connections'],delayMs:500,when:()=>!document.hidden&&sourceBrowserVisible(),
+    busy:()=>globalThis.AutoSourcarrLive.userEditing(document.querySelector('#settingsBrowserPane')),refresh:()=>loadSourceBrowser()});
   document.querySelector('#sourceUserAgentPreset')?.addEventListener('change',event=>{sourceBrowserUi.dirty=true;sourceBrowserUi.revision++;sourceBrowserDraft(event.target.value);renderSourceBrowser();});
   document.querySelector('#sourceUserAgentValue')?.addEventListener('input',()=>{sourceBrowserUi.dirty=true;sourceBrowserUi.revision++;});
   document.querySelector('#applySourceUserAgent')?.addEventListener('click',()=>changeSourceBrowser('user-agent'));

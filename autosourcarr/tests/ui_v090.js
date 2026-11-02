@@ -9,7 +9,7 @@ test('Browse and task polling start while preferences and source inventory remai
   const calls=[],pending=[];
   const ctx={applyUiPreferences:()=>calls.push('local'),loadUiPreferences:()=>new Promise(r=>pending.push(r)),
     uiPreferencesState:{},updateUiPreferenceOwner:()=>{},rememberClientError:()=>{},
-    startTaskPolling:()=>calls.push('tasks'),runLiveEvents:()=>{},health:()=>calls.push('health'),scheduleMetadataLivePoll:()=>{},scheduleDuplicateHeartbeat:()=>{},
+    startTaskUpdates:()=>calls.push('tasks'),startLiveUpdates:()=>{},health:()=>calls.push('health'),
     browseState:{},$:()=>({value:''}),loadBrowse:async()=>calls.push('browse'),loadSources:()=>new Promise((r,j)=>pending.push(j)),toast:e=>calls.push(e)};
   Object.assign(ctx,{navigationGeneration:0,switchTab:()=>{},activeSurface:()=>true,loadActiveTab:()=>ctx.loadBrowse(1)});ctx.browseState.items=[{}];
   vm.createContext(Object.assign(ctx,{performance}));vm.runInContext(extract('function browsePageSizeNeedsReload(){',"if(typeof initializeWorkbench==='function')"),ctx);
@@ -79,7 +79,7 @@ test('Late server page size refreshes page one with current filters without wait
     loadUiPreferences:()=>new Promise(r=>releasePreferences=r),
     loadSources:()=>new Promise(r=>releaseSources=r),
     loadBrowse:page=>{const size=Number(controls.size);state.loading=true;requests.push({page,size,filter:controls.filter});return new Promise(r=>releases.push(()=>{state.loadedPageSize=size;state.loading=false;r();}));},
-    startTaskPolling:()=>{},runLiveEvents:()=>{},health:()=>{},scheduleMetadataLivePoll:()=>{},scheduleDuplicateHeartbeat:()=>{},toast:e=>{throw Error(e)}};
+    startTaskUpdates:()=>{},startLiveUpdates:()=>{},health:()=>{},toast:e=>{throw Error(e)}};
   Object.assign(ctx,{navigationGeneration:0,switchTab:()=>{},activeSurface:()=>true,loadActiveTab:()=>ctx.loadBrowse(1)});ctx.browseState.items=[{}];
   vm.createContext(Object.assign(ctx,{performance}));vm.runInContext(extract('function browsePageSizeNeedsReload(){',"if(typeof initializeWorkbench==='function')"),ctx);
   const boot=ctx.bootstrapAutoSourcarr();assert.equal(requests.length,1);
@@ -97,7 +97,7 @@ test('Late preference GET preserves a user edit even after its save cleared pend
     api:()=>new Promise(r=>release=r),applyUiPreferences:p=>{applied=p;},updateUiPreferenceOwner:()=>{},
     setTimeout:()=>1,clearTimeout:()=>{},flushUiPreferenceSave:()=>{}};
   vm.createContext(Object.assign(ctx,{performance}));
-  const wb=fs.readFileSync(__dirname+'/../app/static/workbench.js','utf8');vm.runInContext(wb.slice(wb.indexOf('function migrateColorRoles('),wb.indexOf('function commitTertiaryColor('))+extract('function normalizeHexColor(', 'function syncCustomColorInputs('),ctx);
+  vm.runInContext(fs.readFileSync(__dirname+'/../app/static/theme.js','utf8'),ctx);
   vm.runInContext(extract('function queueUiPreferenceSave(','async function flushUiPreferenceSave(')+extract('async function loadUiPreferences(){','function rememberClientError('),ctx);
   const loading=ctx.loadUiPreferences();
   ctx.queueUiPreferenceSave('theme','green');
@@ -111,7 +111,7 @@ test('Preference reconciliation waits for an already running Browse request',asy
   const state={loading:false,loadedPageSize:25};let calls=0;
   const ctx={browseState:state,$:()=>controls,applyUiPreferences:()=>{},
     loadUiPreferences:()=>new Promise(r=>releasePreferences=r),loadSources:()=>new Promise(r=>releaseSources=r),
-    loadBrowse:async()=>{calls++;},startTaskPolling:()=>{},runLiveEvents:()=>{},health:()=>{},scheduleMetadataLivePoll:()=>{},scheduleDuplicateHeartbeat:()=>{},toast:e=>{throw Error(e)}};
+    loadBrowse:async()=>{calls++;},startTaskUpdates:()=>{},startLiveUpdates:()=>{},health:()=>{},toast:e=>{throw Error(e)}};
   Object.assign(ctx,{navigationGeneration:0,switchTab:()=>{},activeSurface:()=>true,loadActiveTab:()=>ctx.loadBrowse(1)});ctx.browseState.items=[{}];
   vm.createContext(Object.assign(ctx,{performance}));vm.runInContext(extract('function browsePageSizeNeedsReload(){',"if(typeof initializeWorkbench==='function')"),ctx);
   const boot=ctx.bootstrapAutoSourcarr();await tick();

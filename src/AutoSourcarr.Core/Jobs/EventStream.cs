@@ -68,6 +68,60 @@ public sealed class EventStream
         }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
+    private sealed class Batch(string field)
+    {
+        public string Field { get; } = field;
+        public SortedSet<string> Changes { get; } = new(StringComparer.Ordinal);
+        public List<JsonNode> Keys { get; } = [];
+        public HashSet<string> Seen { get; } = new(StringComparer.Ordinal);
+        public bool Truncated { get; set; }
+    }
+
+    /// <summary>The most keys one coalesced event lists; more set <c>truncated</c> (the page then reloads its list).</summary>
+    public const int MaximumBatchKeys = 500;
+    private readonly Dictionary<string, Batch> _batches = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Coalesced change event with the changed keys (UI-13/PERF-8): every change of <paramref name="topic"/> inside
+    /// <paramref name="window"/> becomes ONE event at the end of the window,
+    /// <c>{change, &lt;field&gt;: [keys...], truncated}</c>; <c>change</c> is the one kind seen, or "updated" for a mix.
+    /// </summary>
+    public void PulseKeys(string topic, TimeSpan window, string field, IEnumerable<JsonNode> keys, string change = "updated")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic); ArgumentNullException.ThrowIfNull(keys);
+        bool start;
+        lock (_gate)
+        {
+            start = !_batches.TryGetValue(topic, out var batch);
+            if (batch is null) _batches[topic] = batch = new Batch(field);
+            batch.Changes.Add(change);
+            foreach (var key in keys)
+            {
+                var text = key.ToJsonString();
+                if (batch.Seen.Contains(text)) continue;
+                if (batch.Keys.Count >= MaximumBatchKeys) { batch.Truncated = true; break; }
+                batch.Seen.Add(text); batch.Keys.Add(key.DeepClone());
+            }
+        }
+        if (!start) return;
+        _ = Task.Delay(window).ContinueWith(_ =>
+        {
+            Batch? done;
+            lock (_gate) _batches.Remove(topic, out done);
+            if (done is null) return;
+            var data = new JsonObject { ["change"] = done.Changes.Count == 1 ? done.Changes.Min : "updated" };
+            if (done.Field.Length > 0) { data[done.Field] = new JsonArray(done.Keys.ToArray()); data["truncated"] = done.Truncated; }
+            Publish(topic, data);
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+    }
+
+    /// <summary>One trailing <c>{change}</c> event per burst inside <paramref name="window"/> (no keys).</summary>
+    public void Debounce(string topic, TimeSpan window, string change = "updated") => PulseKeys(topic, window, "", [], change);
+
+    /// <summary><see cref="PulseKeys"/> with entry ids (<c>entry_ids</c>).</summary>
+    public void PulseEntries(string topic, TimeSpan window, IEnumerable<long> entryIds, string change = "updated") =>
+        PulseKeys(topic, window, "entry_ids", entryIds.Where(id => id > 0).Select(id => (JsonNode)JsonValue.Create(id)), change);
+
     /// <summary>Events after <paramref name="lastId"/> still held, oldest first; null when some were already dropped.</summary>
     public IReadOnlyList<AppEvent>? Since(long lastId)
     {

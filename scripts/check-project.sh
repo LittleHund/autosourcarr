@@ -127,8 +127,15 @@ if command -v node >/dev/null 2>&1; then
   node autosourcarr/tests/ui_reimagined_arr.js
   node autosourcarr/tests/ui_reimagined_core.js
   node autosourcarr/tests/ui_reimagined_tools.js
+  node --check autosourcarr/app/static/theme.js
+  node autosourcarr/tests/ui_v050_theme_contrast.js
   node --check autosourcarr/app/static/app.js
   node --check autosourcarr/app/static/navigation-state.js
+  node --check autosourcarr/app/static/live-events.js
+  node autosourcarr/tests/ui_v050_live_events.js
+  node autosourcarr/tests/ui_v050_navigation_restore.js
+  node autosourcarr/tests/ui_v050_live_topics.js
+  node autosourcarr/tests/ui_v050_matrix_pages.js
   node --check autosourcarr/app/static/connections.js
   node --check autosourcarr/app/static/internal-services.js
   node --check autosourcarr/app/static/workbench.js
@@ -146,7 +153,7 @@ if command -v node >/dev/null 2>&1; then
     exit 1
   fi
   grep -q "timeoutMs:20000,suppressClientError:true" autosourcarr/app/static/app.js
-  grep -q "tasksPollTimer=setTimeout(poll,delay)" autosourcarr/app/static/app.js
+  grep -q "function subscribeTaskUpdates()" autosourcarr/app/static/app.js
   grep -q "method:'POST',body:JSON.stringify({ids})" autosourcarr/app/static/app.js
   grep -q "renderErrorsSnapshot();" autosourcarr/app/static/app.js
   grep -q "English hint" autosourcarr/app/static/app.js
@@ -202,7 +209,7 @@ grep -q 'CREATE TABLE IF NOT EXISTS manual_title_scopes' autosourcarr/app/db.py
   grep -q 'id="sourceExtensionUpdatesSection"' autosourcarr/app/static/index.html
   grep -q 'id="sourceExtensionInstalledSection"' autosourcarr/app/static/index.html
   grep -q 'id="sourceExtensionAvailableSection"' autosourcarr/app/static/index.html
-  grep -q '/api/admin/ui-preferences' autosourcarr/app/static/app.js
+  grep -q '/api/v1/ui-preferences' autosourcarr/app/static/app.js
   grep -q '/api/v1/source-extension-icon/' autosourcarr/app/static/app.js
   grep -q 'data-theme="emerald"' autosourcarr/app/static/index.html
   grep -q 'data-settings-subtab="customization"' autosourcarr/app/static/index.html
@@ -223,7 +230,7 @@ from pathlib import Path
 main=Path('autosourcarr/app/main.py').read_text()
 service=Path('autosourcarr/app/service.py').read_text()
 appjs=Path('autosourcarr/app/static/app.js').read_text()
-heartbeat=appjs[appjs.index('async function refreshSparseEntryMetadata()'):appjs.index('function scheduleMetadataLivePoll')]
+heartbeat=appjs[appjs.index('async function refreshSparseEntryMetadata()'):appjs.index('function subscribeEntryMetadataUpdates')]
 syncui=appjs[appjs.index('async function syncEntrySnapshot'):appjs.index('function scheduleEntrySnapshotSync')]
 assert "rerenderMatrixPreservingScroll('matrix')" not in heartbeat and "renderDuplicates();" not in heartbeat, 'metadata heartbeat must not unconditionally rebuild active surfaces'
 assert 'renderInlineEntry(' not in syncui and 'openBrowseEntry(' not in syncui, 'background entry sync must not rebuild/reopen an inspector'
@@ -431,7 +438,7 @@ assert 'Has possible match' in imports_block and 'No possible match' in imports_
 assert 'Source reference found' in imports_block and 'Has English hint' in imports_block, 'Imports source/translation review filters are missing'
 js = Path('autosourcarr/app/static/app.js').read_text()
 assert 'importPassesReviewFilter' in js and 'importReviewFilter' in js, 'Imports review-filter behavior is missing'
-for required in ('/api/v1/catalogue/browse','/api/v1/maintenance/unmatch-duplicates','/api/v1/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/v1/maintenance/refresh-metadata','/api/v1/maintenance/reset-covers','/api/v1/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','apiV1().getSettings()','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','.getErrors()','runLiveEvents()','openErrors','loadErrors'):
+for required in ('/api/v1/catalogue/browse','/api/v1/maintenance/unmatch-duplicates','/api/v1/maintenance/reset-database','splitDuplicateRecords','duplicateRuleBadge','page_size','browsePageSizePreset','applyBrowsePageSize','browseInspectorBackdrop','browseState.scrollY','window.scrollTo(0,y)','/api/v1/maintenance/refresh-metadata','/api/v1/maintenance/reset-covers','/api/v1/entries/${id}/refresh-covers','duplicateManagerModal','duplicateBrowserGrid','subscriptionStatsFor','downloaded_chapter_count','chapter_count','apiV1().getSettings()','saveEnvSettings','<details class=\"settingsGroup','if(tab===\'matrix\'){if(matrixData)renderMatrix','Find missing + extra source records','cataloged_entries||0)>0){matrixData=null','/preferred-title','Set main title',"entryDetailSection('titles','Alternate titles'",'applyMatchBrowserEntry','AUTO ELIGIBLE','matchBrowserState.results=results','.getErrors()','startLiveEvents()','openErrors','loadErrors'):
     assert required in js, required
 assert '<h3>All known titles</h3>' not in js, 'Inspector should separate canonical main title from alternate titles'
 assert 'refreshAfterManualEdit' not in js, 'manual matching must update the open browser in-place instead of reloading both matrices after every click'

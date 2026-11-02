@@ -138,11 +138,12 @@ const requests=[],rendered=[];const api=url=>new Promise(resolve=>requests.push(
 ''')
 
 
-def test_duplicate_pending_requests_coalesce_back_off_and_stop_when_hidden():
+def test_duplicate_pending_requests_coalesce_and_wait_for_job_events():
+    # UI-13: a pending snapshot no longer polls; the snapshot job's outcome event re-reads it (subscribeMatrixUpdates).
     hydrate = block("async function hydrateMatrixDuplicates(", "function updateMatrixCoverageLabel(")
     node(r'''
 const assert=require('node:assert/strict'),duplicates={matrix:{entries:[{id:1},{id:2}],duplicates:{}},subbed:{entries:[{id:2},{id:1}],duplicates:{}}};
-const matrixDataset=kind=>duplicates[kind],duplicateHydrateRetry={matrix:null,subbed:null},duplicateSnapshotRequests=new Map(),duplicatePollAttempts={matrix:0,subbed:0};
+const matrixDataset=kind=>duplicates[kind],duplicateSnapshotRequests=new Map();
 const document={hidden:false,querySelector:()=>true};let active='matrix';const activeSurface=kind=>active===kind;
 const timers=[],requests=[];const setTimeout=(fn,delay)=>{timers.push({fn,delay});return timers.length;},clearTimeout=()=>{};
 const api=()=>new Promise(resolve=>requests.push(resolve));const requestSurfaceRender=()=>{};const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -150,10 +151,9 @@ const api=()=>new Promise(resolve=>requests.push(resolve));const requestSurfaceR
 (async()=>{
  const a=hydrateMatrixDuplicates('matrix',duplicates.matrix),b=hydrateMatrixDuplicates('subbed',duplicates.subbed);
  assert.equal(requests.length,1,'The same IDs across two views share one pending request');
- requests[0]({pending:true,duplicates:{}});await Promise.all([a,b]);assert.equal(timers.length,1);assert.equal(timers[0].delay,5000);
- timers[0].fn();requests[1]({pending:true,duplicates:{}});await tick();assert.equal(timers[1].delay,10000);
- document.hidden=true;timers[1].fn();await tick();assert.equal(requests.length,2,'Hidden tabs stop polling');
- document.hidden=false;const complete=hydrateMatrixDuplicates('matrix',duplicates.matrix);requests[2]({pending:false,duplicates:{}});await complete;assert.equal(duplicatePollAttempts.matrix,0);
+ requests[0]({pending:true,duplicates:{}});await Promise.all([a,b]);
+ assert.equal(timers.length,0,'A pending snapshot starts no poll timer');assert.equal(duplicates.matrix.duplicates_pending,true,'It stays marked pending for the live subscription');
+ const complete=hydrateMatrixDuplicates('matrix',duplicates.matrix);requests[1]({pending:false,duplicates:{}});await complete;assert.equal(duplicates.matrix.duplicates_pending,false);
 })().catch(error=>{console.error(error);process.exitCode=1});
 ''')
 

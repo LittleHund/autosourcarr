@@ -56,6 +56,8 @@ public static class AccessPolicy
         // It is not the reader API: /api/reader/v1 keeps its key check (ReaderAuthorizationMiddleware).
         if (method is "GET" or "HEAD" && path.StartsWith("/api/reader/repo/", StringComparison.Ordinal)) return AccessLevel.Public;
         if (path == "/api/v1/auth/me" || path == "/api/v1/auth/password") return AccessLevel.Guest;
+        // Phase 11: every account keeps its own UI preferences, guests too (the route refuses reader and script keys).
+        if (path == "/api/v1/ui-preferences" && method is "GET" or "HEAD" or "PUT") return AccessLevel.Guest;
         if (path.StartsWith("/api/v1/accounts", StringComparison.Ordinal) || path == "/api/v1/keys/admin-token/regenerate") return AccessLevel.Owner;
         if (!path.StartsWith("/api/", StringComparison.Ordinal)) return AccessLevel.Guest;
         if (method is "GET" or "HEAD" && GuestReadPrefixes.Any(prefix => prefix.EndsWith('/') ? path.StartsWith(prefix, StringComparison.Ordinal) : path == prefix)

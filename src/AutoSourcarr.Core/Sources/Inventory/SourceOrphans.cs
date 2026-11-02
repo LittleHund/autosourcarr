@@ -25,6 +25,9 @@ public sealed class SourceOrphanException(int statusCode, string message) : Exce
 /// </summary>
 public sealed class SourceOrphans
 {
+    /// <summary>Raised when the cached inventory changed or a refresh finished (live UI topic <c>orphans</c>).</summary>
+    public Action? InventoryChanged { get; set; }
+
     public const string Repository = "https://github.com/keiyoushi/extensions";
     public const string Raw = "https://raw.githubusercontent.com/keiyoushi/extensions/";
     public const string Api = "https://api.github.com/repos/keiyoushi/extensions/";
@@ -241,7 +244,7 @@ public sealed class SourceOrphans
     {
         lock (_gate)
         {
-            _inventoryRevision++; _inventory = rows.Select(row => (JsonObject)row.DeepClone()).ToList();
+            _inventoryRevision++; InventoryChanged?.Invoke(); _inventory = rows.Select(row => (JsonObject)row.DeepClone()).ToList();
             _inventoryKnown = true; _inventoryAt = _clock.GetTimestamp();
         }
     }
@@ -251,7 +254,7 @@ public sealed class SourceOrphans
     {
         lock (_gate)
         {
-            _inventoryRevision++;
+            _inventoryRevision++; InventoryChanged?.Invoke();
             _inventory = _inventory.Where(row => Text(row["pkgName"]) != package).ToList();
             if (extension is not null) _inventory.Add((JsonObject)extension.DeepClone());
             _inventoryAt = null;
@@ -269,14 +272,14 @@ public sealed class SourceOrphans
             lock (_gate)
             {
                 if (revision != _inventoryRevision) return;
-                _inventoryRevision++; _inventory = rows.ToList(); _inventoryKnown = true;
+                _inventoryRevision++; InventoryChanged?.Invoke(); _inventory = rows.ToList(); _inventoryKnown = true;
             }
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
             lock (_gate) if (revision == _inventoryRevision) _inventoryKnown = false;
         }
-        finally { lock (_gate) _inventoryAt = _clock.GetTimestamp(); }
+        finally { lock (_gate) _inventoryAt = _clock.GetTimestamp(); InventoryChanged?.Invoke(); }
     }
 
     /// <summary>Every extension the engine lists (installed and available), in the inventory query's fields.</summary>
@@ -419,7 +422,7 @@ public sealed class SourceOrphans
                     if (previous is null) _labels.Remove(package); else _labels[package] = previous;
                     throw;
                 }
-                _inventoryRevision++; _inventory = rows.Select(row => (JsonObject)row.DeepClone()).ToList(); _inventoryKnown = true; _inventoryAt = _clock.GetTimestamp();
+                _inventoryRevision++; InventoryChanged?.Invoke(); _inventory = rows.Select(row => (JsonObject)row.DeepClone()).ToList(); _inventoryKnown = true; _inventoryAt = _clock.GetTimestamp();
                 return new JsonObject
                 {
                     ["extension"] = AnnotateOne(extension, configured),
@@ -670,7 +673,7 @@ public sealed class SourceOrphans
                     { record["state"] = "installed-unverified"; record["installed_at"] = Now(); record["message"] = message; record["identity_matches"] = matches; }
                     _operation["state"] = "installed"; _operation["message"] = message;
                     Save();
-                    _inventoryRevision++; _inventory = after.Select(item => (JsonObject)item.DeepClone()).ToList(); _inventoryKnown = true; _inventoryAt = _clock.GetTimestamp();
+                    _inventoryRevision++; InventoryChanged?.Invoke(); _inventory = after.Select(item => (JsonObject)item.DeepClone()).ToList(); _inventoryKnown = true; _inventoryAt = _clock.GetTimestamp();
                     return (JsonObject)_operation.DeepClone();
                 }
             }

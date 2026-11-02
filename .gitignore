@@ -22,3 +22,7 @@ __pycache__/
 node_modules/
 conversion-export/
 lockfiles.txt
+# Web UI build output (scripts/bundle-ui.mjs) and browser test results
+autosourcarr/app/static/dist/
+test-results/
+playwright-report/

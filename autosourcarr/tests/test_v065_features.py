@@ -26,7 +26,7 @@ def test_status_storage_has_own_panel_and_metrics_are_not_in_catalog_review():
 def test_browse_metadata_heartbeat_patches_cards_without_rebuilding_browse_grid():
     js = (STATIC / "app.js").read_text(encoding="utf-8")
     patch = _block(js, "function patchCompactSummary", "async function refreshSparseEntryMetadata")
-    heartbeat = _block(js, "async function refreshSparseEntryMetadata", "function scheduleMetadataLivePoll")
+    heartbeat = _block(js, "async function refreshSparseEntryMetadata", "function subscribeEntryMetadataUpdates")
     assert "patchBrowseCardNode(browseCard,browseEntry)" in patch
     assert "['matrix','subbed','imports','duplicates']" in heartbeat
     assert "['matrix','subbed','browse','imports','duplicates']" not in heartbeat
