@@ -11,6 +11,9 @@ namespace AutoSourcarr.Core.Repair.Runner.Egress;
 internal sealed record EgressTestHooks(Func<string, CancellationToken, Task<IPAddress[]>>? Resolve = null,
     bool AllowNonGlobalTargets = false, bool AllowAnyPort = false);
 
+/// <summary>Phase 13 policy: hosts that may resolve to private, loopback or link-local addresses (a local mirror); empty by default.</summary>
+public sealed record EgressOptions(IReadOnlyCollection<string>? PrivateHosts = null);
+
 /// <summary>
 /// Domain-filtering HTTP proxy for the isolated repair runner, on 127.0.0.1 with an ephemeral port.
 /// CONNECT host:443 is tunnelled without inspection; absolute-URI http GET/HEAD/POST is forwarded
@@ -18,6 +21,10 @@ internal sealed record EgressTestHooks(Func<string, CancellationToken, Task<IPAd
 /// A host is allowed when it equals an allowed entry or is a subdomain of an entry written as
 /// "*.example.com". The proxy resolves DNS itself, refuses any answer containing a private,
 /// loopback, link-local or other non-global address, and connects only to the pinned answers.
+/// Phase 13 hardening: a host is resolved once per proxy lifetime and every later connection reuses that pinned answer
+/// (DNS rebinding cannot swap in a private address later); private answers are allowed only for hosts listed in
+/// <see cref="EgressOptions.PrivateHosts"/>; a CONNECT tunnel's TLS ClientHello must name the CONNECT host (SNI);
+/// Set-Cookie headers on proxied http answers whose Domain is a public suffix or not the request host's are dropped.
 /// </summary>
 public sealed class EgressProxy : IAsyncDisposable
 {
@@ -46,12 +53,16 @@ public sealed class EgressProxy : IAsyncDisposable
     private readonly EgressTestHooks _hooks;
     private readonly Lock _refusedLock = new();
     private readonly List<string> _refusedHosts = [];
+    private readonly ConcurrentDictionary<string, IPAddress[]> _pinned = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _privateHosts = new(StringComparer.Ordinal);
     private Task _acceptLoop = Task.CompletedTask;
     private long _allowed, _refused, _failed;
     private int _disposed;
 
-    private EgressProxy(IReadOnlyCollection<string> allowedHosts, string userAgent, Action<string>? log, EgressTestHooks hooks)
+    private EgressProxy(IReadOnlyCollection<string> allowedHosts, string userAgent, Action<string>? log, EgressTestHooks hooks, EgressOptions? options = null)
     {
+        foreach (var entry in options?.PrivateHosts ?? [])
+            _privateHosts.Add(NormalizeHost(entry ?? "") ?? throw new ArgumentException("Invalid private egress host: " + Printable(entry ?? ""), nameof(options)));
         ArgumentNullException.ThrowIfNull(allowedHosts);
         if (allowedHosts.Count > MaximumAllowedHosts) throw new ArgumentException("Too many allowed egress hosts.", nameof(allowedHosts));
         foreach (var entry in allowedHosts)
@@ -80,9 +91,13 @@ public sealed class EgressProxy : IAsyncDisposable
     public static Task<EgressProxy> StartAsync(IReadOnlyCollection<string> allowedHosts, string userAgent, Action<string>? log) =>
         StartAsync(allowedHosts, userAgent, log, new EgressTestHooks());
 
-    internal static Task<EgressProxy> StartAsync(IReadOnlyCollection<string> allowedHosts, string userAgent, Action<string>? log, EgressTestHooks hooks)
+    public static Task<EgressProxy> StartAsync(IReadOnlyCollection<string> allowedHosts, string userAgent, Action<string>? log, EgressOptions options) =>
+        StartAsync(allowedHosts, userAgent, log, new EgressTestHooks(), options);
+
+    internal static Task<EgressProxy> StartAsync(IReadOnlyCollection<string> allowedHosts, string userAgent, Action<string>? log, EgressTestHooks hooks,
+        EgressOptions? options = null)
     {
-        var proxy = new EgressProxy(allowedHosts, userAgent, log, hooks);
+        var proxy = new EgressProxy(allowedHosts, userAgent, log, hooks, options);
         try
         {
             proxy._listener.Start(MaximumConnections);
@@ -186,9 +201,45 @@ public sealed class EgressProxy : IAsyncDisposable
         using var upstream = await OpenAsync(client, target.Value.Host, target.Value.Port, 443, "CONNECT", token).ConfigureAwait(false);
         if (upstream is null) return;
         await WriteAsync(client, "HTTP/1.1 200 Connection established\r\n\r\n", token).ConfigureAwait(false);
+        // SNI: the first TLS record must be a ClientHello naming the CONNECT host; anything else closes the tunnel
+        // before a byte reaches the upstream (the 200 is already sent, so the refusal is the closed connection).
+        byte[] hello;
+        using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(token))
+        {
+            timeout.CancelAfter(HeadTimeout);
+            hello = await ReadClientHelloAsync(client, early, timeout.Token).ConfigureAwait(false);
+        }
+        var named = TlsClientHello.ServerName(hello) is { } sni ? NormalizeHost(sni) : null;
+        if (named is null || named != NormalizeHost(target.Value.Host))
+        {
+            RecordRefusal(target.Value.Host, target.Value.Port, named is null ? "the tunnel's TLS handshake names no server (SNI)"
+                : "the tunnel's TLS server name " + Printable(named) + " differs from the CONNECT host");
+            return;
+        }
         using var upstreamStream = new NetworkStream(upstream, ownsSocket: false);
-        if (!early.IsEmpty) await upstreamStream.WriteAsync(early, token).ConfigureAwait(false);
+        await upstreamStream.WriteAsync(hello, token).ConfigureAwait(false);
         await RelayAsync(client, upstreamStream, upstream, token).ConfigureAwait(false);
+    }
+
+    /// <summary>The first TLS record (plus anything the client sent with it); empty when it is no TLS handshake record.</summary>
+    private static async Task<byte[]> ReadClientHelloAsync(NetworkStream client, ReadOnlyMemory<byte> early, CancellationToken token)
+    {
+        var buffer = new byte[5 + TlsClientHello.MaximumRecordBytes + 64 * 1024];
+        var length = Math.Min(early.Length, buffer.Length);
+        early[..length].CopyTo(buffer);
+        int? total = null;
+        while (true)
+        {
+            if (total is null && length >= 5)
+            {
+                total = TlsClientHello.RecordLength(buffer.AsSpan(0, 5));
+                if (total is null) return [];
+            }
+            if (total is { } wanted && length >= wanted) return buffer.AsSpan(0, length).ToArray();
+            var read = await client.ReadAsync(buffer.AsMemory(length, (total ?? 5) - length), token).ConfigureAwait(false);
+            if (read == 0) return [];
+            length += read;
+        }
     }
 
     private async Task ForwardAsync(NetworkStream client, Message request, ReadOnlyMemory<byte> early, CancellationToken token)
@@ -263,9 +314,16 @@ public sealed class EgressProxy : IAsyncDisposable
         var statusEnd = response.Text.IndexOf("\r\n", StringComparison.Ordinal);
         var head = new StringBuilder(statusEnd < 0 ? response.Text : response.Text[..statusEnd]).Append("\r\n");
         foreach (var (name, value) in parsed.Headers)
-            if (!name.Equals("Connection", StringComparison.OrdinalIgnoreCase) && !name.Equals("Keep-Alive", StringComparison.OrdinalIgnoreCase)
-                && !name.Equals("Proxy-Connection", StringComparison.OrdinalIgnoreCase))
-                head.Append(name).Append(": ").Append(value).Append("\r\n");
+        {
+            if (name.Equals("Connection", StringComparison.OrdinalIgnoreCase) || name.Equals("Keep-Alive", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Proxy-Connection", StringComparison.OrdinalIgnoreCase)) continue;
+            if (name.Equals("Set-Cookie", StringComparison.OrdinalIgnoreCase) && !PublicSuffix.CookieDomainAllowed(authority.Value.Host, PublicSuffix.CookieDomain(value)))
+            {
+                Log("egress dropped a cookie from " + Printable(authority.Value.Host) + " for a public-suffix or foreign domain");
+                continue;
+            }
+            head.Append(name).Append(": ").Append(value).Append("\r\n");
+        }
         head.Append("Connection: close\r\n\r\n");
         await client.WriteAsync(Encoding.Latin1.GetBytes(head.ToString()), token).ConfigureAwait(false);
         if (!response.Rest.IsEmpty) await client.WriteAsync(response.Rest, token).ConfigureAwait(false);
@@ -285,10 +343,16 @@ public sealed class EgressProxy : IAsyncDisposable
         IPAddress[] addresses;
         try
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeout.CancelAfter(ConnectTimeout);
-            addresses = _hooks.Resolve is { } resolve ? await resolve(normalized, timeout.Token).ConfigureAwait(false)
-                : await Dns.GetHostAddressesAsync(normalized, timeout.Token).ConfigureAwait(false);
+            if (_pinned.TryGetValue(normalized, out var pinned)) addresses = pinned;
+            else
+            {
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+                timeout.CancelAfter(ConnectTimeout);
+                addresses = _hooks.Resolve is { } resolve ? await resolve(normalized, timeout.Token).ConfigureAwait(false)
+                    : await Dns.GetHostAddressesAsync(normalized, timeout.Token).ConfigureAwait(false);
+                // Resolve once, pin: a later answer (DNS rebinding) never replaces the first accepted one.
+                if (addresses.Length is > 0 and <= 64 && AddressesAllowed(normalized, addresses)) addresses = _pinned.GetOrAdd(normalized, addresses);
+            }
         }
         catch (Exception error) when (error is SocketException or OperationCanceledException && !token.IsCancellationRequested)
         {
@@ -297,7 +361,7 @@ public sealed class EgressProxy : IAsyncDisposable
             await RespondAsync(client, 502, "Bad Gateway", "could not resolve " + normalized, token).ConfigureAwait(false);
             return null;
         }
-        if (addresses.Length == 0 || addresses.Length > 64 || !_hooks.AllowNonGlobalTargets && addresses.Any(address => !RawCodeRules.IsGlobalAddress(address)))
+        if (addresses.Length == 0 || addresses.Length > 64 || !AddressesAllowed(normalized, addresses))
         { await RefuseAsync(client, normalized, port, "DNS answer includes a private or reserved address", token).ConfigureAwait(false); return null; }
         Interlocked.Increment(ref _allowed);
         Log("egress allowed " + method + " " + normalized + ":" + port.ToString(CultureInfo.InvariantCulture));
@@ -320,13 +384,26 @@ public sealed class EgressProxy : IAsyncDisposable
         return null;
     }
 
-    private async Task RefuseAsync(NetworkStream client, string host, int port, string reason, CancellationToken token)
+    /// <summary>Global addresses only, unless the host is listed as private (then loopback/private/link-local are allowed for it).</summary>
+    private bool AddressesAllowed(string host, IPAddress[] addresses) =>
+        _hooks.AllowNonGlobalTargets || _privateHosts.Contains(host) || addresses.All(RawCodeRules.IsGlobalAddress);
+
+    /// <summary>How many hosts have a pinned DNS answer (diagnostics and tests).</summary>
+    public int PinnedHosts => _pinned.Count;
+
+    private string RecordRefusal(string host, int port, string reason)
     {
         var shown = Printable(host);
         Interlocked.Increment(ref _refused);
         lock (_refusedLock)
             if (_refusedHosts.Count < MaximumRefusedHosts && !_refusedHosts.Contains(shown, StringComparer.Ordinal)) _refusedHosts.Add(shown);
         Log("egress refused " + shown + ":" + port.ToString(CultureInfo.InvariantCulture) + " (" + reason + ")");
+        return shown;
+    }
+
+    private async Task RefuseAsync(NetworkStream client, string host, int port, string reason, CancellationToken token)
+    {
+        var shown = RecordRefusal(host, port, reason);
         await RespondAsync(client, 403, "Forbidden", "AutoSourcarr egress refused " + shown + ": " + reason, token).ConfigureAwait(false);
     }
 

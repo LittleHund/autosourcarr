@@ -62,6 +62,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private SourceWebViewServices? _webViewServices;
     private AutoSourcarr.Core.Sources.Inventory.HostRawInstalledSources? _rawInstalled;
     private AutoSourcarr.Core.Repair.SourceRawService? _raws;
+    private AutoSourcarr.Core.Repair.Runner.RepairIsolation? _repairIsolation;
     private AutoSourcarr.Core.Repair.RawRepositoryCache? _rawRepositories;
     private AutoSourcarr.Core.Sources.Inventory.SourceBaselineStore? _baselines;
     private readonly CancellationTokenSource _healthStop = new();
@@ -137,6 +138,22 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     internal bool Stopping => _http.IsStopping;
     /// <summary>Set by the host: asks the web host to stop normally (setup restart in the integrated image).</summary>
     internal Action? RequestStop { get; set; }
+
+    /// <summary>
+    /// Phase 13 (no native launcher): the exit code of a restart the app asked for itself (setup restart, armed restore).
+    /// 75 (EX_TEMPFAIL) is non-zero on purpose, so a container restart policy of "on-failure" restarts it as well as
+    /// "unless-stopped"/"always"; under tini (PID 1) the app's exit ends the container and the policy starts it again.
+    /// </summary>
+    internal const int RestartExitCode = 75;
+    private int _restartRequested;
+    internal bool RestartRequested => Volatile.Read(ref _restartRequested) == 1;
+
+    /// <summary>Stops normally (every cleanup step runs) and makes the process exit with <see cref="RestartExitCode"/>.</summary>
+    internal void RequestRestart()
+    {
+        Interlocked.Exchange(ref _restartRequested, 1);
+        RequestStop?.Invoke();
+    }
 
     internal static Task<ApplicationRuntime> CreateNativeAsync(StartupConfigurationSnapshot startup,
         IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken = default)
@@ -251,7 +268,11 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 // Built for every launch: a restarted host gets the saved browser identity and repositories.
                 var process = new SourceHostProcess(java, jar, Path.Combine(owner._dataDirectory!, "source-host"), 4567,
                     () => SourceHostEnvironment(owner.Settings, launch, environment, owner.EnabledSolvers()),
-                    line => owner.Logs.Record("Source host", line));
+                    line => owner.Logs.Record("Source host", line))
+                {
+                    // Phase 13 (SRC-5): Landlock sandbox launcher, optional low-rights user (AUTOSOURCARR_SOURCE_HOST_*).
+                    Sandbox = SourceHostSandboxOptions.FromEnvironment(environment),
+                };
                 owner._hostProcess = process;
                 owner._webView = new AutoSourcarr.Core.Sources.WebView.SourceWebViewBroker(() => process.Running
                     ? new AutoSourcarr.Core.Sources.WebView.SourceHostEndpoint(new Uri(process.BaseUrl), process.Token) : null);
@@ -315,7 +336,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._health = new SourceHealthCoordinator(healthStore, owner._source.Client, owner.Io, owner.Lanes,
                 owner.Tasks, new RepairConfirmationObservations(repairConfirmations, domainRepair), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
                 onWorking: package => domainRepair.QueueKeepLastWorking(package, error => owner.Errors.Record("Source repair",
-                    "Keeping the last working jar of " + package + " failed: " + error.Message, "source-last-working|" + error.GetType().Name)));
+                    "Keeping the last working jar of " + package + " failed: " + error.Message, "source-last-working|" + error.GetType().Name)))
+            { Jobs = owner.Jobs };
             if (useHost)
             {
                 owner._autoRepair = AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher.Create(maintenanceRoot, maintenance, healthStore, orphans, domainRepair,
@@ -329,6 +351,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             }
             // REP-1: source code and the installed package of each source (raws routes, original-APK evidence) on the source host.
             SourceRawRoutes? rawRoutes = null;
+            // Phase 13 (REP-5, hard rule 13): code-running repair steps go through the Landlock repair runner or are refused.
+            owner._repairIsolation = useHost ? new AutoSourcarr.Core.Repair.Runner.RepairIsolation(owner._dataDirectory!, line => owner.Logs.Record("Source repair", line)) : null;
             if (useHost)
             {
                 try
@@ -356,11 +380,12 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     owner._raws = new AutoSourcarr.Core.Repair.SourceRawService(
                         () => new AutoSourcarr.Core.Repair.SourceRawCatalog(rawShared, rawPrivate, rawRequests, repositories, owner._publicFetcher!),
                         owner._rawInstalled, owner._admin, ConfiguredIndexes, () => new JsonArray(),
-                        owner.Io, owner.Lanes, owner.Tasks, owner.Privacy, message => owner.Logs.Record("Source code", message), repairHistory);
+                        owner.Io, owner.Lanes, owner.Tasks, owner.Privacy, message => owner.Logs.Record("Source code", message), repairHistory) { Jobs = owner.Jobs };
                     owner._baselines = new AutoSourcarr.Core.Sources.Inventory.SourceBaselineStore(owner._rawInstalled, maintenanceRoot, owner.Io);
                     rawRoutes = new SourceRawRoutes
                     {
                         Service = owner._raws, Installed = owner._rawInstalled, AdminLock = owner._admin, Io = owner.Io, History = repairHistory,
+                        Reconstruction = new IsolatedRawReconstruction(owner._repairIsolation!, NoRawReconstruction.Instance),
                     };
                 }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or AutoSourcarr.Core.Repair.RepairHistoryConflictException)
@@ -381,14 +406,14 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 galleryEvidence: sharingGallery.CatalogueAdapter, structure: owner.Catalogue.Structure, invalidate: () => owner._duplicates?.Invalidate())
             { Log = matching.Decisions };
             var identities = new AutoSourcarr.Core.Catalogue.Sharing.PortableIdentityResolver(owner.Database);
-            var catalogueReviews = new AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks(sharingExchange, owner.Tasks, owner.Lanes, owner.Io);
+            var catalogueReviews = new AutoSourcarr.Core.Catalogue.Sharing.CatalogueReviewTasks(sharingExchange, owner.Tasks, owner.Lanes, owner.Io) { Jobs = owner.Jobs };
             owner._catalogueReviews = catalogueReviews;
             var readerExtension = OpenReaderExtension(owner, environment);
             var libraryManager = owner._libraryManager!;
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings,
                     duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }, pausedSources: owner.SourceResults.PausedCount),
-                () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
+                owner.RequestRestart, health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
                 moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory),
                     claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))))
             {
@@ -442,6 +467,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     MaintenanceRoot = maintenanceRoot,
                     ReadInstalledJar = (package, token) => owner._source.Client.ReadExtensionJarAsync(package, token),
                     Raws = rawRoutes,
+                    RunnerCheck = owner._repairIsolation is { } isolation ? isolation.SelfCheckAsync : null,
+                    Isolation = owner._repairIsolation is { } probe ? () => probe.Probe().Json() : null,
                     // Hard rule 6: the user-confirmed "Fixed" verdicts survive restarts (Tasks → Repairs).
                     Confirmations = repairConfirmations,
                 },
@@ -756,6 +783,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             ["captured_at"] = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
             ["instance_id"] = Identity.InstanceId,
             ["source_host"] = source,
+            // SRC-5 / phase 13: what the source host and its WebView run under (Landlock sandbox, user); never blocks sources.
+            ["source_sandbox"] = _hostProcess?.SandboxState.Json(),
+            ["repair_isolation"] = _repairIsolation?.Probe().Json(),
             ["main_suwayomi"] = MainSuwayomiHealth(settings),
             ["translation"] = _translationHealth?.Snapshot(_healthStop.Token)
                 ?? NotChecked(settings.TranslationApiUrl, !string.IsNullOrWhiteSpace(settings.TranslationApiUrl), "10"),

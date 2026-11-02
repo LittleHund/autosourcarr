@@ -46,7 +46,7 @@ internal sealed partial class ApplicationRuntime
     {
         _access = OpenAccounts(this, startup);
         _apiV1 = new ApiV1Services(() => Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
-            values => Privacy.Register(values), status: null, stop: () => RequestStop?.Invoke(), health: SafeHealthAsync, databasePaths: () => Database.Paths)
+            values => Privacy.Register(values), status: null, stop: RequestRestart, health: SafeHealthAsync, databasePaths: () => Database.Paths)
         {
             Tasks = Tasks, Jobs = Jobs, Events = Events, Errors = Errors, Access = _access,
             Diagnostics = new DiagnosticExporter(Io, Identity, Errors, Logs, () => Settings, new RuntimeDiagnosticSources(this)),

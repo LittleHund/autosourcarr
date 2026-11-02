@@ -24,6 +24,8 @@ public sealed class RepairV1Services
     public SourceRawRoutes? Raws { get; init; }
     /// <summary>Self-check of the isolated repair runner for control/check; null answers 409 (no runner check in this host).</summary>
     public Func<CancellationToken, Task<JsonObject>>? RunnerCheck { get; init; }
+    /// <summary>Phase 13: the repair isolation state (RepairIsolation.Probe) for control; null reports "not checked".</summary>
+    public Func<JsonObject>? Isolation { get; init; }
     /// <summary>Reads the jar the source host runs for a package (repaired-code download when the jar was not kept); null skips it.</summary>
     public Func<string, CancellationToken, Task<byte[]>>? ReadInstalledJar { get; init; }
     /// <summary>Hard rule 6: the user's persisted "Fixed" / "doesn't work" verdicts; null keeps feedback in feedback.jsonl only.</summary>
@@ -50,6 +52,22 @@ public sealed class NoRawReconstruction : IRawReconstructionCommands
         throw new ApiProblem(409, "Rebuilding a source without its code needs an AI provider. Code rebuilds by an AI provider are not available in this version (planned for 0.6.0). Provide the source code or its repository instead.");
     public Task<JsonObject> ReconstructAsync(RawInstalledSource installed, long rawRevision, string? previousJobId, CancellationToken cancellationToken) =>
         throw new ApiProblem(409, "Rebuilding a source without its code is not available in this host.");
+}
+
+/// <summary>
+/// Phase 13 (hard rule 13): rebuilding a source runs code, so it is refused first when no host isolation is available
+/// ("Isolation unavailable: ..."); with isolation it goes on to the next step (today: the AI provider is not available).
+/// </summary>
+public sealed class IsolatedRawReconstruction(AutoSourcarr.Core.Repair.Runner.RepairIsolation isolation, IRawReconstructionCommands next) : IRawReconstructionCommands
+{
+    private void Require()
+    {
+        var state = isolation.Probe();
+        if (!state.Available) throw new ApiProblem(409, "Isolation unavailable: " + state.Message);
+    }
+    public Task EnsureReadyAsync(CancellationToken cancellationToken) { Require(); return next.EnsureReadyAsync(cancellationToken); }
+    public Task<JsonObject> ReconstructAsync(RawInstalledSource installed, long rawRevision, string? previousJobId, CancellationToken cancellationToken)
+    { Require(); return next.ReconstructAsync(installed, rawRevision, previousJobId, cancellationToken); }
 }
 
 /// <summary>
@@ -143,9 +161,9 @@ internal static class RepairV1Endpoints
                     ["provider"] = "none", ["provider_configured"] = false,
                     ["domain_repair"] = available, ["runner_check"] = services.Repair?.RunnerCheck is not null,
                     ["message"] = (available ? "Domain-move repairs run in this instance. " : "Source repair is not available in this host. ") + NoProvider,
-                    ["isolation"] = new JsonObject
+                    ["isolation"] = services.Repair?.Isolation?.Invoke() ?? new JsonObject
                     {
-                        ["available"] = false, ["reason"] = "not-checked",
+                        ["available"] = false, ["state"] = "unavailable", ["reason"] = "not-checked",
                         ["message"] = "Domain-move repairs do not run source code, so they need no isolation check. Code rebuilds are not available yet.",
                     },
                 });

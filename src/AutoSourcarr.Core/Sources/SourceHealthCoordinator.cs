@@ -18,7 +18,9 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
 {
     private sealed class Job(string taskId, HashSet<string> ids, CancellationTokenSource cancel, IDisposable lease)
     {
-        public string TaskId { get; } = taskId;
+        public string TaskId { get; set; } = taskId;
+        /// <summary>Job-queue heartbeat (PERF-3 watchdog) when the check runs as a queued job.</summary>
+        public Action? Beat { get; set; }
         public HashSet<string> Ids { get; } = ids;
         public CancellationTokenSource Cancel { get; } = cancel;
         public IDisposable Lease { get; } = lease;
@@ -46,6 +48,12 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
     private readonly Dictionary<string, double> _siteLast = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _checking = new(StringComparer.Ordinal);
     private Task? _dispose;
+
+    /// <summary>PERF-2: the job type of a health check run in the job queue (manual Normal, daily Low; long waits for idle lanes).</summary>
+    public static readonly JobType HealthCheckJob = new("source-health-check", "Check source health", JobPriority.Low, JobFlags.LongRunning, RunLimit: 2,
+        StallTimeout: TimeSpan.FromHours(2));
+    /// <summary>Phase 13: when set, checks are queued jobs here instead of bare tasks.</summary>
+    public JobQueue? Jobs { get; init; }
 
     public SourceHealthCoordinator(SourceHealthStore store, SuwayomiClient client, BoundedWorkScheduler io, WholeTaskCoordinator lanes,
         TaskRegistry tasks, IRepairHealthObservations repairs, Func<bool> engineReady, SupportPrivacy privacy,
@@ -116,6 +124,31 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
                         return new() { ["queued"] = false, ["task_id"] = old.TaskId, ["coalesced"] = true };
                     }
                     old.Cancel.Dispose();
+                }
+                if (Jobs is { } queue)
+                {
+                    // PERF-2: health checks run in the one job queue (priority, run limit, watchdog, Tasks), like other heavy work.
+                    var queued = new Job("", ids, Lifetime(CancellationToken.None), lease);
+                    var started = 0;
+                    var snapshot = rows.Select(row => (JsonObject)row.DeepClone()).ToArray();
+                    var handle = queue.Enqueue(HealthCheckJob, origin, async context =>
+                    {
+                        Interlocked.Exchange(ref started, 1);
+                        using var link = context.CancellationToken.Register(() => { try { queued.Cancel.Cancel(); } catch (ObjectDisposedException) { } });
+                        queued.Beat = context.Heartbeat;
+                        await RunAsync(snapshot, origin, queued).ConfigureAwait(false);
+                    }, origin == "manual" ? JobPriority.Normal : JobPriority.Low, origin: origin, title: "Check source health",
+                        context: rows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " source variant(s)");
+                    if (handle.Merged) { queued.Cancel.Dispose(); lease.Dispose(); return new() { ["queued"] = false, ["task_id"] = handle.Id, ["coalesced"] = true }; }
+                    queued.TaskId = handle.Id;
+                    _tasks.Update(handle.Id, total: rows.Count);
+                    queued.Work = handle.Completion; queued.Observer = handle.Completion;
+                    // A job cancelled before it started never ran RunAsync: release its lease here.
+                    _ = handle.Completion.ContinueWith(_ => { if (Volatile.Read(ref started) == 0) queued.Lease.Dispose(); }, CancellationToken.None,
+                        TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    _jobs[origin] = queued;
+                    queued.Start.TrySetResult(); lease = null!;
+                    return new() { ["queued"] = true, ["task_id"] = handle.Id };
                 }
                 var taskId = _tasks.Create("Check source health", rows.Count, "Queued source samples", "queued", $"{rows.Count} source variant(s)", origin);
                 var job = new Job(taskId, ids, Lifetime(CancellationToken.None), lease);
@@ -193,7 +226,7 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
                 try
                 {
                     var current = await _io.RunAsync(() => _store.Source(sid), token).ConfigureAwait(false);
-                    if (!Due(current, origin)) { _tasks.Advance(job.TaskId); continue; }
+                    if (!Due(current, origin)) { { _tasks.Advance(job.TaskId); job.Beat?.Invoke(); } continue; }
                     double last; lock (_gate) last = _siteLast.GetValueOrDefault(site);
                     var delay = Math.Max(0, last + _pacing.TotalSeconds - Monotonic());
                     if (delay > 0) await Task.Delay(TimeSpan.FromSeconds(delay), token).ConfigureAwait(false);
@@ -206,6 +239,7 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
                         var observationToken = observationLifetime.Token;
                         var began = _clock(); var checks = new JsonArray(); string package = "", version = ""; string state, message;
                         lock (_gate) _checking[sid] = job.TaskId;
+                        job.Beat?.Invoke();
                         _tasks.Update(job.TaskId, message: "Checking " + SourceResponseContract.Text(row["name"]) + " · " + SourceResponseContract.Text(row["lang"]));
                         try
                         {
@@ -265,7 +299,7 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
                     else await _lanes.RunBackgroundAsync(Sample, taskId: job.TaskId, cancellationToken: token).ConfigureAwait(false);
                 }
                 finally { siteLock.Release(); }
-                _tasks.Advance(job.TaskId);
+                { _tasks.Advance(job.TaskId); job.Beat?.Invoke(); }
             }
             var message = states.Count == 0 ? "No source samples were due" : string.Join(", ", states.Select(pair => pair.Value + " " + pair.Key.Replace('_', ' ')));
             if (states.Any(pair => pair.Key != "working")) _tasks.Fail(job.TaskId, message, message);

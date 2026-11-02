@@ -111,6 +111,26 @@ public static class MixedEntriesTests
             Check.Equal(1, splitter.Splits);
         });
 
+        suite.Add("mixed entries: RefreshMediaVariants recomputes media modes, splits a mixed automatic entry and never a locked one", () =>
+        {
+            using var f = new Fixture();
+            f.Entry(1, "Shared Title"); f.Entry(2, "Other Title"); f.Entry(3, "Locked Title");
+            f.Record("source_matches", 1, "20", 201, "Shared Title", "Manga"); f.Record("source_variants", 1, "21", 202, "Shared Title", "Webtoon");
+            f.Record("source_matches", 2, "20", 301, "Other Title", "Webtoon");
+            f.Record("source_matches", 3, "20", 401, "Locked Title", "Manga"); f.Record("source_variants", 3, "21", 402, "Locked Title", "Webtoon");
+            f.Execute("UPDATE source_variants SET locked=1 WHERE source_manga_id=402");
+            var splitter = new FakeSplitter(f.Database);
+            var mixed = new MixedEntries(f.Database, new EditionProfiles(f.Database, () => new EditionOptions()), f.Log, splitter, new AutoSourcarr.Core.Catalogue.CatalogueMetadata(() => .9));
+            var result = mixed.RefreshMediaVariants();
+            Check.Equal(3, result["checked"]!.GetValue<int>());
+            Check.Equal(1, result["changed"]!.GetValue<int>());
+            Check.Equal(1, splitter.Splits);
+            Check.Equal("webtoon", f.Scalar("SELECT media_mode FROM entries WHERE id=2"));
+            Check.Equal("mixed", f.Scalar("SELECT media_mode FROM entries WHERE id=3"));
+            Check.True(new MixedEntries(f.Database, new EditionProfiles(f.Database, () => new EditionOptions()), f.Log).RefreshMediaVariants()["skipped"] is not null,
+                "without the metadata owner the step reports itself skipped");
+        });
+
         suite.Add("mixed entries: a review applies only to the exact evidence and is logged with its actor", () =>
         {
             using var f = new Fixture();

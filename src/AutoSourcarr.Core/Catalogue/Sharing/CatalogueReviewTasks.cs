@@ -14,10 +14,32 @@ public sealed class CatalogueReviewTasks(CatalogueExchange exchange, TaskRegistr
     private readonly CancellationTokenSource _stopping = new();
     private bool _closed;
     private Task? _stop;
+    /// <summary>PERF-2: a review of a shared catalogue choice as a job (same choice merges), Normal priority, one at a time.</summary>
+    public static readonly JobType ReviewJob = new("catalogue-choice-review", "Review shared catalogue choice", JobPriority.Normal, StallTimeout: TimeSpan.FromMinutes(30));
+    /// <summary>Phase 13: when set, reviews run in the job queue; null keeps the bare task (tests, safe mode).</summary>
+    public JobQueue? Jobs { get; init; }
     public JsonObject Schedule(string uid, string digest, string revision, string action = "apply", DecisionActor? actor = null)
     {
         CatalogueFormat.CheckUid(uid, "decision"); if (action is not ("apply" or "ignore")) throw new ArgumentException("Choose Apply or Keep local");
         var key = uid + ":" + digest;
+        if (Jobs is { } queue)
+        {
+            lock (_gate) if (_closed) return new() { ["queued"] = false, ["error"] = "Database maintenance or shutdown is in progress" };
+            JobHandle handle;
+            try
+            {
+                handle = queue.Enqueue(ReviewJob, key, async job =>
+                {
+                    var result = await lanes.RunManualAsync(token => io.RunAsync(() => exchange.ApplyDecision(uid, digest, revision, action, taskId: job.Id, actor: actor,
+                        cancellationToken: token), token), job.Id, job.CancellationToken).ConfigureAwait(false);
+                    var state = result["state"]?.GetValue<string>();
+                    if (state is "applied" or "ignored") job.Result(result["message"]?.GetValue<string>() ?? "Shared choice reviewed");
+                    else tasks.Fail(job.Id, result["message"]?.GetValue<string>() ?? "The shared choice remains pending local review");
+                }, JobPriority.Normal, origin: "manual", title: "Review shared catalogue choice", context: uid);
+            }
+            catch (ObjectDisposedException) { return new() { ["queued"] = false, ["error"] = "Database maintenance or shutdown is in progress" }; }
+            return handle.Merged ? new() { ["queued"] = false, ["already_running"] = true } : new() { ["queued"] = true, ["task_id"] = handle.Id };
+        }
         lock (_gate)
         {
             if (_closed) return new() { ["queued"] = false, ["error"] = "Database maintenance or shutdown is in progress" };
