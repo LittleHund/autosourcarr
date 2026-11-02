@@ -1,4 +1,4 @@
-sha=af25d2703d2e4ab1cbb67099b94ebdf595ae6cfe
+sha=352d9c6cd2b92fc095dba30ad419b4469249a17d
 restore=0
 build=0
 test=0
@@ -13,6 +13,9 @@ reader_extension_build=0
 playwright=0
 playwright_bundle=0
 ui_bundle=0
+sandbox_check=0
+linux_runtime=0
+benchmark=0
 image_build=0
-boot_seconds=6.4
+boot_seconds=6.5
 image_playwright=0

@@ -1,0 +1,25 @@
+{
+  "benchmark": "pipe-8",
+  "entries": 50000,
+  "machine": "4 cpu",
+  "os": "Ubuntu 24.04.5 LTS",
+  "generate_seconds": 4.98,
+  "page_first_p95_ms": 3.95,
+  "page_deep_p95_ms": 3.23,
+  "page_walk_ms_per_200": 11.97,
+  "search_p95_ms": 75.06,
+  "queue_jobs": 5000,
+  "queue_jobs_per_second": 705,
+  "queue_high_wait_ms": 111.6,
+  "queue_share_wait_ms": 7.3,
+  "queue_failed": 0,
+  "budgets": {
+    "page_first_p95_ms": 250,
+    "page_deep_p95_ms": 250,
+    "search_p95_ms": 1500,
+    "queue_jobs_per_second_min": 500,
+    "queue_high_wait_ms": 2000,
+    "queue_share_wait_ms": 2000
+  },
+  "over_budget": []
+}

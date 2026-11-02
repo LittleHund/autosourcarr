@@ -1,0 +1,10 @@
+PASS compiles with -O2 -Wall -Werror
+proof: AUTOSOURCARR_SOURCE_SANDBOX_V1 {"uid":1001,"separated":0,"landlock":8,"scoped":2,"nnp":1,"reason":""}
+PASS first stderr line is the proof
+PASS the data folder is writable
+PASS a write outside the data folder is refused
+PASS a file outside the allowed paths is unreadable
+PASS cannot signal processes outside the sandbox
+PASS a separate user without capabilities degrades to the app's user
+PASS relative paths are refused (usage)
+source-host-sandbox check: 0 failure(s)

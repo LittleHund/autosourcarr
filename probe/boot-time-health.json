@@ -1,0 +1,138 @@
+{
+  "ok": true,
+  "version": "0.4.3-migration",
+  "captured_at": "2026-11-02T23:46:12.0777005+00:00",
+  "instance_id": "a166c3504850",
+  "source_host": {
+    "ok": true,
+    "checked": true,
+    "configured": true,
+    "url": "built-in source host",
+    "engine": {
+      "mode": "integrated",
+      "state": "source-host",
+      "ready": true,
+      "restarts": 0,
+      "error": "",
+      "engine": "autosourcarr-source-host"
+    },
+    "detail": {
+      "ok": true,
+      "version": "0.5.0",
+      "compat_version": "v2.4.2366",
+      "extensions": 0,
+      "extension_load_errors": 0,
+      "sources": 0,
+      "backed_off_sources": 0,
+      "java": "25.0.5",
+      "webview": "ready"
+    }
+  },
+  "source_sandbox": {
+    "state": "sandboxed",
+    "landlock_abi": 8,
+    "signals_scoped": true,
+    "separate_user": false,
+    "uid": 568,
+    "reason": "",
+    "message": "The source host and its WebView run in the Landlock sandbox (ABI 8): only its own data folder is writable, the app's configuration and databases are unreachable, and it cannot signal the app; it runs as the app's user."
+  },
+  "repair_isolation": {
+    "available": true,
+    "state": "available",
+    "reason": "ready",
+    "message": "Repair code runs in the Landlock repair runner (ABI 8) with the egress proxy as its only network path.",
+    "runner": "/opt/autosourcarr-native/repair-runner",
+    "landlock_abi": 8
+  },
+  "main_suwayomi": {
+    "ok": null,
+    "checked": false,
+    "configured": false,
+    "url": "",
+    "feed": "off",
+    "warning": "No main Suwayomi is set (Settings: MAIN_SUWAYOMI_URL, or a Suwayomi connection)."
+  },
+  "translation": {
+    "ok": null,
+    "checked": false,
+    "configured": false,
+    "url": "",
+    "warning": "Translation is off or not configured (TRANSLATION_MODE, TRANSLATION_API_URL)."
+  },
+  "library": {
+    "ok": null,
+    "error": "Library status is refreshing",
+    "refreshing": true,
+    "subbed_entries": 0,
+    "downloaded_chapters": 0,
+    "download_size": {
+      "configured": false,
+      "available": false,
+      "bytes": null,
+      "files": 0,
+      "path": "",
+      "error": "Download size is refreshing",
+      "refreshing": true
+    }
+  },
+  "stats": {
+    "catalog": {
+      "entries": 0,
+      "matched_entries": 0,
+      "unmatched_entries": 0,
+      "source_matches": 0,
+      "manual_matches": 0,
+      "alternate_source_records": 0,
+      "merged_aliases": 0,
+      "possible_duplicates": null,
+      "duplicate_groups": null,
+      "duplicate_snapshot_ready": false,
+      "duplicate_snapshot_age_seconds": null,
+      "reviewed_nonduplicates": 0,
+      "duplicate_review_history": 0,
+      "entries_with_additional_matches": 0,
+      "translated_titles": 0,
+      "deleted_entries": 0,
+      "deleted_source_records": 0,
+      "publication_statuses": {}
+    },
+    "sources": {
+      "families": 0,
+      "enabled_families": 0,
+      "variants": 0,
+      "enabled_variants": 0,
+      "search_variants": 0,
+      "chapter_variants": 0,
+      "unavailable_variants": 0,
+      "temporarily_paused_variants": 0
+    },
+    "cache": {
+      "persistent_browse_feeds": 0,
+      "latest_browse_refresh": "",
+      "translation_cache_rows": 0,
+      "cover_files": 0,
+      "cover_bytes": 0
+    },
+    "chapters": {
+      "virtual_chapters": 0,
+      "chapter_candidates": 0,
+      "served_history": 0
+    },
+    "storage": {
+      "database_dir": "/data",
+      "database_bytes": 1163832,
+      "data_dir": "/data",
+      "data_bytes": 10007248
+    },
+    "captured_at": "2026-11-02T23:46:12.0714037+00:00",
+    "cache_age_seconds": 0
+  },
+  "errors": {
+    "active": 0,
+    "active_errors": 0,
+    "active_warnings": 0,
+    "items": [],
+    "groups": []
+  }
+}
