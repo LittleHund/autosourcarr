@@ -79,7 +79,7 @@ const base=path=>Promise.resolve(path.includes('/suggestions')?{items:[{left:fir
   const delays=[];ctx.setTimeout=(fn,delay)=>{delays.push(delay);return 1;};ctx.clearTimeout=()=>{};
   nodes.sources.classList.contains=()=>true;nodes.sourceOrphanedPanel.classList.contains=()=>true;
   apiImpl=()=>Promise.resolve({items:[{...row(),can_repair:true}],refresh:{state:'complete',checked_at:1790526381},operation:{state:'idle'},inventory_known:true,inventory_refreshing:true,worker_configured:true,repair_available:true});
-  await ctx.loadSourceOrphans();assert.equal(delays.at(-1),4000);
+  await ctx.loadSourceOrphans();assert(!delays.includes(4000),'UI-13: the inventory refresh waits for the orphans event, not a 4 s timer');
   assert(nodes.sourceOrphanStatus.textContent.includes('Checking installed sources'));assert(!nodes.sourceOrphanStatus.textContent.includes('1970'));
   assert.equal(all(nodes.sourceInstalledOrphanList).find(node=>node.dataset.orphanMutation==='repair').disabled,false);
   console.log('PASS original tag IDs, manual decisions, stale response guards, gallery provenance, archived recovery, safe links and nonblocking inventory polling');
