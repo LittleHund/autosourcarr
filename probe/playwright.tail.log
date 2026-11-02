@@ -1,0 +1,296 @@
+ }
+      41 | }
+        at signIn (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:38:57)
+        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/popups.spec.js:43:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: theme accent applied
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "cyan"
+    Received: "blue"
+
+       at fixtures.js:38
+
+      36 |   if (theme) {
+      37 |     const applied = await appliedTheme(page);
+    > 38 |     base.expect(applied.accent, 'theme accent applied').toBe(theme.accent);
+         |                                                         ^
+      39 |     base.expect(applied.scheme, 'light/dark applied').toBe(theme.scheme);
+      40 |   }
+      41 | }
+        at signIn (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:38:57)
+        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/popups.spec.js:43:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/popups-setup-wizard-closes-31547-e-click-and-keeps-the-draft-desktop-cyan-light-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  169) [desktop-cyan-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+
+    Error: theme accent applied
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "cyan"
+    Received: "blue"
+
+       at fixtures.js:38
+
+      36 |   if (theme) {
+      37 |     const applied = await appliedTheme(page);
+    > 38 |     base.expect(applied.accent, 'theme accent applied').toBe(theme.accent);
+         |                                                         ^
+      39 |     base.expect(applied.scheme, 'light/dark applied').toBe(theme.scheme);
+      40 |   }
+      41 | }
+        at signIn (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:38:57)
+        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/popups.spec.js:60:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: theme accent applied
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "cyan"
+    Received: "blue"
+
+       at fixtures.js:38
+
+      36 |   if (theme) {
+      37 |     const applied = await appliedTheme(page);
+    > 38 |     base.expect(applied.accent, 'theme accent applied').toBe(theme.accent);
+         |                                                         ^
+      39 |     base.expect(applied.scheme, 'light/dark applied').toBe(theme.scheme);
+      40 |   }
+      41 | }
+        at signIn (/home/runner/work/autosourcarr/autosourcarr/tests/e2e/fixtures.js:38:57)
+        at /home/runner/work/autosourcarr/autosourcarr/tests/e2e/popups.spec.js:60:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/popups-navigation-drawer-closes-on-Escape-and-outside-click-desktop-cyan-light-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  169 failed
+    [phone-blue-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─────
+    [phone-blue-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-blue-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-blue-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────────
+    [phone-blue-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
+    [phone-blue-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-blue-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-blue-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-amber-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────────
+    [phone-amber-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
+    [phone-amber-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-amber-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-amber-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-amber-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [phone-amber-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [phone-amber-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-amber-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-amber-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-emerald-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [phone-emerald-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [phone-emerald-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-emerald-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-emerald-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-emerald-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ────────────────────
+    [phone-emerald-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─
+    [phone-emerald-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-emerald-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-emerald-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-violet-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [phone-violet-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [phone-violet-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-violet-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-violet-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-violet-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [phone-violet-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [phone-violet-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-violet-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-violet-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-rose-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ────────────────────────
+    [phone-rose-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─────
+    [phone-rose-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-rose-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-rose-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-rose-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────────
+    [phone-rose-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
+    [phone-rose-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-rose-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-rose-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-cyan-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ────────────────────────
+    [phone-cyan-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─────
+    [phone-cyan-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-cyan-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-cyan-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [phone-cyan-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────────
+    [phone-cyan-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
+    [phone-cyan-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [phone-cyan-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [phone-cyan-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-blue-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
+    [tablet-blue-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [tablet-blue-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [tablet-blue-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-blue-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-blue-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-amber-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [tablet-amber-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [tablet-amber-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-amber-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-amber-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-amber-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [tablet-amber-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [tablet-amber-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-amber-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-amber-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-emerald-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ────────────────────
+    [tablet-emerald-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─
+    [tablet-emerald-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-emerald-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-emerald-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-emerald-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────
+    [tablet-emerald-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout 
+    [tablet-emerald-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-emerald-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-emerald-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-violet-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [tablet-violet-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [tablet-violet-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-violet-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-violet-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-violet-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ────────────────────
+    [tablet-violet-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─
+    [tablet-violet-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-violet-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-violet-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-rose-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────────
+    [tablet-rose-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
+    [tablet-rose-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-rose-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-rose-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-rose-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [tablet-rose-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [tablet-rose-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-rose-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-rose-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-cyan-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────────
+    [tablet-cyan-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ────
+    [tablet-cyan-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-cyan-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-cyan-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [tablet-cyan-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [tablet-cyan-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [tablet-cyan-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [tablet-cyan-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [tablet-cyan-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-blue-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [desktop-blue-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [desktop-blue-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-blue-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-blue-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-amber-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [desktop-amber-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [desktop-amber-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-amber-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-amber-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-amber-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ────────────────────
+    [desktop-amber-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─
+    [desktop-amber-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-amber-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-amber-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-emerald-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────
+    [desktop-emerald-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout 
+    [desktop-emerald-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-emerald-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-emerald-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-emerald-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────
+    [desktop-emerald-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout 
+    [desktop-emerald-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-emerald-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-emerald-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-violet-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ────────────────────
+    [desktop-violet-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ─
+    [desktop-violet-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-violet-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-violet-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-violet-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ───────────────────
+    [desktop-violet-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout 
+    [desktop-violet-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-violet-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-violet-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-rose-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [desktop-rose-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [desktop-rose-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-rose-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-rose-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-rose-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [desktop-rose-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [desktop-rose-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-rose-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-rose-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-cyan-dark] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ──────────────────────
+    [desktop-cyan-dark] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ───
+    [desktop-cyan-dark] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-cyan-dark] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-cyan-dark] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+    [desktop-cyan-light] › tests/e2e/pages.spec.js:18:1 › sidebar is reachable ─────────────────────
+    [desktop-cyan-light] › tests/e2e/pages.spec.js:33:1 › every page and sub-tab keeps the layout ──
+    [desktop-cyan-light] › tests/e2e/popups.spec.js:27:1 › search dialog closes on Escape and outside click 
+    [desktop-cyan-light] › tests/e2e/popups.spec.js:42:1 › setup wizard closes on Escape and outside click and keeps the draft 
+    [desktop-cyan-light] › tests/e2e/popups.spec.js:59:1 › navigation drawer closes on Escape and outside click 
+  2 skipped
+  9 passed (10.4m)

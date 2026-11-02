@@ -1,0 +1,2 @@
+bundle-ui: 36 scripts 1003 KiB -> app.7ff3151b10e1.js 668 KiB; ui.css -> ui.a000c853034b.css 174 KiB (check only, nothing written to the repo)
+bundle-ui: 36 scripts 1003 KiB -> app.7ff3151b10e1.js 668 KiB; ui.css -> ui.a000c853034b.css 174 KiB in autosourcarr/app/static/dist

@@ -1,0 +1,25 @@
+playwright 1.64.1: expected=6 unexpected=13 flaky=0 skipped=1 duration_s=252
+
+per project (passed/failed/flaky/skipped):
+  desktop-blue-dark: 4/0/0/1
+  desktop-blue-light: 0/5/0/0
+  phone-blue-dark: 2/3/0/0
+  phone-blue-light: 0/5/0/0
+
+notes:
+  slow: undefined
+
+failures (13):
+  FAIL [phone-blue-dark] pages.spec.js > every page and sub-tab keeps the layout: Error: start page: 15 of 36 sampled controls are smaller than 44x44 px | expect(received).toEqual(expected) // deep equality | - Expected  -  1
+  FAIL [phone-blue-light] pages.spec.js > sidebar is reachable: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [phone-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [desktop-blue-light] pages.spec.js > sidebar is reachable: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [desktop-blue-light] pages.spec.js > every page and sub-tab keeps the layout: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [phone-blue-dark] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Test timeout of 120000ms exceeded.
+  FAIL [phone-blue-dark] popups.spec.js > navigation drawer closes on Escape and outside click: Error: a click on the scrim closes the drawer | a click on the scrim closes the drawer | expect(received).toBe(expected) // Object.is equality
+  FAIL [phone-blue-light] popups.spec.js > search dialog closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [phone-blue-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [phone-blue-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [desktop-blue-light] popups.spec.js > search dialog closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [desktop-blue-light] popups.spec.js > setup wizard closes on Escape and outside click and keeps the draft: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
+  FAIL [desktop-blue-light] popups.spec.js > navigation drawer closes on Escape and outside click: Error: light/dark applied | expect(received).toBe(expected) // Object.is equality | Expected: "light"
