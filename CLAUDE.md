@@ -110,7 +110,7 @@ AUTH, GST, UI, PERF, SET, DEV). Knowledge DB records per phase: `RELEASE-0.5.0-P
 | `tests/AutoSourcarr.Tests` | Custom test runner (`TestSuite.cs`, `suite.Add`, `Check.*`; registration in `Program.cs`). Also tool modes `--write-openapi`, `--write-settings-docs`, `--filter`, `--score-pairs`, `--duplicate-test-set`. |
 | `source-host/` | Kotlin JVM worker ("source host") built inside a pinned Suwayomi-Server checkout (commit `40bc5da5`, v2.4.2366) by `scripts/build-source-host.sh`. |
 | `extension/` | Kotlin reader extension (Tachiyomi extensions-lib 1.4, built with the Keiyoushi build). |
-| `native/` | C launchers: `repair-runner.c` (Landlock ABI ≥ 6 sandbox, connect gate to egress proxy, signal gate), `repair-launcher.c` (KVM microVM; no guest image yet), container entry. |
+| `native/` | C tools: `repair-runner.c` (Landlock ABI ≥ 6 sandbox, connect gate to egress proxy, signal gate), `repair-launcher.c` (KVM microVM; no guest image yet), `source-host-sandbox.c` (Landlock for the source host JVM/JCEF, phase 13). The native PID 1 path was removed in phase 13. |
 | `docs/` | `port-map.md` (Python→C# map, per-phase ticks), `settings.md` (generated), `reverse-proxy/` (Authelia/NPM, phase 10), user guides. |
 
 **JVM boundary.** All extension (third-party) code runs only in the source host JVM, never in the
