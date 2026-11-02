@@ -593,7 +593,7 @@ async function loadSourceBrowser(){
   sourceBrowserUi.loading=(async()=>{
     try{sourceBrowserUi.snapshot=await apiV1({timeoutMs:6000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'}).getSourceBrowser();renderSourceBrowser();}
     catch(e){document.querySelector('#sourceBrowserOperation').textContent='Unable to refresh browser status: '+e.message;}
-    finally{sourceBrowserUi.loading=null;if(sourceBrowserVisible())sourceBrowserUi.timer=setTimeout(loadSourceBrowser,sourceBrowserUi.snapshot?.busy?1500:5000);}
+    finally{sourceBrowserUi.loading=null;}
   })();return sourceBrowserUi.loading;
 }
 async function changeSourceBrowser(action,reset=false){
@@ -629,6 +629,10 @@ async function openSolverSettings(){
   }catch(e){toast(e.message);}
 }
 function initializeSourceBrowser(){
+  // UI-13: source restarts and browser changes report through task/job/connection events; no timer. The identity
+  // draft is never overwritten (renderSourceBrowser keeps it while dirty) and a focused field holds the refresh (UI-12).
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-browser',topics:['tasks','jobs','connections'],delayMs:800,when:()=>!document.hidden&&sourceBrowserVisible(),
+    busy:()=>globalThis.AutoSourcarrLive.userEditing(document.querySelector('#settingsBrowserPane')),refresh:()=>loadSourceBrowser()});
   document.querySelector('#sourceUserAgentPreset')?.addEventListener('change',event=>{sourceBrowserUi.dirty=true;sourceBrowserUi.revision++;sourceBrowserDraft(event.target.value);renderSourceBrowser();});
   document.querySelector('#sourceUserAgentValue')?.addEventListener('input',()=>{sourceBrowserUi.dirty=true;sourceBrowserUi.revision++;});
   document.querySelector('#applySourceUserAgent')?.addEventListener('click',()=>changeSourceBrowser('user-agent'));

@@ -28,10 +28,8 @@ const entryCoverRevisions = restoreCoverRevisions('autosourcarr.entryCoverRevisi
 const sourceCoverRevisions = restoreCoverRevisions('autosourcarr.sourceCoverRevisions');
 const knownEntryThumbnails = new Map();
 const knownEntryCoverReady = new Map();
-let metadataLiveTimer = null;
 let duplicateRetryTimer = null;
 let duplicateRefreshTimer = null;
-let duplicateHeartbeatTimer = null;
 let matchBrowserState = null;
 let matchBrowserGeneration = 0;
 let matchMutationSequence = 0;
@@ -55,7 +53,6 @@ let tasksState = { running: 0, items: [] };
 let tasksLoadPromise = null;
 let tasksLastSuccess = 0;
 let tasksPollFailures = 0;
-let tasksPollTimer = null;
 let importsState = { runs: [], runId: '', filter: 'all', review: 'all', items: [], enrichmentPending: 0, offset: 0, limit: 50, total: 0, reviewCounts: null, loadedKey: '', loading: false, error: '', failures: 0, revision: 0 };
 let importsListRequest = null;
 const importItemRequests = new Map();
@@ -75,16 +72,14 @@ let manualActionsMutationPending = 0;
 let manualActionsRequest = null;
 let manualActionsReconcileTimer = null;
 let manualActionsNeedsReconcile = false;
-let importsPollTimer = null;
+let importsRetryTimer = null;
 let importsPendingPollTimer = null;
 const pendingImportActions = new Map();
 let lastHealthSnapshot = null;
 let clientHealthError = null;
 let clientErrors = [];
 let lastBackendErrors = {active_count:0,active_error_count:0,active_warning_count:0,items:[]};
-let duplicateHydrateRetry = {matrix:null,subbed:null};
 const duplicateSnapshotRequests=new Map();
-const duplicatePollAttempts={matrix:0,subbed:0};
 const entrySyncTimers = new Map();
 let uiPreferencesState = {loaded:false,user:'',authelia:false,identityHeader:'',identityDiagnostics:{},values:{},saveTimer:null,pending:{}};
 const UI_PREF_LOCAL_KEYS = {
@@ -398,61 +393,25 @@ async function api(url, opts = {}) {
 // Typed client for /api/v1, generated from the server's OpenAPI document (scripts/generate-api-client.mjs).
 // Requests still go through api() above: same admin token, timeouts and error handling.
 function apiV1(defaults={}){return AutoSourcarrApi.createClient({request:(path,options)=>api(path,{...defaults,...options})});}
-// UI-13 live updates: one server-sent event stream (/api/v1/events). It is read with fetch, not EventSource, so the
-// admin token header can be sent. Events only say *what* changed; the page then reloads that part. Reconnects resume
-// from the last event id; a "resync" event (the server no longer holds the gap) reloads everything.
-const liveEvents={connected:false,lastId:null,controller:null,retryMs:3000,handlers:{},started:false};
-function onLiveEvent(topic,handler){(liveEvents.handlers[topic]||=[]).push(handler);return()=>{const list=liveEvents.handlers[topic]||[];const at=list.indexOf(handler);if(at>=0)list.splice(at,1);};}
-function dispatchLiveEvent(topic,data){
-  for(const handler of [...(liveEvents.handlers[topic]||[]),...(liveEvents.handlers['*']||[])]){try{handler(data,topic);}catch(e){console.error('Live update handler failed',e);}}
+// UI-13 / PERF-8 live updates: live-events.js keeps one server-sent event stream per tab (/api/v1/events). Events
+// only say *what* changed; each view subscribes to the topics it shows and reloads its own data once per burst,
+// only while it is visible. Nothing here polls on a timer.
+const liveUpdates=globalThis.AutoSourcarrLive;
+function onLiveEvent(topic,handler){return liveUpdates?.on(topic,handler)||(()=>{});}
+function liveConnected(){return !!liveUpdates?.status().connected;}
+function liveSubscribe(config){return liveUpdates?.subscribe(config)||{unsubscribe(){},refreshNow(){}};}
+// Background job progress is frequent; views that only show results wait for the outcome.
+const liveJobOutcome=event=>event.topic!=='jobs'||!['progress','queued','started'].includes(String(event.data?.change||''));
+// Every view's subscription is registered once at boot; each decides itself whether it is on screen.
+function startLiveUpdates(){
+  subscribeTaskUpdates();subscribeEntryMetadataUpdates();subscribeDuplicateUpdates();subscribeMatrixUpdates();subscribeImportUpdates();
+  startLiveEvents();
 }
-function parseLiveBlock(block){
-  let id=null,event='message';const data=[];
-  for(const line of block.split('\n')){
-    if(!line||line.startsWith(':'))continue;
-    const colon=line.indexOf(':');const field=colon<0?line:line.slice(0,colon);let value=colon<0?'':line.slice(colon+1);if(value.startsWith(' '))value=value.slice(1);
-    if(field==='id')id=value;else if(field==='event')event=value;else if(field==='data')data.push(value);else if(field==='retry'&&/^\d+$/.test(value))liveEvents.retryMs=Number(value);
-  }
-  return {id,event,data:data.join('\n')};
+function startLiveEvents(){
+  if(!liveUpdates)return;
+  liveUpdates.configure({getToken:()=>token});
+  liveUpdates.start();
 }
-async function runLiveEvents(){
-  if(liveEvents.started)return;liveEvents.started=true;
-  for(;;){
-    const controller=new AbortController();liveEvents.controller=controller;
-    try{
-      const headers={Accept:'text/event-stream'};
-      if(token)headers['X-Admin-Token']=token;
-      if(liveEvents.lastId)headers['Last-Event-ID']=liveEvents.lastId;
-      const response=await fetch('/api/v1/events',{headers,cache:'no-store',signal:controller.signal,credentials:'same-origin'});
-      if(!response.ok||!response.body)throw new Error('HTTP '+response.status);
-      liveEvents.connected=true;
-      // Whatever changed while disconnected (or before a server restart) is picked up once.
-      liveTasksChanged();
-      const reader=response.body.getReader();const decoder=new TextDecoder();let buffer='';
-      for(;;){
-        const {value,done}=await reader.read();if(done)break;
-        buffer+=decoder.decode(value,{stream:true}).replace(/\r\n?/g,'\n');
-        let cut;
-        while((cut=buffer.indexOf('\n\n'))>=0){
-          const block=buffer.slice(0,cut);buffer=buffer.slice(cut+2);
-          const item=parseLiveBlock(block);if(!item.data&&item.event==='message')continue;
-          if(item.id)liveEvents.lastId=item.id;
-          let payload=null;try{payload=item.data?JSON.parse(item.data):null;}catch(_){payload=null;}
-          if(item.event==='resync')liveEvents.lastId=null;
-          dispatchLiveEvent(item.event,payload);
-        }
-      }
-    }catch(e){if(e?.name!=='AbortError')console.debug('Live updates disconnected',e?.message||e);}
-    liveEvents.connected=false;
-    await new Promise(resolve=>setTimeout(resolve,document.hidden?Math.max(15000,liveEvents.retryMs):liveEvents.retryMs));
-  }
-}
-let liveTasksTimer=null;
-function liveTasksChanged(){if(liveTasksTimer)return;liveTasksTimer=setTimeout(()=>{liveTasksTimer=null;loadTasks().catch(()=>{});},150);}
-onLiveEvent('tasks',liveTasksChanged);
-onLiveEvent('jobs',liveTasksChanged);
-onLiveEvent('errors',()=>{const panel=document.getElementById('errorPanel');if(panel&&!panel.hidden&&typeof loadErrors==='function')loadErrors().catch(()=>{});});
-onLiveEvent('resync',()=>{liveTasksChanged();});
 // Waits until a task leaves the running list; resolves with its final row (state, message, error).
 async function waitForTask(taskId,{timeoutMs=3600000}={}){
   const deadline=Date.now()+timeoutMs;
@@ -462,7 +421,7 @@ async function waitForTask(taskId,{timeoutMs=3600000}={}){
     if(!row)return {state:'failed',error:'The task is no longer listed; see the task history.'};
     if(row.state!=='running')return row;
     if(Date.now()>deadline)return {state:'failed',error:'Still running; follow it in the task list.'};
-    await new Promise(resolve=>{let off=null;const timer=setTimeout(()=>{off?.();resolve();},liveEvents.connected?10000:2000);off=onLiveEvent('jobs',data=>{if(data?.id===taskId){clearTimeout(timer);off?.();resolve();}});});
+    await new Promise(resolve=>{let off=null;const timer=setTimeout(()=>{off?.();resolve();},liveConnected()?30000:2000);off=onLiveEvent('jobs',data=>{if(data?.id===taskId){clearTimeout(timer);off?.();resolve();}});});
   }
 }
 window.addEventListener('unhandledrejection', e => {
@@ -682,25 +641,35 @@ async function refreshSparseEntryMetadataOnce(){
     }
   }catch(_e){}
 }
-function scheduleMetadataLivePoll(delay=2200){
-  if(metadataLiveTimer)return;
-  metadataLiveTimer=setTimeout(async()=>{metadataLiveTimer=null;if(!document.hidden)await refreshSparseEntryMetadata();scheduleMetadataLivePoll(tasksState.running>0?3500:15000);},Math.max(500,delay));
+// Covers and summaries fill in while background jobs run: re-read only the sparse entries on screen, once per burst.
+function subscribeEntryMetadataUpdates(){
+  liveSubscribe({name:'entry-metadata',topics:['jobs','library'],delayMs:1500,when:()=>!document.hidden&&sparseEntryIds().length>0,refresh:()=>refreshSparseEntryMetadata()});
 }
 function scheduleMetadataBurst(){
-  for(const delay of [450,1200,2800,5500])setTimeout(()=>{if(!document.hidden)refreshSparseEntryMetadata().catch(()=>{});},delay);
+  // After an import decision: one read soon; everything later follows the jobs it started.
+  setTimeout(()=>{if(!document.hidden)refreshSparseEntryMetadata().catch(()=>{});},450);
 }
 function scheduleDuplicateLiveRefresh(delay=350){
   if(duplicateRefreshTimer)clearTimeout(duplicateRefreshTimer);
   duplicateRefreshTimer=setTimeout(()=>{duplicateRefreshTimer=null;if(duplicateCandidatesVisible())loadDuplicates(null,{render:true,quiet:true}).catch(()=>{});},Math.max(50,delay));
 }
 function duplicateCandidatesVisible(){return !document.hidden&&activeSurface('duplicates')&&!globalThis.AutoSourcarrMatchingReview?.historyActive;}
-function scheduleDuplicateHeartbeat(delay=4500){
-  if(duplicateHeartbeatTimer)return;
-  duplicateHeartbeatTimer=setTimeout(async()=>{
-    duplicateHeartbeatTimer=null;
-    if(duplicateCandidatesVisible())await loadDuplicates(null,{render:true,quiet:true}).catch(()=>{});
-    scheduleDuplicateHeartbeat(document.hidden?15000:4500);
-  },Math.max(1000,delay));
+// Candidate groups change when matching, snapshot or merge jobs finish (not on their progress ticks).
+function duplicateLiveRefresh(){
+  if(!duplicateCandidatesVisible())return Promise.resolve();
+  return loadDuplicates(null,{render:true,quiet:true}).catch(()=>{});
+}
+function subscribeMatrixUpdates(){
+  for(const kind of ['matrix','subbed']){
+    liveSubscribe({name:'duplicate-snapshot-'+kind,topics:['jobs'],delayMs:1000,filter:liveJobOutcome,
+      when:()=>!document.hidden&&activeSurface(kind)&&!!matrixDataset(kind)?.duplicates_pending,
+      refresh:()=>{const d=matrixDataset(kind);return d?hydrateMatrixDuplicates(kind,d,{render:true}):undefined;}});
+  }
+  liveSubscribe({name:'subbed-membership',topics:['library'],delayMs:1000,
+    when:()=>!document.hidden&&activeSurface('subbed')&&!!matrixDataset('subbed')?.subscription?.refreshing,refresh:()=>loadSubbed().catch(()=>{})});
+}
+function subscribeDuplicateUpdates(){
+  return liveSubscribe({name:'duplicates',topics:['jobs'],delayMs:1000,filter:liveJobOutcome,when:duplicateCandidatesVisible,refresh:duplicateLiveRefresh});
 }
 function scheduleMutationRefresh(url,method){
   const path=String(url||'').split('?')[0];if(String(method||'GET').toUpperCase()==='GET')return;
@@ -979,22 +948,30 @@ function loadImports(){
       select.innerHTML=importsState.runs.length?importsState.runs.map(r=>`<option value="${esc(r.id)}" ${String(r.id)===importsState.runId?'selected':''}>${esc(r.filename||'backup')} · ${esc(r.created_at||'')} · ${Number(r.total||0)} items</option>`).join(''):'<option value="">No imports yet</option>';
       await loadImportItems();importsState.failures=0;
       const active=importsState.runs.find(r=>String(r.id)===importsState.runId);
-      if((active&&String(active.state)==='running')||importsState.enrichmentPending>0)scheduleImportsPoll();
+      importsState.live=!!((active&&String(active.state)==='running')||importsState.enrichmentPending>0);
       if(pendingImportActions.size)schedulePendingImportPoll(250);
     }catch(error){
-      if(revision===importsState.revision){importsState.failures++;importsState.error=String(error?.message||error);requestSurfaceRender('imports');scheduleImportsPoll();}
+      if(revision===importsState.revision){importsState.failures++;importsState.error=String(error?.message||error);requestSurfaceRender('imports');scheduleImportsRetry();}
       throw error;
     }finally{importsListRequest=null;}
   })();
   importsListRequest.revision=revision;
   return importsListRequest;
 }
-function scheduleImportsPoll(){
-  if(importsPollTimer)return;
-  importsPollTimer=setTimeout(async()=>{
-    importsPollTimer=null;
+// A running import or its enrichment follows the jobs it runs (progress included, so counts move), once per burst.
+function subscribeImportUpdates(){
+  liveSubscribe({name:'imports',topics:['jobs','tasks'],delayMs:2000,when:()=>!document.hidden&&activeSurface('imports')&&!!importsState.live,
+    busy:()=>structuralRenderBlocked('imports'),refresh:()=>loadImports().catch(()=>{})});
+  // A user's own import decision: re-read its row as soon as the job it started reports an outcome.
+  liveSubscribe({name:'import-actions',topics:['jobs'],delayMs:300,filter:liveJobOutcome,when:()=>pendingImportActions.size>0,refresh:()=>refreshPendingImportActions().catch(()=>{})});
+}
+// Only a failed list read is retried, with back-off; a good read waits for the next event.
+function scheduleImportsRetry(){
+  if(importsRetryTimer)return;
+  importsRetryTimer=setTimeout(async()=>{
+    importsRetryTimer=null;
     if(!activeSurface('imports')||document.hidden)return;
-    if(structuralRenderBlocked('imports')){scheduleImportsPoll();return;}
+    if(structuralRenderBlocked('imports')){scheduleImportsRetry();return;}
     await loadImports().catch(()=>{});
   },Math.min(30000,2000*Math.pow(2,Math.min(4,importsState.failures))));
 }
@@ -1074,7 +1051,8 @@ async function refreshPendingImportActions(){
   }
   if(changed&&String(importsState.runId))requestSurfaceRender('imports');
   if(finished){loadTasks().catch(()=>{});loadImportItems().catch(()=>{});}
-  if(pendingImportActions.size)schedulePendingImportPoll(700);
+  // Outcome events normally finish this; the slow re-check covers an action whose request was lost in transit.
+  if(pendingImportActions.size)schedulePendingImportPoll(liveConnected()?5000:1500);
 }
 function schedulePendingImportPoll(delay=700){
   if(importsPendingPollTimer||!pendingImportActions.size)return;
@@ -1558,25 +1536,25 @@ async function loadTasks(){
   })();
   try{return await tasksLoadPromise;}finally{tasksLoadPromise=null;}
 }
-function startTaskPolling(){
-  if(tasksPollTimer)return;
-  const poll=async()=>{
-    tasksPollTimer='running';
-    loadAttention().catch(()=>{});
-    await loadTasks();
-    const running=Number(tasksState.running||0)>0;
-    const tasksOpen=!!document.querySelector('#tasks.active');
-    const importsOpen=!!document.querySelector('#imports.active');
-    const delay=document.hidden?60000:(tasksPollFailures?Math.min(30000,3000*2**Math.min(tasksPollFailures,4)):liveEvents.connected?30000:(running||tasksOpen||importsOpen?3000:30000));
-    tasksPollTimer=setTimeout(poll,delay);
-  };
-  poll();
+// Task list, activity strip and assistance are on every page: they follow the tasks/jobs/errors topics whenever the
+// tab is visible (live-events.js holds refreshes while it is hidden and catches up once on return).
+let tasksRetryTimer=null;
+async function refreshTasksLive(){
+  const ok=await loadTasks();
+  clearTimeout(tasksRetryTimer);tasksRetryTimer=null;
+  // Only a failed read is retried (with back-off, as the status line says); a good one waits for the next event.
+  if(!ok&&!document.hidden)tasksRetryTimer=setTimeout(()=>{tasksRetryTimer=null;refreshTasksLive().catch(()=>{});},Math.min(30000,3000*2**Math.min(tasksPollFailures,4)));
+  return ok;
 }
-window.addEventListener('visibilitychange',()=>{
-  if(!document.hidden && tasksPollTimer && tasksPollTimer!=='running'){
-    clearTimeout(tasksPollTimer);tasksPollTimer=null;startTaskPolling();
-  }
-});
+function startTaskUpdates(){
+  loadAttention().catch(()=>{});
+  refreshTasksLive().catch(()=>{});
+}
+function subscribeTaskUpdates(){
+  liveSubscribe({name:'tasks',topics:['tasks','jobs'],delayMs:200,refresh:()=>refreshTasksLive()});
+  liveSubscribe({name:'attention',topics:['tasks','errors'],delayMs:3000,refresh:()=>loadAttention(true)});
+  liveSubscribe({name:'errors',topics:['errors'],delayMs:500,when:()=>{const panel=document.getElementById('errorPanel');return !!panel&&!panel.hidden;},refresh:()=>loadErrors()});
+}
 
 // Settings editor: config.json through /api/v1/settings (see settingsFromApi below). Changes apply after a restart.
 function settingsFile(){
@@ -2717,7 +2695,6 @@ function renderMatrix(kind='matrix'){
 async function hydrateMatrixDuplicates(kind,d,{render=true}={}){
   const ids=(d.entries||[]).map(e=>Number(e.id)).filter(Boolean);
   if(!ids.length){d.duplicates_pending=false;return;}
-  if(duplicateHydrateRetry[kind]){clearTimeout(duplicateHydrateRetry[kind]);duplicateHydrateRetry[kind]=null;}
   try{
     // POST avoids the multi-kilobyte ?ids= URL that v0.2.32+ generated for a 500-row
     // Matrix. The backend serves only the completed duplicate snapshot, so this
@@ -2730,10 +2707,7 @@ async function hydrateMatrixDuplicates(kind,d,{render=true}={}){
     const changed=JSON.stringify(d.duplicates||{})!==JSON.stringify(r.duplicates||{});
     d.duplicates=r.duplicates||{};d.duplicates_pending=!!r.pending;
     if(changed&&(render||document.querySelector(`#${kind}.active`)))requestSurfaceRender(kind);
-    if(r.pending){
-      const delay=Math.min(30000,5000*Math.pow(2,Math.min(3,duplicatePollAttempts[kind]++)));
-      if(!document.hidden&&activeSurface(kind))duplicateHydrateRetry[kind]=setTimeout(()=>{duplicateHydrateRetry[kind]=null;if(!document.hidden&&activeSurface(kind)&&matrixDataset(kind)===d)hydrateMatrixDuplicates(kind,d,{render:true}).catch(()=>{});},delay);
-    }else duplicatePollAttempts[kind]=0;
+    // Still pending: the snapshot job's outcome event re-reads it (subscribeMatrixUpdates).
   }catch(e){
     if(matrixDataset(kind)===d){d.duplicates_pending=false;console.warn('Duplicate candidate snapshot unavailable',e);}
   }
@@ -2805,7 +2779,8 @@ function loadMatrixView(kind,{render=true}={}){
       if(data.chapter_stats_pending)hydrateMatrixChapters(kind,data);
       if(matrixViewRetry[kind]){clearTimeout(matrixViewRetry[kind]);matrixViewRetry[kind]=null;}
       if(kind==='subbed'&&data.subscription?.refreshing){
-        matrixViewRetry[kind]=setTimeout(()=>{matrixViewRetry[kind]=null;if(activeSurface(kind)&&matrixDataset(kind)===data)loadSubbed().catch(()=>{});},2000);
+        // The library status refresh publishes no event yet: one slow re-check while it runs (library events come first).
+        matrixViewRetry[kind]=setTimeout(()=>{matrixViewRetry[kind]=null;if(!document.hidden&&activeSurface(kind)&&matrixDataset(kind)===data)loadSubbed().catch(()=>{});},liveConnected()?10000:3000);
       }
       return data;
     }catch(error){
@@ -3382,9 +3357,11 @@ async function loadDuplicates(focusId=null,{render=true,quiet=false}={}){
     if(focusId!=null&&!structuralRenderBlocked('duplicates'))renderDuplicates(focusId);
     else if(changed)requestSurfaceRender('duplicates');
   }
-  if(duplicateData?.pending||duplicateData?.stale||duplicateData?.subscription_pending){
+  // pending/stale: the snapshot or sweep job's outcome event re-reads this view (subscribeDuplicateUpdates). The
+  // library membership refresh behind subscription_pending publishes no event yet, so only that keeps a slow re-check.
+  if(duplicateData?.subscription_pending&&!duplicateData?.pending){
     if(duplicateRetryTimer)clearTimeout(duplicateRetryTimer);
-    duplicateRetryTimer=setTimeout(()=>{duplicateRetryTimer=null;if(duplicateCandidatesVisible())loadDuplicates(focusId,{render:true,quiet:true}).catch(()=>{});},1800);
+    duplicateRetryTimer=setTimeout(()=>{duplicateRetryTimer=null;if(duplicateCandidatesVisible())loadDuplicates(focusId,{render:true,quiet:true}).catch(()=>{});},liveConnected()?10000:3000);
   }else if(!quiet&&duplicateRetryTimer){clearTimeout(duplicateRetryTimer);duplicateRetryTimer=null;}
   return duplicateData;
 }
@@ -3966,11 +3943,9 @@ async function bootstrapAutoSourcarr(){
     updateUiPreferenceOwner();
     rememberClientError('Unable to load server user preferences',{component:'User preferences',path:'/api/admin/ui-preferences',method:'GET',severity:'warning',detail:String(e?.message||e)});
   });
-  startTaskPolling();
-  runLiveEvents();
+  startTaskUpdates();
+  startLiveUpdates();
   health();
-  scheduleMetadataLivePoll();
-  scheduleDuplicateHeartbeat();
   // Browse first; heavy catalogue views load only when visited.
   const sources=loadSources().catch(e=>toast('Unable to load source filters: '+e.message));
   const browse=(async()=>{if(restored.needsSourceInventory)await sources;if(navigationGeneration!==initialGeneration)return;return loadActiveTab(restored.tab);})().catch(e=>toast(e.message));

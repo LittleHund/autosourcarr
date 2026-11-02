@@ -48,7 +48,7 @@
         const snapshot=await api('/api/v1/source-health',{signal:request.controller.signal,suppressClientError:true,timeoutMs:12000});
         if(read===request&&own===generation&&visible()&&!busy){data=snapshot;render();}
       }catch(error){if(read===request&&own===generation&&visible())status('Unable to refresh source health: '+error.message+' · last recorded results retained');}
-      finally{if(read===request){read=null;if(visible())timer=setTimeout(load,10000);}}
+      finally{if(read===request)read=null;}
     })();return request.promise;
   }
   async function mutate(path,body){
@@ -76,5 +76,7 @@
   document.addEventListener('visibilitychange',changed);
   for(const node of [panel,byId('sources')])new MutationObserver(changed).observe(node,{attributes:true,attributeFilter:['class']});
   window.loadSourceHealth=load;
+  // UI-13: checks run as jobs; their events refresh the table (never while a control in it has focus, UI-12).
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-health',topics:['jobs','tasks'],delayMs:1000,when:visible,busy:()=>globalThis.AutoSourcarrLive.userEditing(panel),refresh:()=>load()});
   if(visible())load();
 })();

@@ -252,7 +252,7 @@ function manualLedgerHarness(){
   h.context.ledgerVisible=true;h.context.activeSurface=name=>name==='manual-actions'&&h.context.ledgerVisible;
   h.context.fetch=(url,options)=>{const pending=deferred();h.requests.push({url,options,...pending});return pending.promise;};
   h.context.loadTagReview=async()=>{h.tagLoads++;};h.tagLoads=0;
-  h.run(block(app,'let manualGroupsState =','let importsPollTimer ='));
+  h.run(block(app,'let manualGroupsState =','let importsRetryTimer ='));
   h.run(block(app,'async function api(',"window.addEventListener('unhandledrejection'"));
   h.run(block(app,'function manualMemberCard(','// User-visible background task monitor.'));
   h.reply=(request,payload={})=>request.resolve({ok:true,status:200,json:async()=>payload});

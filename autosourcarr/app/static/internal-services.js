@@ -1,4 +1,4 @@
-/* Built-in tools are asynchronous; poll only while their controls are visible. */
+/* Built-in tools are asynchronous; their status follows live task/job/connection events while the controls are visible. */
 (()=>{
   const byId=id=>document.getElementById(id);
   const labels={repair:'Source repair',builder:'Reader extension builder',translation:'Title translation',solver:'Challenge handling'};
@@ -108,7 +108,7 @@
       readerCheckUnavailable();updateBuilderControls();
       byId('readerBuildStatus').textContent='Service status could not be refreshed. Use Refresh services to check again.';
     }
-    finally{if(loading===request){loading=null;if(visible())timer=setTimeout(load,5000);}}
+    finally{if(loading===request)loading=null;}
   }
   byId('refreshInternalServices').onclick=load;
   byId('buildReaderExtensions').onclick=()=>action('builder','start');
@@ -126,5 +126,7 @@
   };
   document.addEventListener('visibilitychange',()=>{if(visible())load();else clearTimeout(timer);});
   window.loadInternalServices=load;
+  // UI-13: no timer; a build or service change arrives as an event and refreshes this panel once per burst.
+  globalThis.AutoSourcarrLive?.subscribe({name:'internal-services',topics:['tasks','jobs','connections'],delayMs:1000,when:visible,refresh:()=>load()});
   window.integratedServiceMode=()=>mode;
 })();
