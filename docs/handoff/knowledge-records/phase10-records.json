@@ -1,0 +1,92 @@
+{
+  "records": [
+    {
+      "id": "RELEASE-0.5.0-PHASE-10",
+      "kind": "release",
+      "state": "implemented",
+      "title": "Conversion phase 10: chapters and reader (branch conversion)",
+      "body": "{\"commits\": [\"3ed0b4e\", \"8b4129b\", \"20f82fa\", \"e98ccdb\", \"54668a0\", \"788178d\", \"eeafd3d\", \"38472b6\"], \"ci\": \"probe b772773 green (1193/1193 C# tests, source host 5/5, repair runner, Kavita, reader extension build)\", \"scope\": \"chapter numbering and seasons, group priority, quality and upgrades, reader browse (READ-3), CBZ library and downloads (CHAP-7), thumbnails, translation (MAT-20), tags, reader extension repository and setup (READ-1/2/5), reverse proxy docs (READ-4)\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "VERIFY-20261101-PHASE-10",
+      "kind": "verification",
+      "state": "verified",
+      "title": "Phase 10 Done when verified in CI (Mihon device not run)",
+      "body": "{\"kavita\": \"downloaded two-chapter series opens in Kavita 0.8.9 (1 series, 2 chapters); check-cbz-library.py passes\", \"two_servers\": \"built reader extension JAR in the source host reads two AutoSourcarr servers with separate device keys\", \"not_run\": [\"Mihon on a phone (local source, APK install)\", \"full Python suite on Windows (Linux CI runs it)\", \"Docker validation\"], \"duplicates\": \"user set sample (300 pairs incl. all 66 different-work pairs): sweep 0 wrong merges\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261101-LOCAL-BUILD",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "Build and test C# locally on the PC first, one ci-probe per round",
+      "body": "{\"why\": \"the PC has .NET SDK 10.0.403 and nuget access; fewer GitHub pushes (owner wants little notification mail)\", \"owner\": \"approved 2026-11-01\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261101-NO-WEAK-THUMBNAIL-OVERRIDE",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "The 0.4.5 discovery override by exact cover for weak candidates is not ported",
+      "body": "{\"why\": \"it made a candidate with title score >= 0.50 eligible, below the 0.94 floor (hard rule 2)\", \"kept\": \"import tie-break among candidates whose title alone reaches the floor or that share an identity\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "FINDING-20261101-PHASE10-AUDIT",
+      "kind": "finding",
+      "state": "resolved",
+      "title": "Phase 10 fresh-agent audit: 13 findings, 8 fixed, 5 limitations",
+      "body": "{\"fixed\": [\"library membership/queue/downloads lost on merge and reset\", \"UI APK/JAR downloads used removed /api/admin routes\", \"gallery policy saved during a pass not applied\", \"local timeout recorded as source failure\", \"tie-break below the floor\", \"library duplicates filter\", \"slot id quotes\", \"translation bounds and health text\"], \"limitations\": [\"reader extension built into the image (phase 13)\", \"download lane keyed by enqueue-time source\", \"restore re-activates like 0.4.5\", \"no symlink check under the image-owned repo root\", \"synchronous refresh-metadata/discover-additional bypass Tasks\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "FINDING-20261101-RECHECK-0-9",
+      "kind": "finding",
+      "state": "resolved",
+      "title": "Recheck of phases 0–9: missed items fixed in phase 10 or given an owner",
+      "body": "{\"fixed\": [\"0.4.5 startup sequence (maintenance with its one-time steps, title consensus, orphan aliases, startup dedup/metadata/additional/refresh, origin recovery, reset-hint replay)\", \"reset-database/full-reset preview token (hard rule 1)\", \"resets stop and resume background work\", \"local pacing overflow counted as source failure (hard rule 3)\", \"orphan-archive installs without APK checks (hard rule 8)\", \"entry-id token\", \"chapters after discovery attach\", \"RuntimeMetrics call sites\", \"OpenAPI groups\", \"stale texts\", \"library writes of two source lanes in one series folder\"], \"owners\": \"docs/handoff/briefs/phase10-checklist.md\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "FINDING-20261101-INGEST-TITLE-ONLY",
+      "kind": "finding",
+      "state": "open",
+      "title": "Match-on-ingest attaches identical-title works the owner marked different",
+      "body": "{\"evidence\": \"15 of 66 different-work pairs in the user duplicate set (titles only, no creators/year/edition)\", \"sweep\": \"0 wrong merges\", \"decision\": \"owner: stricter ingest gate for title-only matches?\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "medium"
+    },
+    {
+      "id": "LIMIT-20261101-PHASE10-DEFERRED",
+      "kind": "limitation",
+      "state": "open",
+      "title": "Phase 10 and recheck items carried to later phases",
+      "body": "{\"phase_11\": [\"internal services panel (/api/admin/services, builder) → 0.5.0 status\", \"page-first lists (PERF-5)\", \"event-driven UI (PERF-8, UI-13)\", \"persisted Fixed repair state (hard rule 6)\", \"split-path decision-log atomicity\", \"CatalogueDiscovery.SourceResult (exclude deferrals)\"], \"phase_13\": [\"reader extension in the image, signed with the owner's key\", \"repair runner used by the app\", \"WebView sandbox (SRC-5)\", \"PERF-2 CPU/memory limits and queue coverage\", \"DNS rebinding, public-suffix, SNI checks\", \"continuous catalogue discovery crawler (before cutover)\", \"RefreshMediaVariants startup step\"], \"phase_16\": [\"Postgres CI service use\"], \"owner_decisions\": [\"ingest title-only gate\", \"import gate title 0.80 + summary 0.90\", \"MAT-11, MAT-22, Komf, AUTH-8\", \"AI code-repair worker port target\", \"AUTH-7/9 marked 0.6.0\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-01 (conversion phase 10)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "medium"
+    }
+  ]
+}

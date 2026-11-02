@@ -193,6 +193,26 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | UI pages of this phase | done: imports, sharing, identity review, entry metadata, Connections "Create entries" |
 | Audit fixes (fresh-agent audit) | 16 findings: all fixed |
 
+### Phase 10 (chapters and reader), ticked 2026-11-01
+
+| Row | Result |
+| --- | --- |
+| Catalogue/Chapters (28 methods) | done: ChapterNumbering (numbering words, part order, season continuation "Chapter 41: S2 Ch.1: …"), ChapterRefresh (per record and per work, jobs; a local timeout or deferral writes no failed scan), ChapterCandidateReview (reject/restore with the caller), ServingGroups (one priority per group, the member with most chapters serves) |
+| Catalogue/Browse (11 methods) | done: ReaderBrowse (saved feeds served at once, old ones queue a crawl, READ-3 stored chapters first and a background refresh of old records); the reader API routes and key protection are unchanged |
+| Catalogue/Gallery (10 methods) | done: GalleryLayout as a job; a policy saved during a pass is applied by the same job |
+| Catalogue/Metadata hydration (23) and identity (11) | done: MetadataEnrichment, EntryMetadataRefresh, SourceIdentitySeed, OrphanIdentityRepair, MetadataProviderStatus, TranslationEnrichment |
+| Catalogue/Tags (1) | done: TagCatalogue (groups, suggestions, reviews with the decision log, reindex job) |
+| Imaging (27 methods) | done: ThumbnailFingerprints (exact decoded pixels), CoverHints, page sampling for colour detection (IPageImageSource); not ported: the 0.4.5 discovery override that made a weak (title ≥ 0.50) candidate eligible by its cover (below the 0.94 floor) |
+| Quality and upgrades (CHAP-5, CHAP-6) | done: CandidateQuality (sample pages; a failed sample keeps the old score), ServingUpgrades (opt-in, minimum gain, cutoff, locked records blocked) |
+| LibraryEndpoints (9 routes, CHAP-7) | done under `/api/v1`: CBZ library (`Series/Chapter.cbz`, `cover.jpg`, `ComicInfo.xml`, `details.json`; LIBRARY_DIR), one download lane per source, monitoring, activity history; a merge moves membership, queue and downloads to the surviving work |
+| Reader extension (READ-1, READ-2, READ-5) | done: `scripts/build-reader-extension.sh` (5 slots, no baked address/key), own repository at `/api/reader/repo/` (public GET/HEAD only), per-source APK/JAR downloads, QR/link setup; built and signed in the image → phase 13 |
+| Reverse proxy (READ-4) | done: `docs/reverse-proxy/` Authelia and Nginx Proxy Manager examples (reader rule unchanged plus the repo path) |
+| Carried in | done: import exact-thumbnail tie-break (floor-passing candidates only), machine translation in manual source search and additional-record discovery (MAT-20), translation health, library-monitor safe replay, RuntimeMetrics call sites, entry-id token in reader search, chapters for records attached by discovery |
+| Recheck of phases 0–9 | done in phase 10: 0.4.5 startup sequence as jobs, reset preview tokens and stop/resume, local pacing overflow as deferral, orphan-archive APK checks, OpenAPI groups; the rest has an owner in `docs/handoff/briefs/phase10-checklist.md` |
+| UI pages of this phase | done: chapters, serving profiles and upgrades, gallery, library and downloads, activity, tags review, catalogue views, System → reader setup, Installed downloads |
+| Done when | CI probe b772773: a downloaded two-chapter series opens in Kavita 0.8.9 (1 series, 2 chapters) and passes check-cbz-library.py; the built reader extension JAR, loaded in the source host, reads two AutoSourcarr servers with separate device keys. Not run: Mihon on a phone (local source and the APK) |
+| Audit fixes (fresh-agent audit) | 13 findings: 8 fixed (library on merge/reset, UI APK/JAR downloads, gallery policy during a pass, local deferral as failure, tie-break floor, duplicates filter, slot id quotes, translation bounds/health text); 5 kept as limitations (image build of the reader extension → phase 13; download lane keyed by the enqueue-time source; restore re-activates like 0.4.5; no symlink check under the image-owned repo root; synchronous refresh-metadata/discover-additional bypass Tasks) |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):

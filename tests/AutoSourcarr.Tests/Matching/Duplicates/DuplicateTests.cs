@@ -33,7 +33,7 @@ public static class DuplicateTests
         var privateSet = Environment.GetEnvironmentVariable(DuplicateTestSet.EnvironmentVariable);
         var whole = !string.IsNullOrWhiteSpace(privateSet) && File.Exists(privateSet);
         if (whole || File.Exists(DuplicateTestSet.UserPath))
-            suite.Add("duplicates: user duplicate test set scores no wrong merges on the automatic sweep (ingest is reported)", () =>
+            suite.Add("duplicates: user duplicate test set scores no wrong merges on the automatic sweep or on ingest", () =>
             {
                 using var sample = new Sandbox();
                 var path = whole ? privateSet! : DuplicateTestSet.Sample(DuplicateTestSet.UserPath, 300, Path.Combine(sample.Path, "pairs.json"));
@@ -41,10 +41,10 @@ public static class DuplicateTests
                 Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
                     $"user duplicate set: pairs {result.Pairs} · wrong merges {result.WrongMerges.Count} · recall {result.Recall:P1} · ingest wrong merges {result.Ingest?.WrongMerges.Count} · ingest recall {result.Ingest?.Recall:P1}"));
                 Check.True(result.WrongMerges.Count == 0, "Wrong merges: " + result.WrongMerges.Count.ToString(CultureInfo.InvariantCulture));
-                // Open finding (2026-11-01, waiting on the owner): match-on-ingest attaches 15 of the 66 different-work pairs.
-                // They have identical titles and no creators/year/edition in this file, so nothing blocks a title-only
-                // attach; the sweep needs more evidence. Reported here, not asserted, until the owner decides on the ingest gate.
+                // Owner decision 2026-11-02: match-on-ingest never attaches on a title alone (it attached 15 of the 66
+                // identical-title different-work pairs before), so ingest has no wrong merges either.
                 foreach (var wrong in result.Ingest?.WrongMerges ?? []) Console.WriteLine("ingest wrong merge " + wrong);
+                Check.True(result.Ingest is { WrongMerges.Count: 0 }, "Ingest wrong merges: " + (result.Ingest?.WrongMerges.Count ?? -1).ToString(CultureInfo.InvariantCulture));
             });
 
         suite.Add("duplicates: stand-in gate blocks editions, adaptations, sequels and other creators", () =>

@@ -73,6 +73,19 @@ public static class EntryIngestTests
             Check.True(discovery.SourceMatchEvidence(entry, "3", MatchingFixtures.Manga(36, "The Apothecary Diaries", "Natsu Hyuuga")).AutomaticMatch);
         });
 
+        suite.Add("matching ingest: an identical title alone never attaches; an agreeing creator or summary does", () =>
+        {
+            using var setup = new Setup();
+            var ingest = setup.Ingest;
+            const string Summary = "A pharmacist sold to the inner palace solves poisonings while hiding how much she knows about medicine.";
+            var entry = ingest.IngestManga("1", MatchingFixtures.Manga(11, "The Return of the Prodigious Swordmaster", "Han Seol", Summary)).EntryId!.Value;
+            var alone = ingest.IngestManga("2", MatchingFixtures.Manga(22, "The Return of the Prodigious Swordmaster"));
+            Check.True(alone.EntryId is { } apart && apart != entry, "a title alone made a new entry: " + alone.Reason);
+            Check.Equal(entry, ingest.IngestManga("3", MatchingFixtures.Manga(33, "The Return of the Prodigious Swordmaster", "Han Seol")).EntryId ?? 0);
+            Check.Equal(entry, ingest.IngestManga("4", MatchingFixtures.Manga(44, "The Return of the Prodigious Swordmaster", description: Summary)).EntryId ?? 0);
+            Check.True(setup.Log.Entries.Where(item => item.Kind == "match.automatic").All(item => item.Entries.Contains(entry)), "only corroborated attaches are logged");
+        });
+
         suite.Add("matching ingest: near-tied candidates, separate records and deleted records stay apart", () =>
         {
             using var setup = new Setup();
@@ -193,17 +206,18 @@ public static class EntryIngestTests
             var saved = presets.Save(new JsonObject
             {
                 ["revision"] = presets.Configuration()["preset_revision"]!.GetValue<string>(), ["name"] = "Evidence", ["kind"] = "simple",
-                ["settings"] = new JsonObject { ["require_identity_evidence"] = true },
+                ["settings"] = new JsonObject { ["require_creators"] = true },
             }, null, DecisionActor.User("owner"));
             var profile = (saved["presets"] as JsonArray)!.OfType<JsonObject>().Single(preset => preset["name"]!.GetValue<string>() == "Evidence");
             var policies = new MatchingPolicyStore(setup.Database, setup.Gate, setup.Log);
             policies.Write(new MatchingRuleKey("source", "2", "external"), (JsonObject)profile["rule"]!.DeepClone(), MatchingRuleConfiguration.Revision(policies.Rules()),
                 DecisionActor.User("owner"), "use the Evidence profile");
-            var entry = setup.Ingest.IngestManga("1", MatchingFixtures.Manga(11, "The Clockwork Orchard")).EntryId!.Value;
-            // Without a rule a distinctive title alone attaches ...
-            Check.Equal(entry, setup.Ingest.IngestManga("3", MatchingFixtures.Manga(33, "The Clockwork Orchard")).EntryId ?? 0);
-            // ... the profile behind source 2's rule asks for agreeing creator, year, cover or summary evidence.
-            var strict = setup.Ingest.IngestManga("2", MatchingFixtures.Manga(22, "The Clockwork Orchard"));
+            const string Summary = "A clockmaker's apprentice tends an orchard of brass trees that keep the hours of a sleeping city.";
+            var entry = setup.Ingest.IngestManga("1", MatchingFixtures.Manga(11, "The Clockwork Orchard", description: Summary)).EntryId!.Value;
+            // Without a rule a title with an agreeing summary attaches ...
+            Check.Equal(entry, setup.Ingest.IngestManga("3", MatchingFixtures.Manga(33, "The Clockwork Orchard", description: Summary)).EntryId ?? 0);
+            // ... the profile behind source 2's rule also asks for agreeing creators.
+            var strict = setup.Ingest.IngestManga("2", MatchingFixtures.Manga(22, "The Clockwork Orchard", description: Summary));
             Check.True(strict.EntryId != entry, strict.Reason);
         });
 

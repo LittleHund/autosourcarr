@@ -7,6 +7,28 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   `config.json` with keys it does not know, so before rolling back to 0.4.x remove the
   `"connections"` key (keep a copy to restore later). The first connection you add
   shows this note in the app.
+- Phase 10 (Chapters and reader): new catalogue tables for the CBZ library (`library_series`,
+  `download_queue`, `library_downloads`, `download_history`, `library_state`; migration
+  2026110192) and the setting `LIBRARY_DIR`. 0.4.x ignores these tables. The reader extension
+  repository is served at `/api/reader/repo/` without a key (GET/HEAD only); the reader API at
+  `/api/reader/v1` keeps its key and Authelia rule. Add the repo path to Authelia/NPM when you
+  deploy 0.5.0 (`docs/reverse-proxy/`). Limits: the reader extension is not yet built into the
+  image (phase 13).
+- Ingest and import gate (owner decision 2026-11-02): a new source record no longer attaches to
+  an existing entry on its title alone; it needs an agreeing creator, cover or summary, and
+  otherwise becomes its own entry. Once its details are fetched the duplicate review is rescored,
+  so the automatic sweep can still merge it on real evidence. Backup imports follow the same
+  rule (a title at 0.94 needs an agreeing creator, summary or the backup's own source record;
+  a single exact cover match also counts), and a summary no longer admits a title below 0.94:
+  those rows stay in review as suggestions. Metadata records for an import row need the title at
+  0.94 plus an agreeing summary or creator. On the owner's duplicate decisions (300-pair sample)
+  match-on-ingest went from 15 wrong merges to 0; its recall on that title-only sample fell from
+  63 % to 53 % (records with summaries or covers were not in the sample).
+- Phase 10 recheck: `POST /api/v1/maintenance/reset-database` and `/full-reset` now need the
+  `preview_token` from `GET` on the same path (the UI fetches it); a reset stops and drains
+  background work first. The 0.4.5 startup jobs run again (merge safety repair, startup
+  maintenance, startup dedup and the other `*_ON_STARTUP` settings, reset-hint replay). The
+  source host answers a local pacing overflow as a deferral instead of a source error.
 
 ## Unreleased
 
