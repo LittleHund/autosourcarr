@@ -5,6 +5,7 @@
   <ItemGroup>
     <!-- Phase 12: tests register a test-only failing migration (SchemaMigrator.MigrationAssemblies). -->
     <InternalsVisibleTo Include="AutoSourcarr.Tests" />
+    <InternalsVisibleTo Include="AutoSourcarr.Api" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />

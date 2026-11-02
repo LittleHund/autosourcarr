@@ -71,29 +71,6 @@ public sealed class SourceEngineEnvironment
         return result;
     }
 
-    /// <summary>Projects the fixed image's source environment into the native START payload, without launching or granting readiness.</summary>
-    internal SourceEngineLaunchEnvironment BuildNativeLaunch(IReadOnlyDictionary<string, string?> parentEnvironment, AutoSourcarrSettings settings)
-    {
-        ArgumentNullException.ThrowIfNull(settings);
-        if (settings.SourceEngineMode != "integrated") throw new InvalidOperationException("An external source engine has no local native launch.");
-        var original = BuildLaunch(parentEnvironment, settings);
-        var launch = original.Launch.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        // Native owner and immutable launcher supply these values. Refuse a
-        // differing inherited request rather than silently discarding its intent.
-        foreach (var (key, expected) in new[] { ("HOME", "/home/suwayomi"), ("PATH", "/usr/bin:/bin"),
-            ("JAVA_HOME", "/opt/java/openjdk"), ("LANG", "C.UTF-8") })
-        {
-            if (launch.TryGetValue(key, out var requested) && requested != expected)
-                throw new InvalidDataException("The source image environment conflicts with its fixed native " + key + " contract.");
-            launch.Remove(key);
-        }
-        // Reuse the exact wire guards for the remaining keys/UTF8/quotas. This
-        // synthetic envelope is never sent and is not a native boot binding.
-        var checkedFrame = NativeSourceOwnerProtocol.EncodeCommand(new byte[32], 1, NativeSourceOwnerOpcode.Start, launch.ToArray());
-        CryptographicOperations.ZeroMemory(checkedFrame);
-        return new(ReadOnly(launch), original.IntendedChallenges);
-    }
-
     /// <summary>Preserves intended solver settings separately; actual enabling still requires a real challenge owner and readiness check.</summary>
     public static SourceEngineLaunchEnvironment PrepareLaunch(IReadOnlyDictionary<string, string> environment, AutoSourcarrSettings settings)
     {

@@ -17,7 +17,7 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | `setup_api.py` → Api/SetupEndpoints | done: `/api/v1/setup`, `/setup/finish`, `/setup/reader-preflight`, `/setup/restart` (ApiV1Endpoints); reader checks ported as ReaderConfigCheck |
 | `setup_cleanup.py` → Settings | moved to phase 12 (SET-3 old-file removal); the wizard reports that no cleanup status is available |
 | `runtime_observability.py` → Diagnostics | done: RuntimeMetrics, `/api/v1/diagnostics/metrics`; call sites arrive with the ported work in phases 3–10 |
-| `lifecycle.py` → Host | moved to phase 4: the Host project is today the unprivileged native startup resolver; the web entry point moves there when phase 4 retires the native resolver and PID 1 launcher (native/container-entry.c names AutoSourcarr.Api.dll) |
+| `lifecycle.py` → Host | done (phase 13): the web entry stays in AutoSourcarr.Api; `src/AutoSourcarr.Host` (native startup resolver), the native PID 1 launcher (`native/container-entry.c`, startup-resolver, startup-frame, source-launcher, source-owner, source-root, source-observation, process-identity, bootstrap-binding) and the C# native owner path (`CreateNativeAsync`, `NativeSourceOwnerConnection`, native snapshots/observation) are removed; the 0.5.0 image runs `tini -- dotnet AutoSourcarr.Api.dll` |
 | `diagnostic_groups.py`, `diagnostics.py`, `error_registry.py`, `repair_evidence.py`, `support_logs.py`, `request_origin.py`, `reimagined_state.py` | exist and are wired in ApplicationRuntime (stage 26) |
 | `matching_review.py` → Api | phase 8 (its routes are in MatchingEndpoints, phase 8) |
 | `main.py`, `models.py`, `reimagined_api.py` → Api | partial: ported per area in the phase that owns each route (section 3) |
@@ -74,7 +74,7 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | `child_process.py` → Sources/Runtime | done: SourceHostProcess (supervised `java -jar`, health wait, restart ladder 2/5/15/30/60 s, own process group via setsid so Chromium helpers stop with it, own Xvfb, app marked not dumpable) |
 | `internal_services.py` → SourceEngineEnvironment | done: SourceHostEnvironment reuses it (source-host.env, EXTENSION_STORES, FlareSolverr, saved user agent), rebuilt for each launch |
 | `suwayomi.py` → SuwayomiClient | done: host mode (ForSourceHost; every GraphQL operation the app uses answered by host REST in the same data shape, same validation); the GraphQL client stays as the slim client for the main Suwayomi (import ids: host `/v1/import-ids`, re-keys or reports conflicts) |
-| `lifecycle.py` → Host entry | decided: the web entry stays in AutoSourcarr.Api; `AUTOSOURCARR_SOURCE_HOST_JAR` selects the hosted path; the native PID 1 launcher and resolver are removed with the image switch (phase 13) |
+| `lifecycle.py` → Host entry | done: the web entry stays in AutoSourcarr.Api; the hosted path is the only path (phase 13 removed the native PID 1 launcher and resolver with the image switch) |
 | SourceRuntimeEndpoints (8) + engine/compatibility | done: `GET /api/v1/source-engine`, `POST /source-engine/challenges`, `GET /source-browser`, `PUT /source-browser/user-agent`, `POST /source-browser/clear-data`, `POST /source-browser/restart` (applies saved repositories, reloads extensions), `GET /attention`, `POST /attention/{attentionId}/retry`, `POST /engine/{target}/compatibility` |
 | `source_browser.py` presets/clear (SRC-5) | done for the host: SourceBrowserPreferences (0.4.x presets and rules), live user agent change, clear cookies (store + Chromium); interactive "Open in WebView" → phase 7 (SourceBrowser) |
 | Source-engine health in `/api/v1/health` | done: `source_host` is a real check (host health or external engine) |
@@ -232,6 +232,18 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | Carried: split atomicity | done: split, decision-log rows and not-duplicate reviews in one transaction |
 | Carried: `CatalogueDiscovery.SourceResult` | done: `SourceResultTracker` (0.4.5 `_record_source_result`); local timeouts, deferrals, engine restarts never count |
 | Audit fixes (fresh-agent audit) | 15 findings: 12 fixed (Playwright per-account themes, matrix `discovery_outcomes` array, engine restarts as local, keyset on id, split review atomicity, ui_v090/092, CSS contrast sample, dead `/api/admin` action, repair verdict in health, select focus vs live refresh, long cursors, tag event ids); 3 recorded (bundle runs as one script, setup draft per browser, event key field fixed per topic) |
+
+### Phase 12 (backup and rollback), ticked 2026-11-02
+
+| Row | Result |
+| --- | --- |
+| `instance_backup.py` → Backup | done: InstanceBackupStore (format 3 zip: manifest with PIPE-4 compatibility, settings without secrets, profiles, both databases, share export), BackupCrypto (ASCBK4 chunked AES-256-GCM, PBKDF2 600k; ASCBK3 still read), streaming upload/download |
+| BackupEndpoints (6 routes) | done: `GET/POST /api/v1/backups`, `GET /backups/{id}/download`, `DELETE /backups/{id}`, `POST /backups/restore/preview`, `POST /backups/restore/apply` (arms; applied at next start); plus `DELETE /backups/restore/pending`, `POST /backups/safe-mode/retry`, `POST /backups/safe-mode/migrate-without-backup`, `POST /backups/update-notice/dismiss` |
+| SET-9 automatic backup + rollback | done: UpgradeGuard (marker migrating/rolling-back/rolled-back, `.pre-update` copies, swap journal, safe mode with a write gate, Retry as a job, migrate-without-backup for an owner account) |
+| `setup_cleanup.py` → Settings (SET-3) | done: OldFileCleanup (preview token, moves to `<data>/trash/<date>`, staged previews and 30-day trash pruning, wizard cleanup status) |
+| SET-4 / SET-6 | done: retired Komf/AI-dashboard links dropped; full reset keeps config and library (test) |
+| UI pages | done: instance tools backup dialog on `/api/v1` (plain download link, multipart passphrase, restore confirmation with decisions and chapter-provenance warnings) |
+| Audit fixes (two fresh-agent audits) | 13 + 11 findings, all fixed (safe mode, no migration loop, next-start restore with journal, crash points at 12 update and 7 restore steps, streaming, decision digest, account-only owner choices, unknown config keys kept) |
 
 ### Route groups without a phase (assigned 2026-10-31)
 

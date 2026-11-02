@@ -37,8 +37,6 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private SqliteDatabase? _database;
     private SettingsRepository? _preferences;
     private SupportLogStore? _logs;
-    private NativeSourceOwnerConnection? _native;
-    private NativeSourceSnapshots? _snapshots;
     private SourceEngineController? _source;
     private SourceAttention? _attention;
     private AutoSourcarr.Api.Security.AccessControlServices? _access;
@@ -130,7 +128,6 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     internal SqliteDatabase Database => _database ?? throw new InvalidOperationException("Storage is not initialized.");
     internal SettingsRepository Preferences => _preferences ?? throw new InvalidOperationException("Preferences are not initialized.");
     internal SupportLogStore Logs => _logs ?? throw new InvalidOperationException("Diagnostics are not initialized.");
-    internal NativeSourceSnapshots? SourceSnapshots => _snapshots;
     internal SourceEngineController SourceRuntime => _source ?? throw new InvalidOperationException("Source runtime is not initialized.");
     internal CatalogueRuntime Catalogue => _catalogue ?? throw new InvalidOperationException("Catalogue is not initialized.");
     internal object CatalogueWriteGate => _catalogueWriteGate;
@@ -155,31 +152,21 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         RequestStop?.Invoke();
     }
 
-    internal static Task<ApplicationRuntime> CreateNativeAsync(StartupConfigurationSnapshot startup,
-        IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken = default)
-    {
-        // No production switch bypasses the actual native identity/channel checks.
-        NativeSourceOwnerConnection.RequirePostExecPrivacyBeforeConfiguration();
-        return OpenAsync(startup, environment, acceptInherited: true, cancellationToken);
-    }
-
-    /// <summary>Controlled external-only composition. It cannot create a native connection,
-    /// snapshot reader, process generation or repair-isolation proof.</summary>
+    /// <summary>Controlled external-only composition: no source host process and no repair-isolation proof.</summary>
     internal static Task<ApplicationRuntime> CreateExternalForTestsAsync(AutoSourcarrSettings settings,
         string configurationRoot, CancellationToken cancellationToken = default)
     {
         if (settings.SourceEngineMode != "external") throw new ArgumentException("The controlled host supports external mode only.");
-        return OpenAsync(new(settings, Path.GetFullPath(configurationRoot)), new Dictionary<string, string?>(),
-            acceptInherited: false, cancellationToken);
+        return OpenAsync(new(settings, Path.GetFullPath(configurationRoot)), new Dictionary<string, string?>(), hosted: false, cancellationToken);
     }
 
     /// <summary>
-    /// Phase 4 image path: no native launcher and no Suwayomi. In integrated mode the app starts its own source host
-    /// (<see cref="SourceHostProcess"/>); external mode is unchanged.
+    /// The 0.5.0 image path (phase 13: the native PID 1 launcher is gone, the image runs <c>tini -- dotnet</c>). In
+    /// integrated mode the app starts its own source host (<see cref="SourceHostProcess"/>); external mode is unchanged.
     /// </summary>
     internal static Task<ApplicationRuntime> CreateHostedAsync(StartupConfigurationSnapshot startup,
         IReadOnlyDictionary<string, string?> environment, CancellationToken cancellationToken = default)
-        => OpenAsync(startup, environment, acceptInherited: false, cancellationToken, hosted: true);
+        => OpenAsync(startup, environment, hosted: true, cancellationToken);
 
     /// <summary>
     /// The source host gets the same source settings Suwayomi got (source-host.env, EXTENSION_STORES, FlareSolverr with
@@ -193,14 +180,26 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         foreach (var key in new[] { "JAVA_TOOL_OPTIONS", "BIND_IP", "BIND_PORT", "AUTH_MODE", "BASIC_AUTH_ENABLED", "WEB_UI_ENABLED",
             "INITIAL_OPEN_IN_BROWSER_ENABLED", "AUTOSOURCARR_SOURCE_UA_REVISION", "AUTOSOURCARR_SOURCE_UA_STATUS" })
             result.Remove(key);
+        // Phase 13: the native launcher's environment guard is gone with it; the same loader and injection keys never
+        // reach the JVM (source-host.env is admin-edited, but a dynamic-loader or runtime hook there would run code in
+        // the host outside the extension model). Malformed or oversized names are dropped too.
+        foreach (var key in result.Keys.Where(LoaderKey).ToArray()) result.Remove(key);
         result["SOURCE_MIN_INTERVAL_MS"] = Math.Clamp(settings.SourceMinIntervalMs, 0, 60_000).ToString(System.Globalization.CultureInfo.InvariantCulture);
         // CON-2: enabled FlareSolverr/Byparr connections are the fallback after the built-in WebView (cookies only).
         result["AUTOSOURCARR_SOLVERS"] = AutoSourcarr.Core.Connections.Types.SolverConnectionType.HostEnvironment(solvers ?? []);
         return result;
     }
 
+    /// <summary>Environment keys that load or inject code (dynamic loader, .NET/CLR hooks, JVM option files) or are not plain names.</summary>
+    internal static bool LoaderKey(string key) =>
+        key.Length is 0 or > 128 || !key.All(c => char.IsAsciiLetterOrDigit(c) || c == '_') || char.IsAsciiDigit(key[0])
+        || key is "_JAVA_OPTIONS" or "JDK_JAVA_OPTIONS" or "CLASSPATH" or "BASH_ENV" or "ENV" or "SHELLOPTS"
+        || key.StartsWith("LD_", StringComparison.Ordinal) || key.StartsWith("DOTNET_", StringComparison.Ordinal)
+        || key.StartsWith("CORECLR_", StringComparison.Ordinal) || key.StartsWith("COMPlus_", StringComparison.Ordinal)
+        || key.StartsWith("PYTHON", StringComparison.Ordinal);
+
     private static async Task<ApplicationRuntime> OpenAsync(StartupConfigurationSnapshot startup,
-        IReadOnlyDictionary<string, string?> environment, bool acceptInherited, CancellationToken cancellationToken, bool hosted = false)
+        IReadOnlyDictionary<string, string?> environment, bool hosted, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(startup); ArgumentNullException.ThrowIfNull(environment);
         var owner = new ApplicationRuntime(startup.Settings);
@@ -244,13 +243,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner.OpenSafeMode(startup);
                 return owner;
             }
-            if (acceptInherited)
-                owner._native = await NativeSourceOwnerConnection.AcceptInheritedAsync(startup.SourceRequest, cancellationToken, owner.Logs).ConfigureAwait(false);
             var useHost = hosted && startup.Settings.SourceEngineMode == "integrated";
-            if (!useHost && (startup.Settings.SourceEngineMode == "integrated") != (owner._native is not null))
-                throw new InvalidDataException("Source mode and native boot ownership disagree.");
-            if (owner._native is not null)
-                owner._snapshots = await NativeSourceSnapshots.CreateAsync(owner._native, owner.Io, cancellationToken).ConfigureAwait(false);
+            if (!useHost && startup.Settings.SourceEngineMode == "integrated")
+                throw new InvalidDataException("Integrated source mode needs the app's own source host (the 0.5.0 image).");
             var launch = new SourceEngineEnvironment(startup.ConfigurationRoot, "/home/suwayomi/.local/share/Tachidesk", owner.Privacy);
             // CON-1/CON-5: the Connections menu (config.json "connections", secrets encrypted); solvers feed the host launch.
             owner._connections = new AutoSourcarr.Core.Connections.ConnectionStore(startup.ConfigurationRoot,
@@ -289,11 +284,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner._source = await SourceEngineController.CreateHostedAsync(startup.Settings, process, launch, environment, owner._admin,
                     owner.Io, owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false);
             }
-            else owner._source = owner._native is null
-                ? await SourceEngineController.CreateExternalAsync(startup.Settings, launch, environment, owner._admin, owner.Io,
-                    owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false)
-                : await SourceEngineController.CreateIntegratedAsync(startup.Settings, owner._native, launch, environment, owner._admin, owner.Io,
-                    owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false);
+            else owner._source = await SourceEngineController.CreateExternalAsync(startup.Settings, launch, environment, owner._admin, owner.Io,
+                owner.Preferences, owner.Privacy, owner.Errors).ConfigureAwait(false);
             // Task history survives restarts (0.4.x task_journal): finished tasks are reloaded, interrupted ones are marked.
             owner._journal = new TaskJournal(owner.Database, owner.Tasks, owner.Io, owner.Privacy);
             await owner._journal.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -994,7 +986,6 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         if (_main is not null) await Attempt("Main transport", () => _main.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_webView is not null) await Attempt("Source WebView sessions", () => _webView.DisposeAsync().AsTask()).ConfigureAwait(false);
         if (_source is not null) await Attempt("Source lifetime", () => _source.DisposeAsync().AsTask()).ConfigureAwait(false);
-        if (_native is not null) await Attempt("Native lifetime", () => _native.DisposeAsync().AsTask()).ConfigureAwait(false);
         await Attempt("Source status watch cancellation", () => _watchStop.CancelAsync()).ConfigureAwait(false);
         if (_sourceWatch is not null) await Attempt("Source status watch", () => _sourceWatch).ConfigureAwait(false);
         if (_sourceStateWatch is not null) await Attempt("Source state events", () => _sourceStateWatch).ConfigureAwait(false);

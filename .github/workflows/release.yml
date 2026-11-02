@@ -121,6 +121,44 @@ jobs:
           echo "exit=$code" >> mihon-backup-watch.txt; cat mihon-backup-watch.txt
           [ "$code" = 0 ] || echo "::warning::Mihon backup-format watch reported a change, a sample gap or a fetch problem (exit $code); see mihon-backup-watch.txt."
 
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          global-json-file: global.json
+      - name: Build the test runner (benchmark and Linux runtime tests)
+        run: |
+          dotnet restore AutoSourcarr.slnx --locked-mode
+          dotnet build tests/AutoSourcarr.Tests -c Release --no-restore
+      # SRC-5: the source host sandbox proof, as the (non-root) runner user.
+      - name: Source host sandbox check
+        id: sandbox
+        run: |
+          set +e
+          bash scripts/source-host-sandbox-check.sh > source-host-sandbox.txt 2>&1; code=$?
+          cat source-host-sandbox.txt; echo "code=$code" >> "$GITHUB_OUTPUT"; exit 0
+      # The Linux-only C# tests against the native binaries built here with the image's hardened flags.
+      - name: Linux runtime tests (repair isolation, source host sandbox)
+        id: linux
+        run: |
+          set +e
+          bin=$RUNNER_TEMP/native; mkdir -p "$bin"
+          flags="-O2 -Wall -Werror -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -fPIE -static-pie -Wl,-z,relro,-z,now,-z,noexecstack"
+          gcc $flags -o "$bin/repair-runner" native/repair-runner.c && gcc $flags -o "$bin/source-host-sandbox" native/source-host-sandbox.c; built=$?
+          code=$built
+          if [ "$built" = 0 ]; then
+            AUTOSOURCARR_REPAIR_RUNNER=$bin/repair-runner AUTOSOURCARR_SOURCE_HOST_SANDBOX=$bin/source-host-sandbox \
+              dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- \
+              --filter "repair isolation (linux)" --filter "source host sandbox (linux)" > linux-runtime.txt 2>&1; code=$?
+            grep -q '^SKIP' linux-runtime.txt && { echo "::warning::A Linux runtime test was skipped (see linux-runtime.txt)."; }
+          else echo "native build failed" > linux-runtime.txt; fi
+          cat linux-runtime.txt; echo "code=$code" >> "$GITHUB_OUTPUT"; exit 0
+      # PIPE-8 / PERF-2: large-library page load and job queue under load, against the budgets in PerformanceBenchmark.
+      - name: Performance benchmark gate
+        id: benchmark
+        run: |
+          set +e
+          dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --benchmark benchmark.json --gate > benchmark.txt 2>&1; code=$?
+          cat benchmark.txt; echo "code=$code" >> "$GITHUB_OUTPUT"; exit 0
+
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       # Layer cache in the GitHub cache: the NuGet restore layer is reused while the lock files are unchanged, the apt
       # layer is rebuilt on every release on purpose (fresh OS packages, PIPE-2).
@@ -147,13 +185,17 @@ jobs:
           docker run --rm --entrypoint cat autosourcarr:ci /opt/autosourcarr-image-packages.txt > image-packages.txt
           docker run --rm --entrypoint sh autosourcarr:ci -c 'cat /opt/source-host/aot/status.txt; cat /opt/source-jre/autosourcarr-modules.txt; ls -l /opt/autosourcarr-native; id' | tee image-contents.txt
 
-      - name: Boot time (PERF-7, budget 5 min, target 1 min)
+      # Also the runtime check: /api/v1/health source_sandbox + repair_isolation, and the WebView (JCEF) reaching
+      # "ready" inside the source host sandbox. Exit 75 (the app's restart request) is followed like Compose's
+      # restart: unless-stopped; the restart count is in boot-time.txt.
+      - name: Boot time and runtime check (PERF-7 budget 5 min, target 1 min; SRC-5)
         id: boot
         run: |
           set +e
           bash scripts/image-boot-check.sh autosourcarr:ci boot-time.txt "$BOOT_PORT" autosourcarr-boot; code=$?
           echo "code=$code" >> "$GITHUB_OUTPUT"
           grep -q 'result=pass-budget' boot-time.txt && echo "::warning::Boot is within the 5-minute budget but over the 1-minute target."
+          grep -q '^restarts=0' boot-time.txt || echo "::warning::The container restarted during boot (see restarts/last_exit_code in boot-time.txt; 75 = the app's restart request)."
           exit 0
 
       - name: Contrast gate (palette table, every theme)
@@ -165,7 +207,7 @@ jobs:
 
       - name: Browser checks against the running image (PIPE-5)
         id: playwright
-        if: steps.meta.outputs.ui_changed == 'true' && steps.boot.outputs.code == '0'
+        if: steps.meta.outputs.ui_changed == 'true' && (steps.boot.outputs.code == '0' || steps.boot.outputs.code == '3')
         run: |
           set +e
           node scripts/image-e2e-prepare.mjs "http://127.0.0.1:$BOOT_PORT" tests/e2e/fixtures/owner.json; prep=$?
@@ -228,6 +270,12 @@ jobs:
           path: |
             boot-time.txt
             boot-time-container.log
+            boot-time-health.json
+            boot-time-runtime.log
+            source-host-sandbox.txt
+            linux-runtime.txt
+            benchmark.json
+            benchmark.txt
             contrast.txt
             image-packages.txt
             image-contents.txt
@@ -240,10 +288,17 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Release gates (boot budget, contrast, layout)
+      - name: Release gates (boot budget, sandbox, benchmark, contrast, layout)
         run: |
           fail=0
-          [ "${{ steps.boot.outputs.code }}" = 0 ] || { echo "::error::Boot-time gate failed (see boot-time.txt): ready not reached within 5 minutes."; fail=1; }
+          case "${{ steps.boot.outputs.code }}" in
+            0) ;;
+            3) echo "::error::Runtime check failed (see boot-time.txt): the source host is not Landlock-sandboxed or its WebView did not reach ready."; fail=1 ;;
+            *) echo "::error::Boot-time gate failed (see boot-time.txt): ready not reached within 5 minutes."; fail=1 ;;
+          esac
+          [ "${{ steps.sandbox.outputs.code }}" = 0 ] || { echo "::error::Source host sandbox check failed (see source-host-sandbox.txt)."; fail=1; }
+          [ "${{ steps.linux.outputs.code }}" = 0 ] || { echo "::error::Linux runtime tests failed (see linux-runtime.txt)."; fail=1; }
+          [ "${{ steps.benchmark.outputs.code }}" = 0 ] || { echo "::error::Performance benchmark over budget (see benchmark.txt)."; fail=1; }
           [ "${{ steps.contrast.outputs.code }}" = 0 ] || { echo "::error::Contrast gate failed (see contrast.txt)."; fail=1; }
           if [ "${{ steps.meta.outputs.ui_changed }}" = true ]; then
             [ "${{ steps.playwright.outputs.code }}" = 0 ] || { echo "::error::Browser/layout checks failed or did not run (see playwright-image.txt)."; fail=1; }
