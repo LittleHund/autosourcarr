@@ -95,8 +95,11 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         Tasks.Changed += () => Events.Pulse("tasks", TimeSpan.FromMilliseconds(250));
         Errors.Changed += () => Events.Pulse("errors", TimeSpan.FromMilliseconds(500));
         Jobs = new(Tasks, Events, Errors);
+        SourceResults = new(() => Settings);
     }
     internal EventStream Events { get; } = new();
+    /// <summary>What discovery learned about each source (0.4.5 _record_source_result; local timeouts/deferrals ignored).</summary>
+    internal AutoSourcarr.Core.Sources.SourceResultTracker SourceResults { get; }
     internal JobQueue Jobs { get; }
     internal AutoSourcarrSettings Settings { get; }
     internal RuntimeIdentity Identity { get; }
@@ -347,7 +350,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             var libraryManager = owner._libraryManager!;
             owner._apiV1 = new ApiV1Services(() => owner.Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
                 values => owner.Privacy.Register(values), new Core.Catalogue.CatalogueStatusStats(owner.Database, () => owner.Settings,
-                    duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }),
+                    duplicates: () => owner._duplicates?.SnapshotSummary() ?? new JsonObject { ["ready"] = false }, pausedSources: owner.SourceResults.PausedCount),
                 () => owner.RequestStop?.Invoke(), health: owner.HealthAsync, databasePaths: () => owner.Database.Paths,
                 moveDatabase: path => DatabaseRelocation.Move(owner.Database, path, directory => owner._apiV1!.Editor.SaveDatabaseDirectory(directory),
                     claimTarget: target => owner.KeepRoot(InstanceRoots.Acquire([target]))))

@@ -11,7 +11,8 @@ namespace AutoSourcarr.Core.Catalogue;
 /// Duplicate counts come from the last completed duplicate review snapshot (phase 8, <paramref name="duplicates"/>:
 /// DuplicateMatching.SnapshotSummary); without it they are reported as not available.
 /// </summary>
-public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourcarrSettings> settings, TimeProvider? clock = null, Func<JsonObject>? duplicates = null)
+public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourcarrSettings> settings, TimeProvider? clock = null, Func<JsonObject>? duplicates = null,
+    Func<int>? pausedSources = null)
 {
     private static readonly string[] StatusLabels = ["Unknown", "Ongoing", "Completed", "Licensed", "Publishing finished", "Cancelled", "Hiatus"];
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -87,7 +88,9 @@ public sealed class CatalogueStatusStats(SqliteDatabase database, Func<AutoSourc
                     ["enabled_variants"] = Count("SELECT COUNT(*) FROM source_config WHERE available=1 AND enabled_language=1"),
                     ["search_variants"] = Count("SELECT COUNT(*) FROM source_config WHERE available=1 AND enabled_language=1 AND enabled_search=1"),
                     ["chapter_variants"] = Count("SELECT COUNT(*) FROM source_config WHERE available=1 AND enabled_language=1 AND enabled_chapters=1"),
-                    ["unavailable_variants"] = Count("SELECT COUNT(*) FROM source_config WHERE available=0")
+                    ["unavailable_variants"] = Count("SELECT COUNT(*) FROM source_config WHERE available=0"),
+                    // Sources paused after repeated real failures (local timeouts and deferrals never count, hard rule 3).
+                    ["temporarily_paused_variants"] = pausedSources?.Invoke() ?? 0
                 },
                 ["cache"] = new JsonObject
                 {

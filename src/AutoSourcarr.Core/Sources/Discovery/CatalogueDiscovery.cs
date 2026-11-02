@@ -72,6 +72,8 @@ public sealed class CatalogueDiscovery
     public Action<long, string, long>? RecordAttached { get; init; }
     /// <summary>_record_source_result: a source answered (null) or failed (the error), for source health.</summary>
     public Action<string, Exception?>? SourceResult { get; init; }
+    /// <summary>_source_in_cooldown: a source paused after repeated real failures is skipped (its feed and outcome stay as they were).</summary>
+    public Func<string, bool>? SourcePaused { get; init; }
     /// <summary>
     /// MAT-20: machine-translated extra search names for the additional-record search (names, genre, source language);
     /// they only widen the search, every candidate is still proved against the entry's trusted evidence. Null: none.
@@ -105,6 +107,12 @@ public sealed class CatalogueDiscovery
                 foreach (var source in sources.Where(source => mode == "POPULAR" || source.Latest))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (SourcePaused?.Invoke(source.Id) == true)
+                    {
+                        step++;
+                        errors.Add(new JsonObject { ["source_id"] = source.Id, ["source"] = source.Name, ["error"] = "Paused after repeated failures; the last good feed is kept." });
+                        continue;
+                    }
                     progress?.Invoke(step++, total, mode + " page " + page.ToString(CultureInfo.InvariantCulture) + " · " + source.Name);
                     JsonObject payload;
                     try
@@ -457,6 +465,8 @@ public sealed class CatalogueDiscovery
     private async Task<SourceOutcome> SearchSourceAsync(long entryId, string sourceId, string sourceName, IReadOnlyList<string> names, TrustedEntryEvidence trusted,
         bool variantOnly, AutoSourcarrSettings settings, CancellationToken cancellationToken)
     {
+        // A paused source is not searched now; its stored outcome stays (a pause is not a missing manga).
+        if (SourcePaused?.Invoke(sourceId) == true) return new SourceOutcome(0, sourceName + ": paused after repeated failures; retry later", true);
         using var clock = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         clock.CancelAfter(TimeSpan.FromSeconds(Math.Max(0.01, settings.SourceRecoveryTimeoutSeconds)));
         var titles = trusted.Titles.Concat(names).Where(title => title.Length != 0).Distinct(StringComparer.Ordinal).ToArray();

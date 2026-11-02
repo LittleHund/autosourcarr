@@ -156,4 +156,5 @@ AutoSourcarr.Tests.ReaderExtension.ReaderExtensionTests.Register(suite);
 AutoSourcarr.Tests.ReaderExtension.ReaderExtensionSourceHostTests.Register(suite);
 AutoSourcarr.Tests.Matching.Phase10WiringTests.Register(suite);
 Phase11WiringTests.Register(suite);
+SourceResultTrackerTests.Register(suite);
 return suite.Run(filters);

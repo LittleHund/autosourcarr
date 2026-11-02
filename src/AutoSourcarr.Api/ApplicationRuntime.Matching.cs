@@ -196,6 +196,9 @@ internal sealed partial class ApplicationRuntime
         var discovery = new CatalogueDiscovery(database, writeGate, ingest, new SuwayomiCatalogueClient(owner.SourceRuntime.Client), () => owner.Settings)
         {
             Identity = identity, ChooseMetadata = Choose,
+            // Source health from discovery: answers clear, real failures pause a source; local timeouts and capacity
+            // deferrals are dropped by the tracker (hard rule 3).
+            SourceResult = owner.SourceResults.Record, SourcePaused = owner.SourceResults.Paused,
             // A newly attached record gets its details and (phase 10) its chapters, as a low-priority job per work.
             RecordAttached = (entryId, sourceId, mangaId) =>
             {
