@@ -13,6 +13,23 @@
 #
 # Identity: the image runs as 568:568 (TrueNAS "apps") by default; give 568:568 the data and config datasets. The
 # image also has a low-rights account 569:569 (asc-source) for the source host JVM; do not set it as `user:`.
+#
+# Source host sandbox (SRC-5, recommended default, used below): the extension JVM and its WebView (JCEF) run under
+# /opt/autosourcarr-native/source-host-sandbox, a Landlock sandbox that can write only /data/source-host and cannot
+# read /config, the app's other data or your library; it runs as the app's user 568. Status page and
+# /api/v1/health show it as "source_sandbox". Nothing to configure; do not set AUTOSOURCARR_SOURCE_HOST_UID/GID.
+#
+# Optional uid 569 variant -- NOT recommended: it trades the container-wide no-new-privileges and cap_drop ALL for
+# a separate user for the extension JVM. Only if you accept that:
+#   1. in a derived image: chown root:568 /opt/autosourcarr-native/source-host-sandbox; chmod 0750 it;
+#      setcap cap_setuid,cap_setgid,cap_kill+ep /opt/autosourcarr-native/source-host-sandbox
+#   2. in this file: cap_add: [SETUID, SETGID, KILL]; remove "no-new-privileges:true";
+#      environment: AUTOSOURCARR_SOURCE_HOST_UID: "569", AUTOSOURCARR_SOURCE_HOST_GID: "569"
+#   3. on TrueNAS: <data dataset>/source-host owned by 569:569.
+# Without all three the launcher falls back to the app's user (reported "identity-unavailable"), still sandboxed.
+#
+# Restarts: the app exits with code 75 when it must restart itself (setup changes that need a restart, an armed
+# restore). `restart: unless-stopped` below brings it straight back; keep it (or "always"/"on-failure"), never "no".
 # Settings live in /config/config.json (+ config.key); an old /config/autosourcarr.env is converted on first start
 # and kept as a backup. Everything not set there has a safe default in the image (ARC-8).
 #

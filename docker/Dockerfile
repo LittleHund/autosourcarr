@@ -6,7 +6,7 @@
 # The Python 0.4.5 image stays autosourcarr/Dockerfile (context ./autosourcarr) until the cutover (phase 14).
 #
 # Stages: ui (Web UI bundle) · app (.NET 10 ReadyToRun) · source-host (Kotlin host jar) · jre (jlink Java 25) ·
-# jcef (JetBrains JCEF build for the WebView) · native (repair runner + launcher) · reader-extension (APK/JAR repo) ·
+# jcef (JetBrains JCEF build for the WebView) · native (repair runner, launcher, source host sandbox) · reader-extension (APK/JAR repo) ·
 # runtime (final). `source-host` and `reader-extension` are plain file stages, so the release pipeline can hand in
 # prebuilt copies with --build-context source-host=DIR / --build-context reader-extension=DIR (Kotlin host only
 # rebuilt when its files change; extension signed with the owner's secrets outside the image build). A plain
@@ -116,15 +116,16 @@ RUN set -eu; \
     rm -rf /tmp/x /tmp/jcef.tar.gz
 
 # ---------------------------------------------------------------------------------------------------------------
-# Repair runner (Landlock sandbox) and launcher: static PIE, hardened flags, no runtime library dependency.
+# Repair runner (Landlock sandbox), launcher and the source host sandbox (area R, SRC-5): static PIE, hardened
+# flags, no runtime library dependency.
 FROM ${UBUNTU} AS native
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
     && apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev linux-libc-dev binutils
-COPY native/repair-runner.c native/repair-launcher.c /src/
+COPY native/repair-runner.c native/repair-launcher.c native/source-host-sandbox.c /src/
 RUN set -eu; mkdir /out; \
     flags="-O2 -Wall -Werror -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -fPIE -static-pie -Wl,-z,relro,-z,now,-z,noexecstack"; \
-    for tool in repair-runner repair-launcher; do \
+    for tool in repair-runner repair-launcher source-host-sandbox; do \
       gcc $flags -o /out/$tool /src/$tool.c; \
       if readelf -d /out/$tool | grep -q NEEDED; then echo "$tool is not static" >&2; exit 1; fi; \
       strip --strip-unneeded /out/$tool; \
@@ -188,7 +189,7 @@ RUN set -eu; \
 
 COPY --from=jre /opt/source-jre /opt/source-jre
 COPY --from=jcef /opt/source-host/kcef /opt/source-host/kcef
-COPY --from=native /out/repair-runner /out/repair-launcher /opt/autosourcarr-native/
+COPY --from=native /out/repair-runner /out/repair-launcher /out/source-host-sandbox /opt/autosourcarr-native/
 COPY --from=source-host /autosourcarr-source-host.jar /app/source-host/autosourcarr-source-host.jar
 COPY docker/source-host-java.sh /opt/source-host/bin/java
 COPY --from=app /out/ /app/
@@ -202,7 +203,8 @@ RUN set -eu; \
     cp /app/static/dist/index.html /app/static/index.html; \
     chown -R root:root /app /opt/source-jre /opt/source-host /opt/autosourcarr-native; \
     chmod -R go-w /app /opt/source-jre /opt/source-host; \
-    chmod 0755 /opt/source-host/bin/java /opt/autosourcarr-native /opt/autosourcarr-native/repair-runner /opt/autosourcarr-native/repair-launcher; \
+    chmod 0755 /opt/source-host/bin/java /opt/autosourcarr-native /opt/autosourcarr-native/repair-runner /opt/autosourcarr-native/repair-launcher \
+          /opt/autosourcarr-native/source-host-sandbox; \
     test -s /app/reader-extension/index.min.json; \
     grep -q '/static/dist/' /app/static/index.html; \
     sed -i 's/\r$//' /opt/source-host/bin/java
@@ -215,7 +217,7 @@ RUN set -eu; \
     setpriv --reuid=569 --regid=569 --clear-groups --inh-caps=-all \
       env -i PATH=/usr/bin:/bin HOME=/home/asc-source SOURCE_HOST_DATA="$train" SOURCE_HOST_PORT=4599 \
           SOURCE_HOST_BIND=127.0.0.1 SOURCE_HOST_TOKEN=aot-training WEBVIEW_ENABLED=false \
-      /opt/source-jre/bin/java -XX:AOTCacheOutput=/opt/source-host/aot/source-host.aot \
+      /opt/source-jre/bin/java -XX:-UsePerfData -XX:AOTCacheOutput=/opt/source-host/aot/source-host.aot \
           -jar /app/source-host/autosourcarr-source-host.jar > /tmp/aot-training.log 2>&1 & \
     pid=$!; ok=0; \
     for i in $(seq 1 90); do \
@@ -236,11 +238,16 @@ RUN set -eu; \
     rm -rf "$train" /tmp/aot-training.log /tmp/hsperfdata_* /tmp/*.aot* 2>/dev/null || true
 
 # Safe defaults (ARC-8): integrated source host, the image's own runtime paths, no .NET diagnostics port.
+# The source host runs under the Landlock source-host-sandbox as the app's user (568). AUTOSOURCARR_SOURCE_HOST_UID/GID
+# are deliberately NOT set: with cap_drop ALL + no-new-privileges the launcher cannot switch users (see the optional,
+# not recommended uid 569 variant in docker-compose.0.5.0.yml). JCEF needs no extra sandbox path: the Java wrapper
+# puts the JVM temp folder, HOME and XDG caches under the host's data folder, which the sandbox already allows.
 # Everything else (auth, keys, paths) has its default in the settings schema and lives in /config/config.json.
 ENV AUTOSOURCARR_SOURCE_HOST_JAR=/app/source-host/autosourcarr-source-host.jar \
     AUTOSOURCARR_JAVA=/opt/source-host/bin/java \
     AUTOSOURCARR_READER_EXTENSION_DIR=/app/reader-extension \
     AUTOSOURCARR_REPAIR_RUNNER=/opt/autosourcarr-native/repair-runner \
+    AUTOSOURCARR_SOURCE_HOST_SANDBOX=/opt/autosourcarr-native/source-host-sandbox \
     SOURCE_ENGINE_MODE=integrated \
     DOTNET_EnableDiagnostics=0 \
     DOTNET_NOLOGO=1 \
