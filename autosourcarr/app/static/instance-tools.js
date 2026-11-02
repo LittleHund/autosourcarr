@@ -175,11 +175,13 @@
     const safe=result.safe_mode;
     if(safe){
       const {box,actions}=noticeBox(safe.status==='rolled-back'?'Update rolled back — safe mode':'Update paused — safe mode',[safe.message,safe.previous_version_hint,safe.error,safe.retry_pending?'A retry is armed: restart AutoSourcarr to run the update again.':null]);
-      if(!safe.retry_pending)actions.append(action('Retry the update',()=>{
+      if(!safe.retry_pending&&(safe.actions||[]).includes('retry'))actions.append(action('Retry the update',()=>{
         if(!confirm('Take a fresh backup now and run the update again at the next start?'))return;
         return v1().retryBackupUpdate({confirm:true});
       },{after:result=>{if(result)status(result.message);return refreshBackups();}}));
-      if((safe.actions||[]).includes('migrate-without-backup'))actions.append(action('Migrate without a backup',()=>{
+      const named=result.items.find(item=>item.id===safe.backup_id);
+      if((safe.actions||[]).includes('restore')&&named)actions.append(previewSaved(named,'Restore the backup from '+when(named.created_at)));
+      if((safe.actions||[]).includes('migrate-without-backup')&&safe.preview_token)actions.append(action('Migrate without a backup',()=>{
         if(!confirm('Migrate at the next start WITHOUT a backup? If the migration fails, there is nothing to roll back to.'))return;
         return v1().migrateWithoutBackup({confirm:true,preview_token:safe.preview_token});
       },{danger:true,after:result=>{if(result)status(result.message);return refreshBackups();}}));
