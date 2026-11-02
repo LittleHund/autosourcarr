@@ -26,6 +26,7 @@ public static class ApplicationRuntimeTests
         suite.Add("application host: missing configured database mount is never created", () => MissingMount().GetAwaiter().GetResult());
         suite.Add("application host: pre-admission cancellation and controlled integrated mode create no storage", () => Admission().GetAwaiter().GetResult());
         suite.Add("application host: saved timezone replaces stale inherited process and source launch values", TimeZone);
+        suite.Add("application host: a restart the app asks for stops normally and exits with the restart code (no native launcher)", () => RestartExit().GetAwaiter().GetResult());
         if (OperatingSystem.IsWindows())
             suite.Add("application host: actual executable refuses Windows before private configuration", ExecutableGuard);
     }
@@ -90,6 +91,17 @@ public static class ApplicationRuntimeTests
         Check.Throws<IOException>(() => ApplicationRuntime.InstanceRoots.Acquire([earlier, busy]));
         using var recovered = ApplicationRuntime.InstanceRoots.Acquire([earlier]);
         Check.Equal(17, Child(typeof(ApplicationRuntimeTests).Assembly.Location, temp.Path, "--instance-lock-probe", busy).Exit);
+    }
+    private static async Task RestartExit()
+    {
+        using var temp = new Sandbox(); var settings = Settings(temp.Path);
+        await using var runtime = await ApplicationRuntime.CreateExternalForTestsAsync(settings, settings.SettingsConfigDir);
+        var stops = 0; runtime.RequestStop = () => stops++;
+        Check.True(!runtime.RestartRequested, "no restart before it is asked for");
+        runtime.RequestRestart();
+        Check.Equal(1, stops);
+        Check.True(runtime.RestartRequested, "the restart is remembered for the exit code");
+        Check.Equal(75, ApplicationRuntime.RestartExitCode); // documented image contract: not 0 (clean stop) and not 78 (fatal)
     }
     private static async Task HttpComposition()
     {

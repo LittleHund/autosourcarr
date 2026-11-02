@@ -14,6 +14,8 @@ public sealed record IsolatedRunRequest(string Program, IReadOnlyList<string> Ar
     public int MaximumOutputBytes { get; init; } = 1024 * 1024;
     /// <summary>Runs with the empty private job directory before the program starts.</summary>
     public Action<string>? PrepareJob { get; init; }
+    /// <summary>PERF-2: CPU/memory limits for the runner process (cgroup v2 when writable, else nice); null applies none.</summary>
+    public AutoSourcarr.Core.Jobs.ProcessLimits? Limits { get; init; } = IsolatedRunner.RepairLimits;
 }
 
 /// <summary>Evidence printed by repair-runner before it releases the program.</summary>
@@ -37,6 +39,8 @@ public sealed partial class IsolatedRunner(string instanceDataRoot, Action<strin
     public const string DefaultRunnerPath = "/opt/autosourcarr-native/repair-runner";
     public const string RunnerPathVariable = "AUTOSOURCARR_REPAIR_RUNNER";
     public const int IsolationUnavailableExitCode = 78;
+    /// <summary>PERF-2 repair limits: half the default CPU weight, nice 10, 3 GiB memory in a writable cgroup (the runner keeps its own 8 GiB address-space cap).</summary>
+    public static readonly AutoSourcarr.Core.Jobs.ProcessLimits RepairLimits = new(CpuWeight: 50, MemoryBytes: 3L << 30, Nice: 10);
     private const int MaximumProofBytes = 4096;
     private const string ProofPrefix = "AUTOSOURCARR_RUNNER_V1 ";
     private static readonly HashSet<string> ProofFields = ["pid", "uid", "ppid", "pdeathsig", "landlock", "nnp", "seccomp", "netgate", "proxy", "scoped"];
@@ -78,6 +82,15 @@ public sealed partial class IsolatedRunner(string instanceDataRoot, Action<strin
             }
             catch { child.Dispose(); throw; }
         });
+        if (request.Limits is { } limits)
+        {
+            try
+            {
+                var applied = new AutoSourcarr.Core.Jobs.ProcessResourceLimits().Apply(process.Id, "repair-runner", limits);
+                log?.Invoke("repair runner limits: " + applied.Mode + " (" + applied.Detail + ")");
+            }
+            catch (InvalidOperationException) { /* the runner already exited (refused); nothing to limit */ }
+        }
         var timedOut = false;
         RunnerProof? proof = null;
         try

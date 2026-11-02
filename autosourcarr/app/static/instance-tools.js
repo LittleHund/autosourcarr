@@ -153,7 +153,7 @@
     const rows=(result.databases||[]).flatMap(db=>db.tables.map(t=>`<tr><td>${esc(db.name)}</td><td>${esc(t.table)}</td><td>${t.current??'—'}</td><td>${t.backup??'—'}</td></tr>`)).join('');
     const list=(title,items)=>items&&items.length?`<p><strong>${esc(title)}</strong>: ${items.map(esc).join(', ')}</p>`:'';
     const settings=result.settings||{};
-    byId('riRestorePreview').innerHTML=`<div class="notice"><strong>Backup checked</strong><p>From ${esc(when(result.backup?.created_at))} · AutoSourcarr ${esc(result.backup?.app_version)} · format ${Number(result.backup?.format_version)}</p><p>${esc(result.version_check?.message)}</p>${result.decisions_warning?'<p><strong>'+esc(result.decisions_warning)+'</strong></p>':''}<div class="riTableScroll"><table><thead><tr><th>Database</th><th>Table</th><th>Now</th><th>Backup</th></tr></thead><tbody>${rows}</tbody></table></div>${settings.included?`<p>${Number(settings.changed.length)} setting values change.</p>`:'<p>The backup has no settings; current settings stay.</p>'}${list('Secrets kept from this instance',settings.secrets_kept_from_this_instance)}${list('Secrets to enter again after the restore',settings.secrets_to_enter_again)}<p class="muted">${esc(result.effect)}</p><label>Type RESTORE THIS INSTANCE<input id="riRestoreConfirmation" autocomplete="off"/></label><div id="riRestoreApply"></div></div>`;
+    byId('riRestorePreview').innerHTML=`<div class="notice"><strong>Backup checked</strong><p>From ${esc(when(result.backup?.created_at))} · AutoSourcarr ${esc(result.backup?.app_version)} · format ${Number(result.backup?.format_version)}</p><p>${esc(result.version_check?.message)}</p>${result.decisions_warning?'<p><strong>'+esc(result.decisions_warning)+'</strong></p>':''}${result.chapter_provenance_warning?'<p><strong>'+esc(result.chapter_provenance_warning)+'</strong></p>':''}<div class="riTableScroll"><table><thead><tr><th>Database</th><th>Table</th><th>Now</th><th>Backup</th></tr></thead><tbody>${rows}</tbody></table></div>${settings.included?`<p>${Number(settings.changed.length)} setting values change.</p>`:'<p>The backup has no settings; current settings stay.</p>'}${list('Secrets kept from this instance',settings.secrets_kept_from_this_instance)}${list('Secrets to enter again after the restore',settings.secrets_to_enter_again)}<p class="muted">${esc(result.effect)}</p><label>Type RESTORE THIS INSTANCE<input id="riRestoreConfirmation" autocomplete="off"/></label><div id="riRestoreApply"></div></div>`;
     byId('riRestoreApply').append(action('Restore at the next start',()=>{
       if(byId('riRestoreConfirmation').value!=='RESTORE THIS INSTANCE')throw Error('Type RESTORE THIS INSTANCE to confirm.');
       return v1().applyBackupRestore({stage_id:staged.stage_id,preview_token:staged.preview_token,confirm:true});
@@ -175,11 +175,13 @@
     const safe=result.safe_mode;
     if(safe){
       const {box,actions}=noticeBox(safe.status==='rolled-back'?'Update rolled back — safe mode':'Update paused — safe mode',[safe.message,safe.previous_version_hint,safe.error,safe.retry_pending?'A retry is armed: restart AutoSourcarr to run the update again.':null]);
-      if(!safe.retry_pending)actions.append(action('Retry the update',()=>{
+      if(!safe.retry_pending&&(safe.actions||[]).includes('retry'))actions.append(action('Retry the update',()=>{
         if(!confirm('Take a fresh backup now and run the update again at the next start?'))return;
         return v1().retryBackupUpdate({confirm:true});
       },{after:result=>{if(result)status(result.message);return refreshBackups();}}));
-      if((safe.actions||[]).includes('migrate-without-backup'))actions.append(action('Migrate without a backup',()=>{
+      const named=result.items.find(item=>item.id===safe.backup_id);
+      if((safe.actions||[]).includes('restore')&&named)actions.append(previewSaved(named,'Restore the backup from '+when(named.created_at)));
+      if((safe.actions||[]).includes('migrate-without-backup')&&safe.preview_token)actions.append(action('Migrate without a backup',()=>{
         if(!confirm('Migrate at the next start WITHOUT a backup? If the migration fails, there is nothing to roll back to.'))return;
         return v1().migrateWithoutBackup({confirm:true,preview_token:safe.preview_token});
       },{danger:true,after:result=>{if(result)status(result.message);return refreshBackups();}}));

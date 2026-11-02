@@ -197,6 +197,13 @@ object ExternalSolvers {
         val domain = rawDomain.removePrefix(".")
         // Only cookies for the website asked about (or its parent domains), never for other sites.
         if (url.host != domain && !url.host.endsWith(".$domain")) return null
+        // Phase 13: a domain cookie for a public suffix (co.uk, github.io, ...) would reach every site under it: refused.
+        // topPrivateDomain() is null exactly when the name is a public suffix (OkHttp's bundled public suffix list).
+        if (rawDomain.startsWith(".") &&
+            runCatching { HttpUrl.Builder().scheme("https").host(domain).build().topPrivateDomain() }.getOrNull() == null
+        ) {
+            return null
+        }
         return runCatching {
             Cookie
                 .Builder()

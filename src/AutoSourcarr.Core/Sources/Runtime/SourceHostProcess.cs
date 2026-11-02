@@ -30,6 +30,16 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private string _lastError = "", _startupError = "";
     private bool _healthy;
     private bool _recycling;
+    private SourceHostSandboxState _sandbox = SourceHostSandboxState.Unknown;
+
+    /// <summary>
+    /// Phase 13 (SRC-5): start the host through <c>native/source-host-sandbox</c> (Landlock, optional low-rights user).
+    /// Null or a missing launcher starts it directly; that is reported as "unsandboxed" (never a refusal: sources must work).
+    /// </summary>
+    public SourceHostSandboxOptions? Sandbox { get; init; }
+
+    /// <summary>What the running host runs under (from the launcher's proof line), for health.</summary>
+    public SourceHostSandboxState SandboxState { get { lock (_gate) return _sandbox; } }
 
     public SourceHostProcess(string java, string jar, string dataDirectory, int port, IReadOnlyDictionary<string, string> environment, Action<string> log)
         : this(java, jar, dataDirectory, port, () => environment, log) { }
@@ -182,12 +192,23 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private void Launch()
     {
         var setsid = OperatingSystem.IsLinux() ? new[] { "/usr/bin/setsid", "/bin/setsid" }.FirstOrDefault(File.Exists) : null;
-        var start = new ProcessStartInfo(setsid ?? _java) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
-        if (setsid is not null) start.ArgumentList.Add(_java);
-        start.ArgumentList.Add("-jar");
-        start.ArgumentList.Add(_jar);
+        var (sandbox, unsandboxed) = SandboxLauncher();
+        var command = new List<string>();
+        if (sandbox is not null) { command.Add(sandbox); command.AddRange(Sandbox!.Arguments(_dataDirectory, _java, _jar)); }
+        command.AddRange([_java, "-jar", _jar]);
+        var start = new ProcessStartInfo(setsid ?? command[0]) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
+        foreach (var argument in setsid is null ? command.Skip(1) : command) start.ArgumentList.Add(argument);
         start.Environment.Clear();
         foreach (var (key, value) in _environment()) start.Environment[key] = value;
+        if (sandbox is not null)
+        {
+            // Inside the sandbox only the data folder is writable: the JVM's and Chromium's home and temp files live there.
+            var home = Path.Combine(_dataDirectory, "home"); var temp = Path.Combine(_dataDirectory, "tmp");
+            Directory.CreateDirectory(home); Directory.CreateDirectory(temp);
+            start.Environment["HOME"] = home; start.Environment["TMPDIR"] = temp;
+            start.Environment["XDG_CACHE_HOME"] = Path.Combine(home, ".cache"); start.Environment["XDG_CONFIG_HOME"] = Path.Combine(home, ".config");
+        }
+        lock (_gate) _sandbox = unsandboxed ?? new SourceHostSandboxState("unknown", 0, false, false, null, "no-proof");
         start.Environment["SOURCE_HOST_DATA"] = _dataDirectory;
         start.Environment["SOURCE_HOST_PORT"] = Port.ToString(CultureInfo.InvariantCulture);
         start.Environment["SOURCE_HOST_BIND"] = "127.0.0.1";
@@ -212,9 +233,28 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         _log("Source host started (process " + process.Id.ToString(CultureInfo.InvariantCulture) + ").");
     }
 
+    /// <summary>The launcher to use, or null with the reason the host runs unsandboxed.</summary>
+    internal (string? Launcher, SourceHostSandboxState? Unsandboxed) SandboxLauncher()
+    {
+        static SourceHostSandboxState Without(string reason) => new("unsandboxed", 0, false, false, null, reason);
+        if (Sandbox is not { } options) return (null, Without("sandbox-not-configured"));
+        if (!OperatingSystem.IsLinux()) return (null, Without("platform"));
+        if (!Path.IsPathFullyQualified(_java) || !Path.IsPathFullyQualified(_jar) || !Path.IsPathFullyQualified(_dataDirectory))
+            return (null, Without("java-path-not-absolute"));
+        try { if (!File.Exists(options.LauncherPath)) return (null, Without("sandbox-missing")); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return (null, Without("sandbox-missing")); }
+        return (options.LauncherPath, null);
+    }
+
     private void Output(string? line)
     {
         if (string.IsNullOrEmpty(line)) return;
+        if (line.StartsWith(SourceHostSandboxState.ProofPrefix, StringComparison.Ordinal) && SourceHostSandboxState.Parse(line) is { } proof)
+        {
+            lock (_gate) _sandbox = proof;
+            _log(proof.Message());
+            return;
+        }
         // Only errors before the host answers count as its error: a failing source call logs exceptions too.
         if (line.Contains(" ERROR ", StringComparison.Ordinal) || line.Contains("Exception", StringComparison.Ordinal))
             lock (_gate) if (!_healthy) _startupError = line.Length > 500 ? line[..500] : line;
@@ -303,8 +343,9 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
 
     /// <summary>
     /// Hosted mode has no native launcher to do this: mark the app not dumpable, so code running in the source host
-    /// (same user) cannot read the app's memory or /proc/&lt;pid&gt;/environ (secrets in variables). A separate low-rights user for
-    /// the host is planned for conversion phase 13 (the new image).
+    /// (same user) cannot read the app's memory or /proc/&lt;pid&gt;/environ (secrets in variables). Phase 13: the host also runs
+    /// in the Landlock sandbox (<see cref="Sandbox"/>: own data folder only, no signals to the app) and, where the image
+    /// grants the launcher CAP_SETUID/CAP_SETGID, as its own low-rights user.
     /// </summary>
     public static void ProtectParentProcess()
     {

@@ -43,7 +43,7 @@ while :; do
   if awk -v n="$now" -v b="$budget" 'BEGIN { exit !(n > b) }'; then break; fi
   if [ "$(docker inspect -f '{{.State.Running}}' "$name" 2>/dev/null)" != true ]; then break; fi
   if [ -z "$live" ] && curl -fsS -m 3 -o /dev/null "http://127.0.0.1:$port/api/v1/live"; then live=$now; fi
-  if [ -n "$live" ] && [ -z "$ui" ] && curl -fsS -m 5 "http://127.0.0.1:$port/" 2>/dev/null | grep -q '/static/dist/'; then ui=$(elapsed); fi
+  if [ -n "$live" ] && [ -z "$ui" ] && curl -fsS -m 5 "http://127.0.0.1:$port/static/index.html" 2>/dev/null | grep -q '/static/dist/'; then ui=$(elapsed); fi
   if [ -z "$host" ]; then
     code=$(docker exec "$name" curl -s -m 3 -o /dev/null -w '%{http_code}' http://127.0.0.1:4567/v1/health 2>/dev/null || true)
     [ -n "$code" ] && [ "$code" != 000 ] && host=$(elapsed)

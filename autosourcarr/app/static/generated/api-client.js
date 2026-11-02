@@ -1954,7 +1954,7 @@
        */
       retryAttention(attentionId, options) { return call('POST', `/api/v1/attention/${encodeURIComponent(attentionId)}/retry`, undefined, options); },
       /**
-       * "Retry the update" after a rolled-back or blocked update: takes a fresh backup now, then the next start migrates again (body {confirm: true}).
+       * "Retry the update" after a rolled-back or blocked update, as a job (202 + task id): takes a fresh backup, then the next start migrates again (body {confirm: true}). Needs an owner or admin account when the instance has accounts.
        * POST /api/v1/backups/safe-mode/retry
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`

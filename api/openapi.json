@@ -632,7 +632,7 @@
     "/api/v1/backups/safe-mode/retry": {
       "post": {
         "operationId": "retryBackupUpdate",
-        "summary": "\u0022Retry the update\u0022 after a rolled-back or blocked update: takes a fresh backup now, then the next start migrates again (body {confirm: true}).",
+        "summary": "\u0022Retry the update\u0022 after a rolled-back or blocked update, as a job (202 \u002B task id): takes a fresh backup, then the next start migrates again (body {confirm: true}). Needs an owner or admin account when the instance has accounts.",
         "requestBody": {
           "required": true,
           "content": {
@@ -644,12 +644,22 @@
           }
         },
         "responses": {
-          "200": {
+          "202": {
             "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
                 }
               }
             }

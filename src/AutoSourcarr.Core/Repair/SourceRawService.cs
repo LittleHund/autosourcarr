@@ -19,7 +19,7 @@ public sealed class SourceRawService : IAsyncDisposable
 {
     private sealed class Job(string id, string? key, CancellationTokenSource cancellation, IDisposable lease)
     {
-        public string Id { get; } = id;
+        public string Id { get; set; } = id;
         public string? Key { get; } = key;
         public CancellationTokenSource Cancellation { get; } = cancellation;
         public IDisposable Lease { get; } = lease;
@@ -46,6 +46,10 @@ public sealed class SourceRawService : IAsyncDisposable
     private string _error = "";
     private bool _started;
     private Task? _stopped;
+    /// <summary>PERF-2: the job type of a source-code capture/acquisition in the job queue (one at a time, as before).</summary>
+    public static readonly JobType RawArchiveJob = new("source-raw-archive", "Archive source code", JobPriority.Low, JobFlags.LongRunning, StallTimeout: TimeSpan.FromHours(1));
+    /// <summary>Phase 13: when set, captures are queued jobs here instead of bare tasks.</summary>
+    public JobQueue? Jobs { get; init; }
     public SourceRawService(Func<SourceRawCatalog> factory, IRawInstalledSources installed, SemaphoreSlim sharedSourceAdmin,
         Func<IReadOnlyList<string>> configuredIndexes, Func<JsonArray> cachedAdmissions, BoundedWorkScheduler io, WholeTaskCoordinator lanes,
         TaskRegistry tasks, SupportPrivacy privacy, Action<string> log, RepairHistory? history = null)
@@ -174,6 +178,25 @@ public sealed class SourceRawService : IAsyncDisposable
             {
                 if (key is not null && _keys.TryGetValue(key, out var previous) && !previous.Work.IsCompleted) return new() { ["queued"] = false, ["task_id"] = previous.Id, ["coalesced"] = true };
                 foreach (var old in _jobs.Values.Where(job => job.Observer.IsCompleted && job.Work.IsCompleted).Take(Math.Max(0, _jobs.Count - 128)).ToArray()) { old.Cancellation.Dispose(); _jobs.Remove(old.Id); }
+                if (Jobs is { } queue)
+                {
+                    // PERF-2: source-code archiving runs in the one job queue (Low for automatic captures, Normal for manual).
+                    var queued = new Job("", key, Lifetime(CancellationToken.None), lease);
+                    var started = 0;
+                    var handle = queue.Enqueue(RawArchiveJob, key ?? "raw:" + Guid.NewGuid().ToString("N"), async context =>
+                    {
+                        Interlocked.Exchange(ref started, 1);
+                        using var link = context.CancellationToken.Register(() => { try { queued.Cancellation.Cancel(); } catch (ObjectDisposedException) { } });
+                        await RunAsync(operation, origin, queued, waitForEngine).ConfigureAwait(false);
+                    }, origin == "manual" ? JobPriority.Normal : JobPriority.Low, origin: origin, title: "Archive source code", context: package);
+                    if (handle.Merged) { queued.Cancellation.Dispose(); lease.Dispose(); lease = null!; return new() { ["queued"] = false, ["task_id"] = handle.Id, ["coalesced"] = true }; }
+                    queued.Id = handle.Id; queued.Work = handle.Completion; queued.Observer = handle.Completion; _jobs[handle.Id] = queued;
+                    if (key is not null) _keys[key] = queued;
+                    _ = handle.Completion.ContinueWith(_ => { if (Volatile.Read(ref started) == 0) queued.Lease.Dispose(); }, CancellationToken.None,
+                        TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                    queued.Start.TrySetResult(); lease = null!;
+                    return new() { ["queued"] = true, ["task_id"] = handle.Id };
+                }
                 var id = _tasks.Create("Archive source code", message: "Queued source-code capture", activity: "queued", context: package, origin: origin, kind: "source-raw-acquisition");
                 var job = new Job(id, key, Lifetime(CancellationToken.None), lease); job.Work = RunAsync(operation, origin, job, waitForEngine); _jobs[id] = job;
                 if (key is not null) _keys[key] = job; job.Observer = _tasks.BindRuntimeAsync(id, job.Work, job.Cancellation); job.Start.TrySetResult(); lease = null!;

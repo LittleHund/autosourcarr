@@ -90,6 +90,17 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   - `KOMF_BROWSER_URL` and `REPAIR_AI_BROWSER_URL` are removed (SET-4); a saved value is dropped from `config.json`
     without a notice. A Komf connection (Settings → Connections) is unaffected. `config.json` keeps unknown top-level
     keys on every rewrite.
+  - Crash safety (re-audit): the update marker says `migrating` before a migration and `rolling-back` before the
+    rollback, and the pre-update copies stay until the final marker, so a kill at any step ends rolled back from those
+    copies in safe mode on the next start, without a second backup or migration. An interrupted rollback is completed
+    forward; an interrupted restore is decided from its journal and never applied twice (an undone restore starts safe
+    mode); a swap that cannot be finished or undone, or set-aside files, always mean safe mode, never a fresh empty
+    catalogue. Undo never deletes a live `-wal`, and removes a restored `config.json` when none existed before. An
+    unreadable marker means safe mode. Health (guest-readable) shows only the safe-mode state and a short message;
+    marker errors are scrubbed. Arming a restore, retrying an update and migrating without a backup need a signed-in
+    owner or admin account when the instance has accounts. "Retry the update" runs as a job. A backup of an instance
+    without chapter origins yet contains the catalogue only. The preview token also covers chapter provenance
+    decisions, import auto-resolve and shared catalogue decisions.
   - Limits: safe mode under the native launcher (Suwayomi image) is not tested; an admin token kept in the browser still
     downloads through a buffered request (a plain link cannot carry the header).
 

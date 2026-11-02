@@ -13,6 +13,7 @@ const settle=async()=>{for(let i=0;i<4;i++)await new Promise(resolve=>setImmedia
 const backupId='a'.repeat(32);
 const preview={stage_id:'b'.repeat(32),preview_token:'token-1',backup:{created_at:'2026-11-01T10:00:00Z',app_version:'0.5.0',format_version:3},
   version_check:{ok:true,message:'This backup matches this version\'s database schema.'},decisions_warning:'2 manual decisions newer than the backup will be lost.',
+  chapter_provenance_warning:'Chapter provenance: 1 served origins / 1 rejections / 1 history rows (1 chapters) on this instance will be replaced by an empty database — the backup has no chapter origins. The pre-restore backup keeps them.',
   databases:[{name:'catalog.sqlite',tables:[{table:'entries',current:4,backup:3}]}],
   settings:{included:true,changed:['settings.SOURCE_LANGUAGES'],secrets_kept_from_this_instance:['settings.MAIN_SUWAYOMI_PASSWORD'],secrets_to_enter_again:[]},
   effect:'The restore is applied at the next start.'};
@@ -62,6 +63,7 @@ const item={id:backupId,kind:'automatic',created_at:'2026-11-01T10:00:00Z',bytes
     await rollback.onclick();await settle();
     assert.deepEqual(JSON.parse(calls.find(call=>call.url==='/api/v1/backups/restore/preview').body),{backup_id:backupId});
     assert.match(node('riRestorePreview').innerHTML,/2 manual decisions newer than the backup will be lost/);
+    assert.match(node('riRestorePreview').innerHTML,/Chapter provenance: 1 served origins \/ 1 rejections \/ 1 history rows .* replaced by an empty database/,'Provenance loss shown before the typed confirmation');
     const restore=node('riRestoreApply').children[0];assert.equal(restore.textContent,'Restore at the next start');
     node('riRestoreConfirmation').value='yes';await restore.onclick();await settle();
     assert.ok(!calls.some(call=>call.url==='/api/v1/backups/restore/apply'),'No arm without the typed confirmation');
@@ -115,6 +117,16 @@ const item={id:backupId,kind:'automatic',created_at:'2026-11-01T10:00:00Z',bytes
     const notice=node('riBackupNotice').children[0];assert.match(notice.innerHTML,/Restore armed/);
     await notice.children[0].children[0].onclick();await settle();
     assert.ok(state.cancelled);assert.equal(calls.find(call=>call.url==='/api/v1/backups/restore/pending').method,'DELETE');
+  }
+  // 5. Rollback failed: the notice offers restoring the named backup, never a retry of half-migrated data.
+  {
+    const {node,calls}=await harness(()=>({items:[item],safe_mode:{status:'rollback-failed',message:'Putting the databases back did not finish.',backup_id:backupId,actions:['restore']},
+      limits:{manual:10,automatic_kept:3}}));
+    const buttons=node('riBackupNotice').children[0].children[0].children;
+    const labels=buttons.map(child=>child.textContent);
+    assert.ok(labels.some(label=>/^Restore the backup from/.test(label))&&!labels.includes('Retry the update'),'restore offered, retry not: '+labels.join(', '));
+    await buttons[0].onclick();await settle();
+    assert.deepEqual(JSON.parse(calls.find(call=>call.url==='/api/v1/backups/restore/preview').body),{backup_id:backupId});
   }
   console.log('Backups UI: /api/v1 client, rollback only without migration, safe-mode actions, cancel armed restore, multipart passphrase, plain download links');
 })().catch(error=>{console.error(error);process.exitCode=1;});

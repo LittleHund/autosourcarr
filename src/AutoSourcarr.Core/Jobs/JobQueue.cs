@@ -28,7 +28,22 @@ public sealed record JobType(string Name, string Title, JobPriority Priority = J
 {
     public TimeSpan Stall => StallTimeout ?? TimeSpan.FromMinutes(10);
     public TimeSpan Retry => RetryBase ?? TimeSpan.FromSeconds(60);
+    /// <summary>
+    /// PERF-2 minimum share: worker slots this type keeps for itself while it has work waiting. Other types never take the
+    /// last free slots a waiting type with a share still needs, so a flood of one kind of work cannot starve another.
+    /// Only for types that use worker slots (not long-running); capped by <see cref="RunLimit"/>.
+    /// </summary>
+    public int MinimumShare { get; init; }
+    /// <summary>PERF-2 limits for processes this type starts (repair runner, source host): see <see cref="ProcessResourceLimits"/>.</summary>
+    public ProcessLimits? Limits { get; init; }
 }
+
+/// <summary>
+/// CPU and memory limits for a child process of one job type: cgroup v2 cpu.weight (1–10000, default 100) and memory.max
+/// (<paramref name="MemoryBytes"/>) when the container's cgroup is writable, otherwise a nice value and, only when given,
+/// an address-space limit (<paramref name="AddressSpaceBytes"/>, RLIMIT_AS; a JVM needs far more address space than memory).
+/// </summary>
+public sealed record ProcessLimits(int CpuWeight = 100, long? MemoryBytes = null, int Nice = 0, long? AddressSpaceBytes = null);
 
 public sealed record JobQueueOptions
 {
@@ -179,6 +194,23 @@ public sealed class JobQueue : IAsyncDisposable
 
     public bool Paused { get { lock (_gate) return _paused; } }
 
+    /// <summary>
+    /// True while an exclusive job (backup, reset, database move) waits or runs. Endless background work (the continuous
+    /// crawler) checks this and ends its run, because an exclusive job only starts when nothing else runs.
+    /// </summary>
+    public bool ExclusivePending
+    {
+        get { lock (_gate) return _queued.Concat(_running).Any(job => job.Type.Flags.HasFlag(JobFlags.Exclusive) && !job.Finished); }
+    }
+
+    /// <summary>How many queued or running jobs (not finished, not being cancelled) have one of these type names.</summary>
+    public int Active(IReadOnlyCollection<string> typeNames)
+    {
+        ArgumentNullException.ThrowIfNull(typeNames);
+        lock (_gate)
+            return _queued.Concat(_running).Count(job => !job.Finished && !job.CancelRequested && typeNames.Contains(job.Type.Name));
+    }
+
     /// <summary>Queue, running jobs, per-type limits/averages and an ETA for each job.</summary>
     public JsonObject Snapshot()
     {
@@ -220,6 +252,11 @@ public sealed class JobQueue : IAsyncDisposable
                     ["completed"] = stats.Completed, ["failed"] = stats.Failed, ["frozen"] = stats.Frozen, ["merged"] = stats.Merged,
                     ["average_seconds"] = stats.Average is { } average ? JsonValue.Create(Math.Round(average, 3)) : null,
                     ["stall_timeout_seconds"] = (long)stats.Type.Stall.TotalSeconds, ["max_attempts"] = stats.Type.MaxAttempts,
+                    ["minimum_share"] = stats.Type.MinimumShare,
+                    ["limits"] = stats.Type.Limits is { } limits ? new JsonObject
+                    {
+                        ["cpu_weight"] = limits.CpuWeight, ["memory_bytes"] = limits.MemoryBytes, ["nice"] = limits.Nice,
+                    } : null,
                 });
             return new JsonObject
             {
@@ -351,11 +388,23 @@ public sealed class JobQueue : IAsyncDisposable
     {
         if (_paused || _running.Any(job => job.Type.Flags.HasFlag(JobFlags.Exclusive))) return null;
         var slots = _options.Workers - _running.Count(job => !job.Type.Flags.HasFlag(JobFlags.LongRunning));
+        // PERF-2 minimum shares: slots still owed to types that have ready work waiting and run fewer than their share.
+        var owed = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var waiting in _queued)
+        {
+            var type = waiting.Type;
+            if (type.MinimumShare <= 0 || type.Flags.HasFlag(JobFlags.LongRunning) || waiting.NotBefore > now || owed.ContainsKey(type.Name)) continue;
+            var share = Math.Min(Math.Min(type.MinimumShare, type.RunLimit), _options.Workers);
+            var missing = share - _running.Count(other => other.Type.Name == type.Name);
+            if (missing > 0) owed[type.Name] = Math.Min(missing, _queued.Count(other => other.Type.Name == type.Name && other.NotBefore <= now));
+        }
         var first = true;
         foreach (var job in Ordered(now))
         {
             var head = first; first = false;
             if (job.NotBefore > now) continue;
+            if (!job.Type.Flags.HasFlag(JobFlags.LongRunning) && !job.Type.Flags.HasFlag(JobFlags.Exclusive)
+                && !owed.ContainsKey(job.Type.Name) && slots - owed.Values.Sum() <= 0) continue;
             if (job.Type.Flags.HasFlag(JobFlags.Exclusive))
             {
                 if (_running.Count == 0) return job;

@@ -17,7 +17,7 @@ internal sealed partial class ApplicationRuntime
 {
     /// <summary>What the 0.4.5 startup sequence (main.py lifespan) runs on; built by OpenMatching, started after the source engine.</summary>
     private sealed record StartupWork(CatalogueMaintenance Maintenance, CatalogueTitles Titles, CatalogueStructure Structure, DuplicateMatching Duplicates,
-        CatalogueDiscovery Discovery, SuwayomiLibrary Library, IResetHintIngest Hints);
+        CatalogueDiscovery Discovery, SuwayomiLibrary Library, IResetHintIngest Hints, ContinuousCatalogueCrawler Crawler);
 
     private StartupWork? _startup;
 
@@ -115,9 +115,57 @@ internal sealed partial class ApplicationRuntime
                     job.Result("Refreshed " + result["feeds"]?.ToJsonString() + " feeds; " + result["cataloged_entries"]?.ToJsonString() + " entries");
                 }, origin: "automatic", title: "Refresh browse feeds"));
 
+        if (settings.ContinuousCatalogDiscovery) ScheduleCrawler(work.Crawler);
+
         // A reset that stopped before its rebuild finished left its hints: replay them (low priority, before speculative growth).
         var hints = Path.Combine(_dataDirectory!, CatalogueStructure.ResetHintFile);
         if (File.Exists(hints)) _ = work.Structure.ScheduleResetHintReplay(Jobs, hints, work.Hints);
+    }
+
+    /// <summary>
+    /// Keeps the continuous crawler running like 0.4.5 (self-healing): a failed or frozen run starts again after 5 s; a run
+    /// stopped for a reset/restore pause starts again once the queue resumes; a run a person cancelled stays off until the
+    /// next start.
+    /// </summary>
+    private void ScheduleCrawler(ContinuousCatalogueCrawler crawler)
+    {
+        JobHandle? handle;
+        try { handle = crawler.Schedule(Jobs); }
+        catch (ObjectDisposedException) { return; }
+        if (handle is null || handle.Merged) return;
+        var stop = _healthStop.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await handle.Completion.WaitAsync(stop).ConfigureAwait(false);
+                if (crawler.StoppedByUser) return;
+                do await Task.Delay(TimeSpan.FromSeconds(5), stop).ConfigureAwait(false);
+                while (Jobs.Paused || Jobs.ExclusivePending);
+                ScheduleCrawler(crawler);
+            }
+            catch (Exception error) when (error is OperationCanceledException or ObjectDisposedException) { }
+        });
+    }
+
+    /// <summary>The crawler's enrichment fan-out for genuinely new records (metadata repair, additional records), bounded per page.</summary>
+    private void ScheduleCrawlEnrichment(CatalogueDiscovery discovery, IReadOnlyList<long> ids)
+    {
+        var settings = Settings;
+        try
+        {
+            _metadataEnrichment?.Schedule(ids.Take(Math.Max(1, settings.MetadataEnrichmentEntriesPerFeed)).ToArray());
+            if (settings.AutoVariantDiscovery)
+            {
+                var scan = ids.Take(Math.Max(1, settings.AutoVariantEntriesPerFeed)).ToArray();
+                Jobs.Enqueue(Endpoints.DiscoveryV1Endpoints.AdditionalScanJob, "crawl:" + string.Join(',', scan), async job =>
+                {
+                    var result = await discovery.ScanAdditionalAsync(scan, (current, total, message) => job.Report(current, total, message), job.CancellationToken).ConfigureAwait(false);
+                    job.Result("Additional-record scan complete; " + result["added"]?.ToJsonString() + " record(s) added");
+                }, JobPriority.Low, origin: "automatic", title: "Find extra source records");
+            }
+        }
+        catch (Exception error) when (error is ObjectDisposedException or InvalidOperationException) { _ = error; }
     }
 
     /// <summary>Runs <paramref name="start"/> after <paramref name="delay"/> unless the app is stopping first.</summary>
