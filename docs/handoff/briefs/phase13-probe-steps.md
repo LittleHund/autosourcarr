@@ -1,25 +1,46 @@
-# Phase 13 probe steps (image build, boot time, browser checks against the image)
+# Phase 13 probe steps (runtime checks, image build, boot time, browser checks against the image)
 
-For the coordinator: add these to `.github/workflows/probe.yml` on `ci-probe` so ONE probe run builds the 0.5.0
-image (no push, nothing leaves the runner), boots it, measures the boot time and runs Playwright against it.
-Nothing here publishes to ghcr (hard rule 15). Written 2026-11-02 by area P; not run yet.
+For the coordinator: paste this into `.github/workflows/probe.yml` on `ci-probe`. One probe run then:
+- checks the source host sandbox;
+- runs the Linux-only runtime tests and the performance benchmark;
+- builds the 0.5.0 image (no push; nothing leaves the runner);
+- boots it, measures the boot time and checks the source host sandbox and WebView inside it;
+- runs Playwright against it.
+
+Nothing here publishes to ghcr (hard rule 15). Revision 2 (2026-11-02, area P, on b95a7d0), not run yet. It keeps
+the image/boot/Playwright block of revision 1 (first image probe: build OK, boot gate fixed in 71de9da).
 
 ## 1. Job settings
 
-- `timeout-minutes: 150` → `240` (the image build adds about 20–40 min on a cold cache: R2R publish, apt, the
-  255 MB JCEF download, jlink, the AOT training run; Playwright against the image adds 15–40 min).
-- No new permissions, services or secrets. The runner's Docker (BuildKit) is enough; `docker buildx` with the default
-  `docker` driver supports the named build contexts used below.
+- `timeout-minutes: 240`: the image build adds 2–40 min depending on the cache, Playwright against the image
+  15–40 min, and the benchmark about 1 min.
+- No new permissions, services or secrets. The runner's Docker (BuildKit, default `docker` driver) supports the
+  named build contexts. gcc, curl and node are on the runner already; the tests run as the non-root `runner` user.
 
-## 2. Probe script additions
+## 2. Replacement block
 
-Insert **after** the "Source host (phase 4)" block (it sets `$h` and builds `.build/autosourcarr-source-host.jar`)
-and the "READ-1 reader extension" block (it sets `$rx` and writes `.build/reader-extension`), and **before** the
-"Mihon backup-format watch" line:
+Use it as a replacement for the revision-1 "Phase 13" block, or insert it fresh. It goes **after** the
+"Source host (phase 4)" block (which sets `$h` and builds `.build/autosourcarr-source-host.jar`) and the
+"READ-1 reader extension" block (which sets `$rx` and writes `.build/reader-extension`), and **before** the
+"Mihon backup-format watch" line. It uses `$b` (the build result) and `$sha` from the top of the probe script.
 
 ```bash
-          # Phase 13: the 0.5.0 image (docker/Dockerfile, no push), boot time (PERF-7) and Playwright against it (PIPE-5).
-          ib=skipped; boot=none; ipw=skipped
+          # Phase 13 (area R + P): source host sandbox proof, Linux runtime tests, performance benchmark (PIPE-8),
+          # then the 0.5.0 image (docker/Dockerfile, no push), boot time + sandbox/WebView runtime check (PERF-7,
+          # SRC-5) and Playwright against the running image (PIPE-5).
+          sbx=skipped; lrt=skipped; bm=skipped; ib=skipped; boot=none; ipw=skipped
+          bash scripts/source-host-sandbox-check.sh > probe/source-host-sandbox.txt 2>&1; sbx=$?
+          if [ "$b" = 0 ]; then
+            nbin=$RUNNER_TEMP/native; mkdir -p "$nbin"
+            nflags="-O2 -Wall -Werror -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fstack-protector-strong -fstack-clash-protection -fcf-protection=full -fPIE -static-pie -Wl,-z,relro,-z,now,-z,noexecstack"
+            if gcc $nflags -o "$nbin/repair-runner" native/repair-runner.c > probe/linux-runtime.txt 2>&1 \
+               && gcc $nflags -o "$nbin/source-host-sandbox" native/source-host-sandbox.c >> probe/linux-runtime.txt 2>&1; then
+              AUTOSOURCARR_REPAIR_RUNNER=$nbin/repair-runner AUTOSOURCARR_SOURCE_HOST_SANDBOX=$nbin/source-host-sandbox \
+                timeout 900 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- \
+                --filter "repair isolation (linux)" --filter "source host sandbox (linux)" >> probe/linux-runtime.txt 2>&1; lrt=$?
+            else lrt=compile; fi
+            timeout 900 dotnet run --project tests/AutoSourcarr.Tests -c Release --no-build -- --benchmark probe/benchmark.json --gate > probe/benchmark.txt 2>&1; bm=$?
+          fi
           if [ -f docker/Dockerfile ] && [ "$h" = 0 ] && [ "$rx" = 0 ]; then
             mkdir -p .build/source-host-out && cp .build/autosourcarr-source-host.jar .build/source-host-out/
             start_build=$(date +%s)
@@ -38,9 +59,10 @@ and the "READ-1 reader extension" block (it sets `$rx` and writes `.build/reader
             } > probe/image-build.txt 2>&1
             rm -f probe/image-build.log
             if [ "$ib" = 0 ]; then
-              bash scripts/image-boot-check.sh autosourcarr:probe probe/boot-time.txt 18282 autosourcarr-probe > /dev/null 2>&1
+              # Exit 0 = boot + runtime OK, 1 = boot over budget, 2 = start error, 3 = booted but sandbox/WebView check failed.
+              bash scripts/image-boot-check.sh autosourcarr:probe probe/boot-time.txt 18282 autosourcarr-probe > /dev/null 2>&1; bootcode=$?
               boot=$(grep -o '^ready_seconds=.*' probe/boot-time.txt | cut -d= -f2)
-              if grep -q '^result=pass' probe/boot-time.txt; then
+              if [ "$bootcode" = 0 ] || [ "$bootcode" = 3 ]; then
                 node scripts/image-e2e-prepare.mjs http://127.0.0.1:18282 tests/e2e/fixtures/owner.json > probe/image-playwright.log 2>&1; prep=$?
                 ipw=$prep
                 if [ "$prep" = 0 ]; then
@@ -64,35 +86,43 @@ and the "READ-1 reader extension" block (it sets `$rx` and writes `.build/reader
           fi
 ```
 
-Optional: set `E2E_IMAGE_THEMES: blue-dark,blue-light` in the step's `env:` for a shorter first run (the release
-workflow always runs every theme). Leave it empty for the full 180-test matrix.
+Optional: set `E2E_IMAGE_THEMES: blue-dark,blue-light` in the step's `env:` for a shorter run. The release workflow
+always runs every theme; leave the variable empty here for the full 180-test matrix.
 
 ## 3. Result fields
 
-Append three fields to the `printf` that writes `probe/result.txt` (format string and arguments):
+Append six fields to the `printf` that writes `probe/result.txt`:
+- in the format string, add
+  `\nsandbox_check=%s\nlinux_runtime=%s\nbenchmark=%s\nimage_build=%s\nboot_seconds=%s\nimage_playwright=%s`
+  before the final `\n`;
+- after `"$ub"`, add the arguments `"$sbx" "$lrt" "$bm" "$ib" "$boot" "$ipw"`.
 
-```bash
-          printf '...existing fields...\nimage_build=%s\nboot_seconds=%s\nimage_playwright=%s\n' ...existing args... "$ib" "$boot" "$ipw" > probe/result.txt
-```
-
-i.e. add `\nimage_build=%s\nboot_seconds=%s\nimage_playwright=%s` before the final `\n` of the format and
-`"$ib" "$boot" "$ipw"` after `"$ub"`.
+If revision 1's three image fields are already in the printf, replace them with these six.
 
 ## 4. Reading the results
 
 | File / field | Green |
 | --- | --- |
-| `image_build=0`, `probe/image-build.txt` | `result=0`; `AOT cache: <size>` (a `none` line is a finding, not a build failure); 2 static binaries in `/opt/autosourcarr-native`; `index.min.json` in `/app/reader-extension`; `id` shows `uid=568` |
-| `boot_seconds`, `probe/boot-time.txt` | `result=pass-target` (≤ 60 s) or `pass-budget` (≤ 300 s); `fail` or `none` = gate failed; `probe/boot-time-container.log` holds the container log tail |
-| `image_playwright=0`, `probe/image-playwright.txt` | 0 failed; `screenshots=` > 0 (first run is the baseline) |
-| `probe/contrast.txt` | ends with `PASS WCAG AA` |
+| `sandbox_check=0`, `probe/source-host-sandbox.txt` | Ends with `0 failure(s)`. The `landlock` value in the proof line is ≥ 1 and `scoped` is 2 on the runner kernel. |
+| `linux_runtime=0`, `probe/linux-runtime.txt` | Both filters PASS, no `SKIP` lines. A filter that registers no test exits non-zero; that means the runner lacks Landlock ABI 6 or the test runs as root. |
+| `benchmark=0`, `probe/benchmark.json` | `"over_budget": []`. The budgets are in `PerformanceBenchmark.Budgets`; a local Windows run measured page p95 ≈ 3 ms and 1609 jobs/s. |
+| `image_build=0`, `probe/image-build.txt` | `result=0`; `AOT cache: <size>`; 3 static binaries in `/opt/autosourcarr-native` (repair-runner, repair-launcher, source-host-sandbox); `index.min.json` in `/app/reader-extension`; `id` shows `uid=568`. |
+| `boot_seconds`, `probe/boot-time.txt` | `result=pass-target` (≤ 60 s) or `pass-budget` (≤ 300 s); `runtime_result=pass`, which means `source_sandbox=sandboxed` and `webview=ready`. Also check `repair_isolation=` (state of the repair runner), `restarts=` and `last_exit_code=` (75 = the app's own restart request, which the restart policy follows). Health JSON: `probe/boot-time-health.json`; sign-in/health log: `probe/boot-time-runtime.log`; container log: `probe/boot-time-container.log`. |
+| `image_playwright=0`, `probe/image-playwright.txt` | 0 failed; `screenshots=` > 0 (the first run is the baseline). |
+| `probe/contrast.txt` | Ends with `PASS WCAG AA`. |
 
-The probe commits `probe/` only; screenshots stay on the runner (the release workflow uploads them as the
-`ui-screenshots` artifact, the baseline for the next release's diff).
+If `webview` is a `failed: …` state, the JCEF needs one more sandbox path. Read the reason in
+`boot-time-container.log` (Chromium names the path it could not open). Then add that path to the image as
+`ENV AUTOSOURCARR_SOURCE_HOST_RW=…` or `_RO=…` (colon-separated) in `docker/Dockerfile`. The current image needs
+none: HOME, TMPDIR, XDG caches and `java.io.tmpdir` are all under `<data>/source-host`.
+
+The probe commits `probe/` only. Screenshots stay on the runner; the release workflow uploads them as the
+`ui-screenshots` artifact, which is the baseline for the next release's diff.
 
 ## 5. What the probe does not cover
 
 - Publishing (owner gate) and the `release` environment.
-- The in-Docker `reader-extension` and `source-host` stages (the probe hands both in as build contexts, like the
-  release workflow); a plain `docker build` without them builds both inside BuildKit and is not tested here.
-- The low-rights source host user (569) at run time: the image has the account; area R starts the host under it.
+- The in-Docker `reader-extension` and `source-host` stages. The probe hands both in as build contexts, like the
+  release workflow; a plain `docker build` without them builds both inside BuildKit, and that path is not tested here.
+- The optional uid 569 variant of the source host (not recommended; see `docker-compose.0.5.0.yml`). The image runs
+  the host as 568 inside the Landlock sandbox.
