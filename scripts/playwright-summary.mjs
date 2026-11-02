@@ -16,7 +16,7 @@ const walk = (suite, titles) => {
     const status = test.status; // expected | unexpected | flaky | skipped
     if (status === 'expected') row.passed++; else if (status === 'unexpected') row.failed++; else if (status === 'flaky') row.flaky++; else row.skipped++;
     perProject.set(project, row);
-    for (const note of test.annotations || []) if (note.type !== 'skip') notes.add(`${note.type}: ${note.description}`);
+    for (const note of test.annotations || []) if (!['skip', 'slow'].includes(note.type)) notes.add(`${note.type}: ${note.description}`);
     if (status === 'unexpected' || status === 'flaky') {
       const result = (test.results || []).find(r => r.status !== 'passed') || {};
       const message = String(result.error?.message || result.errors?.[0]?.message || '').replace(/\u001b\[[0-9;]*m/g, '').split('\n').filter(Boolean).slice(0, 3).join(' | ');
