@@ -93,6 +93,20 @@ test('a reload while a page is loading wins; the late page is dropped',async()=>
   assert.equal(h.paging().nextCursor,'c50b');
 });
 
+test('A2: object or missing list fields from the server read as empty lists (load, load more, render)',async()=>{
+  const h=harness();let loading=h.context.loadMatrix();
+  h.requests[0].resolve({entries:[{id:1}],sources:{},matches:null,variants:'x',discovery_outcomes:{},next_cursor:'c1',has_more:true,subscription:{entry_ids:{}}});
+  await loading;const d=h.data();
+  for(const field of ['sources','matches','variants','discovery_outcomes'])assert.equal(Array.isArray(d[field])&&d[field].length,0,field+' is an empty array');
+  assert.equal(Array.isArray(d.subscription.entry_ids),true);
+  const more=h.context.loadMoreMatrix();h.requests[1].resolve({entries:{},sources:{},matches:{},variants:{},discovery_outcomes:{},next_cursor:null,has_more:false});await more;
+  assert.equal(h.data().entries.length,1,'A page with an object for entries adds nothing and does not throw');
+  const merged=h.context.mergeMatrixPage({entries:[{id:1}],discovery_outcomes:{}},{entries:[{id:2}],matches:{},discovery_outcomes:{}});
+  assert.equal(JSON.stringify(merged.entries.map(e=>e.id)),'[1,2]');assert.equal(merged.discovery_outcomes.length,0);
+  assert.match(block('function renderMatrix(','function '+'hydrateMatrixDuplicates')||'',/const d=matrixDataset\(kind\); if\(!d\)return;\n  normalizeMatrixPayload\(d\);/,'renderMatrix normalises before building its maps');
+  assert.equal(Array.isArray(h.context.normalizeMatrixPayload(null).entries),true);
+});
+
 test('UI-6: the loaded Matrix chain length survives a refresh',()=>{
   const context={document:{getElementById:()=>null,querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){}},console,JSON,Object,Array,Number,Math,Set,Map};
   context.window=context;vm.createContext(context);vm.runInContext(nav,context);

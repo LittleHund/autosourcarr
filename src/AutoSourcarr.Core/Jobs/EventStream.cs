@@ -86,7 +86,8 @@ public sealed class EventStream
     /// <paramref name="window"/> becomes ONE event at the end of the window,
     /// <c>{change, &lt;field&gt;: [keys...], truncated}</c>; <c>change</c> is the one kind seen, or "updated" for a mix.
     /// </summary>
-    public void PulseKeys(string topic, TimeSpan window, string field, IEnumerable<JsonNode> keys, string change = "updated")
+    /// <param name="truncated">The changed keys are not all known (a full reindex): the event says so and pages reload.</param>
+    public void PulseKeys(string topic, TimeSpan window, string field, IEnumerable<JsonNode> keys, string change = "updated", bool truncated = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topic); ArgumentNullException.ThrowIfNull(keys);
         bool start;
@@ -95,6 +96,7 @@ public sealed class EventStream
             start = !_batches.TryGetValue(topic, out var batch);
             if (batch is null) _batches[topic] = batch = new Batch(field);
             batch.Changes.Add(change);
+            if (truncated) batch.Truncated = true;
             foreach (var key in keys)
             {
                 var text = key.ToJsonString();
@@ -119,8 +121,8 @@ public sealed class EventStream
     public void Debounce(string topic, TimeSpan window, string change = "updated") => PulseKeys(topic, window, "", [], change);
 
     /// <summary><see cref="PulseKeys"/> with entry ids (<c>entry_ids</c>).</summary>
-    public void PulseEntries(string topic, TimeSpan window, IEnumerable<long> entryIds, string change = "updated") =>
-        PulseKeys(topic, window, "entry_ids", entryIds.Where(id => id > 0).Select(id => (JsonNode)JsonValue.Create(id)), change);
+    public void PulseEntries(string topic, TimeSpan window, IEnumerable<long> entryIds, string change = "updated", bool truncated = false) =>
+        PulseKeys(topic, window, "entry_ids", entryIds.Where(id => id > 0).Select(id => (JsonNode)JsonValue.Create(id)), change, truncated);
 
     /// <summary>Events after <paramref name="lastId"/> still held, oldest first; null when some were already dropped.</summary>
     public IReadOnlyList<AppEvent>? Since(long lastId)

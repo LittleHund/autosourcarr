@@ -597,7 +597,7 @@ async function refreshSparseEntryMetadataOnce(){
     // .some() stopped at the first changed entry, leaving the rest of this
     // successful response unapplied until many more HTTP polls had completed.
     let structuralChanged=false;
-    for(const summary of (r.items||[]))structuralChanged=patchCompactSummary(summary)||structuralChanged;
+    for(const summary of (Array.isArray(r?.items)?r.items:[]))structuralChanged=patchCompactSummary(summary)||structuralChanged;
     // Cover-ready changes update <img> elements directly. Rebuild a large list only
     // when text/structure actually changed, and never while the user is interacting
     // with an inspector/modal.
@@ -2592,6 +2592,7 @@ function renderTableRows(table,header,rows){
 function renderMatrix(kind='matrix'){
   if(kind==='subbed'&&globalThis.AutoSourcarrLibrary?.hasData())return globalThis.AutoSourcarrLibrary.render();
   const d=matrixDataset(kind); if(!d)return;
+  normalizeMatrixPayload(d);
   const c=matrixControls(kind);
   const enabledVariants=d.sources.filter(s=>s.enabled_language&&(s.enabled_search||s.enabled_chapters));
   const enabled=groupSources(enabledVariants);
@@ -2743,7 +2744,7 @@ function loadMatrixView(kind,{render=true}={}){
   const url='/api/v1/matrix?'+(kind==='subbed'?'subbed=true&':'')+'search='+encodeURIComponent(query)+'&limit='+limit+'&include_chapter_stats=false'+(sourceId?'&source_id='+encodeURIComponent(sourceId):'');
   const request=(async()=>{
     try{
-      const data=await api(url,{timeoutMs:15000});
+      const data=normalizeMatrixPayload(await api(url,{timeoutMs:15000}));
       if(!current())return data;
       const previous=matrixDataset(kind);
       preserveMatrixChapterStats(data,previous);
@@ -2768,6 +2769,15 @@ function loadMatrixView(kind,{render=true}={}){
 // paged by the server and keep one bounded answer (500).
 const MATRIX_PAGE=50,MATRIX_MAX=500;
 const matrixPaging={loaded:MATRIX_PAGE,nextCursor:null,loading:null,paged:false};
+// A2: list fields of Matrix/library responses are arrays by contract; anything else (an object such as {} from an
+// older or failing host, null, a string) reads as an empty list. Normalised in place, so dataset identity is kept.
+const MATRIX_LIST_FIELDS=['entries','sources','matches','variants','discovery_outcomes'];
+function normalizeMatrixPayload(data){
+  if(!data||typeof data!=='object')return {entries:[],sources:[],matches:[],variants:[],discovery_outcomes:[]};
+  for(const field of MATRIX_LIST_FIELDS)if(!Array.isArray(data[field]))data[field]=[];
+  if(data.subscription&&typeof data.subscription==='object'&&'entry_ids' in data.subscription&&!Array.isArray(data.subscription.entry_ids))data.subscription.entry_ids=[];
+  return data;
+}
 function matrixPaged(kind,query,sourceId){return kind==='matrix'&&!String(query||'').trim()&&!sourceId;}
 function matrixPageLimit(){return Math.min(MATRIX_MAX,Math.max(MATRIX_PAGE,Math.ceil(Number(matrixPaging.loaded||0)/MATRIX_PAGE)*MATRIX_PAGE));}
 function noteMatrixPage(data,paged){
@@ -2776,6 +2786,7 @@ function noteMatrixPage(data,paged){
   updateMatrixLoadMore();
 }
 function mergeMatrixPage(base,page){
+  base=normalizeMatrixPayload(base);page=normalizeMatrixPayload(page);
   const seen=new Set((base.entries||[]).map(e=>Number(e.id)));
   const fresh=(page.entries||[]).filter(e=>!seen.has(Number(e.id)));
   const added=new Set(fresh.map(e=>Number(e.id)));
@@ -3369,7 +3380,7 @@ async function loadDuplicates(focusId=null,{render=true,quiet=false}={}){
   let incoming=await api('/api/v1/duplicates',{timeoutMs:8000,suppressClientError:true});
   if(serial!==duplicateLoadSerial||revision!==duplicateViewRevision)return duplicateData;
   if(incoming.pending||incoming.stale){
-    let groups=incoming.groups||[];
+    let groups=Array.isArray(incoming.groups)?incoming.groups:[];
     for(const review of duplicateConfirmedReviews.values())groups=pruneDuplicateReviewGroups(groups,review.left,review.right,review.decision);
     incoming={...incoming,groups};
   }else duplicateConfirmedReviews.clear();

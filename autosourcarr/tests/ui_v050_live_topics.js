@@ -32,6 +32,9 @@ test('entry metadata follows topic catalogue for the entries on screen only',()=
   assert.equal(meta.filter(ev('catalogue',{change:'metadata',entry_ids:[11],truncated:false})),true);
   assert.equal(meta.filter(ev('catalogue',{change:'titles',entry_ids:[99],truncated:false})),false,'Changes of entries not on screen are ignored');
   assert.equal(meta.filter(ev('catalogue',{change:'updated',entry_ids:[99],truncated:true})),true,'A truncated list may include ours');
+  assert.equal(meta.filter(ev('catalogue',{change:'tags',entry_ids:[12],truncated:false})),true,'Tag changes carry entry ids too');
+  assert.equal(meta.filter(ev('catalogue',{change:'tags',entry_ids:[],truncated:true})),true,'A truncated tag event touches every entry');
+  assert.equal(meta.filter(ev('catalogue',{change:'tags'})),true,'An event without an id list is treated as touching everything');
   h.context.sparse=[];assert.equal(meta.when(),false,'No sparse entries on screen: nothing to re-read');
   const covers=h.sub('entry-covers');assert.deepEqual([...covers.topics],['jobs'],'Cover files have no topic: job outcomes stand in');
   assert.equal(covers.filter(ev('jobs',{change:'progress'})),false);assert.equal(covers.filter(ev('jobs',{change:'completed'})),true);
@@ -65,6 +68,8 @@ test('source pages use source-health, orphans, repairs and sources topics',()=>{
   assert.match(repairs,/name:'source-repairs',topics:\['repairs','tasks','sources'\]/);
   assert.match(services,/name:'internal-services',topics:\['sources','connections','tasks'\]/);
   assert.match(workbench,/name:'source-browser',topics:\['sources','connections'\]/);
+  assert.ok(health.includes("hint:globalThis.AutoSourcarrLive?.hintButton?.(()=>byId('sourceHealthStatus'))"),'Source health shows an Updated hint while a refresh waits');
+  assert.ok(repairs.includes("hint:globalThis.AutoSourcarrLive?.hintButton?.(()=>byId('sourceRepairStatus'))"),'and so does source repairs');
 });
 
 test('no re-check timers remain for library membership, duplicate membership or the orphan inventory',()=>{

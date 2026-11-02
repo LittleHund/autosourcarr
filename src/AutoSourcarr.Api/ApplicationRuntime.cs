@@ -97,7 +97,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         Tasks.Changed += () => Events.Pulse("tasks", TimeSpan.FromMilliseconds(250));
         Errors.Changed += () => Events.Pulse("errors", TimeSpan.FromMilliseconds(500));
         Jobs = new(Tasks, Events, Errors);
-        SourceResults = new(() => Settings);
+        // A failure while the source engine is not ready (a host restart during discovery) never counts (hard rule 3).
+        SourceResults = new(() => Settings, engineReady: () => _source is not { } engine || engine.Cached().Ready);
         SourceResults.Changed += id => Events.PulseKeys("source-health", LiveWindow, "source_ids", [JsonValue.Create(id)!], "results");
     }
 
@@ -288,9 +289,11 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     return AutoSourcarr.Core.Sources.Inventory.SourceOrphans.MaintainedVersion(rows, package, configured);
                 });
             domainRepair.ReportWritten = package => owner.Events.PulseKeys("repairs", LiveWindow, "packages", [JsonValue.Create(package)!], "report");
+            // Hard rule 6: one store of the user's Fixed verdicts, shown in Tasks → Repairs and Sources → Health (audit A10).
+            var repairConfirmations = new AutoSourcarr.Core.Repair.RepairConfirmations(maintenanceRoot);
             var maintenance = new AutoSourcarr.Core.Sources.Inventory.SourceMaintenanceState(maintenanceRoot, startup.ConfigurationRoot);
             owner._health = new SourceHealthCoordinator(healthStore, owner._source.Client, owner.Io, owner.Lanes,
-                owner.Tasks, new NoRepairObservations(), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
+                owner.Tasks, new RepairConfirmationObservations(repairConfirmations, domainRepair), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
                 onWorking: package => domainRepair.QueueKeepLastWorking(package, error => owner.Errors.Record("Source repair",
                     "Keeping the last working jar of " + package + " failed: " + error.Message, "source-last-working|" + error.GetType().Name)));
             if (useHost)
@@ -419,7 +422,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     ReadInstalledJar = (package, token) => owner._source.Client.ReadExtensionJarAsync(package, token),
                     Raws = rawRoutes,
                     // Hard rule 6: the user-confirmed "Fixed" verdicts survive restarts (Tasks → Repairs).
-                    Confirmations = new AutoSourcarr.Core.Repair.RepairConfirmations(maintenanceRoot),
+                    Confirmations = repairConfirmations,
                 },
                 Sources = new SourceServices
                 {

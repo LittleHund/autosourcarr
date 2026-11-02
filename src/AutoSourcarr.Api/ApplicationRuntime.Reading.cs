@@ -77,6 +77,8 @@ internal sealed partial class ApplicationRuntime
             // The Subbed view needs MAIN_SUWAYOMI_URL (read at startup, like the maintenance routes).
             Subscription = string.IsNullOrWhiteSpace(owner.Settings.MainSuwayomiUrl) ? null : new Func<JsonObject>(library.CachedSubbedPayload),
             ClearCovers = keys => catalogue.Covers.ClearKeys(keys),
+            // The Matrix shows each entry's stored discovery outcome per source (0.4.5 source_discovery_outcomes).
+            DiscoveryOutcomes = ids => ChaptersV1Endpoints.StoredDiscoveryOutcomes(database, ids),
             HydrateDetails = (sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId),
             ScheduleIdentity = id => identity.Schedule(id),
         };
@@ -113,7 +115,9 @@ internal sealed partial class ApplicationRuntime
         _ = new OrphanIdentityRepair(database, () => owner.Settings, identity.ResolveAsync, () => providers.Current().Count > 0).Schedule(owner.Jobs);
         var tagCatalogue = new TagCatalogue(database, writeGate, decisions)
         {
-            Changed = () => { owner._duplicates?.Invalidate(); owner.Events.PulseEntries("catalogue", LiveWindow, [], "tags"); },
+            Changed = () => owner._duplicates?.Invalidate(),
+            // Live topic catalogue: the entries with a reviewed tag, or truncated (reload) when they are not all known.
+            EntriesChanged = ids => owner.Events.PulseEntries("catalogue", LiveWindow, ids ?? [], "tags", truncated: ids is null),
         };
         var tagStore = new NativeTagStore(database, writeGate);
         if (!tagCatalogue.IndexCurrent()) _ = tagCatalogue.QueueReindex(owner.Jobs, tagStore, "automatic");

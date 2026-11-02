@@ -28,6 +28,10 @@ public sealed class TagCatalogue(SqliteDatabase database, object sourceWriteGate
 
     /// <summary>After a review changed tag equivalence (duplicate snapshot and search caches).</summary>
     public Action? Changed { get; init; }
+    /// <summary>The entries whose tags may read differently now (live topic catalogue); null when unknown (a full reindex).</summary>
+    public Action<IReadOnlyList<long>?>? EntriesChanged { get; init; }
+    /// <summary>The most entry ids one tag change names; more are reported as unknown.</summary>
+    internal const int MaximumChangedEntries = 500;
 
     /// <summary>list_tags: one page of tags (search over "namespace name"), with canonical id/name, aliases and record/entry counts.</summary>
     public JsonObject List(string search = "", int limit = 100, int offset = 0)
@@ -141,6 +145,14 @@ public sealed class TagCatalogue(SqliteDatabase database, object sourceWriteGate
                 return 0;
             });
         Changed?.Invoke();
+        if (EntriesChanged is { } entriesChanged)
+        {
+            // The entries with either tag on an active record (bounded; more than the cap is "unknown").
+            var affected = database.Read(DatabaseFile.Catalog, s => s.Query("WITH active AS (" + Active + ") SELECT DISTINCT a.entry_id FROM source_record_tags t "
+                + "JOIN active a USING(source_id,source_manga_id) WHERE t.tag_id IN ($l,$r) ORDER BY a.entry_id LIMIT $cap",
+                ("$l", leftId), ("$r", rightId), ("$cap", MaximumChangedEntries + 1)).Select(row => row.Integer("entry_id")).ToArray());
+            entriesChanged(affected.Length > MaximumChangedEntries ? null : affected);
+        }
         return new JsonObject { ["left_id"] = leftId, ["right_id"] = rightId, ["decision"] = decision };
     }
 
@@ -182,6 +194,7 @@ public sealed class TagCatalogue(SqliteDatabase database, object sourceWriteGate
                 ("$k", IndexVersionKey), ("$v", IndexVersion)));
             job.Result("Indexed " + count.ToString(CultureInfo.InvariantCulture) + " saved source records");
             Changed?.Invoke();
+            EntriesChanged?.Invoke(null);
             return Task.CompletedTask;
         }, origin: origin, title: "Index source tags");
         return new JsonObject { ["state"] = "queued", ["queued"] = !handle.Merged, ["already_running"] = handle.Merged, ["task_id"] = handle.Id };

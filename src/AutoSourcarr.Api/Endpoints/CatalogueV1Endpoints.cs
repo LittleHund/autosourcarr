@@ -97,7 +97,7 @@ internal static class CatalogueV1Endpoints
                 return Answer(new JsonObject { ["items"] = Array(rows), ["next_cursor"] = null, ["has_more"] = false });
             }))
             .WithName("listCatalogueEntries")
-            .WithSummary("Catalogue entries as cards (PERF-5 page-first): newest first in pages of 'limit' (default 50, at most 1000) continued with 'cursor' (next_cursor of the previous page), or matching the optional query 'search' (local titles only, one page).")
+            .WithSummary("Catalogue entries as cards (PERF-5 page-first): newest added first (by id, stable while paging) in pages of 'limit' (default 50, at most 1000) continued with 'cursor' (next_cursor of the previous page), or matching the optional query 'search' (local titles only, one page).")
             .Produces<JsonObject>(StatusCodes.Status200OK)
             .Produces<ProblemResponse>(StatusCodes.Status422UnprocessableEntity);
 

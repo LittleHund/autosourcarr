@@ -177,6 +177,59 @@ test('precise topics: every server topic is listened to and its keys reach the f
   assert.equal(view.calls.length,1);assert.deepEqual([...view.calls[0].events[0].data.entry_ids],[7,8]);
 });
 
+function domHarness(){
+  let now=1000;const listeners={};
+  class El{
+    constructor(tag,type=''){this.tagName=tag;this.type=type;this.parent=null;this.after=[];this.removed=false;this.clicks=[];this.attributes={};}
+    contains(node){for(let n=node;n;n=n.parent)if(n===this)return true;return false;}
+    insertAdjacentElement(where,node){assert.equal(where,'afterend');this.after.push(node);node.anchor=this;}
+    remove(){this.removed=true;if(this.anchor)this.anchor.after=this.anchor.after.filter(n=>n!==this);}
+    addEventListener(type,fn){this.clicks.push(fn);}
+    setAttribute(k,v){this.attributes[k]=v;}
+    click(){for(const fn of this.clicks)fn();}
+  }
+  const body=new El('BODY');body.classList={contains:()=>false};
+  const document={body,activeElement:body,createElement:tag=>new El(tag.toUpperCase()),
+    addEventListener:(type,fn)=>{(listeners[type]||=[]).push(fn);},removeEventListener(){}};
+  const context={console:{debug(){},error(){}},document,Date:{now:()=>now}};
+  context.window=context;vm.createContext(context);vm.runInContext(source,context);
+  const panel=new El('SECTION');const child=(tag,type)=>{const el=new El(tag,type);el.parent=panel;return el;};
+  const fire=(type,target)=>{for(const fn of listeners[type]||[])fn({target,isTrusted:true});};
+  return {live:context.AutoSourcarrLive,document,panel,child,fire,advance:ms=>{now+=ms;},El};
+}
+
+test('UI-12: a focused select or checkbox holds a refresh only while it is being operated',()=>{
+  const h=domHarness();const select=h.child('SELECT'),checkbox=h.child('INPUT','checkbox'),text=h.child('INPUT','text'),area=h.child('TEXTAREA');
+  h.document.activeElement=text;assert.equal(h.live.userEditing(h.panel),true,'A focused text field holds');
+  h.document.activeElement=area;assert.equal(h.live.userEditing(h.panel),true);
+  h.document.activeElement=select;assert.equal(h.live.userEditing(h.panel),false,'A select that only kept focus after use does not hold');
+  h.fire('pointerdown',select);assert.equal(h.live.userEditing(h.panel),true,'An open select holds');
+  h.fire('change',select);h.advance(999);assert.equal(h.live.userEditing(h.panel),true,'Briefly after its change');
+  h.advance(2);assert.equal(h.live.userEditing(h.panel),false,'then no longer, although it still has focus');
+  h.fire('pointerdown',select);h.advance(10001);assert.equal(h.live.userEditing(h.panel),false,'An abandoned open state expires');
+  h.document.activeElement=checkbox;h.fire('keydown',checkbox);assert.equal(h.live.userEditing(h.panel),true);
+  h.fire('input',checkbox);h.advance(1001);assert.equal(h.live.userEditing(h.panel),false,'Checkboxes behave like selects');
+  const outside=new h.El('INPUT','text');h.document.activeElement=outside;assert.equal(h.live.userEditing(h.panel),false,'Focus outside the panel does not hold it');
+});
+
+test('UI-12: the hint button appears after its anchor, refreshes on click and goes away',()=>{
+  const h=domHarness();const anchor=new h.El('P');let runs=0;
+  const hint=h.live.hintButton(()=>anchor);
+  hint(true,()=>{runs++;});hint(true,()=>{runs++;});
+  assert.equal(anchor.after.length,1,'One button, placed after the status line (never inside its rewritten text)');
+  const button=anchor.after[0];assert.equal(button.tagName,'BUTTON');assert.match(button.textContent,/Updated .* refresh/);
+  button.click();assert.equal(runs,1);assert.equal(anchor.after.length,0);
+  hint(true,()=>{runs++;});assert.equal(anchor.after.length,1);hint(false);assert.equal(anchor.after.length,0);
+});
+
+test('UI-12: a held refresh shows the hint and a click on it refreshes at once',async()=>{
+  const h=harness();h.live.start();h.last().open();const view=recorder();let shown=null;
+  h.live.subscribe({name:'held',topics:['source-health'],refresh:view.refresh,busy:()=>true,hint:(on,run)=>{shown=on?run:null;}});
+  h.last().send('source-health',1,{change:'results',source_ids:['a']});await h.clock.advance(5000);
+  assert.equal(view.calls.length,0);assert.equal(typeof shown,'function','The hint is offered');
+  await shown();assert.equal(view.calls.length,1,'Clicking it refreshes without waiting for the user to leave the control');
+});
+
 test('raw handlers: on(topic) gets each event at once and can be removed',async()=>{
   const h=harness();h.live.start();h.last().open();const seen=[];
   const off=h.live.on('jobs',data=>seen.push(data.id));h.last().send('jobs',1,{id:'a'});off();h.last().send('jobs',2,{id:'b'});

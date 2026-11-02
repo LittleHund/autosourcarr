@@ -12,7 +12,8 @@
  * stream keeps failing, a slow poll tick stands in (and the stream is still retried now and then).
  *
  * Public: AutoSourcarrLive.subscribe({name,topics,refresh,when,filter,busy,hint,delayMs}) -> {unsubscribe,refreshNow},
- * on(topic,handler) -> off, start(), stop(), configure({getToken}), status(), userEditing(container), create(env).
+ * on(topic,handler) -> off, start(), stop(), configure({getToken}), status(), userEditing(container), hintButton(anchor),
+ * create(env).
  */
 (function(root){
   'use strict';
@@ -265,16 +266,53 @@
       _dispatch:dispatch};
   }
 
-  /** UI-12: true while the user is typing in, or holding a control of, the given container (or a modal is open). */
+  // UI-12: what counts as "the user is editing". Typing fields count for as long as they have focus. A choice control
+  // (select, checkbox, radio, range...) that merely keeps focus after use does not: it counts only while it is being
+  // operated (pointer or key down on it, until its change, at most CHOICE_OPEN_MS) and for CHOICE_SETTLE_MS after.
+  const TEXT_INPUTS=new Set(['','text','search','email','url','tel','password','number','date','datetime-local','month','time','week']);
+  const CHOICE_OPEN_MS=10000,CHOICE_SETTLE_MS=1000;
+  const choice={target:null,until:0};
+  const clock=()=>Date.now();
+  const isTyping=element=>!!element&&(element.isContentEditable||element.tagName==='TEXTAREA'||(element.tagName==='INPUT'&&TEXT_INPUTS.has(String(element.type||'').toLowerCase())));
+  const isChoice=element=>!!element&&!isTyping(element)&&['INPUT','SELECT'].includes(element.tagName);
+  function trackChoices(doc){
+    if(!doc?.addEventListener||trackChoices.done)return;
+    trackChoices.done=true;
+    const opened=event=>{if(isChoice(event.target)){choice.target=event.target;choice.until=clock()+CHOICE_OPEN_MS;}};
+    const settled=event=>{if(isChoice(event.target)){choice.target=event.target;choice.until=clock()+CHOICE_SETTLE_MS;}};
+    for(const type of ['pointerdown','keydown'])doc.addEventListener(type,opened,{capture:true,passive:true});
+    for(const type of ['input','change'])doc.addEventListener(type,settled,{capture:true,passive:true});
+    doc.addEventListener('focusout',event=>{if(event.target===choice.target)choice.until=Math.min(choice.until,clock()+CHOICE_SETTLE_MS);},{capture:true,passive:true});
+  }
+  /** UI-12: true while the user is typing in, or operating a control of, the given container (or a modal is open). */
   function userEditing(container){
     const doc=root.document;if(!doc)return false;
+    trackChoices(doc);
     if(doc.body?.classList?.contains('modalOpen'))return true;
     const active=doc.activeElement;
     if(!active||active===doc.body||!container?.contains?.(active))return false;
-    return active.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(active.tagName);
+    if(isTyping(active))return true;
+    return isChoice(active)&&choice.target===active&&clock()<choice.until;
+  }
+  /**
+   * A visible "Updated - refresh" button placed right after `anchor` (never inside it: status text is rewritten),
+   * for subscribe({hint}). Shown while an update waits on the user; a click runs the held refresh at once.
+   */
+  function hintButton(anchor){
+    let button=null;
+    return (on,run)=>{
+      const doc=root.document;const target=typeof anchor==='function'?anchor():anchor;
+      if(!on){button?.remove?.();button=null;return;}
+      if(button||!doc||!target?.insertAdjacentElement)return;
+      button=doc.createElement('button');button.type='button';button.className='liveUpdateHint';
+      button.textContent='Updated — refresh';button.setAttribute?.('aria-label','New data is available. Refresh this view');
+      button.addEventListener('click',()=>{const own=button;button=null;own?.remove?.();run?.();});
+      target.insertAdjacentElement('afterend',button);
+    };
   }
 
   const shared=root.document?create():null;
-  root.AutoSourcarrLive=shared?{...shared,create}:{create,userEditing};
-  if(typeof module==='object'&&module.exports)module.exports={create,userEditing};
+  if(root.document)trackChoices(root.document);
+  root.AutoSourcarrLive=shared?{...shared,create,hintButton}:{create,userEditing,hintButton};
+  if(typeof module==='object'&&module.exports)module.exports={create,userEditing,hintButton};
 })(typeof window!=='undefined'?window:globalThis);

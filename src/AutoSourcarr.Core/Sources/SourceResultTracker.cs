@@ -10,9 +10,11 @@ namespace AutoSourcarr.Core.Sources;
 /// source. An answer clears the source's failures; SOURCE_FAILURE_THRESHOLD real failures in a row pause it for
 /// SOURCE_COOLDOWN_SECONDS (a challenge, rate limit or access refusal pauses at once; a CAPTCHA for at least 5 minutes).
 /// Hard rule 3: a local timeout, a cancelled or expired local deadline and a capacity deferral are never evidence of a
-/// source outage and are ignored here. In memory only, like 0.4.5: a restart starts clean.
+/// source outage and are ignored here. Neither is a failure of the app's own link to the source engine (the source
+/// host on 127.0.0.1 or the configured Suwayomi: connection refused or reset, the engine unavailable or restarting), nor
+/// anything that fails while the engine is not ready (<paramref name="engineReady"/>). In memory only, like 0.4.5.
 /// </summary>
-public sealed class SourceResultTracker(Func<AutoSourcarrSettings> settings, TimeProvider? clock = null)
+public sealed class SourceResultTracker(Func<AutoSourcarrSettings> settings, TimeProvider? clock = null, Func<bool>? engineReady = null)
 {
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly ConcurrentDictionary<string, (int Failures, DateTimeOffset Until, string Error, string Kind)> _failures = new(StringComparer.Ordinal);
@@ -20,18 +22,34 @@ public sealed class SourceResultTracker(Func<AutoSourcarrSettings> settings, Tim
     /// <summary>Raised when a source becomes paused or recovers (live UI topic <c>source-health</c>).</summary>
     public event Action<string>? Changed;
 
+    /// <summary>Text the source host and the engine link use while the engine itself is not answering.</summary>
+    private static readonly string[] EngineLinkMarkers =
+    [
+        "connection refused", "connection reset", "actively refused", "no connection could be made", "an existing connection was forcibly closed",
+        "source host is restarting", "source host is not running", "source host did not start", "source engine is not ready",
+        "source engine is restarting", "source engine unavailable", "source host unavailable", "127.0.0.1:", "localhost:", "[::1]:",
+    ];
+
     /// <summary>Whether this error says nothing about the source itself (hard rule 3).</summary>
     public static bool IsLocal(Exception error) => error switch
     {
+        // SourceEngineUnavailableException is a SourceWorkDeferredException.
         SourceWorkDeferredException or TimeoutException or OperationCanceledException => true,
         AggregateException aggregate => aggregate.InnerExceptions.Count > 0 && aggregate.InnerExceptions.All(IsLocal),
-        _ => SourceFailures.Kind(error) is "deferred" or "timeout",
+        // A transport failure has no HTTP status: the app could not reach its source engine (the engine reports a site's
+        // own failure as an answer with its message), so it is never the source's fault.
+        HttpRequestException { StatusCode: null } => true,
+        System.Net.Sockets.SocketException => true,
+        IOException { InnerException: System.Net.Sockets.SocketException } => true,
+        _ => SourceFailures.Kind(error) is "deferred" or "timeout"
+            || EngineLinkMarkers.Any(marker => error.Message.Contains(marker, StringComparison.OrdinalIgnoreCase))
+            || error.InnerException is { } inner && IsLocal(inner),
     };
 
     public void Record(string sourceId, Exception? error)
     {
         if (string.IsNullOrEmpty(sourceId)) return;
-        if (error is not null && IsLocal(error)) return;
+        if (error is not null && (IsLocal(error) || engineReady?.Invoke() == false)) return;
         if (error is null)
         {
             if (_failures.TryRemove(sourceId, out var previous) && previous.Until > _clock.GetUtcNow()) Changed?.Invoke(sourceId);

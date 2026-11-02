@@ -8,7 +8,11 @@
   'use strict';
   const KEY = 'autosourcarr.navigation.v1';
   const VERSION = 1;
-  const MAX_BYTES = 32768;
+  // Room for a full library cursor chain (50 cursors of up to MAX_CURSOR) next to the rest of the view state.
+  const MAX_BYTES = 262144;
+  // The server accepts library cursors up to 2048 characters (LibraryDownloadsV1Endpoints' cursor length check); a
+  // cursor carries the sort key, which for title sorting is the whole lower-cased title.
+  const MAX_CURSOR = 2048;
   const TABS = new Set(['browse','subbed','matrix','duplicates','mixed-entries','manual-actions','sources','about','imports','attention','tasks','settings','statistics']);
   const CONTROL_IDS = [
     'browseSearch','browseSource','browseConnectedSource','browseLanguage','browseMatchCount','browseSort',
@@ -28,7 +32,7 @@
   const DETAIL_SECTIONS = new Set(['titles','tags','metadata','matches','chapters','history','served']);
   const ENTRY_TABS = ['browse','matrix','subbed'];
   // Library cursors are opaque server tokens: printable ASCII only, bounded.
-  const cursorText = value => typeof value === 'string' && /^[\x21-\x7e]{0,512}$/.test(value) ? value : '';
+  const cursorText = value => typeof value === 'string' && value.length<=MAX_CURSOR && /^[\x21-\x7e]*$/.test(value) ? value : '';
   const own = (object,key) => Object.prototype.hasOwnProperty.call(object,key);
   const plain = value => value && typeof value === 'object' && !Array.isArray(value);
   const text = (value,max=300) => typeof value === 'string' ? value.slice(0,max) : '';
@@ -109,7 +113,12 @@
     if(typeof matrixPaging!=='undefined')result.matrixLoaded=matrixPaging.loaded;
     return normalize(result);
   }
-  function save(){if(!started || applying)return;saved=capture();try{sessionStorage.setItem(KEY,JSON.stringify(saved));}catch(_){}}
+  function save(){
+    if(!started || applying)return;saved=capture();
+    // Never store more than read() accepts: drop the library page chain rather than lose the whole view state.
+    let json=JSON.stringify(saved);if(json.length>MAX_BYTES){saved.library=null;json=JSON.stringify(saved);}
+    try{sessionStorage.setItem(KEY,json);}catch(_){}
+  }
 
   function restoreControl(key,value,{placeholder=false}={}) {
     const control=element(key);if(!control)return;

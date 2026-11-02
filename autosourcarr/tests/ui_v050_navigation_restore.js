@@ -82,6 +82,24 @@ test('normalize keeps the open entry, library page and new filters, and rejects 
   assert.equal(navigation.normalize({version:1,library:{signature:'x',cursor:'c\n',previous:[]}}).library.cursor,'');
 });
 
+test('A12: library cursors with long title keys survive a refresh (server accepts up to 2048 characters)',()=>{
+  // The library cursor is base64url of {stamp,key,id,total}; with title sorting the key is the lower-cased title.
+  const cursor=title=>Buffer.from(JSON.stringify({stamp:'s1',key:title.toLowerCase(),id:4711,total:12000})).toString('base64url');
+  const long=cursor('A Very Long Light Novel Style Title '.repeat(40));
+  assert.ok(long.length>512&&long.length<=2048,'fixture is longer than the old 512 cap: '+long.length);
+  const {navigation}=harness(null);
+  const kept=navigation.normalize({version:1,library:{signature:'sig',cursor:long,previous:['',long]}});
+  assert.equal(kept.library.cursor,long);assert.equal(kept.library.previous[1],long);
+  const tooLong=cursor('x'.repeat(1600));assert.ok(tooLong.length>2048);
+  assert.equal(navigation.normalize({version:1,library:{signature:'sig',cursor:tooLong,previous:[]}}).library.cursor,'','Beyond the server limit the cursor is dropped');
+  const h=harness(null);boot(h);
+  h.context.libraryPosition={signature:'sig',cursor:long,previous:Array.from({length:50},()=>long)};
+  h.navigation.save();
+  const stored=h.session.get(KEY);assert.ok(stored.length>32768,'A full chain of long cursors is stored');
+  const again=harness(JSON.parse(stored));boot(again);
+  assert.equal(again.libraryCalls[0].cursor,long,'and restored after the refresh');assert.equal(again.libraryCalls[0].previous.length,50);
+});
+
 test('save records the open entries, the library position and the health filter',()=>{
   const h=harness(null);boot(h);h.show('subbed');
   h.context.activeInspector.subbed=42;h.context.browseOpen=true;h.context.browseState.selectedEntryId=9;
@@ -148,7 +166,7 @@ test('library controller resumes the saved cursor and starts again at page 1 whe
   const context={console,JSON,Number,Object,Array,Map,Promise,URLSearchParams,AbortController,
     document:{documentElement:{dataset:{}},getElementById:node,addEventListener(){}},Option:class extends Node{constructor(text,value){super('','option');this.textContent=text;this.value=value;}},
     workbenchState:{libraryScope:'all'},subbedData:null,
-    api:async url=>{requests.push(new URL('http://x'+url).searchParams);return {entries:[],sources:[],total:0,next_cursor:'',subscription:{ok:true}};},
+    api:async url=>{requests.push(new URL('http://x'+url).searchParams);return context.reply||{entries:[],sources:[],total:0,next_cursor:'',subscription:{ok:true}};},
     esc:String,apiV1:()=>({}),loadTasks:async()=>{},toast(){},queueMicrotask:fn=>fn()};
   context.window=context;vm.createContext(context);vm.runInContext(libraryController,context);
   const library=context.AutoSourcarrLibrary;
@@ -160,6 +178,9 @@ test('library controller resumes the saved cursor and starts again at page 1 whe
   library.restorePosition({signature,cursor:'c3',previous:['','c2']});node('subbedSearch').value='naruto';await library.load();
   assert.equal(requests.at(-1).get('cursor'),'','Different filters start at page 1');assert.equal(library.position(),null);
   library.restorePosition(null);assert.equal(library.position(),null);
+  // A2: object list fields from the server read as empty lists instead of throwing.
+  context.reply={entries:{},sources:{},matches:{},total:0,next_cursor:'',subscription:{ok:true}};node('subbedSearch').value='';
+  await library.load({reset:true});assert.equal(Array.isArray(context.subbedData.entries)&&context.subbedData.entries.length,0);assert.match(node('subbedCount').textContent,/^0 shown/);
 });
 
 (async()=>{

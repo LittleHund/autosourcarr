@@ -24,6 +24,8 @@
     try{
       const result=await api('/api/v1/library?'+new URLSearchParams({...values,cursor}),{signal:controller.signal,timeoutMs:15000,suppressClientError:true});
       if(own!==generation||controller.signal.aborted)return;
+      // A2: list fields are arrays by contract; anything else reads as an empty list.
+      for(const field of ['entries','sources','matches'])if(!Array.isArray(result[field]))result[field]=[];
       payload=result;
       const stats=Object.fromEntries(result.entries.map(row=>[String(row.id),row.library_stats||{}]));
       subbedData={...result,subscription:{...result.subscription,entry_ids:result.entries.map(row=>row.id),stats_by_entry:stats},discovery_outcomes:[]};

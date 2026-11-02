@@ -233,12 +233,15 @@ public sealed partial class DuplicateMatching
                 long id;
                 try
                 {
-                    id = _structure.SplitRecords(canonical, [record], manual: false, "split-duplicate", (_, from, separate) =>
-                        _decisions.Record(new DecisionEvent("split.unbind", actor, [from, separate], [Key(record)], "Unbind automatic match", null, new JsonObject { ["new_entry_id"] = separate })));
+                    // The split, its not-duplicate review and both decision rows commit together (hard rule 1).
+                    id = _structure.SplitRecords(canonical, [record], manual: false, "split-duplicate", (c, from, separate) =>
+                    {
+                        _decisions.Record(new DecisionEvent("split.unbind", actor, [from, separate], [Key(record)], "Unbind automatic match", null, new JsonObject { ["new_entry_id"] = separate }));
+                        ReviewIn(c, from, separate, "not_duplicate", actor, "Unbind automatic matches");
+                    });
                 }
                 catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { continue; }
                 created.Add(id);
-                ReviewLocked(canonical, id, "not_duplicate", actor, "Unbind automatic matches");
             }
             Invalidate();
             return new JsonObject

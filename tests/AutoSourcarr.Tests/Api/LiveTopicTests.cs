@@ -34,6 +34,11 @@ public static class LiveTopicTests
             var big = Drain(subscription, TimeSpan.FromMilliseconds(400)).Single(item => item.Topic == "catalogue");
             Check.Equal(EventStream.MaximumBatchKeys, big.Data["entry_ids"]!.AsArray().Count);
             Check.Equal(true, big.Data["truncated"]!.GetValue<bool>());
+            // Audit A15b: a change whose entries are not all known (a tag reindex) says so instead of naming none.
+            events.PulseEntries("catalogue", TimeSpan.FromMilliseconds(100), [], "tags", truncated: true);
+            var unknown = Drain(subscription, TimeSpan.FromMilliseconds(400)).Single(item => item.Topic == "catalogue");
+            Check.Equal(true, unknown.Data["truncated"]!.GetValue<bool>());
+            Check.Equal("tags", unknown.Data["change"]!.GetValue<string>());
         });
 
         suite.Add("live topics: the app publishes catalogue, source-health, duplicates, imports, orphans and library once per change burst", () =>
@@ -45,7 +50,8 @@ public static class LiveTopicTests
                 // catalogue: the metadata chooser, titles and identity hooks name the entries.
                 for (var i = 0; i < 5; i++) runtime.CatalogueChanged(41, "metadata");
                 runtime.CatalogueChanged(42, "metadata");
-                // source-health: a source paused by repeated real failures (a CAPTCHA pauses at once).
+                // source-health (audit A3): the external engine of this host is not ready (as during a source-host restart), so
+                // even a CAPTCHA reported meanwhile never pauses the source and publishes nothing (hard rule 3).
                 for (var i = 0; i < 3; i++) runtime.SourceResults.Record("9001", new InvalidOperationException("Cloudflare challenge: human verification"));
                 // duplicates: the duplicate list went stale (several invalidations).
                 for (var i = 0; i < 4; i++) runtime.ApiV1!.Duplicates!.Invalidate();
@@ -58,11 +64,12 @@ public static class LiveTopicTests
                 using (var admin = app.Client(Phase11WiringTests.AdminToken)) using (await admin.GetAsync("/api/v1/health")) { }
                 await Task.Delay(50);
                 var received = Drain(subscription, TimeSpan.FromSeconds(2));
-                foreach (var topic in new[] { "catalogue", "source-health", "duplicates", "imports", "orphans", "library" })
+                foreach (var topic in new[] { "catalogue", "duplicates", "imports", "orphans", "library" })
                     Check.Equal(1, received.Count(item => item.Topic == topic));
+                Check.True(!runtime.SourceResults.Paused("9001") && runtime.SourceResults.Snapshot().Count == 0, "nothing counts while the engine is not ready");
+                Check.Equal(0, received.Count(item => item.Topic == "source-health"));
                 var catalogue = received.Single(item => item.Topic == "catalogue");
                 Check.Equal("41,42", string.Join(",", catalogue.Data["entry_ids"]!.AsArray().Select(id => id!.GetValue<long>())));
-                Check.Equal("9001", received.Single(item => item.Topic == "source-health").Data["source_ids"]![0]!.GetValue<string>());
                 Check.Equal("phase11-live", received.Single(item => item.Topic == "imports").Data["import_ids"]![0]!.GetValue<string>());
                 Check.Equal("stale", received.Single(item => item.Topic == "duplicates").Data["change"]!.GetValue<string>());
             }).GetAwaiter().GetResult());
