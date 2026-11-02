@@ -179,6 +179,38 @@ public static class DuplicateTests
             Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM preferred_title_overrides WHERE entry_id=" + reliable.ToString(CultureInfo.InvariantCulture)));
         });
 
+        suite.Add("duplicates: a split and its decision_log row commit in one transaction (a failing log write leaves no split)", () =>
+        {
+            using var f = new DuplicateFixture();
+            var log = new DecisionLog(f.Database);
+            var entry = f.Entry(["The Glass Garden Chronicle"], ["Aoi Sora"], 2018);
+            var wrong = f.Attach(entry, "Swordmaster of the Endless Sky");
+            IDuplicateStructure structure = f.Structure;
+            var entries = f.Scalar("SELECT COUNT(*) FROM entries");
+            try
+            {
+                structure.SplitRecords(entry, [wrong], true, "split-duplicate", (_, original, created) =>
+                {
+                    log.Record(new DecisionEvent("split", Person, [original, created], ["x"], "test"));
+                    throw new InvalidOperationException("log failure after the row was written");
+                });
+                Check.True(false, "the failure must reach the caller");
+            }
+            catch (InvalidOperationException error) when (error.Message.StartsWith("log failure", StringComparison.Ordinal)) { }
+            Check.Equal(entries, f.Scalar("SELECT COUNT(*) FROM entries"));
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM decision_log"));
+            Check.Equal(entry, f.Database.Read(DatabaseFile.Catalog, c => c.Query("SELECT entry_id FROM source_matches WHERE source_id=$p0 AND source_manga_id=$p1 AND active=1 UNION ALL SELECT entry_id FROM source_variants WHERE source_id=$p0 AND source_manga_id=$p1 AND active=1",
+                ("$p0", wrong.SourceId), ("$p1", wrong.MangaId)).Single().Integer("entry_id")));
+            Check.Equal(0L, f.Scalar("SELECT COUNT(*) FROM pending_entry_splits") + f.Scalar("SELECT COUNT(*) FROM duplicate_split_history"));
+
+            // Through the duplicate owner with the real log: the split and its row are both there.
+            var duplicates = new DuplicateMatching(f.Database, f.Gate, f.Structure, f.Evidence.Snapshot, log, () => f.Settings);
+            var split = duplicates.UnmatchRecords(entry, [wrong], Person);
+            var created = N(split["new_entry_id"]);
+            Check.True(created != entry, "split happened");
+            Check.Equal(1L, f.Scalar("SELECT COUNT(*) FROM decision_log WHERE kind='split' AND entries_json LIKE '%" + created.ToString(CultureInfo.InvariantCulture) + "%'"));
+        });
+
         suite.Add("duplicates: unmatch, unbind and redo split records without touching manual ones", () =>
         {
             using var f = new DuplicateFixture();

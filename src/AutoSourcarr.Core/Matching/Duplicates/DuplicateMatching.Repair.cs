@@ -199,8 +199,9 @@ public sealed partial class DuplicateMatching
         {
             var original = Read(c => DuplicateEvidence.Canonical(c, entryId));
             if (!Read(c => Exists(c, original))) throw new KeyNotFoundException("Entry not found");
-            var created = _structure.SplitRecords(original, records.Distinct().ToArray(), manual: true, "split-duplicate");
-            _decisions.Record(new DecisionEvent("split", actor, [original, created], records.Select(Key).Distinct(StringComparer.Ordinal).ToArray(), "Unmatch duplicate records", null, new JsonObject { ["new_entry_id"] = created }));
+            // The decision row commits with the split (same catalogue transaction).
+            var created = _structure.SplitRecords(original, records.Distinct().ToArray(), manual: true, "split-duplicate", (_, from, id) =>
+                _decisions.Record(new DecisionEvent("split", actor, [from, id], records.Select(Key).Distinct(StringComparer.Ordinal).ToArray(), "Unmatch duplicate records", null, new JsonObject { ["new_entry_id"] = id })));
             Invalidate();
             return new JsonObject { ["entry_id"] = original, ["new_entry_id"] = created, ["split_records"] = records.Count };
         }
@@ -230,11 +231,14 @@ public sealed partial class DuplicateMatching
             {
                 canonical = Read(c => DuplicateEvidence.Canonical(c, canonical));
                 long id;
-                try { id = _structure.SplitRecords(canonical, [record], manual: false, "split-duplicate"); }
+                try
+                {
+                    id = _structure.SplitRecords(canonical, [record], manual: false, "split-duplicate", (_, from, separate) =>
+                        _decisions.Record(new DecisionEvent("split.unbind", actor, [from, separate], [Key(record)], "Unbind automatic match", null, new JsonObject { ["new_entry_id"] = separate })));
+                }
                 catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { continue; }
                 created.Add(id);
                 ReviewLocked(canonical, id, "not_duplicate", actor, "Unbind automatic matches");
-                _decisions.Record(new DecisionEvent("split.unbind", actor, [canonical, id], [Key(record)], "Unbind automatic match", null, new JsonObject { ["new_entry_id"] = id }));
             }
             Invalidate();
             return new JsonObject
@@ -299,7 +303,11 @@ public sealed partial class DuplicateMatching
             foreach (var record in candidates.Distinct())
             {
                 current = Read(c => DuplicateEvidence.Canonical(c, current));
-                try { created.Add(_structure.SplitRecords(current, [record], manual: false, "redo-anchor")); }
+                try
+                {
+                    created.Add(_structure.SplitRecords(current, [record], manual: false, "redo-anchor", (_, from, separate) =>
+                        _decisions.Record(new DecisionEvent("split.redo-anchor", actor, [from, separate], [Key(record)], "Redo: automatic record moved off the clean anchor"))));
+                }
                 catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { }
             }
             var affected = Read(c => created.Prepend(current).Select(id => DuplicateEvidence.Canonical(c, id)).Distinct().Where(id => Exists(c, id)).ToArray());
@@ -481,12 +489,17 @@ public sealed partial class DuplicateMatching
                     if (bestTitle >= 0.70 || bestTitle >= 0.35 && bestDescription >= 0.93) continue;
                     var current = Read(c => DuplicateEvidence.Canonical(c, canonical));
                     long created;
-                    try { created = _structure.SplitRecords(current, group.Select(x => x.Key).ToArray(), manual: false, "split-duplicate"); }
+                    try
+                    {
+                        created = _structure.SplitRecords(current, group.Select(x => x.Key).ToArray(), manual: false, "split-duplicate", (c, from, separate) =>
+                        {
+                            c.Execute("DELETE FROM identity_links WHERE entry_id IN ($p0,$p1) AND locked=0", P(from, separate));
+                            _decisions.Record(new DecisionEvent("split.repair", actor, [from, separate], group.Select(x => Key(x.Key)).ToArray(), "Unsafe automatic merge repair: records are clearly a different work"));
+                        });
+                    }
                     catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { continue; }
                     groupsSplit++; recordsSplit += group.Count; changed = true;
-                    Write(c => c.Execute("DELETE FROM identity_links WHERE entry_id IN ($p0,$p1) AND locked=0", P(current, created)));
                     Metadata([current, created]);
-                    _decisions.Record(new DecisionEvent("split.repair", actor, [current, created], group.Select(x => Key(x.Key)).ToArray(), "Unsafe automatic merge repair: records are clearly a different work"));
                 }
                 if (changed) repaired++;
             }

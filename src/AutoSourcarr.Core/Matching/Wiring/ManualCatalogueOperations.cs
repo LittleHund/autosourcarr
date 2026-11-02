@@ -62,6 +62,9 @@ public sealed class ManualCatalogueOperations : IManualCatalogueOperations
     /// <summary>A user's split (Separate entry): the moved records stay bound and apart from the original (manual split).</summary>
     public long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records) => _structure.SplitRecords(entryId, records, manual: true, "split-duplicate");
 
+    public long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, Action<DatabaseSession, long, long> commit)
+        => _structure.SplitRecords(entryId, records, manual: true, "split-duplicate", commit);
+
     public void PurgeSourceRecordTitles(long entryId, string sourceId, IReadOnlyCollection<long> sourceMangaIds)
         => _ = _titles.PurgeSourceRecordTitles(entryId, sourceId, sourceMangaIds, dropPreferredOverride: true);
 

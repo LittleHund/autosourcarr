@@ -174,11 +174,13 @@ public sealed class ReviewActions : IReviewActions
         if (keys.Any(key => !owned.Contains(Key(key.SourceId, key.MangaId)))) throw new ReviewException(409, "A chosen source record is no longer on this work");
         if (keys.Length >= owned.Count) throw new ReviewException(409, "A split must leave at least one record on the work");
         // A manual split: the moved records stay bound together and apart from the original (automation keeps them apart).
-        var created = Refused(() => _structure.SplitRecords(entry.CanonicalId, keys, manual: true, "split-duplicate"));
+        // The decision row is written inside the split's own transaction (split and log commit together).
+        long id = 0;
+        var created = Refused(() => _structure.SplitRecords(entry.CanonicalId, keys, manual: true, "split-duplicate", (_, original, separate) =>
+            id = _log.Record(new DecisionEvent("split.manual", context.Actor, [original, separate], keys.Select(key => Key(key.SourceId, key.MangaId)).ToArray(),
+                context.Reason, new JsonObject { ["records"] = ReviewJson.Texts(entry.Records) },
+                new JsonObject { ["original_entry_id"] = original, ["new_entry_id"] = separate }, context.UndoOf))));
         if (created <= 0) throw new ReviewException(409, "Nothing was split; reload the review");
-        var id = _log.Record(new DecisionEvent("split.manual", context.Actor, [entry.CanonicalId, created], keys.Select(key => Key(key.SourceId, key.MangaId)).ToArray(),
-            context.Reason, new JsonObject { ["records"] = ReviewJson.Texts(entry.Records) },
-            new JsonObject { ["original_entry_id"] = entry.CanonicalId, ["new_entry_id"] = created }, context.UndoOf));
         _duplicates.Invalidate();
         return new ReviewSplitResult(id, created);
     }

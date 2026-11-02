@@ -29,6 +29,9 @@ public interface IManualCatalogueOperations
     long MergeEntries(long target, long duplicate, string reason);
     /// <summary>Moves the records to a new entry; returns the new entry id (0 when nothing was split).</summary>
     long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records);
+    /// <summary>As <see cref="SplitRecords(long, IReadOnlyList{NativeSourceRecord})"/>; <paramref name="commit"/> (session,
+    /// original, new entry) runs inside the split's transaction so the decision-log row commits with the split.</summary>
+    long SplitRecords(long entryId, IReadOnlyList<NativeSourceRecord> records, Action<AutoSourcarr.Core.Persistence.DatabaseSession, long, long> commit);
     /// <summary>Drops titles owned by detached records (and a preferred-title override that came from them).</summary>
     void PurgeSourceRecordTitles(long entryId, string sourceId, IReadOnlyCollection<long> sourceMangaIds);
     /// <summary>Returns an automatic main title to the bound-record consensus.</summary>

@@ -251,11 +251,14 @@ public sealed partial class DuplicateMatching
             if (!Read(c => Exists(c, target))) throw new KeyNotFoundException("Entry not found");
             var record = new NativeSourceRecord(sourceId, sourceMangaId);
             var owner = Read(c => Owner(c, record));
-            long separate;
+            long separate; var logged = false;
             if (owner == target)
             {
                 if (Read(c => ActiveRecords(c, target).Count) <= 1) throw new InvalidOperationException("This is the entry's only source record, so it cannot be split away from itself");
-                separate = _structure.SplitRecords(target, [record], manual: true, "split-duplicate");
+                // The decision row of a split commits with the split itself.
+                separate = _structure.SplitRecords(target, [record], manual: true, "split-duplicate", (_, from, created) =>
+                    _decisions.Record(new DecisionEvent("separate", actor, [from, created], [Key(record)], "Keep source record separate", null, new JsonObject { ["separate_entry_id"] = created })));
+                logged = true;
             }
             else if (owner is { } existing) separate = existing;
             else separate = createUnowned?.Invoke() ?? throw new InvalidOperationException("Source record is not in the catalogue yet; open it from a source first");
@@ -269,7 +272,8 @@ public sealed partial class DuplicateMatching
                     """, P(target, sourceId, sourceMangaId, separate, sourceTitle, stamp)));
                 ReviewLocked(target, separate, "not_duplicate", actor, "Separate source record");
             }
-            _decisions.Record(new DecisionEvent("separate", actor, [target, separate], [Key(record)], "Keep source record separate", null, new JsonObject { ["separate_entry_id"] = separate }));
+            if (!logged)
+                _decisions.Record(new DecisionEvent("separate", actor, [target, separate], [Key(record)], "Keep source record separate", null, new JsonObject { ["separate_entry_id"] = separate }));
             Invalidate();
             return new JsonObject { ["entry_id"] = target, ["separate_entry_id"] = separate, ["source_id"] = sourceId, ["source_manga_id"] = sourceMangaId, ["separate"] = true };
         }

@@ -91,6 +91,18 @@ public sealed partial class CatalogueStructure : IEditionSplitter
     /// <summary>IEditionSplitter with a precondition re-checked under the source-write gate right before the split.</summary>
     public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
         Func<DatabaseSession, bool> stillAllowed, CancellationToken cancellationToken)
+        => SplitAutomaticCore(entryId, records, splitMatchType, stillAllowed, null, cancellationToken);
+
+    /// <summary>IEditionSplitter with the caller's decision row written inside the split's transaction.</summary>
+    public (long OriginalEntryId, long NewEntryId) SplitAutomatic(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
+        Func<DatabaseSession, bool> stillAllowed, Action<DatabaseSession, long, long> commit, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(commit);
+        return SplitAutomaticCore(entryId, records, splitMatchType, stillAllowed, commit, cancellationToken);
+    }
+
+    private (long OriginalEntryId, long NewEntryId) SplitAutomaticCore(long entryId, IReadOnlyList<(string SourceId, long MangaId)> records, string splitMatchType,
+        Func<DatabaseSession, bool> stillAllowed, Action<DatabaseSession, long, long>? commit, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(records); ArgumentNullException.ThrowIfNull(stillAllowed);
         lock (_gate)
@@ -107,7 +119,7 @@ public sealed partial class CatalogueStructure : IEditionSplitter
             });
             if (state.Manual) throw new InvalidOperationException("Manual or locked records are never moved automatically");
             // The precondition is re-checked inside the split's own catalogue transaction (a review can not slip in between).
-            var created = Split(state.Entry, keys, manual: false, splitMatchType: splitMatchType, precondition: stillAllowed);
+            var created = Split(state.Entry, keys, manual: false, splitMatchType: splitMatchType, precondition: stillAllowed, commit: commit);
             return (state.Entry, created);
         }
     }
@@ -143,17 +155,18 @@ public sealed partial class CatalogueStructure : IEditionSplitter
                 cancellationToken.ThrowIfCancellationRequested();
                 current = _database.Read(DatabaseFile.Catalog, c => Canonical(c, current));
                 long id;
-                try { id = Split(current, [record], manual: false); }
+                // The "kept separate" review and the decision row commit with the split itself.
+                try
+                {
+                    id = Split(current, [record], manual: false, commit: (c, anchorEntry, separate) =>
+                    {
+                        SeparateReview(c, anchorEntry, separate, Stamp());
+                        decisions.Record(new DecisionEvent("unbind.automatic", actor, [anchorEntry, separate], [record.SourceId + ":" + record.MangaId.ToString(CultureInfo.InvariantCulture)],
+                            "Automatic record unbound and kept separate"));
+                    });
+                }
                 catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { continue; }
                 created.Add(id);
-                var anchorEntry = current;
-                _database.Write(DatabaseFile.Catalog, c =>
-                {
-                    SeparateReview(c, anchorEntry, id, Stamp());
-                    decisions.Record(new DecisionEvent("unbind.automatic", actor, [anchorEntry, id], [record.SourceId + ":" + record.MangaId.ToString(CultureInfo.InvariantCulture)],
-                        "Automatic record unbound and kept separate"));
-                    return 0;
-                });
             }
             var final = _database.Read(DatabaseFile.Catalog, c => Canonical(c, current));
             _invalidate([final, .. created]);
@@ -209,7 +222,13 @@ public sealed partial class CatalogueStructure : IEditionSplitter
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 current = _database.Read(DatabaseFile.Catalog, c => Canonical(c, current));
-                try { created.Add(Split(current, [record], manual: false, splitMatchType: "redo-anchor")); }
+                // Each split carries its own decision row in its transaction; the redo summary follows below.
+                try
+                {
+                    created.Add(Split(current, [record], manual: false, splitMatchType: "redo-anchor", commit: (_, original, separate) =>
+                        decisions.Record(new DecisionEvent("split.redo-anchor", actor, [original, separate], [record.SourceId + ":" + record.MangaId.ToString(CultureInfo.InvariantCulture)],
+                            "Redo: automatic record moved off the clean anchor"))));
+                }
                 catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { }
             }
             var affected = _database.Read(DatabaseFile.Catalog, c => created.Prepend(current).Select(id => Canonical(c, id)).Distinct().Where(id => Exists(c, id)).ToArray());
