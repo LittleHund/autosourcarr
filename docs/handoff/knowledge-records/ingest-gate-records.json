@@ -12,6 +12,17 @@
       "confidence": "high"
     },
     {
+      "id": "VERIFY-20261102-INGEST-GATE",
+      "kind": "verification",
+      "state": "verified",
+      "title": "Ingest and import gate verified: probe f810244 green",
+      "body": "{\"commit\": \"877306c\", \"probe\": \"f810244 all green: build, 1195/1195 C# tests, OpenAPI/client, source host, repair runner, Kavita, reader extension build\", \"user_set\": \"300-pair sample: sweep 0 wrong / 75.2% recall; ingest 0 wrong / 53.0% recall (asserted)\", \"local\": \"Windows: 1189/1191 (two known Windows-only failures: file lock, python3 alias)\", \"new_tests\": [\"matching ingest: an identical title alone never attaches; an agreeing creator or summary does\", \"imports: a title alone, or a summary under a title below the floor, never imports automatically (hard rule 2)\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "probe/result.txt on ci-probe 378a788",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
       "id": "FINDING-20261101-INGEST-TITLE-ONLY",
       "kind": "finding",
       "state": "resolved",
