@@ -17,7 +17,7 @@ concurrency:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 240
     services:
       postgres:
         image: postgres:17-alpine
@@ -134,12 +134,56 @@ jobs:
               fi
             fi
           fi
+          # Phase 13: the 0.5.0 image (docker/Dockerfile, no push), boot time (PERF-7) and Playwright against it (PIPE-5).
+          ib=skipped; boot=none; ipw=skipped
+          if [ -f docker/Dockerfile ] && [ "$h" = 0 ] && [ "$rx" = 0 ]; then
+            mkdir -p .build/source-host-out && cp .build/autosourcarr-source-host.jar .build/source-host-out/
+            start_build=$(date +%s)
+            timeout 3600 docker buildx build -f docker/Dockerfile \
+              --build-context source-host=.build/source-host-out \
+              --build-context reader-extension=.build/reader-extension \
+              --build-arg VERSION="$(tr -d '\r\n' < VERSION)" --build-arg REVISION="$sha" \
+              --load -t autosourcarr:probe . > probe/image-build.log 2>&1; ib=$?
+            {
+              echo "result=$ib"; echo "seconds=$(( $(date +%s) - start_build ))"
+              docker image inspect -f 'size_bytes={{.Size}}' autosourcarr:probe 2>/dev/null
+              docker run --rm --entrypoint sh autosourcarr:probe -c 'cat /opt/source-host/aot/status.txt; echo "jlink: $(cat /opt/source-jre/autosourcarr-modules.txt)"; ls -l /opt/autosourcarr-native /app/reader-extension; id' 2>&1
+              echo "--- build log (errors and last lines)"
+              grep -E "ERROR|error:|failed|UNSIGNED|AOT cache|jlink modules" probe/image-build.log | head -60
+              tail -n 60 probe/image-build.log
+            } > probe/image-build.txt 2>&1
+            rm -f probe/image-build.log
+            if [ "$ib" = 0 ]; then
+              bash scripts/image-boot-check.sh autosourcarr:probe probe/boot-time.txt 18282 autosourcarr-probe > /dev/null 2>&1
+              boot=$(grep -o '^ready_seconds=.*' probe/boot-time.txt | cut -d= -f2)
+              if grep -q '^result=pass' probe/boot-time.txt; then
+                node scripts/image-e2e-prepare.mjs http://127.0.0.1:18282 tests/e2e/fixtures/owner.json > probe/image-playwright.log 2>&1; prep=$?
+                ipw=$prep
+                if [ "$prep" = 0 ]; then
+                  # Official Playwright image, pinned like release.yml; node_modules comes from the npm ci above.
+                  timeout 2700 docker run --rm --network host --ipc=host -v "$PWD:/work" -w /work -e CI=1 \
+                    -e E2E_BASE_URL=http://127.0.0.1:18282 -e E2E_SCREENSHOT_DIR=/work/.build/image-screenshots \
+                    -e E2E_JSON=/work/test-results/playwright-image.json -e E2E_THEMES="${E2E_IMAGE_THEMES:-}" \
+                    mcr.microsoft.com/playwright:v1.64.1-jammy@sha256:a3966b653e8d48a30901889081b616307fca73e0d843a117fadf6609397dac38 \
+                    npx playwright test >> probe/image-playwright.log 2>&1; ipw=$?
+                  sudo chown -R "$(id -u):$(id -g)" . 2>/dev/null || true
+                fi
+                { node scripts/playwright-summary.mjs test-results/playwright-image.json 2>&1
+                  echo "screenshots=$(find .build/image-screenshots -name '*.png' 2>/dev/null | wc -l)"
+                  node scripts/screenshot-diff.mjs "" .build/image-screenshots 2>&1
+                  echo "--- log tail"; tail -c 20000 probe/image-playwright.log; } > probe/image-playwright.txt
+                rm -f probe/image-playwright.log
+              fi
+              docker rm -f autosourcarr-probe > /dev/null 2>&1 || true
+            fi
+            node autosourcarr/tests/ui_v050_theme_contrast.js > probe/contrast.txt 2>&1
+          fi
           # Mihon backup-format watch (phase 9, PIPE-9).
           GITHUB_TOKEN=${{ github.token }} python3 scripts/mihon-backup-watch.py > probe/mihon-backup-watch.txt 2>&1; echo "exit=$?" >> probe/mihon-backup-watch.txt
           # Repair runner isolation (phase 6e).
           { uname -r; python3 -c 'import ctypes; print("landlock abi", ctypes.CDLL(None).syscall(444, None, 0, 1))'; cat /proc/sys/kernel/yama/ptrace_scope; bash scripts/repair-runner-check.sh; echo "exit=$?"; } > probe/repair-runner-check.txt 2>&1
           rr=$(grep -o 'exit=[0-9]*' probe/repair-runner-check.txt | tail -1)
-          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\nkavita=%s\nreader_extension_build=%s\nplaywright=%s\nplaywright_bundle=%s\nui_bundle=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" "$kv" "$rx" "$pw" "$pwb" "$ub" > probe/result.txt
+          printf 'sha=%s\nrestore=%s\nbuild=%s\ntest=%s\nopenapi=%s\nclient=%s\nsource_host_build=%s\nsource_host_check=%s\nsource_host_csharp=%s\nrepair_runner=%s\nkavita=%s\nreader_extension_build=%s\nplaywright=%s\nplaywright_bundle=%s\nui_bundle=%s\nimage_build=%s\nboot_seconds=%s\nimage_playwright=%s\n' "$sha" "$r" "$b" "$t" "$o" "$c" "$h" "$hc" "$hcs" "$rr" "$kv" "$rx" "$pw" "$pwb" "$ub" "$ib" "$boot" "$ipw" > probe/result.txt
           cat probe/result.txt
       - name: Commit results
         if: always()
