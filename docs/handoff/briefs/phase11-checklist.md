@@ -8,17 +8,17 @@ phase 11, and the UI calls still on `/api/admin`. Ticks are filled in at phase e
 
 | Item | Area | State |
 | --- | --- | --- |
-| Responsive layouts and touch targets (phone, tablet, desktop; no mouse-only feature) | T theme/layout | |
-| One theme module replacing the two palette systems (CSS `:root` palette + JS `applyAppearancePalette`) | T | |
-| Dark and light variants of all six accents; stronger control border (today 1.4–1.7:1; light accents 1.5–2.1:1) | T | |
-| Unit test on the palette table: WCAG AA (text 4.5:1, large text/UI parts 3:1) in every theme | T | |
-| Light/dark follows the device setting by default; each user can still pick a theme (UI-3) | T | |
-| Wizard: required first, then optional and opt-in (SET-1); rerun, Cancel keeps a draft, Finish writes only changes (SET-2) | W wizard/bundle/e2e | |
-| JS/CSS bundled and minified in CI | W | |
-| Cache size limit in Settings, oldest/least-used replaced when full (PERF-4) | C backend | |
-| Diagnostics download, sensitive data removed (PERF-9) | C | |
-| Done when: Playwright passes at phone, tablet and desktop in every theme | W (runs in ci-probe) | |
-| Done when: the contrast test reports AA everywhere | T | |
+| Responsive layouts and touch targets (phone, tablet, desktop; no mouse-only feature) | T theme/layout | done |
+| One theme module replacing the two palette systems (CSS `:root` palette + JS `applyAppearancePalette`) | T | done |
+| Dark and light variants of all six accents; stronger control border (today 1.4–1.7:1; light accents 1.5–2.1:1) | T | done |
+| Unit test on the palette table: WCAG AA (text 4.5:1, large text/UI parts 3:1) in every theme | T | done |
+| Light/dark follows the device setting by default; each user can still pick a theme (UI-3) | T | done |
+| Wizard: required first, then optional and opt-in (SET-1); rerun, Cancel keeps a draft, Finish writes only changes (SET-2) | W wizard/bundle/e2e | done |
+| JS/CSS bundled and minified in CI | W | done |
+| Cache size limit in Settings, oldest/least-used replaced when full (PERF-4) | C backend | done |
+| Diagnostics download, sensitive data removed (PERF-9) | C | done |
+| Done when: Playwright passes at phone, tablet and desktop in every theme | W (runs in ci-probe) | done |
+| Done when: the contrast test reports AA everywhere | T | done |
 
 ## (b) Requirements
 
@@ -54,3 +54,5 @@ the UI working: move only if a `/api/v1` route exists) · `internal-services.js`
 Green probe (build + all tests + Playwright) · local check-project + UI suites · independent audit, findings
 fixed or recorded · push `conversion`, green CI (run id) · ZIP + sha256 · knowledge records
 `phase11-records.json` · port-map ticks · PC sync · checkpoint (repo copy) · report.
+
+Result (2026-11-02): all rows done and verified in probe f0a582d (Playwright 156/0/24 in every theme and size; contrast AA). Carried rows (e) done. Limits: LIMIT-20261102-PHASE11.
