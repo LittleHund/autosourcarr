@@ -201,7 +201,7 @@ async function flushUiPreferenceSave(){
   if(!Object.keys(values).length)return;
   uiPreferencesState.pending={};uiPreferencesState.saving=true;
   try{
-    const r=await api('/api/admin/ui-preferences',{method:'PUT',body:JSON.stringify({values}),timeoutMs:6000,noMutationRefresh:true,suppressClientError:true});
+    const r=await apiV1({timeoutMs:6000,noMutationRefresh:true,suppressClientError:true}).saveUiPreferences({values});
     uiPreferencesState.values={...(r.values||uiPreferencesState.values),...uiPreferencesState.pending};
     uiPreferencesState.user=String(r.user||uiPreferencesState.user);uiPreferencesState.authelia=!!r.authelia;
     uiPreferencesState.identityHeader=String(r.identity_header||uiPreferencesState.identityHeader);
@@ -211,7 +211,7 @@ async function flushUiPreferenceSave(){
     // Changes made during the failed request always win over its older snapshot.
     uiPreferencesState.pending={...values,...uiPreferencesState.pending};
     uiPreferencesState.saveFailures=(uiPreferencesState.saveFailures||0)+1;
-    rememberClientError('Unable to save user UI preferences',{component:'User preferences',path:'/api/admin/ui-preferences',method:'PUT',severity:'warning',detail:String(e?.message||e)});
+    rememberClientError('Unable to save user UI preferences',{component:'User preferences',path:'/api/v1/ui-preferences',method:'PUT',severity:'warning',detail:String(e?.message||e)});
   }finally{
     uiPreferencesState.saving=false;
     if(typeof updatePreferenceSaveState==='function')updatePreferenceSaveState();
@@ -258,7 +258,7 @@ function applyUiPreferences(values){
 async function loadUiPreferences(){
   const startedRevisions={...(uiPreferencesState.revisions||{})};
   const local={};for(const key of Object.keys(UI_PREF_LOCAL_KEYS)){const value=readLocalUiPreference(key);if(value!==undefined)local[key]=value;}
-  const r=await api('/api/admin/ui-preferences',{timeoutMs:6000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'});
+  const r=await apiV1({timeoutMs:6000,noMutationRefresh:true,suppressClientError:true,cache:'no-store'}).getUiPreferences();
   const server=(r.values&&typeof r.values==='object')?r.values:{};
   const owner=(r.authelia?'authelia:':'local:')+String(r.user||'');let previousOwner='';
   try{previousOwner=localStorage.getItem('autosourcarr.preferenceOwner')||'';}catch(_){}
@@ -705,7 +705,7 @@ function scheduleDuplicateHeartbeat(delay=4500){
 function scheduleMutationRefresh(url,method){
   const path=String(url||'').split('?')[0];if(String(method||'GET').toUpperCase()==='GET')return;
   if(['/api/v1/catalogue/entries/summaries','/api/v1/duplicate-candidates','/api/v1/matrix/chapter-stats'].includes(path))return;
-  if(path!=='/api/admin/ui-preferences')catalogViewRevision++;
+  if(path!=='/api/v1/ui-preferences')catalogViewRevision++;
   if(path.includes('/entries/')||path.includes('/duplicates')||(path.includes('/manual-groups')||path.includes('/manual-actions'))||path.includes('/sources/'))scheduleDuplicateLiveRefresh();
   if(path.includes('/entries/')||path.includes('/imports/'))setTimeout(()=>refreshSparseEntryMetadata().catch(()=>{}),500);
 }
@@ -3964,7 +3964,7 @@ async function bootstrapAutoSourcarr(){
   const preferences=loadUiPreferences().catch(e=>{
     uiPreferencesState.loaded=true;uiPreferencesState.user='Local user';uiPreferencesState.authelia=false;
     updateUiPreferenceOwner();
-    rememberClientError('Unable to load server user preferences',{component:'User preferences',path:'/api/admin/ui-preferences',method:'GET',severity:'warning',detail:String(e?.message||e)});
+    rememberClientError('Unable to load server user preferences',{component:'User preferences',path:'/api/v1/ui-preferences',method:'GET',severity:'warning',detail:String(e?.message||e)});
   });
   startTaskPolling();
   runLiveEvents();

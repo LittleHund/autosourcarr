@@ -197,6 +197,10 @@ public sealed class ApiV1Services
     public TagsV1Services? Tags { get; init; }
     /// <summary>Phase 10 reader extension repository, setup links and per-source downloads (10D); null answers 503.</summary>
     public ReaderExtensionServices? ReaderExtension { get; init; }
+    /// <summary>Phase 11 per-account UI preferences (port-map UiPreferencesEndpoints); null answers 503.</summary>
+    public UiPreferencesV1Services? UiPreferences { get; init; }
+    /// <summary>Phase 11 Status page internal services (the app's own parts); null answers 503.</summary>
+    public Func<JsonObject>? InternalServices { get; init; }
     public JobQueue? Jobs { get; init; }
     public EventStream? Events { get; init; }
     public ErrorRegistry? Errors { get; init; }
@@ -585,6 +589,9 @@ public static class ApiV1Endpoints
         ServingV1Endpoints.Map(group, services, json, services.Serving);
         CatalogueV1Endpoints.Map(group, services, json, services.CatalogueViews);
         TagsV1Endpoints.Map(group, services, json, services.Tags);
+        // Phase 11 "Web UI finish".
+        UiPreferencesV1Endpoints.Map(group, services, json, services.UiPreferences);
+        InternalServicesV1Endpoints.Map(group, json, services.InternalServices);
 
         group.MapGet("/openapi.json", (Func<HttpContext, IResult>)(context =>
                 Results.Text(OpenApiDocumentBuilder.Build(context.RequestServices.GetRequiredService<EndpointDataSource>()).ToJsonString(),

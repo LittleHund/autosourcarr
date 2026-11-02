@@ -374,6 +374,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 Metadata = matching.Metadata, Discovery = matching.Discovery, Imports = matching.Imports,
                 Chapters = matching.Reading.Chapters, Serving = matching.Reading.Serving, LibraryDownloads = matching.Reading.LibraryDownloads,
                 CatalogueViews = matching.Reading.CatalogueViews, Tags = matching.Reading.Tags, ReaderExtension = readerExtension,
+                UiPreferences = new UiPreferencesV1Services { Preferences = owner.Preferences, Io = owner.Io },
+                InternalServices = owner.InternalServices,
                 // An interrupted library monitoring pass re-runs its read-only observation (0.4.x library-monitor safe replay).
                 SafeRetries = new Dictionary<string, Func<TaskRecord, CancellationToken, Task<JsonObject>>>(StringComparer.Ordinal)
                 {

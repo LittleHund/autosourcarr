@@ -93,7 +93,7 @@ def test_theme_and_server_user_preferences_are_present():
     css = (root / "style.css").read_text()
     for theme in ("blue", "amber", "emerald", "violet", "rose", "cyan"):
         assert f'data-theme="{theme}"' in html
-    assert '/api/admin/ui-preferences' in source
+    assert '/api/v1/ui-preferences' in source
     assert "queueUiPreferenceSave('theme'" in source
     assert "queueUiPreferenceSave('browsePageSize'" in source
     assert "queueUiPreferenceSave('duplicateScope'" in source
