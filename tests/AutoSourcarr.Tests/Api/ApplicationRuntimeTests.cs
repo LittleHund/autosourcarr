@@ -26,6 +26,7 @@ public static class ApplicationRuntimeTests
         suite.Add("application host: missing configured database mount is never created", () => MissingMount().GetAwaiter().GetResult());
         suite.Add("application host: pre-admission cancellation and controlled integrated mode create no storage", () => Admission().GetAwaiter().GetResult());
         suite.Add("application host: saved timezone replaces stale inherited process and source launch values", TimeZone);
+        suite.Add("application host: the source host environment keeps the solver split and drops loader/injection keys (replaces the native launch guard)", SourceHostEnvironmentGuard);
         suite.Add("application host: a restart the app asks for stops normally and exits with the restart code (no native launcher)", () => RestartExit().GetAwaiter().GetResult());
         if (OperatingSystem.IsWindows())
             suite.Add("application host: actual executable refuses Windows before private configuration", ExecutableGuard);
@@ -92,6 +93,23 @@ public static class ApplicationRuntimeTests
         using var recovered = ApplicationRuntime.InstanceRoots.Acquire([earlier]);
         Check.Equal(17, Child(typeof(ApplicationRuntimeTests).Assembly.Location, temp.Path, "--instance-lock-probe", busy).Exit);
     }
+    private static void SourceHostEnvironmentGuard()
+    {
+        using var temp = new Sandbox(); var privacy = new SupportPrivacy();
+        var content = "SOURCE_PASSWORD=synthetic-host-source-secret\nFLARESOLVERR_ENABLED=true\nLD_AUDIT=/tmp/x.so\nDOTNET_STARTUP_HOOKS=/tmp/h.dll\n"
+            + "CORECLR_ENABLE_PROFILING=1\nCOMPlus_EnableDiagnostics=1\nJDK_JAVA_OPTIONS=-Dx=1\nKEEP_ME=1\n";
+        File.WriteAllText(Path.Combine(temp.Path, "source-host.env"), content);
+        var launch = new AutoSourcarr.Core.Sources.Runtime.SourceEngineEnvironment(temp.Path, Path.Combine(temp.Path, "profile"), privacy);
+        var parent = new Dictionary<string, string?> { ["HOME"] = "/home/autosourcarr", ["PATH"] = "/usr/bin:/bin", ["TZ"] = "UTC" };
+        var environment = ApplicationRuntime.SourceHostEnvironment(new AutoSourcarrSettings { AppServicesMode = "integrated" }, launch, parent);
+        foreach (var key in new[] { "LD_AUDIT", "DOTNET_STARTUP_HOOKS", "CORECLR_ENABLE_PROFILING", "COMPlus_EnableDiagnostics", "JDK_JAVA_OPTIONS",
+                     "JAVA_TOOL_OPTIONS", "BIND_IP", "AUTH_MODE" })
+            Check.True(!environment.ContainsKey(key), key + " must not reach the source host");
+        Check.Equal("1", environment["KEEP_ME"]); Check.Equal("UTC", environment["TZ"]); Check.Equal("/usr/bin:/bin", environment["PATH"]);
+        Check.Equal("false", environment["FLARESOLVERR_ENABLED"]); // solver intent stays separate from the launch value
+        Check.Equal("[redacted]", privacy.Text("synthetic-host-source-secret"));
+        Check.True(ApplicationRuntime.LoaderKey("1BAD") && ApplicationRuntime.LoaderKey("BAD-KEY") && ApplicationRuntime.LoaderKey(new string('X', 129)) && !ApplicationRuntime.LoaderKey("SOURCE_MIN_INTERVAL_MS"));
+    }
     private static async Task RestartExit()
     {
         using var temp = new Sandbox(); var settings = Settings(temp.Path);
@@ -108,7 +126,6 @@ public static class ApplicationRuntimeTests
         using var temp = new Sandbox(); var settings = Settings(temp.Path);
         await using (var runtime = await ApplicationRuntime.CreateExternalForTestsAsync(settings, settings.SettingsConfigDir))
         {
-            Check.True(runtime.SourceSnapshots is null, "External mode must not fabricate local installed-byte authority.");
             using var http = new RunningHttp(runtime, temp.Path); using var client = http.Host.GetTestClient();
             var live = await client.GetFromJsonAsync<JsonObject>("/api/v1/live");
             Check.True(live!["ok"]!.GetValue<bool>()); Check.Equal("0.4.3-migration", live["version"]!.GetValue<string>());

@@ -24,8 +24,6 @@ public static class SourceRuntimeContractTests
         suite.Add("source runtime contract: environment is read-only, immutable and registers actual source secrets", EnvironmentPrivacy);
         suite.Add("source runtime contract: missing config creates nothing and malformed/oversized browser preferences fail", EnvironmentBounds);
         suite.Add("source runtime contract: Python container repr preserves UA quotes/order/controls/hash and printable Unicode rejection", PythonRepresentations);
-        suite.Add("source runtime contract: native projection retains explicit fixed-image intent, privacy and solver separation", NativeProjection);
-        suite.Add("source runtime contract: native projection refuses conflicting image values and extra loader keys", NativeProjectionRefusals);
         suite.Add("source runtime contract: explicit configured credentials stay within one engine identity", () => Identity().GetAwaiter().GetResult());
         suite.Add("source runtime contract: incomplete about/schema observations retain the prior saved report", () => InvalidReports().GetAwaiter().GetResult());
         suite.Add("source runtime contract: about redirects, encodings and bytes remain bounded to configured identity", () => AboutBounds().GetAwaiter().GetResult());
@@ -110,60 +108,6 @@ public static class SourceRuntimeContractTests
         Check.Throws<NotSupportedException>(() => ((IDictionary<string, string>)result.Launch).Add("MUTATED", "bad"));
         Check.Equal("false", result.Launch["FLARESOLVERR_ENABLED"]); Check.Equal("true", result.IntendedChallenges["FLARESOLVERR_ENABLED"]);
         Check.Equal("2.3.2243", SourceEngineEnvironment.EngineVersion); Check.Equal(1, SourceEngineEnvironment.SolverTimeout("0_1", 45));
-    }
-
-    private static Dictionary<string, string?> NativeImageParent() => new(StringComparer.Ordinal)
-    {
-        ["HOME"] = "/home/suwayomi", ["PATH"] = "/usr/bin:/bin", ["JAVA_HOME"] = "/opt/java/openjdk", ["LANG"] = "C.UTF-8",
-        ["TZ"] = "UTC", ["SSL_CERT_FILE"] = "/etc/ssl/certs/ca-certificates.crt", ["ADMIN_TOKEN"] = "synthetic-app-only-token"
-    };
-    private static void NativeProjection()
-    {
-        using var temp = new Sandbox(); var privacy = new SupportPrivacy(); var data = Path.Combine(temp.Path, "profile");
-        const string content = "SOURCE_PASSWORD=synthetic-native-source-secret\nFLARESOLVERR_ENABLED=true\n";
-        var configuration = Path.Combine(temp.Path, "source-host.env"); File.WriteAllText(configuration, content);
-        var builder = new SourceEngineEnvironment(temp.Path, data, privacy); var parent = NativeImageParent();
-        var before = JsonSerializer.Serialize(parent); var settings = new AutoSourcarrSettings { AppServicesMode = "integrated" };
-        var original = builder.BuildLaunch(parent, settings);
-        // The legacy builder's fixed system fields cannot be sent as native overrides.
-        Check.Throws<InvalidDataException>(() => NativeSourceOwnerProtocol.EncodeCommand(new byte[32], 1, NativeSourceOwnerOpcode.Start, original.Launch.ToArray()));
-        var projected = builder.BuildNativeLaunch(parent, settings);
-        foreach (var key in new[] { "HOME", "PATH", "JAVA_HOME", "LANG", "ADMIN_TOKEN" }) Check.True(!projected.Launch.ContainsKey(key));
-        var frame = NativeSourceOwnerProtocol.EncodeCommand(new byte[32], 1, NativeSourceOwnerOpcode.Start, projected.Launch.ToArray());
-        try
-        {
-            var command = NativeSourceOwnerProtocol.DecodeCommand(frame, new byte[32], 1);
-            Check.True(command.Environment.SequenceEqual(projected.Launch));
-            Check.Equal("false", projected.Launch["FLARESOLVERR_ENABLED"]); Check.Equal("true", projected.IntendedChallenges["FLARESOLVERR_ENABLED"]);
-            Check.Equal("UTC", projected.Launch["TZ"]); Check.Equal("127.0.0.1", projected.Launch["BIND_IP"]);
-            Check.Equal("/etc/ssl/certs/ca-certificates.crt", projected.Launch["SSL_CERT_FILE"]);
-            Equal(JsonSerializer.SerializeToNode(original.IntendedChallenges), JsonSerializer.SerializeToNode(projected.IntendedChallenges));
-            Check.Equal("[redacted]", privacy.Text("synthetic-native-source-secret"));
-            Check.Equal(before, JsonSerializer.Serialize(parent)); Check.Equal(content, File.ReadAllText(configuration)); Check.True(!Directory.Exists(data));
-            Check.Throws<NotSupportedException>(() => ((IDictionary<string, string>)projected.Launch).Add("MUTATED", "bad"));
-        }
-        finally { CryptographicOperations.ZeroMemory(frame); }
-        // Missing inherited system fields use the same explicit fixed native defaults.
-        _ = builder.BuildNativeLaunch(new Dictionary<string, string?>(), settings);
-    }
-    private static void NativeProjectionRefusals()
-    {
-        using var temp = new Sandbox(); var builder = new SourceEngineEnvironment(temp.Path, Path.Combine(temp.Path, "profile"), new SupportPrivacy());
-        var settings = new AutoSourcarrSettings { AppServicesMode = "integrated" };
-        foreach (var key in new[] { "HOME", "PATH", "JAVA_HOME", "LANG" })
-        {
-            var parent = NativeImageParent(); parent[key] = "synthetic-conflicting-private-value";
-            var error = Check.Throws<InvalidDataException>(() => builder.BuildNativeLaunch(parent, settings));
-            Check.True(error.Message.Contains(key, StringComparison.Ordinal)); Check.True(!error.Message.Contains("synthetic-conflicting-private-value", StringComparison.Ordinal));
-            Check.Equal("synthetic-conflicting-private-value", parent[key]);
-        }
-        foreach (var key in new[] { "LD_AUDIT", "DOTNET_STARTUP_HOOKS", "CORECLR_ENABLE_PROFILING", "COMPlus_EnableDiagnostics", new string('X', 129) })
-        {
-            var content = key + "=synthetic-loader-private-value\n"; var path = Path.Combine(temp.Path, "source-host.env"); File.WriteAllText(path, content);
-            var error = Check.Throws<InvalidDataException>(() => builder.BuildNativeLaunch(NativeImageParent(), settings));
-            Check.True(!error.Message.Contains("synthetic-loader-private-value", StringComparison.Ordinal)); Check.Equal(content, File.ReadAllText(path));
-        }
-        Check.Throws<InvalidOperationException>(() => builder.BuildNativeLaunch(NativeImageParent(), settings with { SourceEngineMode = "external" }));
     }
 
     private static void EnvironmentBounds()

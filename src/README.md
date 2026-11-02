@@ -154,8 +154,8 @@ Windows processes retain 192-character temporary parents, six formats and outsid
 denial; unsupported longer parents fail before native setup and clean the empty
 directory. Resource, delegate, coder and path restrictions remain unchanged.
 Hardware tests use controlled processes and streams and start no VM or native
-launcher. The existing launchers and a private source-owner probe cross-compile
-and link as Linux x86_64 executables.426pure C startup tests run under a trusted
+launcher. Phase 13 removed the native PID 1 launcher and source-owner C code; the
+remaining native tools are repair-runner, repair-launcher and source-host-sandbox.426pure C startup tests run under a trusted
 local WASI harness. Neither check is Linux execution, repair isolation, KVM
 enforcement or abrupt-parent-death proof.
 
