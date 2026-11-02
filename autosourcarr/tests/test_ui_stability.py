@@ -13,7 +13,7 @@ def _function_block(source: str, start: str, end: str) -> str:
 
 def test_metadata_heartbeat_does_not_unconditionally_rebuild_active_surfaces():
     source = APP_JS.read_text()
-    block = _function_block(source, "async function refreshSparseEntryMetadata()", "function scheduleMetadataLivePoll")
+    block = _function_block(source, "async function refreshSparseEntryMetadata()", "function subscribeEntryMetadataUpdates")
     assert "rerenderMatrixPreservingScroll('matrix')" not in block
     assert "rerenderMatrixPreservingScroll('subbed')" not in block
     assert "renderBrowse();" not in block

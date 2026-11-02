@@ -1052,7 +1052,7 @@ async function refreshPendingImportActions(){
   if(changed&&String(importsState.runId))requestSurfaceRender('imports');
   if(finished){loadTasks().catch(()=>{});loadImportItems().catch(()=>{});}
   // Outcome events normally finish this; the slow re-check covers an action whose request was lost in transit.
-  if(pendingImportActions.size)schedulePendingImportPoll(liveConnected()?5000:1500);
+  if(pendingImportActions.size)schedulePendingImportPoll(globalThis.AutoSourcarrLive?.status().connected?5000:1500);
 }
 function schedulePendingImportPoll(delay=700){
   if(importsPendingPollTimer||!pendingImportActions.size)return;
@@ -2323,7 +2323,8 @@ function closeBrowseEntry(userEvent=null){
 }
 window.closeBrowseEntry=closeBrowseEntry;
 window.openBrowseEntry=async(id,userEvent=null)=>{
-  if(!userEvent?.isTrusted)return;
+  // Only the user (or the one-time UI-6 restore of what the user had open) opens an entry; updates never do.
+  if(!userEvent?.isTrusted&&!globalThis.AutoSourcarrNavigation?.isRestore?.(userEvent))return;
   browseInspectorAbort?.abort();const controller=new AbortController();browseInspectorAbort=controller;
   const generation=++browseInspectorGeneration;
   if(!browseInspectorIsOpen())browseState.scrollY=window.scrollY;
@@ -2870,8 +2871,8 @@ function selectMatrixRow(kind,id){
 }
 window.openInlineEntry=async(kind,id,userEvent=null)=>{
   // Entry visibility is user-owned state. Background Tasks are allowed to refresh
-  // data, but they cannot synthesize an inspector open/close transition.
-  if(!userEvent?.isTrusted)return;
+  // data, but they cannot synthesize an inspector open/close transition (UI-6 restore uses its own private token).
+  if(!userEvent?.isTrusted&&!globalThis.AutoSourcarrNavigation?.isRestore?.(userEvent))return;
   if(entryInspectorAbort[kind])entryInspectorAbort[kind].abort();
   const controller=new AbortController();entryInspectorAbort[kind]=controller;
   const generation=++entryInspectorGeneration[kind];
