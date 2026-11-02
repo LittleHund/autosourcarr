@@ -111,7 +111,7 @@
       if(task.repair_raw_available&&!task.repair_is_current)result+=button('original-code','Download acquired code');
       if(task.repair_is_current){
         if(task.repair_can_feedback!==false){
-          if(task.repair_state!=='confirmed')result+=button('fixed','Fixed');
+          if(!['confirmed','fixed'].includes(task.repair_state))result+=button('fixed','Fixed');
           result+=button('retry','Doesn’t work / Retry');
         }
         if(task.repair_can_revert)result+=button('revert','Revert');
@@ -125,7 +125,9 @@
     metadata(task){
       if(task.kind==='source-raw-input')return 'Installed source '+(task.source_version||'')+' · original raw code required';
       // In-app repair jobs (domain move, rollback, automatic repair) carry their kind, package and report outcome.
-      if(task.repair_kind)return [{domain:'Website move repair',rollback:'Restore kept working jar',auto:'Automatic website move repair'}[task.repair_kind]||'Source repair',task.package||'',task.repair_outcome||''].filter(Boolean).join(' · ');
+      // Hard rule 6: only the user's confirmation makes a repair Fixed; installed and content-checked is weaker.
+      const verdict={fixed:'Fixed · you confirmed it works'+(task.repair_confirmed_at?' ('+new Date(task.repair_confirmed_at).toLocaleString()+')':''),'not-working':'Reported not working',unconfirmed:'Installed and checked · not confirmed by you yet'}[task.repair_confirmation]||'';
+      if(task.repair_kind)return [{domain:'Website move repair',rollback:'Restore kept working jar',auto:'Automatic website move repair'}[task.repair_kind]||'Source repair',task.package||'',task.repair_outcome||'',verdict].filter(Boolean).join(' · ');
       const when=stamp=>stamp?new Date(stamp*1000).toLocaleString():'';
       return [!task.repair_version||task.repair_version==='unknown'?'Retained repair · version not recorded':'Started in AutoSourcarr '+task.repair_version,
               task.repair_installed_at?'Installed '+when(task.repair_installed_at):'',task.repair_working_at?'Last confirmed working '+when(task.repair_working_at):'',

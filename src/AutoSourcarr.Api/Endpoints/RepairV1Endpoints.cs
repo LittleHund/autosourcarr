@@ -26,6 +26,8 @@ public sealed class RepairV1Services
     public Func<CancellationToken, Task<JsonObject>>? RunnerCheck { get; init; }
     /// <summary>Reads the jar the source host runs for a package (repaired-code download when the jar was not kept); null skips it.</summary>
     public Func<string, CancellationToken, Task<byte[]>>? ReadInstalledJar { get; init; }
+    /// <summary>Hard rule 6: the user's persisted "Fixed" / "doesn't work" verdicts; null keeps feedback in feedback.jsonl only.</summary>
+    public RepairConfirmations? Confirmations { get; init; }
 }
 
 /// <summary>The source-code storage the raws routes reuse (the same handlers as <see cref="SourceRawEndpoints"/>).</summary>
@@ -371,22 +373,28 @@ internal static class RepairV1Endpoints
                     ["at"] = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture), ["task_id"] = job.Id, ["package"] = job.Package,
                     ["action"] = action, ["installed_sha256"] = installed, ["feedback"] = text,
                 });
+                // Hard rule 6: only the user's "Fixed" makes a repair Fixed; it is bound to this task and this exact jar.
+                if (action != "revert")
+                    services.Repair?.Confirmations?.Record(job.Package, job.Id, installed, action == "fixed" ? RepairConfirmations.Fixed : RepairConfirmations.NotWorking);
                 if (action == "revert")
                 {
                     if (!Integrated()) return Problem(409, "Integrated engine required");
+                    // The rollback installs another jar: this repair's verdict no longer applies.
+                    services.Repair?.Confirmations?.Clear(job.Package);
                     var handle = QueueRollback(services, job.Package, "manual");
                     return Answer(new JsonObject { ["recorded"] = true, ["queued"] = true, ["task_id"] = handle.Id, ["merged"] = handle.Merged }, 202);
                 }
                 return Answer(new JsonObject
                 {
                     ["recorded"] = true, ["queued"] = false, ["action"] = action,
-                    ["message"] = action == "fixed" ? "Recorded as working."
-                        : "Recorded. A domain repair cannot retry by itself: use Revert, or start a new repair with the correct new address.",
+                    ["repair_state"] = action == "fixed" && services.Repair?.Confirmations is not null ? "fixed" : RepairState(job.Row, job.Report),
+                    ["message"] = action == "fixed" ? "Marked Fixed: you confirmed this repair works."
+                        : "Recorded as not working. A domain repair cannot retry by itself: use Revert, or start a new repair with the correct new address.",
                 }, 202);
             })))
             .Accepts<JsonObject>("application/json")
             .WithName("sendSourceRepairFeedback")
-            .WithSummary("Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Kept in feedback.jsonl (bounded); revert queues a rollback.")
+            .WithSummary("Feedback on the current installed repair (action fixed, retry or revert; installed_sha256 must match). Fixed (user-confirmed working, hard rule 6) and retry (not working) are kept per package for that jar across restarts; revert queues a rollback. Also kept in feedback.jsonl (bounded).")
             .Produces<JsonObject>(StatusCodes.Status202Accepted)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status404NotFound)
@@ -524,6 +532,27 @@ internal static class RepairV1Endpoints
         return result;
     }
 
+    /// <summary>The user's verdicts, read once per projection; a store that cannot be read shows nothing as Fixed.</summary>
+    private static IReadOnlyDictionary<string, RepairConfirmation> Verdicts(ApiV1Services services)
+    {
+        if (services.Repair?.Confirmations is not { } confirmations) return new Dictionary<string, RepairConfirmation>();
+        try { return confirmations.All(); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException) { return new Dictionary<string, RepairConfirmation>(); }
+    }
+
+    /// <summary>
+    /// Hard rule 6 for the repair lists: <c>repair_confirmation</c> is fixed (confirmed by the user), not-working (reported) or
+    /// unconfirmed; <c>repair_state</c> becomes "fixed" only for a user-confirmed current repair. "repaired" stays the weaker
+    /// installed-and-content-checked state.
+    /// </summary>
+    private static void ApplyVerdict(JsonObject row, RepairConfirmation? verdict, bool current, string state)
+    {
+        row["repair_confirmation"] = verdict?.Verdict ?? (current && state == "repaired" ? "unconfirmed" : null);
+        row["repair_confirmed_at"] = verdict?.At.UtcDateTime.ToString("O", CultureInfo.InvariantCulture);
+        row["repair_working_at"] = verdict is { Verdict: RepairConfirmations.Fixed } ? verdict.At.ToUnixTimeMilliseconds() / 1000.0 : null;
+        if (current && verdict is { Verdict: RepairConfirmations.Fixed }) row["repair_state"] = "fixed";
+    }
+
     private static async Task<byte[]?> ReadKeptAsync(DomainRepair domain, string package, string sha, CancellationToken cancellationToken)
     {
         var path = Path.Combine(domain.LastWorkingDirectory(package), sha + ".jar");
@@ -549,6 +578,7 @@ internal static class RepairV1Endpoints
         if (snapshot["items"] is not JsonArray items) return snapshot;
         var rows = items.OfType<JsonObject>().Where(row => RepairKinds.ContainsKey(Text(row, "kind"))).ToList();
         var reports = new Dictionary<string, JsonObject?>(StringComparer.Ordinal);
+        var verdicts = rows.Count == 0 ? new Dictionary<string, RepairConfirmation>() : Verdicts(services);
         var newest = rows.GroupBy(row => Text(row, "context"), StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Select(row => Text(row, "created_at")).Max(StringComparer.Ordinal) ?? "", StringComparer.Ordinal);
         foreach (var row in rows)
@@ -581,6 +611,7 @@ internal static class RepairV1Endpoints
             row["repair_history_revision"] = 0;
             row["installed_sha256"] = current ? installed : "";
             row["address_migration_count"] = 0;
+            ApplyVerdict(row, kind == "rollback" ? null : RepairConfirmations.For(verdicts, package, Text(row, "id"), installed), current, state);
         }
         snapshot["source_repairs"] = new JsonObject
         {

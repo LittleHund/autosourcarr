@@ -401,6 +401,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     MaintenanceRoot = maintenanceRoot,
                     ReadInstalledJar = (package, token) => owner._source.Client.ReadExtensionJarAsync(package, token),
                     Raws = rawRoutes,
+                    // Hard rule 6: the user-confirmed "Fixed" verdicts survive restarts (Tasks → Repairs).
+                    Confirmations = new AutoSourcarr.Core.Repair.RepairConfirmations(maintenanceRoot),
                 },
                 Sources = new SourceServices
                 {
