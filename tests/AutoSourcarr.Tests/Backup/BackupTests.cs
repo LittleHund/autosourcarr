@@ -39,17 +39,20 @@ public static class BackupTests
 
     public static void Register(TestSuite suite)
     {
-        suite.Add("phase 12 backup: a populated 0.4.4 instance restores on a clean instance (rows, settings minus secrets, profiles, provenance); no secret is in the file",
+        suite.Add("phase 12 backup: a populated 0.4.4 instance restores on a clean instance at the next start (rows, settings minus secrets, profiles, provenance); no secret is in the file",
             RoundTrip);
         suite.Add("phase 12 backup: password-protected round trip; wrong or missing passphrase, tampered, newer-format and 0.4.x files are refused",
             Refusals);
-        suite.Add("phase 12 update guard (SET-9): a failing migration rolls both databases back to the automatic backup unchanged; a good update keeps 3 automatic backups",
+        suite.Add("phase 12 backup crypto: chunked AES-GCM streams any size, refuses truncation and appended data, still reads ASCBK3", Crypto);
+        suite.Add("phase 12 swap journal: a failed check or a crash mid-swap (mixed databases) is undone on the next start; after the check it is finished", SwapCrash);
+        suite.Add("phase 12 config.json: unknown top-level keys survive rewrites and never enter a backup", UnknownConfigKeys);
+        suite.Add("phase 12 update guard (SET-9): a failing migration swaps the databases back unchanged, no retry loop, Retry the update, backup failure never migrates",
             GuardCore);
-        suite.Add("phase 12 update rollback (SET-9): the app starts in a safe state with the rollback notice, the rollback is in Tasks, and the one-click rollback route restores the backup",
+        suite.Add("phase 12 update rollback (SET-9): a real failing migration on a real older schema starts the full runtime in minimal safe mode (writes refused), no restart loop, retry",
             () => GuardRuntime().GetAwaiter().GetResult());
-        suite.Add("phase 12 backup routes: list/create/download/delete/preview/apply on /api/v1 with admin access, 202 jobs, preview token + confirm",
+        suite.Add("phase 12 backup routes: list/create/download/delete/preview (multipart)/arm/cancel on /api/v1; writes refused while armed; the restore applies at the next start",
             () => Routes().GetAwaiter().GetResult());
-        suite.Add("phase 12 old files (SET-3): only the app's own old reports, bytecode and temporary files move to a dated trash after a preview", OldFiles);
+        suite.Add("phase 12 old files (SET-3): only the app's own old reports, bytecode, temporary files and previews move to a dated trash; expired trash is deleted", OldFiles);
         suite.Add("phase 12 link settings (SET-4): Komf and AI-dashboard links are gone from the schema and dropped silently from config.json", RetiredLinks);
         suite.Add("phase 12 full reset (SET-6): the full reset keeps config.json and the library files",
             () => FullResetKeeps().GetAwaiter().GetResult());
@@ -222,11 +225,24 @@ public static class BackupTests
         Check.True(preview["settings"]!["secrets_kept_from_this_instance"]!.AsArray().Any(node => node!.GetValue<string>() == "settings.MAIN_SUWAYOMI_PASSWORD"), "preview keeps B's secret");
         Check.True(preview["settings"]!["secrets_to_enter_again"]!.AsArray().Any(node => node!.GetValue<string>() == "connections.c1.api_key"), "preview lists the connection key to enter again");
         Check.True(preview["databases"]!.AsArray().Count == 2 && preview["version_check"]!["ok"]!.GetValue<bool>(), "preview databases and version check");
-        // Hard rule 1: a wrong token changes nothing.
-        Check.Throws<BackupRefusedException>(() => storeB.Apply(preview["stage_id"]!.GetValue<string>(), "wrong-token"));
+        // Hard rule 1: a wrong token changes nothing; a manual decision saved after the preview invalidates it (audit 7).
+        var stage = preview["stage_id"]!.GetValue<string>(); var token = preview["preview_token"]!.GetValue<string>();
+        Check.Throws<BackupRefusedException>(() => storeB.Arm(stage, "wrong-token"));
+        Execute(b.Paths.Catalog, "INSERT INTO manual_match_groups(id,title,created_at,updated_at) VALUES('late','Late','2026-12-01','2026-12-01')");
+        Check.True(Check.Throws<BackupRefusedException>(() => storeB.Arm(stage, token)).Message.Contains("saved decisions", StringComparison.Ordinal), "stale after a new decision");
+        Check.True(storeB.PendingRestore() is null, "nothing armed");
+        preview = storeB.Stage(raw, null, "upload");
+        stage = preview["stage_id"]!.GetValue<string>(); token = preview["preview_token"]!.GetValue<string>();
+        // Nothing is replaced when arming: the restore waits for the next start.
+        storeB.Arm(stage, token);
+        Check.True(storeB.PendingRestore()?["stage_id"]?.GetValue<string>() == stage, "armed");
         Check.Equal(0L, BackupDatabases.Facts(b.Paths.Catalog).Rows["entries"]);
-        var result = storeB.Apply(preview["stage_id"]!.GetValue<string>(), preview["preview_token"]!.GetValue<string>());
-        Check.True(result["restored"]!.GetValue<bool>() && storeB.Find(result["pre_restore_backup"]!.GetValue<string>())?.Kind == "pre-restore", "restored with a pre-restore backup");
+        SqliteConnection.ClearAllPools();
+        var result = storeB.ApplyAtStart()!;
+        Check.True(result["status"]!.GetValue<string>() == "restored" && storeB.Find(result["pre_restore_backup"]!.GetValue<string>())?.Kind == "pre-restore",
+            "restored at start with a pre-restore backup: " + result.ToJsonString());
+        Check.True(storeB.PendingRestore() is null && !Directory.Exists(Path.Combine(storeB.Staged, stage)), "armed restore consumed");
+        Check.True(!File.Exists(b.Paths.Catalog + ".swap-old") && !File.Exists(Path.Combine(storeB.Root, DatabaseSwap.JournalFile)), "swap finished cleanly");
 
         foreach (var table in Compared) Check.Equal(Dump(a.Paths.Catalog, table), Dump(b.Paths.Catalog, table));
         foreach (var table in ComparedOrigins) Check.Equal(Dump(a.Paths.Origins, table), Dump(b.Paths.Origins, table));
@@ -295,7 +311,19 @@ public static class BackupTests
         var plain = File.ReadAllBytes(store.FilePath(store.Create("manual").Id));
         // Tampered content: the manifest checksum no longer matches.
         var tampered = Rezip(plain, (name, data) => name == "profiles/profiles.json" ? Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(data).Replace("Strict", "Loose", StringComparison.Ordinal)) : data);
-        Check.True(Check.Throws<BackupRefusedException>(() => store.Stage(tampered, null, "upload")).Message.Contains("checksum", StringComparison.Ordinal), "tampered refused");
+        Check.True(Check.Throws<BackupRefusedException>(() => store.Stage(tampered, null, "upload")).Message.Contains("tampered", StringComparison.Ordinal), "tampered (size) refused");
+        // Same size, different content: only the checksum can tell.
+        var sameSize = Rezip(plain, (name, data) => name == "profiles/profiles.json" ? Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(data).Replace("Strict", "Strong", StringComparison.Ordinal)) : data);
+        Check.True(Check.Throws<BackupRefusedException>(() => store.Stage(sameSize, null, "upload")).Message.Contains("checksum", StringComparison.Ordinal), "tampered (content) refused");
+        // A manifest that declares more than the cap is refused before anything is written (no disk fill).
+        var huge = Rezip(plain, (name, data) =>
+        {
+            if (name != "manifest.json") return data;
+            var manifest = JsonNode.Parse(data)!.AsObject();
+            manifest["contents"]![0]!["bytes"] = InstanceBackupStore.MaxDeclaredBytes + 1;
+            return Encoding.UTF8.GetBytes(manifest.ToJsonString());
+        });
+        Check.Equal(413, Check.Throws<BackupRefusedException>(() => store.Stage(huge, null, "upload")).Status);
         // An extra file the manifest does not list.
         Check.Throws<BackupRefusedException>(() => store.Stage(WithEntry(plain), null, "upload"));
         // A newer format: "Version mismatch: version X required".
@@ -365,29 +393,77 @@ public static class BackupTests
 
         // The next version: its migration writes, then fails.
         var next = new InstanceBackupStore(data, config, database, "0.5.1-test");
-        var outcome = UpgradeGuard.Run(next, database, () =>
+        var calls = 0;
+        void Failing()
         {
+            calls++;
             new SchemaMigrator(database).Initialize();
             Execute(database.Paths.Catalog, "INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(99,'Half migrated','2026-01-01','2026-01-01'); DELETE FROM manual_match_bindings;");
             throw new InvalidOperationException("migration 2026119999 failed");
-        });
-        Check.True(outcome.RolledBack && outcome.Backup?.Kind == "automatic" && outcome.Error!.Contains("2026119999", StringComparison.Ordinal), "rolled back from the automatic backup");
+        }
+        var outcome = UpgradeGuard.Run(next, database, Failing);
+        Check.True(outcome.RolledBack && outcome.SafeMode && outcome.Backup?.Kind == "automatic" && outcome.Error!.Contains("2026119999", StringComparison.Ordinal), "rolled back");
         Check.True(before.Item1.SameData(BackupDatabases.Facts(database.Paths.Catalog)) && before.Item2.SameData(BackupDatabases.Facts(database.Paths.Origins)),
             "same stamp, migration and row counts after the rollback");
         Check.True(BackupDatabases.Facts(database.Paths.Catalog).Intact && BackupDatabases.Facts(database.Paths.Origins).Intact, "intact after the rollback");
         Check.True(catalogDump.SequenceEqual(Compared.Select(table => Dump(database.Paths.Catalog, table))), "same rows after the rollback");
-        var notice = UpgradeGuard.Notice(next)!;
-        Check.True(notice["status"]!.GetValue<string>() == "rolled-back" && notice["backup_id"]!.GetValue<string>() == outcome.Backup!.Id, "rollback notice");
-        Check.Equal("0.5.0-test", UpgradeGuard.ReadState(next)["last_opened_version"]!.GetValue<string>());
+        Check.True(!File.Exists(database.Paths.Catalog + ".pre-update") && !File.Exists(database.Paths.Catalog + ".swap-old"), "rollback copies cleaned up");
+        var marker = UpgradeGuard.Marker(next)!;
+        Check.True(marker["status"]!.GetValue<string>() == "rolled-back" && marker["to_version"]!.GetValue<string>() == "0.5.1-test", "marker written");
 
-        // The fixed version updates; every update keeps an automatic backup, the newest 3 stay.
-        foreach (var version in new[] { "0.5.1-test", "0.5.2-test", "0.5.3-test", "0.5.4-test" })
-        {
-            var store2 = new InstanceBackupStore(data, config, database, version);
-            Check.Equal("updated", UpgradeGuard.Run(store2, database, () => new SchemaMigrator(database).Initialize()).Status);
-        }
+        // No restart loop: the next start of the same version neither retries nor backs up again.
+        var backups = next.List().Count;
+        var again = UpgradeGuard.Run(next, database, Failing);
+        Check.True(again.Status == "safe-mode" && calls == 1 && next.List().Count == backups, "no retry and no new backup while the marker stands");
+        Check.True(UpgradeGuard.SafeModeNotice(next)!["actions"]!.AsArray().Any(node => node!.GetValue<string>() == "retry"), "retry offered");
+
+        // "Retry the update": a fresh backup now, then the next start migrates (this time successfully).
+        var fresh = UpgradeGuard.Retry(next);
+        Check.True(fresh.Kind == "automatic" && UpgradeGuard.Marker(next)!["retry"]!.GetValue<bool>(), "retry armed after a fresh backup");
+        Check.Equal("updated", UpgradeGuard.Run(next, database, () => new SchemaMigrator(database).Initialize()).Status);
+        Check.True(UpgradeGuard.Marker(next) is null, "marker cleared");
+
+        // Further updates keep the newest 3 automatic backups.
+        foreach (var version in new[] { "0.5.2-test", "0.5.3-test", "0.5.4-test" })
+            Check.Equal("updated", UpgradeGuard.Run(new InstanceBackupStore(data, config, database, version), database, () => new SchemaMigrator(database).Initialize()).Status);
         Check.Equal(InstanceBackupStore.AutomaticKeep, store.List().Count(row => row.Kind == "automatic"));
         Check.True(UpgradeGuard.Dismiss(store) && UpgradeGuard.Notice(store) is null, "Keep current dismisses the notice");
+
+        // Audit 3: a failing automatic backup (here a missing database) never migrates and never aborts the start.
+        SqliteConnection.ClearAllPools();
+        var origins = File.ReadAllBytes(database.Paths.Origins);
+        File.Move(database.Paths.Origins, database.Paths.Origins + ".away");
+        var blocked = new InstanceBackupStore(data, config, database, "0.5.5-test");
+        var migrated = false;
+        var failed = UpgradeGuard.Run(blocked, database, () => migrated = true);
+        Check.True(failed.Status == "backup-failed" && failed.SafeMode && !migrated, "backup failure: safe mode, nothing migrated");
+        Check.True(UpgradeGuard.Run(blocked, database, () => migrated = true).Status == "safe-mode" && !migrated, "still not retried");
+        var notice = UpgradeGuard.SafeModeNotice(blocked)!;
+        Check.True(notice["actions"]!.AsArray().Any(node => node!.GetValue<string>() == "migrate-without-backup"), "migrate without a backup offered");
+        Check.Throws<BackupRefusedException>(() => UpgradeGuard.AllowWithoutBackup(blocked, "wrong-token"));
+        UpgradeGuard.AllowWithoutBackup(blocked, notice["preview_token"]!.GetValue<string>());
+        File.Move(database.Paths.Origins + ".away", database.Paths.Origins);
+        var automatic = blocked.List().Count(row => row.Kind == "automatic");
+        Check.Equal("updated", UpgradeGuard.Run(blocked, database, () => { migrated = true; new SchemaMigrator(database).Initialize(); }).Status);
+        Check.True(migrated && blocked.List().Count(row => row.Kind == "automatic") == automatic, "migrated once, without a new backup");
+        Check.True(origins.Length > 0, "origins kept");
+    }
+
+    /// <summary>A real test-only migration (registered only by this test): partial schema change, then a failure.</summary>
+    [FluentMigrator.Migration(2099010101, FluentMigrator.TransactionBehavior.None, "test only: fails after a partial change")]
+    [FluentMigrator.Tags(SchemaMigrator.CatalogTag)]
+    public sealed class FailingTestMigration : FluentMigrator.ForwardOnlyMigration
+    {
+        public override void Up() => Execute.WithConnection((connection, transaction) =>
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.Transaction = transaction;
+                command.CommandText = "CREATE TABLE phase12_partial(id INTEGER PRIMARY KEY); INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(990,'Half','2026-01-01','2026-01-01');";
+                command.ExecuteNonQuery();
+            }
+            throw new InvalidOperationException("test migration 2099010101 failed");
+        });
     }
 
     private static async Task<Phase11WiringTests.App> StartAsync(Sandbox temp, AutoSourcarrSettings settings)
@@ -431,6 +507,10 @@ public static class BackupTests
         throw new TimeoutException("Task " + id + " did not finish.");
     }
 
+    private static int Automatic(AutoSourcarrSettings settings) =>
+        Directory.EnumerateFiles(Path.Combine(settings.DataDir, "instance-backups"), "*.json")
+            .Count(file => File.ReadAllText(file).Contains("\"kind\":\"automatic\"", StringComparison.Ordinal));
+
     private static async Task GuardRuntime()
     {
         using var temp = new Sandbox();
@@ -438,47 +518,65 @@ public static class BackupTests
         var app = await StartAsync(temp, settings);
         app.Runtime.Database.Write(DatabaseFile.Catalog, session => session.Execute(
             "INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(7,'Kept entry','2026-01-01','2026-01-01')"));
-        var store = new InstanceBackupStore(settings.DataDir, settings.SettingsConfigDir, app.Runtime.Database, ApplicationRuntime.Version);
         await StopAsync(app);
-        var entries = BackupDatabases.Facts(Path.Combine(settings.DataDir, "catalog.sqlite")).Rows["entries"];
+        var catalog = Path.Combine(settings.DataDir, "catalog.sqlite");
+        var before = BackupDatabases.Facts(catalog);
 
-        // Simulate an update: the data was last opened by an older version, and the new migration fails.
-        var state = UpgradeGuard.ReadState(store);
-        state["last_opened_version"] = "0.4.9-older";
-        UpgradeGuard.WriteState(store, state);
-        UpgradeGuard.FaultAfterMigrate = database =>
-        {
-            database.Write(DatabaseFile.Catalog, session => session.Execute("DELETE FROM entries"));
-            throw new InvalidOperationException("injected migration failure");
-        };
-        try { app = await StartAsync(temp, settings); }
-        finally { UpgradeGuard.FaultAfterMigrate = null; }
+        // "New code": the same build plus one real catalogue migration that fails; the data is at the previous level.
+        SchemaMigrator.MigrationAssemblies = [typeof(SchemaMigrator).Assembly, typeof(FailingTestMigration).Assembly];
         try
         {
-            Check.True(app.Runtime.Upgrade?.RolledBack == true, "the start rolled back");
-            Check.Equal(entries, BackupDatabases.Facts(app.Runtime.Database.Paths.Catalog, integrity: false).Rows["entries"]);
-            var tasks = app.Runtime.Tasks.Snapshot().ToJsonString();
-            Check.True(tasks.Contains("Automatic backup before update", StringComparison.Ordinal) && tasks.Contains("Update rolled back", StringComparison.Ordinal), "recorded in Tasks");
-            using var admin = app.Client(Phase11WiringTests.AdminToken);
-            var list = await Json(await admin.GetAsync("/api/v1/backups"), HttpStatusCode.OK);
-            var update = list["update"]!.AsObject();
-            Check.True(update["status"]!.GetValue<string>() == "rolled-back" && update["from_version"]!.GetValue<string>() == "0.4.9-older", "notice in System → Backups");
-            var backupId = update["backup_id"]!.GetValue<string>();
-            Check.True(list["items"]!.AsArray().Any(row => row!["id"]!.GetValue<string>() == backupId && row["kind"]!.GetValue<string>() == "automatic"), "automatic backup listed");
+            app = await StartAsync(temp, settings);
+            try
+            {
+                Check.True(app.Runtime.SafeMode && app.Runtime.Upgrade?.RolledBack == true, "the full runtime starts in safe mode after the rollback");
+                var after = BackupDatabases.Facts(catalog);
+                Check.True(before.SameData(after) && after.Intact && !after.Rows.ContainsKey("phase12_partial"), "back at the previous migration level, no partial table");
+                Check.True(after.Migration < SchemaMigrator.LatestMigration(DatabaseFile.Catalog), "the data is really at the older schema");
+                Check.Equal(1, Automatic(settings));
+                using var admin = app.Client(Phase11WiringTests.AdminToken);
+                var list = await Json(await admin.GetAsync("/api/v1/backups"), HttpStatusCode.OK);
+                var safe = list["safe_mode"]!.AsObject();
+                Check.True(safe["status"]!.GetValue<string>() == "rolled-back" && safe["pending_migrations"]!.AsArray().Any(node => node!.GetValue<long>() == 2099010101)
+                    && safe["error"]!.GetValue<string>().Contains("2099010101", StringComparison.Ordinal), "safe-mode notice names the failed migration");
+                Check.True(list["update"] is null, "no rollback-to-backup button on a rolled-back instance (the data already is that backup)");
+                var health = await Json(await admin.GetAsync("/api/v1/health"), HttpStatusCode.OK);
+                Check.Equal("safe-mode", health["status"]!.GetValue<string>());
+                using (var diagnostics = await admin.GetAsync("/api/v1/diagnostics")) Check.Equal(HttpStatusCode.OK, diagnostics.StatusCode);
+                // Writes are refused (settings, UI preferences, errors), catalogue services are not even built.
+                using (var put = await admin.PutAsJsonAsync("/api/v1/settings", new { revision = "x", values = new { } })) Check.Equal(HttpStatusCode.ServiceUnavailable, put.StatusCode);
+                using (var clear = await admin.PostAsJsonAsync("/api/v1/errors/clear", new { })) Check.Equal(HttpStatusCode.ServiceUnavailable, clear.StatusCode);
+                using (var stats = await admin.GetAsync("/api/v1/status/stats")) Check.Equal(HttpStatusCode.ServiceUnavailable, stats.StatusCode);
+                using (var jobs = await admin.GetAsync("/api/v1/jobs")) Check.Equal(HttpStatusCode.ServiceUnavailable, jobs.StatusCode);
+                var tasks = app.Runtime.Tasks.Snapshot().ToJsonString();
+                Check.True(tasks.Contains("Automatic backup before update", StringComparison.Ordinal) && tasks.Contains("Update rolled back", StringComparison.Ordinal), "recorded in Tasks");
+            }
+            finally { await StopAsync(app); }
 
-            // One-click rollback to that backup: preview (token) then confirmed apply.
-            app.Runtime.Database.Write(DatabaseFile.Catalog, session => session.Execute("INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(8,'After','2026-01-01','2026-01-01')"));
-            var preview = await Json(await admin.PostAsJsonAsync("/api/v1/backups/restore/preview", new { backup_id = backupId }), HttpStatusCode.OK);
-            using (var refused = await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>() }))
-                Check.Equal(HttpStatusCode.BadRequest, refused.StatusCode); // no confirm
-            var queued = await Json(await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new
-            { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>(), confirm = true }), HttpStatusCode.Accepted);
-            var task = await Finished(app, queued["task_id"]!.GetValue<string>());
-            Check.True(task.State == "completed", "rollback task: " + task.State + " " + task.Error);
-            Check.Equal(entries, BackupDatabases.Facts(app.Runtime.Database.Paths.Catalog, integrity: false).Rows["entries"]);
-            var dismissed = await Json(await admin.PostAsync("/api/v1/backups/update-notice/dismiss", null), HttpStatusCode.OK);
-            Check.True(dismissed["dismissed"]!.GetValue<bool>(), "Keep current");
-            Check.True((await Json(await admin.GetAsync("/api/v1/backups"), HttpStatusCode.OK))["update"] is null, "notice gone");
+            // No restart loop: the same build starts in safe mode again without a new backup or a second attempt.
+            app = await StartAsync(temp, settings);
+            try
+            {
+                Check.True(app.Runtime.SafeMode && app.Runtime.Upgrade?.Status == "safe-mode", "safe mode again");
+                Check.Equal(1, Automatic(settings));
+                Check.True(!BackupDatabases.Facts(catalog).Rows.ContainsKey("phase12_partial"), "the failing migration did not run again");
+                using var admin = app.Client(Phase11WiringTests.AdminToken);
+                using (var refused = await admin.PostAsJsonAsync("/api/v1/backups/safe-mode/retry", new { })) Check.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+                var retry = await Json(await admin.PostAsJsonAsync("/api/v1/backups/safe-mode/retry", new { confirm = true }), HttpStatusCode.OK);
+                Check.True(retry["retry"]!.GetValue<bool>() && retry["restart_required"]!.GetValue<bool>(), "retry armed");
+                Check.Equal(2, Automatic(settings));
+            }
+            finally { await StopAsync(app); }
+        }
+        finally { SchemaMigrator.MigrationAssemblies = [typeof(SchemaMigrator).Assembly]; }
+
+        // The fixed build (the failing migration gone) starts normally after the retry.
+        app = await StartAsync(temp, settings);
+        try
+        {
+            Check.True(!app.Runtime.SafeMode, "normal start after the retry with a fixed build");
+            Check.True(UpgradeGuard.Marker(new InstanceBackupStore(settings.DataDir, settings.SettingsConfigDir, app.Runtime.Database, ApplicationRuntime.Version)) is null, "marker cleared");
+            Check.Equal(before.Rows["entries"], BackupDatabases.Facts(catalog, integrity: false).Rows["entries"]);
         }
         finally { await StopAsync(app); }
     }
@@ -488,9 +586,20 @@ public static class BackupTests
     internal static readonly (string Method, string Path)[] RouteList =
     [
         ("GET", "/api/v1/backups"), ("POST", "/api/v1/backups"), ("GET", "/api/v1/backups/{backupId}/download"), ("DELETE", "/api/v1/backups/{backupId}"),
-        ("POST", "/api/v1/backups/restore/preview"), ("POST", "/api/v1/backups/restore/apply"), ("POST", "/api/v1/backups/update-notice/dismiss"),
+        ("POST", "/api/v1/backups/restore/preview"), ("POST", "/api/v1/backups/restore/apply"), ("DELETE", "/api/v1/backups/restore/pending"),
+        ("POST", "/api/v1/backups/update-notice/dismiss"), ("POST", "/api/v1/backups/safe-mode/retry"), ("POST", "/api/v1/backups/safe-mode/migrate-without-backup"),
         ("GET", "/api/v1/maintenance/old-files"), ("POST", "/api/v1/maintenance/old-files"),
     ];
+
+    private static MultipartFormDataContent Upload(byte[] file, string? passphrase)
+    {
+        var form = new MultipartFormDataContent();
+        if (passphrase is not null) form.Add(new StringContent(passphrase), "passphrase");
+        var content = new ByteArrayContent(file);
+        content.Headers.ContentType = new("application/octet-stream");
+        form.Add(content, "file", "backup.ascbackup");
+        return form;
+    }
 
     private static async Task Routes()
     {
@@ -514,7 +623,6 @@ public static class BackupTests
                 using (var response = await anonymous.SendAsync(new HttpRequestMessage(new HttpMethod(method), concrete))) Check.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
                 using (var response = await guestClient.SendAsync(new HttpRequestMessage(new HttpMethod(method), concrete))) Check.Equal(HttpStatusCode.Forbidden, response.StatusCode);
             }
-            // The 0.4.5 /api/admin/instance routes are gone (phase 12 moved them).
             using var admin = app.Client(Phase11WiringTests.AdminToken);
             using (var old = await admin.GetAsync("/api/admin/instance/backups")) Check.Equal(HttpStatusCode.NotFound, old.StatusCode);
 
@@ -525,44 +633,157 @@ public static class BackupTests
             using (var tooShort = await admin.PostAsJsonAsync("/api/v1/backups", new { passphrase = "short" })) Check.Equal(HttpStatusCode.BadRequest, tooShort.StatusCode);
             var list = await Json(await admin.GetAsync("/api/v1/backups"), HttpStatusCode.OK);
             var item = list["items"]!.AsArray().Single()!.AsObject();
-            Check.True(item["protected"]!.GetValue<bool>() && item["kind"]!.GetValue<string>() == "manual", "listed as a protected manual backup");
+            Check.True(item["protected"]!.GetValue<bool>() && item["kind"]!.GetValue<string>() == "manual" && item["schema_matches_build"]!.GetValue<bool>(), "listed");
             var id = item["id"]!.GetValue<string>();
             var file = await admin.GetByteArrayAsync("/api/v1/backups/" + id + "/download");
-            Check.True(BackupCrypto.IsProtected(file), "download is the protected file");
+            Check.True(BackupCrypto.Detect(file) == BackupContainer.Protected4, "download is the chunked protected file");
 
-            // Upload preview with the passphrase header; wrong passphrase answers 400.
-            using (var wrong = new ByteArrayContent(file))
+            // Audit 9: the passphrase travels in the body (multipart), never in a header.
+            using (var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/backups/restore/preview") { Content = new ByteArrayContent(file) })
             {
-                wrong.Headers.ContentType = new("application/octet-stream");
-                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/backups/restore/preview") { Content = wrong };
-                request.Headers.Add("X-Backup-Passphrase", Convert.ToBase64String(Encoding.UTF8.GetBytes("not the passphrase")));
+                request.Content.Headers.ContentType = new("application/octet-stream");
+                request.Headers.Add("X-Backup-Passphrase", Convert.ToBase64String(Encoding.UTF8.GetBytes(Passphrase)));
                 using var response = await admin.SendAsync(request);
                 Check.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             }
-            JsonObject preview;
-            using (var content = new ByteArrayContent(file))
-            {
-                content.Headers.ContentType = new("application/octet-stream");
-                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/backups/restore/preview") { Content = content };
-                request.Headers.Add("X-Backup-Passphrase", Convert.ToBase64String(Encoding.UTF8.GetBytes(Passphrase)));
-                preview = await Json(await admin.SendAsync(request), HttpStatusCode.OK);
-            }
+            using (var wrong = await admin.PostAsync("/api/v1/backups/restore/preview", Upload(file, "not the passphrase"))) Check.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
+            var preview = await Json(await admin.PostAsync("/api/v1/backups/restore/preview", Upload(file, Passphrase)), HttpStatusCode.OK);
             using (var stale = await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = "0000", confirm = true }))
-            {
-                var stalled = await Json(stale, HttpStatusCode.Accepted);
-                var failed = await Finished(app, stalled["task_id"]!.GetValue<string>());
-                Check.True(failed.State == "failed", "a wrong token fails the job and changes nothing");
-            }
-            var applied = await Json(await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new
-            { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>(), confirm = true }), HttpStatusCode.Accepted);
-            var restoreTask = await Finished(app, applied["task_id"]!.GetValue<string>());
-            Check.True(restoreTask.State == "completed", "restore task: " + restoreTask.Error);
+                Check.Equal(HttpStatusCode.Conflict, stale.StatusCode);
+            var armed = await Json(await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new
+            { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>(), confirm = true }), HttpStatusCode.OK);
+            Check.True(armed["armed"]!.GetValue<bool>() && armed["restart_required"]!.GetValue<bool>() && !armed["restarting"]!.GetValue<bool>(), "armed, restart required");
+            // Until the restart, changes are refused (audit 4/5/8); the backup routes stay open.
+            using (var refused = await admin.PostAsJsonAsync("/api/v1/errors/clear", new { })) Check.Equal(HttpStatusCode.ServiceUnavailable, refused.StatusCode);
+            Check.True((await Json(await admin.GetAsync("/api/v1/backups"), HttpStatusCode.OK))["restore_pending"] is JsonObject, "pending restore listed");
+            await Json(await admin.DeleteAsync("/api/v1/backups/restore/pending"), HttpStatusCode.OK);
+            using (var allowed = await admin.PostAsJsonAsync("/api/v1/errors/clear", new { })) Check.Equal(HttpStatusCode.OK, allowed.StatusCode);
+            preview = await Json(await admin.PostAsync("/api/v1/backups/restore/preview", Upload(file, Passphrase)), HttpStatusCode.OK);
+            await Json(await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new
+            { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>(), confirm = true }), HttpStatusCode.OK);
+        }
+        finally { await StopAsync(app); }
+
+        // The next start applies it before anything opens the databases.
+        app = await StartAsync(temp, settings);
+        try
+        {
+            using var admin = app.Client(Phase11WiringTests.AdminToken);
             var after = await Json(await admin.GetAsync("/api/v1/backups"), HttpStatusCode.OK);
+            Check.True(after["restore"]?["status"]?.GetValue<string>() == "restored" && after["restore_pending"] is null, "restored at start: " + after["restore"]?.ToJsonString());
             Check.True(after["items"]!.AsArray().Any(row => row!["kind"]!.GetValue<string>() == "pre-restore"), "pre-restore backup kept");
+            Check.True(app.Runtime.Tasks.Snapshot().ToJsonString().Contains("Restore at start", StringComparison.Ordinal), "restore in Tasks");
+            await Json(await admin.PostAsync("/api/v1/backups/update-notice/dismiss", null), HttpStatusCode.OK);
+            Check.True((await Json(await admin.GetAsync("/api/v1/backups"), HttpStatusCode.OK))["restore"] is null, "notice dismissed");
+            var id = after["items"]!.AsArray().First(row => row!["kind"]!.GetValue<string>() == "manual")!["id"]!.GetValue<string>();
             await Json(await admin.DeleteAsync("/api/v1/backups/" + id), HttpStatusCode.OK);
             using (var gone = await admin.GetAsync("/api/v1/backups/" + id + "/download")) Check.Equal(HttpStatusCode.NotFound, gone.StatusCode);
         }
         finally { await StopAsync(app); }
+    }
+
+    // ---- crash safety, streaming, config keys --------------------------------------------------------------------
+
+    private static void SwapCrash()
+    {
+        using var temp = new Sandbox();
+        var data = Path.Combine(temp.Path, "data");
+        using var database = Populated(data);
+        SqliteConnection.ClearAllPools();
+        var config = Path.Combine(temp.Path, "config");
+        WriteConfig(config, "en", SecretA, connection: false);
+        var journalRoot = Path.Combine(data, "instance-backups");
+        var original = (File.ReadAllBytes(database.Paths.Catalog), File.ReadAllBytes(database.Paths.Origins), File.ReadAllBytes(Path.Combine(config, "config.json")));
+        using var other = Clean(Path.Combine(temp.Path, "other"));
+        SqliteConnection.ClearAllPools();
+        var incoming = new Dictionary<string, string>(StringComparer.Ordinal) { ["catalog.sqlite"] = other.Paths.Catalog, ["chapter-origins.sqlite"] = other.Paths.Origins };
+
+        // A failing check undoes the swap at once: the live files are byte-for-byte as before.
+        Check.Throws<InvalidOperationException>(() => DatabaseSwap.Swap(journalRoot, database.Paths, config, incoming, "{}"u8.ToArray(), "test", () => throw new InvalidOperationException("check failed")));
+        Check.True(original.Item1.SequenceEqual(File.ReadAllBytes(database.Paths.Catalog)) && original.Item2.SequenceEqual(File.ReadAllBytes(database.Paths.Origins))
+            && original.Item3.SequenceEqual(File.ReadAllBytes(Path.Combine(config, "config.json"))), "undone byte-for-byte");
+
+        // A crash after the catalogue was replaced but before the origins were (the audit's mixed state): the journal says
+        // "aside", the catalogue is new, the origins file is gone. The next start undoes it before opening anything.
+        Directory.CreateDirectory(journalRoot);
+        File.WriteAllText(Path.Combine(journalRoot, DatabaseSwap.JournalFile), "{\"kind\":\"restore\",\"step\":\"aside\"}");
+        foreach (var path in new[] { database.Paths.Catalog, database.Paths.Origins }) File.Move(path, path + ".swap-old");
+        File.Copy(other.Paths.Catalog, database.Paths.Catalog);
+        File.Copy(Path.Combine(config, "config.json"), Path.Combine(config, "config.json.swap-old"));
+        File.WriteAllText(Path.Combine(config, "config.json"), "{}");
+        var store = new InstanceBackupStore(data, config, database, "0.5.0-test");
+        var result = store.ApplyAtStart()!;
+        Check.True(result["status"]!.GetValue<string>() == "recovered" && result["message"]!.GetValue<string>().Contains("undone", StringComparison.Ordinal), "recovered: " + result.ToJsonString());
+        Check.True(original.Item1.SequenceEqual(File.ReadAllBytes(database.Paths.Catalog)) && original.Item2.SequenceEqual(File.ReadAllBytes(database.Paths.Origins))
+            && original.Item3.SequenceEqual(File.ReadAllBytes(Path.Combine(config, "config.json"))), "the mixed state was undone");
+        Check.True(!File.Exists(Path.Combine(journalRoot, DatabaseSwap.JournalFile)), "journal removed");
+
+        // After the check passed ("verified") a crash is finished, not undone.
+        File.WriteAllText(Path.Combine(journalRoot, DatabaseSwap.JournalFile), "{\"kind\":\"restore\",\"step\":\"verified\"}");
+        File.WriteAllText(database.Paths.Catalog + ".swap-old", "old");
+        Check.True(DatabaseSwap.Recover(journalRoot, database.Paths, config)!.Contains("completed", StringComparison.Ordinal), "finished");
+        Check.True(!File.Exists(database.Paths.Catalog + ".swap-old") && original.Item1.SequenceEqual(File.ReadAllBytes(database.Paths.Catalog)), "old copy removed, live kept");
+    }
+
+    private static void Crypto()
+    {
+        foreach (var size in new[] { 0, 10, BackupCrypto.ChunkSize, BackupCrypto.ChunkSize * 2 + 1234 })
+        {
+            using var temp = new Sandbox();
+            var plain = new byte[size]; System.Security.Cryptography.RandomNumberGenerator.Fill(plain);
+            var sealedFile = Path.Combine(temp.Path, "sealed");
+            using (var input = new MemoryStream(plain)) using (var output = File.Create(sealedFile)) BackupCrypto.Encrypt(input, output, Passphrase);
+            var opened = Path.Combine(temp.Path, "opened");
+            BackupCrypto.Decrypt(sealedFile, opened, Passphrase);
+            Check.True(plain.AsSpan().SequenceEqual(File.ReadAllBytes(opened)), "chunked round trip of " + size + " bytes");
+            var bytes = File.ReadAllBytes(sealedFile);
+            // Truncation (drop the last chunk) and appended data are refused.
+            if (size > BackupCrypto.ChunkSize)
+            {
+                var truncated = Path.Combine(temp.Path, "truncated");
+                File.WriteAllBytes(truncated, bytes[..(7 + 16 + 8 + 4 + BackupCrypto.ChunkSize + 16)]);
+                Check.Throws<BackupRefusedException>(() => BackupCrypto.Decrypt(truncated, Path.Combine(temp.Path, "t-out"), Passphrase));
+            }
+            var appended = Path.Combine(temp.Path, "appended");
+            File.WriteAllBytes(appended, [.. bytes, 1, 2, 3]);
+            Check.Throws<BackupRefusedException>(() => BackupCrypto.Decrypt(appended, Path.Combine(temp.Path, "a-out"), Passphrase));
+            Check.True(!File.Exists(Path.Combine(temp.Path, "a-out")), "no partial output left");
+        }
+        // The first phase 12 container (ASCBK3, one AES-GCM block) is still read.
+        using (var temp = new Sandbox())
+        {
+            var plain = Encoding.UTF8.GetBytes("PK legacy container body");
+            var salt = new byte[16]; var nonce = new byte[12];
+            System.Security.Cryptography.RandomNumberGenerator.Fill(salt); System.Security.Cryptography.RandomNumberGenerator.Fill(nonce);
+            var key = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(Passphrase), salt, BackupCrypto.Iterations, System.Security.Cryptography.HashAlgorithmName.SHA256, 32);
+            var cipher = new byte[plain.Length]; var tag = new byte[16];
+            byte[] magic = [.. "ASCBK3\n"u8];
+            using (var aes = new System.Security.Cryptography.AesGcm(key, 16)) aes.Encrypt(nonce, plain, cipher, tag, (byte[])[.. magic, .. salt]);
+            var file = Path.Combine(temp.Path, "v3");
+            File.WriteAllBytes(file, [.. magic, .. salt, .. nonce, .. cipher, .. tag]);
+            BackupCrypto.Decrypt(file, Path.Combine(temp.Path, "v3-out"), Passphrase);
+            Check.True(plain.AsSpan().SequenceEqual(File.ReadAllBytes(Path.Combine(temp.Path, "v3-out"))), "ASCBK3 still read");
+        }
+    }
+
+    private static void UnknownConfigKeys()
+    {
+        using var temp = new Sandbox();
+        var config = Path.Combine(temp.Path, "config");
+        WriteConfig(config, "en", SecretA, connection: false);
+        var path = Path.Combine(config, "config.json");
+        var node = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        node["future_section"] = new JsonObject { ["kept"] = true };
+        node["settings"]!["values"]!["KOMF_BROWSER_URL"] = "http://komf.test";
+        node["update"] = new JsonObject { ["app_version"] = "0.4.5", ["defaults"] = new JsonObject() };
+        File.WriteAllText(path, node.ToJsonString());
+        UpdateNotices.Check(config, "0.5.0-test"); // rewrites config.json (drops the retired link)
+        var after = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        Check.True(after["future_section"]?["kept"]?.GetValue<bool>() == true && after["settings"]!["values"]!["KOMF_BROWSER_URL"] is null, "unknown top-level key kept on rewrite");
+        var clean = BackupSettings.Sanitize(new ConfigStore(config).ReadDocument()!);
+        Check.True(clean.Document.Unknown is null && clean.NotIncluded.Contains("config.future_section"), "unknown keys never go into a backup");
+        var merged = BackupSettings.Merge(clean.Document, new ConfigStore(config).ReadDocument());
+        Check.True(merged.Document.Unknown?.ContainsKey("future_section") == true, "a restore keeps this instance's unknown keys");
     }
 
     // ---- SET-3 / SET-4 / SET-6 ---------------------------------------------------------------------------------
@@ -581,20 +802,35 @@ public static class BackupTests
         File.WriteAllText(Path.Combine(app, "app", "__pycache__", "kept.cpython-312.pyc"), "x");
         var stale = Path.Combine(config, ".config.json." + new string('a', 32) + ".tmp");
         File.WriteAllText(stale, "{}"); File.SetLastWriteTimeUtc(stale, DateTime.UtcNow.AddDays(-3));
+        var keyTemp = Path.Combine(config, ".config.key." + new string('c', 32) + ".tmp"); // a key file: never moved
+        File.WriteAllText(keyTemp, "key"); File.SetLastWriteTimeUtc(keyTemp, DateTime.UtcNow.AddDays(-3));
         var fresh = Path.Combine(config, ".config.json." + new string('b', 32) + ".tmp");
         File.WriteAllText(fresh, "{}"); // still being written: kept
         File.WriteAllText(Path.Combine(config, "config.json"), "{}");
         File.WriteAllText(Path.Combine(config, "autosourcarr.env"), "A=1");
+        var staged = Path.Combine(data, "instance-backups", "staged", new string('d', 32));
+        Directory.CreateDirectory(staged); File.WriteAllText(Path.Combine(staged, "manifest.json"), "{}");
+        Directory.SetLastWriteTimeUtc(staged, DateTime.UtcNow.AddDays(-2));
+        var armed = Path.Combine(data, "instance-backups", "staged", new string('e', 32));
+        Directory.CreateDirectory(armed); Directory.SetLastWriteTimeUtc(armed, DateTime.UtcNow.AddDays(-2));
+        File.WriteAllText(Path.Combine(data, "instance-backups", InstanceBackupStore.PendingFile), "{\"stage_id\":\"" + new string('e', 32) + "\"}");
+        var oldTrash = Path.Combine(data, "trash", DateTime.UtcNow.AddDays(-40).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(oldTrash); File.WriteAllText(Path.Combine(oldTrash, "x.md"), "x");
         var cleanup = new OldFileCleanup(() => app, config, data, data, "0.5.0");
         var preview = cleanup.Preview();
         var paths = preview["items"]!.AsArray().Select(row => row!["path"]!.GetValue<string>()).ToArray();
-        Check.True(paths.SequenceEqual(new[] { "app/UPGRADE-0.4.1.md", "app/app/__pycache__/gone.cpython-312.pyc", "config/" + Path.GetFileName(stale) }), "candidates: " + string.Join(",", paths));
+        Check.True(paths.SequenceEqual(new[] { "app/UPGRADE-0.4.1.md", "app/app/__pycache__/gone.cpython-312.pyc", "config/" + Path.GetFileName(stale),
+            "data/instance-backups/staged/" + new string('d', 32), "data/trash/" + Path.GetFileName(oldTrash) }), "candidates: " + string.Join(",", paths));
+        Check.True(preview["items"]!.AsArray().Last()!["action"]!.GetValue<string>() == "delete", "expired trash is deleted");
         Check.Throws<BackupRefusedException>(() => cleanup.Apply("stale-token"));
+        cleanup.MarkPending("setup");
+        Check.Equal("pending", cleanup.Last()!["status"]!.GetValue<string>());
         var result = cleanup.Apply(preview["preview_token"]!.GetValue<string>());
-        Check.Equal(3, result["removed"]!.AsArray().Count);
+        Check.Equal(5, result["removed"]!.AsArray().Count);
         var day = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        Check.True(File.Exists(Path.Combine(data, "trash", day, "app", "UPGRADE-0.4.1.md")) && !File.Exists(Path.Combine(app, "UPGRADE-0.4.1.md")), "moved to the dated trash, not deleted");
-        foreach (var kept in new[] { Path.Combine(app, "UPGRADE-0.9.0.md"), Path.Combine(app, "UPGRADE-0.3.0.md"), Path.Combine(app, "README.md"), fresh,
+        Check.True(File.Exists(Path.Combine(data, "trash", day, "app", "UPGRADE-0.4.1.md")) && !File.Exists(Path.Combine(app, "UPGRADE-0.4.1.md")), "moved to the dated trash");
+        Check.True(!Directory.Exists(oldTrash) && !Directory.Exists(staged) && Directory.Exists(armed), "expired trash deleted, armed preview kept");
+        foreach (var kept in new[] { Path.Combine(app, "UPGRADE-0.9.0.md"), Path.Combine(app, "UPGRADE-0.3.0.md"), Path.Combine(app, "README.md"), fresh, keyTemp,
                      Path.Combine(config, "config.json"), Path.Combine(config, "autosourcarr.env"), Path.Combine(app, "app", "__pycache__", "kept.cpython-312.pyc") })
             Check.True(File.Exists(kept), "kept: " + kept);
         Check.True(cleanup.Last()?["status"]?.GetValue<string>() == "completed", "the wizard's cleanup status");

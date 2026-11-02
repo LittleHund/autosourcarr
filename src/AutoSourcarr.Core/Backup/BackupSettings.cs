@@ -22,6 +22,8 @@ public static class BackupSettings
         ConfigDocument? document;
         try { document = JsonSerializer.Deserialize(raw, ConfigJsonContext.Default.ConfigDocument); }
         catch (JsonException error) { throw new BackupRefusedException("The settings in the backup are not a valid config.json.", 400, error); }
+        if (document?.Unknown is { Count: > 0 })
+            throw new BackupRefusedException("The settings in the backup contain keys a backup never writes; this file was changed by hand.");
         if (document is null || document.Settings is null || document.SourceHost is null || document.Extra is null || document.ManagedKeys is null)
             throw new BackupRefusedException("The settings in the backup are incomplete.");
         if (document.Format > ConfigDocument.CurrentFormat)
@@ -42,6 +44,9 @@ public static class BackupSettings
     {
         var copy = JsonSerializer.Deserialize(Serialize(current), ConfigJsonContext.Default.ConfigDocument)!;
         var omitted = new List<string>();
+        // Keys this build does not understand could hold anything: they are never copied into a backup.
+        if (copy.Unknown is { Count: > 0 } unknown) omitted.AddRange(unknown.Keys.Order(StringComparer.Ordinal).Select(key => "config." + key));
+        copy.Unknown = null;
         foreach (var (name, section) in Sections(copy))
         {
             omitted.AddRange(section.Secrets.Keys.Order(StringComparer.Ordinal).Select(key => name + "." + key));
@@ -105,7 +110,11 @@ public static class BackupSettings
             if (restored.All(other => other.Id != mine.Id)) { restored.Add(mine); keptConnections.Add(mine.Id); }
         result.Connections = restored.Count == 0 && backup.Connections is null && current?.Connections is null ? null : restored;
         // The running build's own records stay: setup state, update record (SET-9) and conversion history.
-        if (current is not null) { result.Setup = current.Setup ?? result.Setup; result.Update = current.Update; result.Conversion = current.Conversion ?? result.Conversion; }
+        if (current is not null)
+        {
+            result.Setup = current.Setup ?? result.Setup; result.Update = current.Update; result.Conversion = current.Conversion ?? result.Conversion;
+            result.Unknown = current.Unknown;
+        }
         else result.Update = null;
         return new Merged(result, kept, dropped, changed.ToList(), added, keptConnections);
     }

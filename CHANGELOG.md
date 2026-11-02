@@ -57,24 +57,41 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   - Backups (SET-8) are one `.ascbackup` file, format 3: a zip with `manifest.json` (format, app and schema versions, the
     PIPE-4 compatibility list, created time, every file with its sha256), `settings/config.json` without any secret,
     `profiles/profiles.json`, both databases (taken together while database work is paused) and the portable catalogue
-    export. Secret fields are left out and listed by name; `config.key`, accounts, tokens, cookies, signing keys,
-    downloads and covers are never included. An optional passphrase (12–1024 characters) encrypts the file (AES-GCM,
-    PBKDF2-SHA256 600,000 rounds); it is never saved. The compatibility list now names `backup_format`.
-  - System → Backup & restore runs on `/api/v1/backups`: create (a job), download, delete, restore preview (upload or a
-    saved backup) and restore (preview token and typed confirmation). A restore stops background work, keeps a
-    pre-restore backup, swaps and checks both databases, upgrades older schemas, merges the settings and keeps this
-    instance's secrets; any failure rolls back. Restart afterwards (the integrated image restarts itself).
+    export. Secret fields and unknown `config.json` keys are left out and listed by name; `config.key`, accounts, tokens,
+    cookies, signing keys, downloads and covers are never included. An optional passphrase (12–1024 characters)
+    encrypts the file with chunked AES-GCM (container `ASCBK4`, PBKDF2-SHA256 600,000 rounds); it is never saved. Files
+    of the first phase 12 build (`ASCBK3`, up to 1 GiB) are still read. Backups stream through disk (no size cap besides
+    free space); the compatibility list names `backup_format`.
+  - System → Backup & restore runs on `/api/v1/backups`: create (a job), download (a plain streamed link), delete,
+    restore preview (multipart upload with the passphrase as a form field, or a saved backup) and restore. The preview
+    token covers the staged file, `config.json` and the saved manual decisions; the preview says how many manual
+    decisions newer than the backup would be lost.
+  - A restore is armed, not applied: it runs at the next start, before any database is opened. A pre-restore backup is
+    taken, then both databases and `config.json` are swapped with a journal (`instance-backups/swap-journal.json`, files
+    renamed aside as `*.swap-old`); a failed check or a crash mid-swap is undone on the next start. This instance's
+    secrets are kept, and a secret is never carried to a changed address. Until the restart, changes are refused (the
+    restore can be cancelled); the integrated image restarts itself. An older-schema backup is upgraded by the update
+    check after the restore.
   - A newer backup is refused with "Version mismatch: version X required"; a 0.4.x instance backup (format 2) must be
     restored with 0.4.x.
   - Automatic backup before every update or migration (SET-9); the newest 3 are kept. If a migration or the start check
-    after it fails, both databases are put back from that backup, startup maintenance does not run, and System → Backups
-    shows the notice with "Roll back to the backup from …" and "Keep current". Both are recorded in Tasks.
-  - Old files (SET-3): old release reports, orphaned Python bytecode and the app's own abandoned temporary files move to
-    `trash/<date>/` under the data folder after setup, on the first start of a new version, or from
-    `/api/v1/maintenance/old-files` (preview first). Env files are not touched (the app still reads them).
+    after it fails, the pre-update copies are swapped back and `instance-backups/rolled-back.json` is written: the app
+    starts in a minimal safe mode (no source engine, catalogue, jobs or feature-schema writers; changes refused except
+    sign-in and the backup actions; status, health and the diagnostics download work) and does not retry on the next
+    start. System → Backup & restore says to run the previous image again or offers "Retry the update" (a fresh backup,
+    then the next start migrates again). If the automatic backup itself fails, nothing is migrated; the owner may
+    choose "Migrate without a backup" (confirm + token). After a successful update, "Roll back to the backup from …" is
+    offered only when that backup needs no migration; otherwise the notice explains how to go back with the previous
+    image. Everything is recorded in Tasks.
+  - Old files (SET-3): old release reports, orphaned Python bytecode, the app's own abandoned temporary files and
+    restore previews move to `trash/<date>/` under the data folder after setup, on the first start of a new version, or
+    from `/api/v1/maintenance/old-files` (preview first); trash older than 30 days is deleted. Env files and
+    `config.key` temporaries are never touched. The setup wizard shows "pending" until its cleanup finishes.
   - `KOMF_BROWSER_URL` and `REPAIR_AI_BROWSER_URL` are removed (SET-4); a saved value is dropped from `config.json`
-    without a notice. A Komf connection (Settings → Connections) is unaffected.
-  - Limits: after a restore, in-memory caches stay stale until the restart; a backup larger than 1 GiB is refused.
+    without a notice. A Komf connection (Settings → Connections) is unaffected. `config.json` keeps unknown top-level
+    keys on every rewrite.
+  - Limits: safe mode under the native launcher (Suwayomi image) is not tested; an admin token kept in the browser still
+    downloads through a buffered request (a plain link cannot carry the header).
 
 ## Unreleased
 
