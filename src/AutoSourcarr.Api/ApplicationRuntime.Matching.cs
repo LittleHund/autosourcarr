@@ -219,7 +219,18 @@ internal sealed partial class ApplicationRuntime
         var reading = OpenReading(owner, library, new ReadingInputs(decisions, identity, ingest, discovery, providers, candidatePages, coverHints,
             translator, translatedNames));
         chapterRefresh = reading.Chapters.Refresh;
-        owner._startup = new StartupWork(maintenance, titles, structure, duplicates, discovery, library, hintIngest);
+        // Phase 13: the continuous catalogue crawler (0.4.5 schedule_continuous_catalog_discovery) as a low-priority job.
+        string[] ahead = ["subbed-reset-rebuild", "reset-hint-replay", "import-discovery", "import-resolve", "import-recovery", "backup-import", "suwayomi-import"];
+        string[] enrichment = ["translation-enrichment", Endpoints.DiscoveryV1Endpoints.MetadataRepairJob.Name, Endpoints.DiscoveryV1Endpoints.AdditionalScanJob.Name,
+            "entry-source-discovery", "entry-metadata-refresh"];
+        var crawler = new ContinuousCatalogueCrawler(database, ingest, new SuwayomiCatalogueClient(owner.SourceRuntime.Client), () => owner.Settings)
+        {
+            SourcePaused = owner.SourceResults.Paused, SourceResult = owner.SourceResults.Record, RememberCover = coverHints.Remember,
+            Yield = () => owner.Jobs.Active(ahead) > 0,
+            Backlog = () => owner.Jobs.Active(enrichment),
+            NewlyCatalogued = ids => owner.ScheduleCrawlEnrichment(discovery, ids),
+        };
+        owner._startup = new StartupWork(maintenance, titles, structure, duplicates, discovery, library, hintIngest, crawler);
 
         var review = new ReviewV1Services
         {

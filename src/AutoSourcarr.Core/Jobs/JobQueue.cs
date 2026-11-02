@@ -179,6 +179,14 @@ public sealed class JobQueue : IAsyncDisposable
 
     public bool Paused { get { lock (_gate) return _paused; } }
 
+    /// <summary>How many queued or running jobs (not finished, not being cancelled) have one of these type names.</summary>
+    public int Active(IReadOnlyCollection<string> typeNames)
+    {
+        ArgumentNullException.ThrowIfNull(typeNames);
+        lock (_gate)
+            return _queued.Concat(_running).Count(job => !job.Finished && !job.CancelRequested && typeNames.Contains(job.Type.Name));
+    }
+
     /// <summary>Queue, running jobs, per-type limits/averages and an ETA for each job.</summary>
     public JsonObject Snapshot()
     {

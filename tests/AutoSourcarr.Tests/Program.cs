@@ -145,6 +145,7 @@ AutoSourcarr.Tests.Imports.ImportsTests.Register(suite);
 AutoSourcarr.Tests.Catalogue.Metadata.MetadataChooserTests.Register(suite);
 AutoSourcarr.Tests.Catalogue.Metadata.MetadataIdentityTests.Register(suite);
 AutoSourcarr.Tests.Sources.Discovery.CatalogueDiscoveryTests.Register(suite);
+AutoSourcarr.Tests.Sources.Discovery.ContinuousCatalogueCrawlerTests.Register(suite);
 AutoSourcarr.Tests.Matching.Phase9WiringTests.Register(suite);
 // Phase 10 "Chapters and reader".
 AutoSourcarr.Tests.Catalogue.Chapters.ChapterNumberingTests.Register(suite);
