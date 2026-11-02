@@ -4,7 +4,8 @@ const {test, expect, signIn, expectNoErrors, openSidebar} = require('./fixtures'
 /** A point outside the given box, inside the viewport (the backdrop of a modal). */
 async function outside(page, locator) {
   const box = await locator.boundingBox(), {width, height} = page.viewportSize();
-  const candidates = [[4, 4], [width - 4, 4], [4, height - 4], [width - 4, height - 4]];
+  // Middle of the right and bottom edges first: the corners can be the fixed header, which is not the backdrop.
+  const candidates = [[width - 4, Math.round(height / 2)], [Math.round(width / 2), height - 4], [width - 4, height - 4], [4, height - 4], [width - 4, 4], [4, 4]];
   const free = candidates.find(([x, y]) => !box || x < box.x || x > box.x + box.width || y < box.y || y > box.y + box.height);
   return free || null;
 }
