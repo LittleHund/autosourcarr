@@ -1,0 +1,5 @@
+{
+  "last_known_release": "v0.21.3",
+  "repo": "mihonapp/mihon",
+  "note": "Last Mihon release whose backup model was reviewed against MihonBackup.proto (PIPE-9); written by scripts/mihon-backup-watch.py --accept."
+}

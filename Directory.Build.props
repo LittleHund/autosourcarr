@@ -7,6 +7,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Phase 13: the image publishes ReadyToRun for linux-x64; the lock files record that runtime so locked restores hold. -->
+    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
     <VersionPrefix>0.4.3</VersionPrefix>

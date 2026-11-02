@@ -2,12 +2,15 @@
 // Runs in the ci-probe workflow (docs/handoff/briefs/phase11-probe-steps.md); browsers are installed there.
 // The app is the controlled external-mode runtime served by the C# test host (UiTestHost, --serve-ui).
 // Filters: E2E_VIEWPORTS=phone,tablet  E2E_THEMES=blue-dark,rose-light  E2E_BUNDLE=1 (serve dist/index.html).
+// Phase 13: E2E_BASE_URL=http://127.0.0.1:PORT tests an already running instance (the 0.5.0 image) instead of
+// starting the test host; E2E_SCREENSHOT_DIR=DIR saves one screenshot per page, size and theme (PIPE-5).
 const os = require('os');
 const path = require('path');
 const {defineConfig} = require('@playwright/test');
 const {themes} = require('./tests/e2e/themes');
 
 const port = Number(process.env.E2E_PORT || 18282);
+const external = (process.env.E2E_BASE_URL || '').replace(/\/$/, '');
 const viewports = [
   {name: 'phone', viewport: {width: 375, height: 812}, isMobile: true, hasTouch: true, deviceScaleFactor: 2},
   {name: 'tablet', viewport: {width: 768, height: 1024}, isMobile: true, hasTouch: true, deviceScaleFactor: 2},
@@ -33,7 +36,7 @@ module.exports = defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: [['list'], ['json', {outputFile: process.env.E2E_JSON || 'test-results/playwright.json'}], ['html', {open: 'never', outputFolder: 'playwright-report'}]],
   use: {
-    baseURL: `http://127.0.0.1:${port}`,
+    baseURL: external || `http://127.0.0.1:${port}`,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     browserName: 'chromium',
@@ -45,7 +48,7 @@ module.exports = defineConfig({
       colorScheme: theme.colorScheme, theme, sizeName: size.name,
     },
   }))),
-  webServer: {
+  webServer: external ? undefined : {
     command: serve,
     url: `http://127.0.0.1:${port}/api/v1/live`,
     reuseExistingServer: !process.env.CI,

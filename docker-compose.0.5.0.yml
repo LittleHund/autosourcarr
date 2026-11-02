@@ -1,0 +1,108 @@
+# AutoSourcarr 0.5.0 (C#/.NET 10 image, docker/Dockerfile) on TrueNAS. Not for 0.4.5: those Compose files stay as
+# they are until the cutover (phase 14). Deploying this is an owner decision (hard rules 12, 15, 16).
+#
+# Two instances = four services: each AutoSourcarr plus its own optional main Suwayomi. No helper services, no
+# Docker socket, no sibling containers (hard rule 13). The source host (extension sources, JCEF WebView with its own
+# Xvfb), the repair runner and the reader extension repository are inside the AutoSourcarr image.
+# A single instance: keep `autosourcarr` (+ `suwayomi` if you want your own Suwayomi) and delete the `private-*`
+# services. A main Suwayomi is optional in 0.5.0; connect it in the Web UI under Connections -> Suwayomi
+# (address http://suwayomi:30058 inside this network).
+#
+# Image: ghcr.io/littlehund/autosourcarr is published only after the owner's go (release workflow, "publish" input
+# plus the "release" environment). Until then build it locally from the project folder (see `build:` below).
+#
+# Identity: the image runs as 568:568 (TrueNAS "apps") by default; give 568:568 the data and config datasets. The
+# image also has a low-rights account 569:569 (asc-source) for the source host JVM; do not set it as `user:`.
+# Settings live in /config/config.json (+ config.key); an old /config/autosourcarr.env is converted on first start
+# and kept as a backup. Everything not set there has a safe default in the image (ARC-8).
+#
+# Reverse proxy / Authelia (docs/reverse-proxy/authelia.md), rules before the normal AutoSourcarr rule:
+#   1. '^/api/reader/v1([/?].*)?$'  policy bypass  (unchanged; AutoSourcarr checks the reader key itself)
+#   2. '^/api/reader/repo/(index\.min\.json|repo\.json|apk/[A-Za-z0-9._-]+\.apk|icon/[A-Za-z0-9._-]+\.png|jar/[A-Za-z0-9._-]+\.jar)$'
+#      methods GET, HEAD  policy bypass  (new in 0.5.0: the public reader extension repository)
+#   3. everything else on the host: signed in (two_factor)
+# Never bypass /api/v1/, /api/admin/, / or /api/reader/ as a whole.
+#
+# Repair runner: needs Linux Landlock ABI >= 6 and a seccomp profile that allows the Landlock system calls (the
+# default profile of current Docker releases does; unverified on TrueNAS). Without them repairs that run code are
+# refused (fail closed) and everything else works.
+
+x-autosourcarr: &autosourcarr
+  # image: ghcr.io/littlehund/autosourcarr:0.5.0      # after the owner has published it
+  image: autosourcarr:0.5.0-local
+  pull_policy: build
+  build:
+    context: /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/project
+    dockerfile: docker/Dockerfile
+  restart: unless-stopped
+  user: "568:568"
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  init: false            # the image has tini as PID 1 (reaps Xvfb and Chromium helpers)
+  stop_grace_period: 90s
+  # PERF-7: boot under 1 min preferred, 5 min allowed (the image's HEALTHCHECK uses the same budget).
+  healthcheck:
+    test: ["CMD", "curl", "-fsS", "-m", "4", "-o", "/dev/null", "http://127.0.0.1:8282/api/v1/live"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 300s
+
+x-suwayomi: &suwayomi
+  image: ghcr.io/suwayomi/suwayomi-server:v2.3.2243
+  restart: unless-stopped
+  user: "568:568"
+  init: true
+  environment: &suwayomi-env
+    BIND_IP: 0.0.0.0
+    BIND_PORT: "30058"
+    AUTH_MODE: none
+    WEB_UI_ENABLED: "true"
+    TZ: Europe/Amsterdam
+
+services:
+  autosourcarr:
+    <<: *autosourcarr
+    container_name: autosourcarr
+    hostname: autosourcarr
+    ports:
+      - 8282:8282
+    environment:
+      TZ: Europe/Amsterdam
+    volumes:
+      - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/autosourcarr-data:/data
+      - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/config:/config
+      # Optional: the CBZ library (LIBRARY_DIR in Settings) and old downloads to import, read-only.
+      - /mnt/hdd/storage/komga/manga:/mnt/manga-downloads:ro
+    networks: [autosourcarr]
+
+  suwayomi:
+    <<: *suwayomi
+    # No host port: reachable only inside this network.
+    volumes:
+      - /mnt/ssd/apps/komga/automation-apps/manga/suwayomi/config:/home/suwayomi/.local/share/Tachidesk
+    networks: [autosourcarr]
+
+  private-autosourcarr:
+    <<: *autosourcarr
+    container_name: private-autosourcarr
+    hostname: private-autosourcarr
+    ports:
+      - 30061:8282
+    environment:
+      TZ: Europe/Amsterdam
+    volumes:
+      - /mnt/ssd/apps/komga/automation-apps/manga/private-autosourcarr/autosourcarr-data:/data
+      - /mnt/ssd/apps/komga/automation-apps/manga/private-autosourcarr/config:/config
+    networks: [autosourcarr]
+
+  private-suwayomi:
+    <<: *suwayomi
+    volumes:
+      - /mnt/ssd/apps/komga/automation-apps/manga/private-suwayomi/config:/home/suwayomi/.local/share/Tachidesk
+    networks: [autosourcarr]
+
+networks:
+  autosourcarr:
+    name: autosourcarr

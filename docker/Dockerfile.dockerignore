@@ -1,0 +1,19 @@
+# Build context of docker/Dockerfile (repository root). Keep it small and free of local state.
+.git
+.github
+.build
+**/bin
+**/obj
+**/node_modules
+probe
+test-results
+playwright-report
+runtime-config
+**/*.env
+autosourcarr/app/static/dist
+autosourcarr/tests
+autosourcarr/bundled
+**/__pycache__
+**/.gradle
+**/build
+extension/dist
