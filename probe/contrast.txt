@@ -1,0 +1,34 @@
+Theme contrast (minimum ratio per role over its surfaces; AA: text 4.5, UI parts 3.0)
+theme         text          muted         accent        status        on-accent     header        control-borderfocus         accent-border fill          
+blue/dark     9.17          5.24          5.11          5.33          8.44          5.79          3.34          5.94          5.94          5.94          
+blue/light    12.79         6.00          4.69          4.83          6.34          5.79          3.78          5.16          5.55          5.55          
+amber/dark    9.17          5.24          6.52          5.33          10.76         5.87          3.34          7.58          7.58          7.58          
+amber/light   12.79         6.00          4.73          4.83          6.39          5.87          3.78          5.20          5.60          5.60          
+emerald/dark  9.17          5.24          6.11          5.33          10.09         5.50          3.34          7.10          7.10          7.10          
+emerald/light 12.79         6.00          4.60          4.83          6.22          5.50          3.78          5.06          5.45          5.45          
+violet/dark   9.17          5.24          4.86          5.33          8.02          6.02          3.34          5.65          5.65          5.65          
+violet/light  12.79         6.00          4.61          4.83          6.23          6.02          3.78          5.07          5.45          5.45          
+rose/dark     9.17          5.24          4.83          5.33          7.97          6.04          3.34          5.61          5.61          5.61          
+rose/light    12.79         6.00          4.66          4.83          6.29          6.04          3.78          5.12          5.51          5.51          
+cyan/dark     9.17          5.24          6.44          5.33          10.63         5.46          3.34          7.48          7.48          7.48          
+cyan/light    12.79         6.00          4.61          4.83          6.22          5.46          3.78          5.06          5.45          5.45          
+
+Minimum per role over all 12096 derived combinations, the table and the CSS fallback:
+  accent / text             4.50  (rose/dark/graphite/50/accent/-/-/- on card)
+  accent-border / ui        3.00  (custom/light/aurora/25/neutral/#FF2D78/#000000/- on panel2)
+  accent-fill / ui          4.50  (custom/light/tonal/10/accent/#FFFF00/#000000/- on panel2)
+  bad / text                4.50  (blue/light/aurora/25/neutral/-/#000000/- on panel2)
+  control-border / ui       3.00  (cyan/dark/graphite/25/accent/-/-/- on card)
+  focus / ui                4.50  (rose/dark/graphite/50/accent/-/-/- on card)
+  good / text               4.50  (custom/light/tonal/50/accent/#0000FF/#000000/- on accent-soft)
+  header-muted / text       4.51  (custom/dark/neutral/10/accent/#FFFFFF/-/- on header)
+  header-text / text        5.01  (custom/dark/neutral/10/accent/#00FF00/-/- on header)
+  muted / text              4.50  (rose/dark/tonal/50/accent/-/-/- on accent-soft)
+  on-accent / text          5.98  (custom/dark/graphite/10/accent/#000000/-/- on accent-fill)
+  progress / ui             4.50  (custom/light/tonal/10/accent/#FFFF00/#000000/- on panel2)
+  secondary / text          4.50  (amber/dark/aurora/10/accent/-/#000000/- on accent-soft)
+  tertiary / text           4.50  (amber/dark/aurora/10/accent/-/#000000/#000000 on accent-soft)
+  text / text               7.88  (rose/dark/tonal/50/accent/-/-/- on accent-soft)
+  warn / text               4.50  (emerald/light/aurora/50/neutral/-/-/- on panel2)
+
+PASS WCAG AA: 1755950 pairs in 12 themes, 12096 combinations and the CSS fallback

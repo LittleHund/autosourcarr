@@ -1,4 +1,5 @@
 mihon-backup-watch: mihonapp/mihon v0.21.3: 84 @ProtoNumber fields in 10 classes
+Same release as the last reviewed one (v0.21.3).
 Declared in MihonBackup.proto but not written by this release (kept for older backups):
   Backup: 100 = legacy_broken_sources: bytes
   BackupManga: 102 = legacy_broken_history: bytes

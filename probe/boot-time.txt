@@ -1,0 +1,11 @@
+image=autosourcarr:probe
+live_seconds=2.5
+ui_seconds=none
+source_host_seconds=1.5
+ready_seconds=none
+target_seconds=60
+budget_seconds=300
+result=fail
+health=healthy
+aot_cache=AOT cache: 32M
+image_size_bytes=1486970498
