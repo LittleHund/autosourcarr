@@ -151,7 +151,7 @@ if command -v node >/dev/null 2>&1; then
     exit 1
   fi
   grep -q "timeoutMs:20000,suppressClientError:true" autosourcarr/app/static/app.js
-  grep -q "tasksPollTimer=setTimeout(poll,delay)" autosourcarr/app/static/app.js
+  grep -q "function subscribeTaskUpdates()" autosourcarr/app/static/app.js
   grep -q "method:'POST',body:JSON.stringify({ids})" autosourcarr/app/static/app.js
   grep -q "renderErrorsSnapshot();" autosourcarr/app/static/app.js
   grep -q "English hint" autosourcarr/app/static/app.js
