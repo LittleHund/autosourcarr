@@ -1,0 +1,5 @@
+{
+  "_comment": "Test-only owner for the throwaway e2e instance (tests/e2e). Not a real credential; the instance lives in a scratch folder and listens on 127.0.0.1 only.",
+  "username": "e2e-owner",
+  "password": "e2e-owner-password-for-tests"
+}

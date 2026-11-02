@@ -3,6 +3,8 @@ using AutoSourcarr.Tests;
 if (args.Length == 3 && args[0] == "--private-document-probe") return PrivateDocumentTests.Probe(args[1], args[2]);
 if (args.Length == 2 && args[0] == "--instance-lock-probe") return ApplicationRuntimeTests.LockProbe(args[1]);
 if (args.Length == 2 && args[0] == "--raster-scratch-probe") return RasterScratchTests.Probe(args[1]);
+// Phase 11 browser tests: serve the Web UI from the controlled runtime (tests/e2e).
+if (args.Length >= 4 && args[0] == "--serve-ui") return AutoSourcarr.Tests.Api.UiTestHost.Run(args[1..]);
 if (args.Length == 2 && args[0] == "--write-openapi") return ApiV1Tests.WriteOpenApi(args[1]);
 if (args.Length == 2 && args[0] == "--write-settings-docs") return ApiV1Tests.WriteSettingsDocs(args[1]);
 if (args.Length == 2 && args[0] == "--raster-scratch-reject-probe") return RasterScratchTests.RejectProbe(args[1]);
