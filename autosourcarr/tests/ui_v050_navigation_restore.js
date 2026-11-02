@@ -82,6 +82,24 @@ test('normalize keeps the open entry, library page and new filters, and rejects 
   assert.equal(navigation.normalize({version:1,library:{signature:'x',cursor:'c\n',previous:[]}}).library.cursor,'');
 });
 
+test('A12: library cursors with long title keys survive a refresh (server accepts up to 2048 characters)',()=>{
+  // The library cursor is base64url of {stamp,key,id,total}; with title sorting the key is the lower-cased title.
+  const cursor=title=>Buffer.from(JSON.stringify({stamp:'s1',key:title.toLowerCase(),id:4711,total:12000})).toString('base64url');
+  const long=cursor('A Very Long Light Novel Style Title '.repeat(40));
+  assert.ok(long.length>512&&long.length<=2048,'fixture is longer than the old 512 cap: '+long.length);
+  const {navigation}=harness(null);
+  const kept=navigation.normalize({version:1,library:{signature:'sig',cursor:long,previous:['',long]}});
+  assert.equal(kept.library.cursor,long);assert.equal(kept.library.previous[1],long);
+  const tooLong=cursor('x'.repeat(1600));assert.ok(tooLong.length>2048);
+  assert.equal(navigation.normalize({version:1,library:{signature:'sig',cursor:tooLong,previous:[]}}).library.cursor,'','Beyond the server limit the cursor is dropped');
+  const h=harness(null);boot(h);
+  h.context.libraryPosition={signature:'sig',cursor:long,previous:Array.from({length:50},()=>long)};
+  h.navigation.save();
+  const stored=h.session.get(KEY);assert.ok(stored.length>32768,'A full chain of long cursors is stored');
+  const again=harness(JSON.parse(stored));boot(again);
+  assert.equal(again.libraryCalls[0].cursor,long,'and restored after the refresh');assert.equal(again.libraryCalls[0].previous.length,50);
+});
+
 test('save records the open entries, the library position and the health filter',()=>{
   const h=harness(null);boot(h);h.show('subbed');
   h.context.activeInspector.subbed=42;h.context.browseOpen=true;h.context.browseState.selectedEntryId=9;
