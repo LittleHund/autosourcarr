@@ -210,6 +210,38 @@ public static class RepairV1EndpointsTests
             Check.Equal(0, new RepairConfirmations(setup.Maintenance).All().Count);
         });
 
+        suite.Add("repair v1: Sources -> Health reads the persisted verdicts: confirmed only while the confirmed jar is installed (audit A10)", () =>
+        {
+            using var setup = new Setup();
+            var sha = new string('d', 64);
+            void Report(string installed)
+            {
+                var path = setup.Domain.ReportPath(Package); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, new JsonObject
+                {
+                    ["kind"] = "domain-repair", ["package"] = Package, ["state"] = "repaired", ["installed_sha256"] = installed,
+                    ["sources_after"] = new JsonArray(new JsonObject { ["id"] = "123", ["name"] = "Example" }),
+                }.ToJsonString());
+            }
+            var confirmations = new RepairConfirmations(setup.Maintenance);
+            var observations = new AutoSourcarr.Api.RepairConfirmationObservations(confirmations, setup.Domain);
+            JsonObject History() => observations.ReadAsync(CancellationToken.None).GetAwaiter().GetResult().Histories[Package]!.AsObject();
+            Report(sha);
+            Check.Equal(0, observations.ReadAsync(CancellationToken.None).GetAwaiter().GetResult().Histories.Count);
+            confirmations.Record(Package, "aaaaaaaaaaaa", sha, RepairConfirmations.Fixed);
+            var history = History();
+            Check.Equal("confirmed", history["current"]!["status"]!.GetValue<string>());
+            Check.True(history["working_at"]!.GetValue<double>() > 0, "confirmed-working time");
+            Check.Equal("123", history["current"]!["source_ids"]![0]!.GetValue<string>());
+            // Another jar installed since: the old Fixed no longer applies.
+            Report(new string('e', 64));
+            Check.Equal("unconfirmed", History()["current"]!["status"]!.GetValue<string>());
+            Check.True(History()["working_at"] is null, "no confirmed-working time for another jar");
+            Report(sha);
+            confirmations.Record(Package, "aaaaaaaaaaaa", sha, RepairConfirmations.NotWorking);
+            Check.Equal("reported-not-working", History()["current"]!["status"]!.GetValue<string>());
+        });
+
         suite.Add("repair v1: every source-maintenance route needs an admin; the access policy keeps them admin-only", () =>
         {
             using var setup = new Setup();

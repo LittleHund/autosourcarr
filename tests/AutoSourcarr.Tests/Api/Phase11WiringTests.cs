@@ -37,6 +37,8 @@ public static class Phase11WiringTests
             () => Run(Preferences).GetAwaiter().GetResult());
         suite.Add("phase 11 internal services: the Status panel lists the app's own services from cached state and offers no start actions",
             () => Run(InternalServices).GetAwaiter().GetResult());
+        suite.Add("phase 11 matrix: discovery_outcomes is an array of the stored outcome rows in the 0.4.5 shape (audit A2)",
+            () => Run(MatrixOutcomes).GetAwaiter().GetResult());
         suite.Add("phase 11 diagnostics (PERF-9): one download with logs and errors; planted secrets, tokens, cookies, keys, passwords, e-mails and data paths never leak",
             () => Run(Diagnostics).GetAwaiter().GetResult());
     }
@@ -208,6 +210,32 @@ public static class Phase11WiringTests
         Check.Equal("unavailable", services["repair"]!["state"]!.GetValue<string>());
         Check.True(view["reader_build"] is JsonObject, "reader build check included");
         Check.True(!view.ToJsonString().Contains(app.Temp.Path, StringComparison.OrdinalIgnoreCase), "no absolute data path");
+    }
+
+    private static async Task MatrixOutcomes(App app)
+    {
+        using var admin = app.Client(AdminToken);
+        var empty = await Json(await admin.GetAsync("/api/v1/matrix?include_chapter_stats=false"));
+        Check.True(empty["discovery_outcomes"] is JsonArray { Count: 0 }, "an empty catalogue answers []: " + empty["discovery_outcomes"]?.ToJsonString());
+        app.Runtime.Database.Write(Core.Persistence.DatabaseFile.Catalog, c =>
+        {
+            c.Execute("INSERT INTO entries(id,preferred_title,status,created_at,updated_at) VALUES(7,'Outcome work',0,'2026-01-01','2026-01-01')");
+            c.Execute("INSERT INTO entries(id,preferred_title,status,created_at,updated_at) VALUES(8,'Other work',0,'2026-01-01','2026-01-01')");
+            c.Execute("INSERT INTO source_discovery_outcomes(entry_id,source_id,state,message,candidate_entry_id,checked_at) VALUES(7,'100','owned','belongs elsewhere',8,'2026-01-02T00:00:00Z')");
+            c.Execute("INSERT INTO source_discovery_outcomes(entry_id,source_id,state,message,candidate_entry_id,checked_at) VALUES(7,'200','no_results','none',NULL,'2026-01-02T00:00:00Z')");
+            return 0;
+        });
+        var matrix = await Json(await admin.GetAsync("/api/v1/matrix?include_chapter_stats=false"));
+        var outcomes = matrix["discovery_outcomes"] as JsonArray ?? [];
+        Check.True(outcomes.Count == 2, "two outcome rows: " + matrix["discovery_outcomes"]?.ToJsonString());
+        foreach (var row in outcomes.OfType<JsonObject>())
+            foreach (var field in new[] { "entry_id", "source_id", "state", "message", "candidate_entry_id", "checked_at" })
+                Check.True(row.ContainsKey(field), "outcome field " + field);
+        var owned = outcomes.OfType<JsonObject>().Single(row => row["source_id"]!.GetValue<string>() == "100");
+        Check.Equal(7L, owned["entry_id"]!.GetValue<long>());
+        Check.Equal("owned", owned["state"]!.GetValue<string>());
+        Check.Equal(8L, owned["candidate_entry_id"]!.GetValue<long>());
+        Check.True(outcomes.OfType<JsonObject>().Single(row => row["source_id"]!.GetValue<string>() == "200")["candidate_entry_id"] is null, "no candidate is null");
     }
 
     private static async Task Diagnostics(App app)
