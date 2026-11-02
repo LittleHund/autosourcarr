@@ -88,8 +88,8 @@ jobs:
             CI=1 E2E_JSON=test-results/playwright.json timeout 2700 npx playwright test > probe/playwright.log 2>&1; pw=$?
             node scripts/playwright-summary.mjs test-results/playwright.json > probe/playwright.txt 2>&1
             if [ "$ub" = 0 ]; then
-              CI=1 E2E_BUNDLE=1 E2E_VIEWPORTS=phone,desktop E2E_THEMES=blue-dark,blue-light E2E_JSON=test-results/playwright-bundle.json \
-                timeout 900 npx playwright test > probe/playwright-bundle.log 2>&1; pwb=$?
+              CI=1 E2E_BUNDLE=1 E2E_JSON=test-results/playwright-bundle.json \
+                timeout 2700 npx playwright test > probe/playwright-bundle.log 2>&1; pwb=$?
               node scripts/playwright-summary.mjs test-results/playwright-bundle.json > probe/playwright-bundle.txt 2>&1
             fi
             tail -c 30000 probe/playwright.log > probe/playwright.tail.log; rm -f probe/playwright.log
