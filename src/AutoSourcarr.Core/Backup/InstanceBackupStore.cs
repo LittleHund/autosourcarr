@@ -580,6 +580,28 @@ public sealed partial class InstanceBackupStore
         }
     }
 
+    /// <summary>Row counts of the live chapter provenance (what a catalogue-only restore replaces by an empty database).</summary>
+    private JsonObject? LiveProvenance()
+    {
+        var path = _database.Paths.Origins;
+        if (!File.Exists(path)) return null;
+        using var connection = ReadOnly(path);
+        connection.Open();
+        var result = new JsonObject();
+        foreach (var table in new[] { "served_origin", "chapter_candidate_rejections", "origin_history", "virtual_chapters" })
+        {
+            long count = 0;
+            if (HasTable(connection, table))
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT COUNT(*) FROM \"" + table + "\"";
+                count = Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+            }
+            result[table] = count;
+        }
+        return result;
+    }
+
     /// <summary>Decisions made by a person (not automatic) after <paramref name="since"/>: a restore loses them.</summary>
     private long DecisionsSince(string? since)
     {
@@ -638,6 +660,7 @@ public sealed partial class InstanceBackupStore
         var writer = manifest["app_version"]?.GetValue<string>() ?? "";
         var created = manifest["created_at"]?.GetValue<string>();
         var newer = DecisionsSince(created);
+        var provenance = facts.ContainsKey("chapter-origins.sqlite") ? null : LiveProvenance();
         return new JsonObject
         {
             ["stage_id"] = id, ["preview_token"] = Token(id, target), ["source"] = source,
@@ -657,6 +680,14 @@ public sealed partial class InstanceBackupStore
             ["databases"] = databases, ["settings"] = settings,
             ["decisions_newer_than_backup"] = newer,
             ["decisions_warning"] = newer > 0 ? $"{newer} manual decisions newer than the backup will be lost." : null,
+            // Hard rule 1 (chapter provenance): a catalogue-only backup replaces the live origins database by an empty one.
+            // The pre-restore backup keeps the live file, and the preview token covers its decision tables.
+            ["chapter_provenance"] = provenance,
+            ["chapter_provenance_warning"] = provenance is { } held && held.Any(pair => pair.Value?.GetValue<long>() > 0)
+                ? $"Chapter provenance: {held["served_origin"]} served origins / {held["chapter_candidate_rejections"]} rejections / {held["origin_history"]} history rows "
+                  + $"({held["virtual_chapters"]} chapters) on this instance will be replaced by an empty database — the backup has no chapter origins. "
+                  + "The pre-restore backup keeps them."
+                : null,
             ["share_export"] = (manifest["contents"] as JsonArray ?? []).Any(row => row?["path"]?.GetValue<string>().StartsWith("catalogue/", StringComparison.Ordinal) == true),
             ["not_included"] = Names(notIncluded),
             ["always_excluded"] = manifest["always_excluded"]?.DeepClone() ?? new JsonArray(),

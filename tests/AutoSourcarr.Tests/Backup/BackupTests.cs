@@ -55,6 +55,8 @@ public static class BackupTests
             () => GuardRuntime().GetAwaiter().GetResult());
         suite.Add("phase 12 backup routes: list/create/download/delete/preview (multipart)/arm/cancel on /api/v1; writes refused while armed; the restore applies at the next start",
             () => Routes().GetAwaiter().GetResult());
+        suite.Add("phase 12 catalogue-only restore (hard rule 1): the preview names the chapter provenance an empty origins database replaces, the token covers it, the pre-restore backup keeps it",
+            CatalogueOnlyRestore);
         suite.Add("phase 12 old files (SET-3): only the app's own old reports, bytecode, temporary files and previews move to a dated trash; expired trash is deleted", OldFiles);
         suite.Add("phase 12 link settings (SET-4): Komf and AI-dashboard links are gone from the schema and dropped silently from config.json", RetiredLinks);
         suite.Add("phase 12 full reset (SET-6): the full reset keeps config.json and the library files",
@@ -510,6 +512,47 @@ public static class BackupTests
             }
             Check.True(!DatabaseSwap.Pending(next.Root, b.Paths, configB), point + ": nothing left aside");
         }
+    }
+
+    private static void CatalogueOnlyRestore()
+    {
+        using var temp = new Sandbox();
+        // A: a fresh instance without chapter origins yet; its backup holds the catalogue only.
+        using var a = Populated(Path.Combine(temp.Path, "a-data"));
+        var configA = Path.Combine(temp.Path, "a-config");
+        WriteConfig(configA, "en", SecretA, connection: false);
+        SqliteConnection.ClearAllPools();
+        File.Move(a.Paths.Origins, a.Paths.Origins + ".away");
+        var storeA = new InstanceBackupStore(Path.Combine(temp.Path, "a-data"), configA, a, "0.5.0-test");
+        var raw = File.ReadAllBytes(storeA.FilePath(storeA.Create("manual").Id));
+        // B: an instance with chapter provenance (served origin, rejection, history).
+        using var b = Populated(Path.Combine(temp.Path, "b-data"));
+        Execute(b.Paths.Origins, "INSERT INTO chapter_candidate_rejections(source_id,source_chapter_id,rejected_at) VALUES('src-a',7,'2026-12-01')");
+        var configB = Path.Combine(temp.Path, "b-config");
+        WriteConfig(configB, "en", SecretB, connection: false);
+        var store = new InstanceBackupStore(Path.Combine(temp.Path, "b-data"), configB, b, "0.5.0-test");
+        var origins = Dump(b.Paths.Origins, "served_origin") + Dump(b.Paths.Origins, "chapter_candidate_rejections") + Dump(b.Paths.Origins, "origin_history");
+        var preview = store.Stage(raw, null, "upload");
+        var warning = preview["chapter_provenance_warning"]?.GetValue<string>() ?? "";
+        Check.True(warning.StartsWith("Chapter provenance: 1 served origins / 1 rejections / 1 history rows", StringComparison.Ordinal)
+            && warning.Contains("replaced by an empty database", StringComparison.Ordinal), "preview states the provenance loss: " + warning);
+        Check.Equal(1L, preview["chapter_provenance"]!["virtual_chapters"]!.GetValue<long>());
+        // The token covers the provenance: a change after the preview refuses the arm.
+        Execute(b.Paths.Origins, "INSERT INTO chapter_candidate_rejections(source_id,source_chapter_id,rejected_at) VALUES('src-a',8,'2026-12-02')");
+        Check.Throws<BackupRefusedException>(() => store.Arm(preview["stage_id"]!.GetValue<string>(), preview["preview_token"]!.GetValue<string>()));
+        Execute(b.Paths.Origins, "DELETE FROM chapter_candidate_rejections WHERE source_chapter_id=8");
+        preview = store.Stage(raw, null, "upload");
+        store.Arm(preview["stage_id"]!.GetValue<string>(), preview["preview_token"]!.GetValue<string>());
+        SqliteConnection.ClearAllPools();
+        var result = store.ApplyAtStart()!;
+        Check.Equal("restored", result["status"]!.GetValue<string>());
+        Check.True(!File.Exists(b.Paths.Origins), "the origins database is replaced (recreated empty by the next start's migration)");
+        // The pre-restore backup keeps the moved-aside origins file, row for row.
+        var before = store.Find(result["pre_restore_backup"]!.GetValue<string>())!;
+        Check.True(before.Kind == "pre-restore" && before.Chapters == 1, "pre-restore backup includes chapter-origins.sqlite");
+        var extracted = Path.Combine(temp.Path, "pre-restore");
+        using (var zip = ZipFile.OpenRead(store.FilePath(before.Id))) zip.GetEntry("databases/chapter-origins.sqlite")!.ExtractToFile(extracted);
+        Check.Equal(origins, Dump(extracted, "served_origin") + Dump(extracted, "chapter_candidate_rejections") + Dump(extracted, "origin_history"));
     }
 
     private static void SwapPending()
