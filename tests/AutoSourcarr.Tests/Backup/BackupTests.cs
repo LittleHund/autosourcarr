@@ -46,6 +46,9 @@ public static class BackupTests
         suite.Add("phase 12 backup crypto: chunked AES-GCM streams any size, refuses truncation and appended data, still reads ASCBK3", Crypto);
         suite.Add("phase 12 swap journal: a failed check or a crash mid-swap (mixed databases) is undone on the next start; after the check it is finished", SwapCrash);
         suite.Add("phase 12 config.json: unknown top-level keys survive rewrites and never enter a backup", UnknownConfigKeys);
+        suite.Add("phase 12 update kills (re-audit 1/7): a kill at every update and rollback step ends rolled back from the kept copies, in safe mode, without a second backup or migration", UpdateKills);
+        suite.Add("phase 12 restore kills (re-audit 3/6): a kill at every restore step is decided from the journal, never applied twice; a config.json that did not exist is removed on undo", RestoreKills);
+        suite.Add("phase 12 swap pending (re-audit 2/5/10): an unreadable journal or marker, or set-aside files, mean safe mode, never a fresh catalogue; a live -wal is never deleted on undo", SwapPending);
         suite.Add("phase 12 update guard (SET-9): a failing migration swaps the databases back unchanged, no retry loop, Retry the update, backup failure never migrates",
             GuardCore);
         suite.Add("phase 12 update rollback (SET-9): a real failing migration on a real older schema starts the full runtime in minimal safe mode (writes refused), no restart loop, retry",
@@ -230,6 +233,10 @@ public static class BackupTests
         Check.Throws<BackupRefusedException>(() => storeB.Arm(stage, "wrong-token"));
         Execute(b.Paths.Catalog, "INSERT INTO manual_match_groups(id,title,created_at,updated_at) VALUES('late','Late','2026-12-01','2026-12-01')");
         Check.True(Check.Throws<BackupRefusedException>(() => storeB.Arm(stage, token)).Message.Contains("saved decisions", StringComparison.Ordinal), "stale after a new decision");
+        // Re-audit 8: chapter provenance decisions in chapter-origins.sqlite count too.
+        preview = storeB.Stage(raw, null, "upload");
+        Execute(b.Paths.Origins, "INSERT INTO chapter_candidate_rejections(source_id,source_chapter_id,rejected_at) VALUES('src-a',5,'2026-12-01')");
+        Check.Throws<BackupRefusedException>(() => storeB.Arm(preview["stage_id"]!.GetValue<string>(), preview["preview_token"]!.GetValue<string>()));
         Check.True(storeB.PendingRestore() is null, "nothing armed");
         preview = storeB.Stage(raw, null, "upload");
         stage = preview["stage_id"]!.GetValue<string>(); token = preview["preview_token"]!.GetValue<string>();
@@ -377,6 +384,185 @@ public static class BackupTests
 
     // ---- done when (2) ---------------------------------------------------------------------------------------
 
+    private static readonly string[] RollbackPoints =
+        ["guard:migrating", "guard:rolling-back", "swap:aside:catalog.sqlite", "swap:aside:chapter-origins.sqlite", "swap:aside", "swap:placed:catalog.sqlite",
+         "swap:placed", "guard:rollback-verified", "swap:verified", "guard:rolled-back"];
+
+    private static void UpdateKills()
+    {
+        foreach (var point in RollbackPoints.Concat(["guard:migrated", "guard:updated"]))
+        {
+            using var temp = new Sandbox();
+            var data = Path.Combine(temp.Path, "data");
+            using var database = Populated(data);
+            var config = Path.Combine(temp.Path, "config");
+            WriteConfig(config, "en", SecretA, connection: false);
+            UpgradeGuard.Run(new InstanceBackupStore(data, config, database, "0.5.0-test"), database, () => new SchemaMigrator(database).Initialize());
+            SqliteConnection.ClearAllPools();
+            var before = (BackupDatabases.Facts(database.Paths.Catalog), BackupDatabases.Facts(database.Paths.Origins));
+            var succeeds = point is "guard:migrated" or "guard:updated";
+            var migrations = 0;
+            void Migrate()
+            {
+                migrations++;
+                new SchemaMigrator(database).Initialize();
+                if (succeeds) return;
+                Execute(database.Paths.Catalog, "INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(98,'Half','2026-01-01','2026-01-01')");
+                throw new InvalidOperationException("migration failed");
+            }
+            var store = new InstanceBackupStore(data, config, database, "0.5.1-test");
+            var crashed = false;
+            CrashPoints.Hook = reached => { if (reached == point && !crashed) { crashed = true; throw new SimulatedCrash(reached); } };
+            try { UpgradeGuard.Run(store, database, Migrate); }
+            catch (SimulatedCrash) { }
+            finally { CrashPoints.Hook = null; }
+            Check.True(crashed, "reached " + point);
+            SqliteConnection.ClearAllPools();
+            var backups = store.List().Count(row => row.Kind == "automatic");
+            var migratedBefore = migrations;
+
+            // The next start: the swap journal first, then the update check.
+            var next = new InstanceBackupStore(data, config, database, "0.5.1-test");
+            next.ApplyAtStart();
+            var outcome = UpgradeGuard.Run(next, database, Migrate);
+            SqliteConnection.ClearAllPools();
+            if (point == "guard:updated")
+            {
+                Check.True(outcome.Status == "unchanged" && !outcome.SafeMode, point + ": the finished update stands (" + outcome.Status + ")");
+            }
+            else
+            {
+                Check.True(outcome.SafeMode && UpgradeGuard.Text(UpgradeGuard.Marker(next), "status") == "rolled-back", point + ": rolled back, safe mode (" + outcome.Status + ")");
+                Check.True(before.Item1.SameData(BackupDatabases.Facts(database.Paths.Catalog)) && before.Item2.SameData(BackupDatabases.Facts(database.Paths.Origins)),
+                    point + ": the data from before the update");
+                Check.Equal(migratedBefore, migrations); // never migrated again after the kill
+                Check.True(UpgradeGuard.Run(next, database, Migrate).Status == "safe-mode" && migrations == migratedBefore, point + ": no loop on the following start");
+            }
+            Check.True(next.List().Count(row => row.Kind == "automatic") == backups, point + ": no second backup of half-migrated data");
+            Check.True(BackupDatabases.Facts(database.Paths.Catalog).Intact, point + ": intact");
+            Check.True(!File.Exists(database.Paths.Catalog + UpgradeGuard.PreUpdate) && !File.Exists(database.Paths.Catalog + ".swap-old")
+                && !File.Exists(Path.Combine(next.Root, DatabaseSwap.JournalFile)), point + ": copies and journal cleaned up after the final marker");
+        }
+
+        // Re-audit 7: a rollback that cannot finish keeps the copies; the notice offers a restore, not a retry.
+        using (var temp = new Sandbox())
+        {
+            var data = Path.Combine(temp.Path, "data");
+            using var database = Populated(data);
+            var config = Path.Combine(temp.Path, "config");
+            WriteConfig(config, "en", SecretA, connection: false);
+            UpgradeGuard.Run(new InstanceBackupStore(data, config, database, "0.5.0-test"), database, () => new SchemaMigrator(database).Initialize());
+            SqliteConnection.ClearAllPools();
+            var store = new InstanceBackupStore(data, config, database, "0.5.1-test");
+            CrashPoints.Hook = reached => { if (reached == "guard:rollback-verified") throw new IOException("disk error while checking"); };
+            UpgradeOutcome outcome;
+            try { outcome = UpgradeGuard.Run(store, database, () => throw new InvalidOperationException("migration failed")); }
+            finally { CrashPoints.Hook = null; }
+            Check.True(outcome.Status == "rollback-failed" && File.Exists(database.Paths.Catalog + UpgradeGuard.PreUpdate), "rollback-failed keeps the copies");
+            var notice = UpgradeGuard.SafeModeNotice(store)!;
+            var actions = notice["actions"]!.AsArray().Select(node => node!.GetValue<string>()).ToArray();
+            Check.True(actions.Contains("restore") && !actions.Contains("retry"), "restore offered, retry not: " + string.Join(",", actions));
+            Check.Throws<BackupRefusedException>(() => UpgradeGuard.Retry(store));
+        }
+    }
+
+    private static void RestoreKills()
+    {
+        foreach (var point in new[] { "restore:applying", "restore:pre-restore", "swap:aside:catalog.sqlite", "swap:placed:catalog.sqlite", "swap:placed", "swap:verified", "restore:swapped" })
+        {
+            using var temp = new Sandbox();
+            using var a = Populated(Path.Combine(temp.Path, "a-data"));
+            var configA = Path.Combine(temp.Path, "a-config");
+            WriteConfig(configA, "en,ja", SecretA, connection: false);
+            var raw = File.ReadAllBytes(new InstanceBackupStore(Path.Combine(temp.Path, "a-data"), configA, a, "0.5.0-test").FilePath(
+                new InstanceBackupStore(Path.Combine(temp.Path, "a-data"), configA, a, "0.5.0-test").Create("manual").Id));
+            using var b = Clean(Path.Combine(temp.Path, "b-data"));
+            var configB = Path.Combine(temp.Path, "b-config"); Directory.CreateDirectory(configB); // no config.json before the restore
+            var store = new InstanceBackupStore(Path.Combine(temp.Path, "b-data"), configB, b, "0.5.0-test");
+            var preview = store.Stage(raw, null, "upload");
+            store.Arm(preview["stage_id"]!.GetValue<string>(), preview["preview_token"]!.GetValue<string>());
+            SqliteConnection.ClearAllPools();
+            var original = BackupDatabases.Facts(b.Paths.Catalog);
+            var restored = point is "swap:verified" or "restore:swapped";
+            var crashed = false;
+            CrashPoints.Hook = reached => { if (reached == point && !crashed) { crashed = true; throw new SimulatedCrash(reached); } };
+            try { store.ApplyAtStart(); }
+            catch (SimulatedCrash) { }
+            finally { CrashPoints.Hook = null; }
+            Check.True(crashed, "reached " + point);
+            SqliteConnection.ClearAllPools();
+            var next = new InstanceBackupStore(Path.Combine(temp.Path, "b-data"), configB, b, "0.5.0-test");
+            var result = next.ApplyAtStart()!;
+            SqliteConnection.ClearAllPools();
+            Check.True(next.PendingRestore() is null && next.ApplyAtStart() is null, point + ": never applied a second time");
+            var now = BackupDatabases.Facts(b.Paths.Catalog);
+            if (restored)
+            {
+                Check.True(result["status"]!.GetValue<string>() == "restored" && now.Rows["entries"] == 3, point + ": restored: " + result.ToJsonString());
+                Check.True(File.Exists(Path.Combine(configB, "config.json")), point + ": settings restored");
+            }
+            else
+            {
+                Check.True(result["status"]!.GetValue<string>() == "failed" && now.SameData(original), point + ": undone: " + result.ToJsonString());
+                Check.True(!File.Exists(Path.Combine(configB, "config.json")), point + ": the config.json that did not exist before is gone");
+                Check.Equal("restore-failed", UpgradeGuard.Text(UpgradeGuard.Marker(next), "status"));
+                Check.True(UpgradeGuard.Run(next, b, () => new SchemaMigrator(b).Initialize()).SafeMode, point + ": safe mode after an interrupted restore");
+            }
+            Check.True(!DatabaseSwap.Pending(next.Root, b.Paths, configB), point + ": nothing left aside");
+        }
+    }
+
+    private static void SwapPending()
+    {
+        using var temp = new Sandbox();
+        var data = Path.Combine(temp.Path, "data");
+        using var database = Populated(data);
+        var config = Path.Combine(temp.Path, "config");
+        WriteConfig(config, "en", SecretA, connection: false);
+        var store = new InstanceBackupStore(data, config, database, "0.5.0-test");
+        UpgradeGuard.Run(store, database, () => new SchemaMigrator(database).Initialize());
+        SqliteConnection.ClearAllPools();
+        var catalog = File.ReadAllBytes(database.Paths.Catalog);
+
+        // Both databases set aside and an unreadable journal: safe mode, never the "fresh" path on empty databases.
+        foreach (var path in new[] { database.Paths.Catalog, database.Paths.Origins }) File.Move(path, path + ".swap-old");
+        File.WriteAllText(Path.Combine(store.Root, DatabaseSwap.JournalFile), "{not json");
+        Check.Equal("swap-pending", store.ApplyAtStart()!["status"]!.GetValue<string>());
+        var migrated = false;
+        var outcome = UpgradeGuard.Run(store, database, () => migrated = true);
+        Check.True(outcome.Status == "swap-pending" && outcome.SafeMode && !migrated && !File.Exists(database.Paths.Catalog), "swap pending: safe mode, nothing created");
+        Check.True(UpgradeGuard.PublicNotice(store)!.Count == 2 && UpgradeGuard.PublicNotice(store)!["error"] is null, "guests get status and message only");
+        // Once the files are back (by hand or a later version), the next start is normal again.
+        File.Delete(Path.Combine(store.Root, DatabaseSwap.JournalFile));
+        foreach (var path in new[] { database.Paths.Catalog, database.Paths.Origins }) File.Move(path + ".swap-old", path);
+        Check.Equal("unchanged", UpgradeGuard.Run(store, database, () => new SchemaMigrator(database).Initialize()).Status);
+        SqliteConnection.ClearAllPools();
+        catalog = File.ReadAllBytes(database.Paths.Catalog);
+
+        // Re-audit 5: a crash between setting aside -wal and the database: the live -wal is put back, never deleted.
+        File.WriteAllText(Path.Combine(store.Root, DatabaseSwap.JournalFile), "{\"kind\":\"restore\",\"step\":\"begin\",\"existed\":{\"catalog.sqlite\":true,\"chapter-origins.sqlite\":true}}");
+        File.WriteAllBytes(database.Paths.Catalog + ".swap-old-wal", [1, 2, 3]);
+        Check.True(DatabaseSwap.Recover(store.Root, database.Paths, config)!.Contains("undone", StringComparison.Ordinal), "undone");
+        Check.True(File.ReadAllBytes(database.Paths.Catalog + "-wal").SequenceEqual(new byte[] { 1, 2, 3 }) && catalog.SequenceEqual(File.ReadAllBytes(database.Paths.Catalog)),
+            "the -wal went back next to its database");
+        // ... and a live -wal without a set-aside counterpart (the swap had not reached it) is kept.
+        File.WriteAllText(Path.Combine(store.Root, DatabaseSwap.JournalFile), "{\"kind\":\"restore\",\"step\":\"aside\"}");
+        Check.True(DatabaseSwap.Recover(store.Root, database.Paths, config) is not null && File.Exists(database.Paths.Catalog + "-wal"), "live -wal kept");
+        File.Delete(database.Paths.Catalog + "-wal");
+
+        // Re-audit 10: an unreadable marker or one with wrong field types means safe mode, never a silent retry or a crash.
+        var next = new InstanceBackupStore(data, config, database, "0.5.1-test");
+        foreach (var text in new[] { "{bad", "[]", "{\"status\":5}", "{\"status\":\"rolled-back\",\"to_version\":7,\"retry\":\"yes\"}", "{\"status\":\"rolled-back\",\"levels\":3}" })
+        {
+            File.WriteAllText(UpgradeGuard.MarkerPath(next), text);
+            var calls = 0;
+            var result = UpgradeGuard.Run(next, database, () => calls++);
+            Check.True(result.Status == "unreadable" && result.SafeMode && calls == 0, "unreadable marker " + text + ": " + result.Status);
+            Check.True(UpgradeGuard.SafeModeNotice(next)!["actions"]!.AsArray().Any(node => node!.GetValue<string>() == "retry"), "retry offered for " + text);
+        }
+        File.Delete(UpgradeGuard.MarkerPath(next));
+    }
+
     private static void GuardCore()
     {
         using var temp = new Sandbox();
@@ -429,24 +615,32 @@ public static class BackupTests
         Check.Equal(InstanceBackupStore.AutomaticKeep, store.List().Count(row => row.Kind == "automatic"));
         Check.True(UpgradeGuard.Dismiss(store) && UpgradeGuard.Notice(store) is null, "Keep current dismisses the notice");
 
-        // Audit 3: a failing automatic backup (here a missing database) never migrates and never aborts the start.
+        // Audit 3: a failing automatic backup (here a full disk) never migrates and never aborts the start.
         SqliteConnection.ClearAllPools();
-        var origins = File.ReadAllBytes(database.Paths.Origins);
-        File.Move(database.Paths.Origins, database.Paths.Origins + ".away");
         var blocked = new InstanceBackupStore(data, config, database, "0.5.5-test");
         var migrated = false;
-        var failed = UpgradeGuard.Run(blocked, database, () => migrated = true);
+        CrashPoints.Hook = point => { if (point == "guard:backup") throw new IOException("No space left on device"); };
+        UpgradeOutcome failed;
+        try { failed = UpgradeGuard.Run(blocked, database, () => migrated = true); }
+        finally { CrashPoints.Hook = null; }
         Check.True(failed.Status == "backup-failed" && failed.SafeMode && !migrated, "backup failure: safe mode, nothing migrated");
         Check.True(UpgradeGuard.Run(blocked, database, () => migrated = true).Status == "safe-mode" && !migrated, "still not retried");
         var notice = UpgradeGuard.SafeModeNotice(blocked)!;
         Check.True(notice["actions"]!.AsArray().Any(node => node!.GetValue<string>() == "migrate-without-backup"), "migrate without a backup offered");
         Check.Throws<BackupRefusedException>(() => UpgradeGuard.AllowWithoutBackup(blocked, "wrong-token"));
         UpgradeGuard.AllowWithoutBackup(blocked, notice["preview_token"]!.GetValue<string>());
-        File.Move(database.Paths.Origins + ".away", database.Paths.Origins);
         var automatic = blocked.List().Count(row => row.Kind == "automatic");
         Check.Equal("updated", UpgradeGuard.Run(blocked, database, () => { migrated = true; new SchemaMigrator(database).Initialize(); }).Status);
         Check.True(migrated && blocked.List().Count(row => row.Kind == "automatic") == automatic, "migrated once, without a new backup");
-        Check.True(origins.Length > 0, "origins kept");
+
+        // Audit 11: an instance with only the catalogue (fresh origins) is backed up with what exists.
+        SqliteConnection.ClearAllPools();
+        File.Move(database.Paths.Origins, database.Paths.Origins + ".away");
+        var partial = blocked.Create("manual", "catalogue only");
+        Check.True(partial.Entries > 0 && partial.Chapters == 0, "catalogue-only backup");
+        File.Move(database.Paths.Origins + ".away", database.Paths.Origins);
+        var staged = blocked.StageSaved(partial.Id, null);
+        Check.True(staged["databases"]!.AsArray().Count == 1, "a catalogue-only backup stages");
     }
 
     /// <summary>A real test-only migration (registered only by this test): partial schema change, then a failure.</summary>
@@ -542,12 +736,15 @@ public static class BackupTests
                 Check.True(list["update"] is null, "no rollback-to-backup button on a rolled-back instance (the data already is that backup)");
                 var health = await Json(await admin.GetAsync("/api/v1/health"), HttpStatusCode.OK);
                 Check.Equal("safe-mode", health["status"]!.GetValue<string>());
+                // Re-audit 4: health is guest-readable: status and a short message, no errors, ids, migrations or tokens.
+                var exposed = health["safe_mode"]!.AsObject();
+                Check.True(exposed.Count == 2 && !health.ToJsonString().Contains("2099010101", StringComparison.Ordinal)
+                    && !health.ToJsonString().Contains(settings.DataDir.Replace("\\", "\\\\", StringComparison.Ordinal), StringComparison.Ordinal), "health hides the details");
                 using (var diagnostics = await admin.GetAsync("/api/v1/diagnostics")) Check.Equal(HttpStatusCode.OK, diagnostics.StatusCode);
                 // Writes are refused (settings, UI preferences, errors), catalogue services are not even built.
                 using (var put = await admin.PutAsJsonAsync("/api/v1/settings", new { revision = "x", values = new { } })) Check.Equal(HttpStatusCode.ServiceUnavailable, put.StatusCode);
                 using (var clear = await admin.PostAsJsonAsync("/api/v1/errors/clear", new { })) Check.Equal(HttpStatusCode.ServiceUnavailable, clear.StatusCode);
                 using (var stats = await admin.GetAsync("/api/v1/status/stats")) Check.Equal(HttpStatusCode.ServiceUnavailable, stats.StatusCode);
-                using (var jobs = await admin.GetAsync("/api/v1/jobs")) Check.Equal(HttpStatusCode.ServiceUnavailable, jobs.StatusCode);
                 var tasks = app.Runtime.Tasks.Snapshot().ToJsonString();
                 Check.True(tasks.Contains("Automatic backup before update", StringComparison.Ordinal) && tasks.Contains("Update rolled back", StringComparison.Ordinal), "recorded in Tasks");
             }
@@ -562,8 +759,11 @@ public static class BackupTests
                 Check.True(!BackupDatabases.Facts(catalog).Rows.ContainsKey("phase12_partial"), "the failing migration did not run again");
                 using var admin = app.Client(Phase11WiringTests.AdminToken);
                 using (var refused = await admin.PostAsJsonAsync("/api/v1/backups/safe-mode/retry", new { })) Check.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
-                var retry = await Json(await admin.PostAsJsonAsync("/api/v1/backups/safe-mode/retry", new { confirm = true }), HttpStatusCode.OK);
-                Check.True(retry["retry"]!.GetValue<bool>() && retry["restart_required"]!.GetValue<bool>(), "retry armed");
+                // Re-audit 11: the fresh backup runs as a job (token-only instance: the admin token may choose).
+                var retry = await Json(await admin.PostAsJsonAsync("/api/v1/backups/safe-mode/retry", new { confirm = true }), HttpStatusCode.Accepted);
+                var job = await Finished(app, retry["task_id"]!.GetValue<string>());
+                Check.True(job.State == "completed" && job.Name == "Retry the update", "retry job: " + job.State + " " + job.Error);
+                Check.True(UpgradeGuard.Flag(UpgradeGuard.Marker(new InstanceBackupStore(settings.DataDir, settings.SettingsConfigDir, app.Runtime.Database, ApplicationRuntime.Version)), "retry"), "retry armed");
                 Check.Equal(2, Automatic(settings));
             }
             finally { await StopAsync(app); }
@@ -608,7 +808,7 @@ public static class BackupTests
         var app = await StartAsync(temp, settings);
         try
         {
-            app.Runtime.Access!.Accounts.CreateOwner("owner", "owner-password");
+            var owner = app.Runtime.Access!.Accounts.CreateOwner("owner", "owner-password");
             var mapped = app.Host.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>()
                 .Select(endpoint => (endpoint.Metadata.GetMetadata<Microsoft.AspNetCore.Routing.HttpMethodMetadata>()?.HttpMethods.FirstOrDefault() ?? "GET") + " " + endpoint.RoutePattern.RawText)
                 .ToHashSet(StringComparer.Ordinal);
@@ -648,9 +848,18 @@ public static class BackupTests
             }
             using (var wrong = await admin.PostAsync("/api/v1/backups/restore/preview", Upload(file, "not the passphrase"))) Check.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
             var preview = await Json(await admin.PostAsync("/api/v1/backups/restore/preview", Upload(file, Passphrase)), HttpStatusCode.OK);
-            using (var stale = await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = "0000", confirm = true }))
+
+            // Re-audit 9: with accounts, arming, retrying and migrating without a backup need an owner or admin account.
+            foreach (var (path, body) in new (string, object)[]
+            {
+                ("/api/v1/backups/restore/apply", new { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>(), confirm = true }),
+                ("/api/v1/backups/safe-mode/retry", new { confirm = true }), ("/api/v1/backups/safe-mode/migrate-without-backup", new { confirm = true, preview_token = "x" }),
+            })
+                using (var token = await admin.PostAsJsonAsync(path, body)) Check.True(token.StatusCode == HttpStatusCode.Forbidden, "admin token refused for " + path + ": " + (int)token.StatusCode);
+            using var ownerClient = app.Client(session: app.Runtime.Access.Accounts.IssueSession(owner.Id));
+            using (var stale = await ownerClient.PostAsJsonAsync("/api/v1/backups/restore/apply", new { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = "0000", confirm = true }))
                 Check.Equal(HttpStatusCode.Conflict, stale.StatusCode);
-            var armed = await Json(await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new
+            var armed = await Json(await ownerClient.PostAsJsonAsync("/api/v1/backups/restore/apply", new
             { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>(), confirm = true }), HttpStatusCode.OK);
             Check.True(armed["armed"]!.GetValue<bool>() && armed["restart_required"]!.GetValue<bool>() && !armed["restarting"]!.GetValue<bool>(), "armed, restart required");
             // Until the restart, changes are refused (audit 4/5/8); the backup routes stay open.
@@ -659,7 +868,7 @@ public static class BackupTests
             await Json(await admin.DeleteAsync("/api/v1/backups/restore/pending"), HttpStatusCode.OK);
             using (var allowed = await admin.PostAsJsonAsync("/api/v1/errors/clear", new { })) Check.Equal(HttpStatusCode.OK, allowed.StatusCode);
             preview = await Json(await admin.PostAsync("/api/v1/backups/restore/preview", Upload(file, Passphrase)), HttpStatusCode.OK);
-            await Json(await admin.PostAsJsonAsync("/api/v1/backups/restore/apply", new
+            await Json(await ownerClient.PostAsJsonAsync("/api/v1/backups/restore/apply", new
             { stage_id = preview["stage_id"]!.GetValue<string>(), preview_token = preview["preview_token"]!.GetValue<string>(), confirm = true }), HttpStatusCode.OK);
         }
         finally { await StopAsync(app); }
@@ -696,7 +905,7 @@ public static class BackupTests
         var original = (File.ReadAllBytes(database.Paths.Catalog), File.ReadAllBytes(database.Paths.Origins), File.ReadAllBytes(Path.Combine(config, "config.json")));
         using var other = Clean(Path.Combine(temp.Path, "other"));
         SqliteConnection.ClearAllPools();
-        var incoming = new Dictionary<string, string>(StringComparer.Ordinal) { ["catalog.sqlite"] = other.Paths.Catalog, ["chapter-origins.sqlite"] = other.Paths.Origins };
+        var incoming = new Dictionary<string, string?>(StringComparer.Ordinal) { ["catalog.sqlite"] = other.Paths.Catalog, ["chapter-origins.sqlite"] = other.Paths.Origins };
 
         // A failing check undoes the swap at once: the live files are byte-for-byte as before.
         Check.Throws<InvalidOperationException>(() => DatabaseSwap.Swap(journalRoot, database.Paths, config, incoming, "{}"u8.ToArray(), "test", () => throw new InvalidOperationException("check failed")));

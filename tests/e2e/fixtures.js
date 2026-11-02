@@ -186,4 +186,18 @@ async function openSidebar(page) {
   if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
 }
 
-module.exports = {test, expect: base.expect, signIn, expectNoHorizontalScroll, expectTouchTargets, expectContrast, expectNoErrors, openSidebar};
+/**
+ * PIPE-5 (phase 13): with E2E_SCREENSHOT_DIR set, one full-page screenshot per page, size and theme, as
+ * <dir>/<project>/<page>.png, for scripts/screenshot-diff.mjs against the previous release. Otherwise a no-op.
+ */
+async function captureScreenshot(page, where) {
+  const dir = process.env.E2E_SCREENSHOT_DIR;
+  if (!dir) return;
+  const path = require('path');
+  const project = base.test.info().project.name;
+  const name = String(where).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'page';
+  await page.screenshot({path: path.join(dir, project, name + '.png'), fullPage: true, animations: 'disabled', caret: 'hide'})
+    .catch(error => console.warn(`screenshot ${project}/${name} failed: ${error.message}`));
+}
+
+module.exports = {test, expect: base.expect, signIn, expectNoHorizontalScroll, expectTouchTargets, expectContrast, expectNoErrors, openSidebar, captureScreenshot};

@@ -1,5 +1,5 @@
 // Every top-level page and its main sub-tabs, in this project's size and theme (UI-1, UI-2, UI-14).
-const {test, expect, signIn, expectNoHorizontalScroll, expectTouchTargets, expectContrast, expectNoErrors, openSidebar} = require('./fixtures');
+const {test, expect, signIn, expectNoHorizontalScroll, expectTouchTargets, expectContrast, expectNoErrors, openSidebar, captureScreenshot} = require('./fixtures');
 
 // Sub-tab buttons per page, by the data attribute the app switches on.
 const SUBTABS = {sources: 'data-source-subtab', settings: 'data-settings-subtab', 'manual-actions': 'data-manual-action-subtab'};
@@ -14,6 +14,7 @@ async function checkLayout(page, problems, where) {
   await expectTouchTargets(page, where);
   await expectContrast(page, where);
   expectNoErrors(problems, where);
+  await captureScreenshot(page, where);
 }
 
 test('sidebar is reachable', async ({page, sizeName, theme}) => {

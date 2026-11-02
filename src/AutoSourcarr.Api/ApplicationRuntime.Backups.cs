@@ -48,7 +48,7 @@ internal sealed partial class ApplicationRuntime
         _apiV1 = new ApiV1Services(() => Settings, startup.ConfigurationRoot, startup.Conversion, startup.Environment,
             values => Privacy.Register(values), status: null, stop: RequestRestart, health: SafeHealthAsync, databasePaths: () => Database.Paths)
         {
-            Tasks = Tasks, Events = Events, Errors = Errors, Access = _access,
+            Tasks = Tasks, Jobs = Jobs, Events = Events, Errors = Errors, Access = _access,
             Diagnostics = new DiagnosticExporter(Io, Identity, Errors, Logs, () => Settings, new RuntimeDiagnosticSources(this)),
             Backups = BackupServices(null),
         };
@@ -59,7 +59,7 @@ internal sealed partial class ApplicationRuntime
 
     private Task<JsonObject> SafeHealthAsync(CancellationToken cancellationToken) => Task.FromResult(new JsonObject
     {
-        ["ok"] = false, ["status"] = "safe-mode", ["version"] = Version, ["safe_mode"] = _backups is null ? null : UpgradeGuard.SafeModeNotice(_backups),
+        ["ok"] = false, ["status"] = "safe-mode", ["version"] = Version, ["safe_mode"] = _backups is null ? null : UpgradeGuard.PublicNotice(_backups), // guests read health: status and a short message only
         ["message"] = "AutoSourcarr runs in safe mode after a failed update. Open System → Backup & restore.",
     });
 

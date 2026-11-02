@@ -67,7 +67,15 @@ object WebViewEngine {
     const val JCEF_VERSION = "144.0.15-g72717cf-chromium-144.0.7559.172-api-1.21-262-b37"
     const val JBR_RELEASE = "jbr-release-25.0.4b508.27"
 
-    private val cefDir by lazy { HostConfig.dataDir.toPath() / "bin" / "kcef" }
+    /**
+     * Phase 13: the 0.5.0 image bakes this JCEF build into a read-only folder (SOURCE_HOST_CEF_DIR overrides it), so
+     * no download is needed at run time. When that folder is missing or holds another build, the host keeps using
+     * (and, if needed, downloading into) `<data>/bin/kcef` as before.
+     */
+    private val cefDir by lazy {
+        val bundled = Path.of(System.getenv("SOURCE_HOST_CEF_DIR")?.takeIf { it.isNotBlank() } ?: "/opt/source-host/kcef")
+        if (releaseValid(bundled / "release")) bundled else HostConfig.dataDir.toPath() / "bin" / "kcef"
+    }
     private val releaseFile by lazy { cefDir / "release" }
 
     @Volatile var state: String = "not started"
@@ -166,7 +174,9 @@ object WebViewEngine {
             Date(expiresAt),
         )
 
-    private fun installationValid(): Boolean {
+    private fun installationValid(): Boolean = releaseValid(releaseFile)
+
+    private fun releaseValid(releaseFile: Path): Boolean {
         if (!releaseFile.exists() || !releaseFile.isRegularFile()) return false
         return runCatching {
             releaseFile.readLines().firstNotNullOfOrNull { if (it.contains("JCEF_VERSION_DETAILED")) it.split("=").getOrNull(1) else null }
