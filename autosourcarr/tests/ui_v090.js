@@ -1,6 +1,9 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync(process.argv[2]||__dirname+'/../app/static/app.js','utf8');
 const extract=(start,end)=>source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start)));
+// loadUiPreferences reads through the typed /api/v1 client (apiV1 + generated/api-client.js), as in the page.
+const apiClient=fs.readFileSync(__dirname+'/../app/static/generated/api-client.js','utf8');
+const withApiV1=code=>[apiClient,extract('function apiV1(',String.fromCharCode(10)),code].join(String.fromCharCode(10));
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const tests=[];
 function test(name,body){tests.push({name,body});}
@@ -98,7 +101,7 @@ test('Late preference GET preserves a user edit even after its save cleared pend
     setTimeout:()=>1,clearTimeout:()=>{},flushUiPreferenceSave:()=>{}};
   vm.createContext(Object.assign(ctx,{performance}));
   vm.runInContext(fs.readFileSync(__dirname+'/../app/static/theme.js','utf8'),ctx);
-  vm.runInContext(extract('function queueUiPreferenceSave(','async function flushUiPreferenceSave(')+extract('async function loadUiPreferences(){','function rememberClientError('),ctx);
+  vm.runInContext(withApiV1(extract('function queueUiPreferenceSave(','async function flushUiPreferenceSave(')+extract('async function loadUiPreferences(){','function rememberClientError(')),ctx);
   const loading=ctx.loadUiPreferences();
   ctx.queueUiPreferenceSave('theme','green');
   ctx.uiPreferencesState.pending={}; // the newer PUT has already succeeded

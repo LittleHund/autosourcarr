@@ -136,6 +136,8 @@ if command -v node >/dev/null 2>&1; then
   node autosourcarr/tests/ui_v050_navigation_restore.js
   node autosourcarr/tests/ui_v050_live_topics.js
   node autosourcarr/tests/ui_v050_matrix_pages.js
+  node autosourcarr/tests/ui_v090.js
+  node autosourcarr/tests/ui_v092.js
   node --check autosourcarr/app/static/connections.js
   node --check autosourcarr/app/static/internal-services.js
   node --check autosourcarr/app/static/workbench.js

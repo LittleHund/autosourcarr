@@ -1,8 +1,10 @@
 // Executed production workspace behavior; no browser or new runtime dependency.
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const root=__dirname+'/../app/static/',source=fs.readFileSync(root+'app.js','utf8'),workbench=fs.readFileSync(root+'workbench.js','utf8'),theme=fs.readFileSync(root+'theme.js','utf8');
+// loadUiPreferences reads through the typed /api/v1 client (apiV1 + generated/api-client.js), as in the page.
+const apiClient=fs.readFileSync(root+'generated/api-client.js','utf8');
 const section=(a,b)=>{const start=source.indexOf(a),end=source.indexOf(b,start);assert(start>=0&&end>start);return source.slice(start,end);};
-function context(extra={}){const ctx={document:{querySelector:()=>null},esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'),fmtWhen:String,...extra};vm.createContext(ctx);vm.runInContext(theme,ctx);vm.runInContext(workbench,ctx);return ctx;}
+function context(extra={}){const ctx={document:{querySelector:()=>null},esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'),fmtWhen:String,...extra};vm.createContext(ctx);vm.runInContext(theme,ctx);vm.runInContext(workbench,ctx);vm.runInContext(apiClient,ctx);vm.runInContext(section('function apiV1(',String.fromCharCode(10)),ctx);return ctx;}
 const tests=[];function test(name,fn){tests.push({name,fn});}
 const luminosity=c=>{const f=v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
 
