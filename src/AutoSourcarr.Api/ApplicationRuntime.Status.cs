@@ -82,22 +82,16 @@ internal sealed partial class ApplicationRuntime
 
     private JsonObject RepairService(bool integrated)
     {
-        var runner = RepairRunnerPresent();
         if (!integrated) return Service("Source repair", "unavailable", "Repairs run against the built-in source host (integrated mode only).");
+        var isolation = _repairIsolation?.Probe();
         return Service("Source repair", "ready", "Domain-move repairs are available (Tasks → Repairs). "
-            + (runner ? "The isolated repair runner is installed." : "The isolated repair runner is not installed; repairs that run code are unavailable."));
+            + (isolation is { Available: true } ? isolation.Message : "Isolation unavailable: " + (isolation?.Message ?? "repairs that run code are unavailable.")));
     }
 
-    private static JsonObject EgressService(bool integrated) =>
-        integrated && RepairRunnerPresent()
+    private JsonObject EgressService(bool integrated) =>
+        integrated && _repairIsolation?.Probe() is { Available: true }
             ? Service("Repair egress proxy", "idle", "Started for each isolated repair run; it is that run's only network path and allows listed domains only.")
             : Service("Repair egress proxy", "unavailable", "Only used by the isolated repair runner, which is not available here.");
-
-    private static bool RepairRunnerPresent()
-    {
-        try { return OperatingSystem.IsLinux() && File.Exists(AutoSourcarr.Core.Repair.Runner.Egress.IsolatedRunner.RunnerPath); }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { return false; }
-    }
 
     private JsonObject TranslationService()
     {

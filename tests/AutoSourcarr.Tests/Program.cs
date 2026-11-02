@@ -53,6 +53,7 @@ AutoSourcarr.Tests.Sources.SourceHostWebViewIntegrationTests.Register(suite);
 SchemaStampTests.Register(suite);
 DatabaseBlobTests.Register(suite);
 RepairIsolationTests.Register(suite);
+AutoSourcarr.Tests.Repair.RepairIsolationRuntimeTests.Register(suite);
 OwnershipTests.Register(suite);
 MatchingTests.Register(suite);
 PrivacyTests.Register(suite);

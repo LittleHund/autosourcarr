@@ -62,6 +62,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private SourceWebViewServices? _webViewServices;
     private AutoSourcarr.Core.Sources.Inventory.HostRawInstalledSources? _rawInstalled;
     private AutoSourcarr.Core.Repair.SourceRawService? _raws;
+    private AutoSourcarr.Core.Repair.Runner.RepairIsolation? _repairIsolation;
     private AutoSourcarr.Core.Repair.RawRepositoryCache? _rawRepositories;
     private AutoSourcarr.Core.Sources.Inventory.SourceBaselineStore? _baselines;
     private readonly CancellationTokenSource _healthStop = new();
@@ -344,6 +345,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             }
             // REP-1: source code and the installed package of each source (raws routes, original-APK evidence) on the source host.
             SourceRawRoutes? rawRoutes = null;
+            // Phase 13 (REP-5, hard rule 13): code-running repair steps go through the Landlock repair runner or are refused.
+            owner._repairIsolation = useHost ? new AutoSourcarr.Core.Repair.Runner.RepairIsolation(owner._dataDirectory!, line => owner.Logs.Record("Source repair", line)) : null;
             if (useHost)
             {
                 try
@@ -376,6 +379,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     rawRoutes = new SourceRawRoutes
                     {
                         Service = owner._raws, Installed = owner._rawInstalled, AdminLock = owner._admin, Io = owner.Io, History = repairHistory,
+                        Reconstruction = new IsolatedRawReconstruction(owner._repairIsolation!, NoRawReconstruction.Instance),
                     };
                 }
                 catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or AutoSourcarr.Core.Repair.RepairHistoryConflictException)
@@ -457,6 +461,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     MaintenanceRoot = maintenanceRoot,
                     ReadInstalledJar = (package, token) => owner._source.Client.ReadExtensionJarAsync(package, token),
                     Raws = rawRoutes,
+                    RunnerCheck = owner._repairIsolation is { } isolation ? isolation.SelfCheckAsync : null,
+                    Isolation = owner._repairIsolation is { } probe ? () => probe.Probe().Json() : null,
                     // Hard rule 6: the user-confirmed "Fixed" verdicts survive restarts (Tasks → Repairs).
                     Confirmations = repairConfirmations,
                 },
