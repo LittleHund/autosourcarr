@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using AutoSourcarr.Api.Endpoints;
 using AutoSourcarr.Api.Security;
+using AutoSourcarr.Core.Connections.Types;
 using AutoSourcarr.Core.Imports;
 using AutoSourcarr.Core.Jobs;
 using AutoSourcarr.Core.Matching.Decisions;
@@ -62,6 +63,34 @@ public static partial class ImportsTests
             // Different providers, or one common id among several, are no conflict.
             Check.True(ImportRuns.IdentityConflict(["mangadex:abc"], ["anilist:1"]) is null, "different providers");
             Check.True(ImportRuns.IdentityConflict(["anilist:1", "anilist:2"], ["anilist:2"]) is null, "one common id");
+        });
+
+        suite.Add("imports: a title alone, or a summary under a title below the floor, never imports automatically (hard rule 2)", () =>
+        {
+            using var setup = new Setup();
+            const string Summary = "A lighthouse keeper's daughter rows out each night to relight the beacons of a harbour that the sea keeps swallowing.";
+            var entry = MatchingFixtures.Entry(setup.Database, "Lantern Keeper of the Ninth Harbor", "Mirela Tov");
+            MatchingFixtures.Record(setup.Database, entry, Harbor, 777, "Lantern Keeper of the Ninth Harbor", "Mirela Tov");
+            setup.Sql("UPDATE entries SET description=$d WHERE id=$e", ("$d", Summary), ("$e", entry));
+            JsonObject Item(string title, string author = "", string description = "") => new()
+            {
+                ["source"] = long.Parse(Harbor, System.Globalization.CultureInfo.InvariantCulture), ["url"] = "/series/elsewhere",
+                ["title"] = title, ["author"] = author, ["description"] = description, ["sourceName"] = "Harborlight (EN)",
+            };
+            // The exact title with nothing else: kept for review (an exact cover may still decide), never automatic.
+            var alone = setup.Runs.CandidateEvidence(Item("Lantern Keeper of the Ninth Harbor"), entry);
+            Check.True(!alone.Eligible && alone.TitleOnly, alone.Reason);
+            // The same title with an agreeing creator or summary imports.
+            Check.True(setup.Runs.CandidateEvidence(Item("Lantern Keeper of the Ninth Harbor", "Mirela Tov"), entry).Eligible, "title + creator");
+            Check.True(setup.Runs.CandidateEvidence(Item("Lantern Keeper of the Ninth Harbor", description: Summary), entry).Eligible, "title + summary");
+            // A title below the floor is never lifted by the summary.
+            var below = setup.Runs.CandidateEvidence(Item("Lantern Keeper of the Harbor", description: Summary), entry);
+            Check.True(!below.Eligible && below.TitleScore < 0.94, below.TitleScore + " " + below.Reason);
+            // Metadata records: the title must reach the floor and needs a summary or creator to agree.
+            var candidate = new MetadataCandidate { Provider = "anilist", ExternalId = "1", Title = "Lantern Keeper of the Ninth Harbor" };
+            Check.Equal(0.0, setup.Runs.MetadataCandidateScore(Item("Lantern Keeper of the Ninth Harbor"), candidate).Score);
+            Check.True(setup.Runs.MetadataCandidateScore(Item("Lantern Keeper of the Ninth Harbor", description: Summary), candidate with { Description = Summary }).Score >= 0.94, "metadata title + summary");
+            Check.Equal(0.0, setup.Runs.MetadataCandidateScore(Item("Lantern Keeper of the Harbor", description: Summary), candidate with { Description = Summary }).Score);
         });
 
         suite.Add("imports: a shutdown keeps the run resumable; only a person's Cancel ends it (H3)", () =>

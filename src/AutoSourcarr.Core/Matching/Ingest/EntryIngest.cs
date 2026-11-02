@@ -717,12 +717,16 @@ public sealed class EntryIngest
                 Authors = TrustedCreators(trusted), Year = trusted.Year,
                 ColorHint = Known(trusted.ColorMode, "colored", "monochrome"), MediaHint = Known(trusted.MediaMode, "manga", "webtoon", "novel"),
             });
-        // The trusted year can refuse (a different year is a different work) but never alone admits a generic title.
-        var generic = decision.MatchedLeft.Length == 0 || !MatchScorer.IsDistinctive(decision.MatchedLeft) || !MatchScorer.IsDistinctive(decision.MatchedRight);
-        if (decision.AutomaticMatch && generic && !decision.Evidence.Any(item => item.Kind is "author" or "cover" or "summary"))
-            decision = decision with { Blockers = [.. decision.Blockers, new MatchEvidence("identity-evidence", "a generic title needs agreeing creator, cover or summary evidence; a shared year alone is not enough")] };
+        // A title alone never attaches (owner decision 2026-11-02: identical titles of different works were attached). The
+        // trusted year can refuse (a different year is a different work) but never alone admits. A record kept apart here is
+        // re-checked by the duplicate sweep once hydration brings its creators, summary or cover.
+        if (decision.AutomaticMatch && !Corroborated(decision))
+            decision = decision with { Blockers = [.. decision.Blockers, new MatchEvidence("identity-evidence", "a title alone needs agreeing creator, cover or summary evidence; a shared year alone is not enough")] };
         return decision;
     }
+
+    /// <summary>Evidence beyond the title that may admit an automatic attach: agreeing creators, cover or summary.</summary>
+    internal static bool Corroborated(ScoredMatchDecision decision) => decision.Evidence.Any(item => item.Kind is "author" or "cover" or "summary");
 
     internal T WithRead<T>(Func<DatabaseSession, T> operation) => Read(operation);
 

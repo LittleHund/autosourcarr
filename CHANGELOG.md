@@ -13,8 +13,17 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   repository is served at `/api/reader/repo/` without a key (GET/HEAD only); the reader API at
   `/api/reader/v1` keeps its key and Authelia rule. Add the repo path to Authelia/NPM when you
   deploy 0.5.0 (`docs/reverse-proxy/`). Limits: the reader extension is not yet built into the
-  image (phase 13); match-on-ingest can still attach two works that share an exact title and
-  have no other evidence (open owner decision).
+  image (phase 13).
+- Ingest and import gate (owner decision 2026-11-02): a new source record no longer attaches to
+  an existing entry on its title alone; it needs an agreeing creator, cover or summary, and
+  otherwise becomes its own entry. Once its details are fetched the duplicate review is rescored,
+  so the automatic sweep can still merge it on real evidence. Backup imports follow the same
+  rule (a title at 0.94 needs an agreeing creator, summary or the backup's own source record;
+  a single exact cover match also counts), and a summary no longer admits a title below 0.94:
+  those rows stay in review as suggestions. Metadata records for an import row need the title at
+  0.94 plus an agreeing summary or creator. On the owner's duplicate decisions (300-pair sample)
+  match-on-ingest went from 15 wrong merges to 0; its recall on that title-only sample fell from
+  63 % to 53 % (records with summaries or covers were not in the sample).
 - Phase 10 recheck: `POST /api/v1/maintenance/reset-database` and `/full-reset` now need the
   `preview_token` from `GET` on the same path (the UI fetches it); a reset stops and drains
   background work first. The 0.4.5 startup jobs run again (merge safety repair, startup

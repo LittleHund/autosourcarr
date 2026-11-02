@@ -24,6 +24,9 @@ public sealed record ImportEvidence
     public IReadOnlyList<string> SharedIdentities { get; init; } = [];
     public bool ExactReference { get; init; }
     public double RankScore { get; init; }
+    /// <summary>The title reaches the floor and nothing else conflicts, but nothing corroborates it: not automatic on its own
+    /// (an exact decoded cover may still decide among such candidates).</summary>
+    public bool TitleOnly { get; init; }
 }
 
 /// <summary>Where a backup row resolved to: an entry (automatic acceptance), a reference entry for review, and why.</summary>
@@ -135,7 +138,7 @@ public sealed partial class ImportRuns
     /// <summary>
     /// _import_candidate_evidence: the strict automatic import gate over the original backup and accepted metadata evidence.
     /// Rejected works, colour/monochrome and manga/webtoon conflicts and matching rules refuse; a shared provider identity,
-    /// a full title at the floor, or a compatible title with a matching summary admit.
+    /// or a full title at the floor with an agreeing summary, creator or backup-source reference admit.
     /// </summary>
     internal ImportEvidence CandidateEvidence(JsonObject item, long entryId, string englishTitle = "", long? referenceEntryId = null)
     {
@@ -171,15 +174,17 @@ public sealed partial class ImportRuns
         if (authorConflict && shared.Length == 0 && strict < floor && summary < .90)
             return result with { Score = 0, Reason = "author conflict with insufficient work-level evidence" };
         if (shared.Length > 0) return result with { Eligible = true, Score = 1, Reason = "shared " + shared[0].Replace(":", " identity ", StringComparison.Ordinal) };
-        if (strict >= floor) return result with { Eligible = true, Score = strict, Reason = "full/alternate title " + Percent(strict) + (matchedImport.Length > 0 ? " via " + matchedImport + " ↔ " + matchedEntry : "") };
-        if (loose >= .94 && summary >= .80)
-            return result with { Eligible = true, Score = Math.Max(loose, Math.Min(.999, .90 + summary * .099)), Reason = "compatible full title " + Percent(loose) + " + summary " + Percent(summary) };
-        if (strict >= .80 && summary >= .90)
-            return result with { Eligible = true, Score = Math.Max(strict, Math.Min(.999, .90 + summary * .099)), Reason = "title " + Percent(strict) + " + summary " + Percent(summary) };
-        if (summary >= .94 && loose >= .75)
-            return result with { Eligible = true, Score = Math.Max(summary, loose), Reason = "summary " + Percent(summary) + " + compatible title " + Percent(loose) };
-        if (exactReference && loose >= .90 && summary >= .85)
-            return result with { Eligible = true, Score = Math.Max(loose, summary), Reason = "backup-source reference + title/summary " + Percent(loose) + "/" + Percent(summary) };
+        // Hard rule 2: below the floor a summary never admits (those candidates stay review suggestions). Owner decision
+        // 2026-11-02: a title at the floor admits only with an agreeing creator, summary or the backup's own source reference.
+        var corroboration = summary >= SummaryCorroboration ? "summary " + Percent(summary)
+            : author >= CreatorAgreement ? "creator " + Percent(author) : exactReference ? "backup-source reference" : "";
+        var via = matchedImport.Length > 0 ? " via " + matchedImport + " ↔ " + matchedEntry : "";
+        if (strict >= floor)
+            return corroboration.Length > 0
+                ? result with { Eligible = true, Score = strict, Reason = "full/alternate title " + Percent(strict) + via + " + " + corroboration }
+                : result with { TitleOnly = true, Reason = "title " + Percent(strict) + via + " alone; needs an agreeing creator, cover or summary" };
+        if (summary >= .80 && loose >= .75)
+            return result with { Reason = "title " + Percent(strict) + "/" + Percent(loose) + " is below the floor; summary " + Percent(summary) + " cannot admit it" };
         return result;
     }
 
@@ -586,17 +591,17 @@ public sealed partial class ImportRuns
         var backupDescription = TextMatcher.CleanSummary(Str(item, "description"));
         var description = backupDescription.Length > 0 ? TextMatcher.DescriptionSimilarity(candidate.Description, backupDescription) : 0;
         var minimum = Math.Max(MatchingFloor, Options().MetadataMinScore);
-        var accepted = strict >= minimum || (loose >= .94 && description >= .80) || (strict >= .80 && description >= .90) || (loose >= .80 && description >= .94);
-        if (!accepted) return (0, "title " + Percent(strict) + "/" + Percent(loose) + " + summary " + Percent(description));
-        var title = Math.Max(strict, description >= .80 ? loose : 0);
+        // Hard rule 2: the title reaches the floor; a summary corroborates, never replaces it. Owner decision 2026-11-02: a
+        // title alone is not enough, it needs an agreeing summary or creator.
+        if (strict < minimum) return (0, "title " + Percent(strict) + "/" + Percent(loose) + " + summary " + Percent(description) + " (title below the floor)");
         var backupAuthor = Str(item, "author").Trim().Length > 0 ? Str(item, "author").Trim() : Str(item, "artist").Trim();
         var candidateAuthor = candidate.Authors.Concat(candidate.Artists).FirstOrDefault(name => name.Trim().Length > 0) ?? "";
-        if (backupAuthor.Length > 0 && candidateAuthor.Length > 0)
-        {
-            var author = TextMatcher.NameSimilarity(backupAuthor, candidateAuthor);
-            if (author < .30 && strict < minimum && description < .90) return (0, "author conflict with insufficient work-level evidence");
-            if (author >= .90) title = Math.Min(1, Math.Max(title, description) + .01);
-        }
+        var author = backupAuthor.Length > 0 && candidateAuthor.Length > 0 ? TextMatcher.NameSimilarity(backupAuthor, candidateAuthor) : 0;
+        if (backupAuthor.Length > 0 && candidateAuthor.Length > 0 && author < .30 && description < .90) return (0, "author conflict with insufficient work-level evidence");
+        if (description < SummaryCorroboration && author < CreatorAgreement)
+            return (0, "metadata title " + Percent(strict) + " alone; needs an agreeing summary or creator");
+        var title = strict;
+        if (author >= .90) title = Math.Min(1, Math.Max(title, description) + .01);
         var score = Math.Max(title, description >= .90 ? Math.Min(.999, .90 + description * .099) : 0);
         var reason = "metadata title " + Percent(Math.Max(strict, loose)) + " + summary " + Percent(description)
             + (matchedCandidate.Length > 0 && matchedImport.Length > 0 ? " via " + matchedCandidate + " ↔ " + matchedImport : "");
@@ -604,6 +609,10 @@ public sealed partial class ImportRuns
     }
 
     private const double MatchingFloor = .94;
+    /// <summary>Summary similarity that corroborates a title at the floor (the scorer's default summary corroboration).</summary>
+    private const double SummaryCorroboration = .82;
+    /// <summary>Creator-name similarity that counts as agreeing creators (the automatic duplicate gate's value).</summary>
+    private const double CreatorAgreement = .92;
 
     /// <summary>
     /// _resolve_import_metadata_identity: searches the enabled metadata catalogues with the backup's titles and keeps one
@@ -767,14 +776,15 @@ public sealed partial class ImportRuns
         // Exact decoded thumbnail pixels only break a tie among candidates that already pass the same non-image gate:
         // they never bypass an edition, colour or creator conflict (0.4.5 _import_auto_resolve_candidate_async).
         // Hard rule 2: only candidates whose title alone reaches the floor (or that share a provider identity) take part, so
-        // a summary-based pass never becomes an automatic import through the cover.
+        // a summary-based pass never becomes an automatic import through the cover. A title-only candidate takes part too:
+        // the exact cover is then its corroboration, and it must be the only cover match.
         if (ExactThumbnails is { } thumbnails)
         {
             var floor = Options().Floor;
             var eligible = RankedCandidates(item, limit: 16, englishTitle: englishTitle).Select(pair => pair.EntryId).Concat(exactCandidates).Distinct()
-                .Where(id => !IsRejected(item, id) && CandidateEvidence(item, id, englishTitle) is { Eligible: true } evidence
+                .Where(id => !IsRejected(item, id) && CandidateEvidence(item, id, englishTitle) is { } evidence && (evidence.Eligible || evidence.TitleOnly)
                     && (evidence.TitleScore >= floor || evidence.SharedIdentities.Count > 0)).ToList();
-            if (eligible.Count > 1)
+            if (eligible.Count >= 1)
             {
                 var matches = await thumbnails(item, Bundle(item), eligible, cancellationToken).ConfigureAwait(false);
                 if (matches.Count == 1) return (new ImportResolution(matches[0], matches[0], "exact decoded thumbnail pixels"), false);

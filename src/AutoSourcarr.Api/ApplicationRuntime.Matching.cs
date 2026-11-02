@@ -122,7 +122,7 @@ internal sealed partial class ApplicationRuntime
         ingest = new EntryIngest(database, writeGate, decisions, new ManualDecisionsView(manual),
             // Phase 10: a new source record also seeds identities from its source ids and remembers its cover hint.
             followUps: new SourceIdentitySeed(database, writeGate,
-                new MetadataIngestFollowUps(identity) { Choose = Choose, Hydrate = (sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId) }, coverHints)
+                new MetadataIngestFollowUps(identity) { Choose = Choose, Hydrate = (sourceId, mangaId) => HydrateThenRescore(catalogue, owner, sourceId, mangaId) }, coverHints)
             { IdentityAdded = id => { Choose(id); owner._duplicates?.Invalidate(); } },
             autoMatchThreshold: () => owner.Settings.AutoMatchThreshold, identityOnIngest: () => owner.Settings.MetadataIdentityOnIngest)
         { Policies = policies, Presets = presets };
@@ -240,5 +240,23 @@ internal sealed partial class ApplicationRuntime
             new DiscoveryV1Services { Discovery = discovery, SubbedEntryIds = (force, token) => library.SubbedEntryIdsAsync(force, token) },
             new ImportsV1Services { Runs = imports },
             reading);
+    }
+
+    /// <summary>
+    /// Hydrates a new source record, then rescores duplicates: match-on-ingest never attaches on a title alone, so a record
+    /// kept apart becomes mergeable once its creators, summary or cover arrive (0.4.5 did this after identity hydration).
+    /// The snapshot refresh is one coalesced job and starts the automatic sweep only when it finds an eligible pair.
+    /// </summary>
+    private static void HydrateThenRescore(CatalogueRuntime catalogue, ApplicationRuntime owner, string sourceId, long mangaId)
+    {
+        // A record already being hydrated (for example by a cover hint) still gets the rescore when that run applies.
+        catalogue.Hydration.TrySchedule(sourceId, mangaId, out var completion);
+        if (completion is null) return;
+        _ = completion.ContinueWith(task =>
+        {
+            if (!task.IsCompletedSuccessfully || task.Result.State != "applied" || owner._duplicates is not { } duplicates) return;
+            duplicates.Invalidate();
+            duplicates.ScheduleSnapshotRefresh();
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 }
