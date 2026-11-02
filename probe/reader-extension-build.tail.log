@@ -3,10 +3,10 @@ ProGuard, version 7.10.0
 Validated Tachiyomi/Mihon extension APK: /home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build/outputs/apk/release/tachiyomi-all.autosourcarr-v1.4.4005.apk
 OK: JVM extension JAR structure checks passed
 File: tachiyomi-all.autosourcarr-v1.4.4005.jar
-Size: 100829 bytes
+Size: 100831 bytes
 JVM classes: 33
-SHA-256: 82f3dc66ce2ff41ebf0eef937ab7ae48bdb9d49415c1de41749f65c0beb05853
+SHA-256: 3ee0b7612ecc7cae2089bcad641cff262167c40033eb6b86e15c2bc1b3aed9e9
 index: eu.kanade.tachiyomi.extension.all.autosourcarr 1.4.4005 (code 108005), 5 server slots
 Reader extension repository: .build/reader-extension
-  APK: apk/tachiyomi-all.autosourcarr-v1.4.4005.apk  JAR: jar/tachiyomi-all.autosourcarr-v1.4.4005.jar  signing SHA-256: 500efda1b5fd91ae1903102c95bee46caa26065f2fd118f99d413937dc1eea92
+  APK: apk/tachiyomi-all.autosourcarr-v1.4.4005.apk  JAR: jar/tachiyomi-all.autosourcarr-v1.4.4005.jar  signing SHA-256: 15acc0941865625af0fe8e9b366b40fb33c116c353a914e528afe446327d5990
 UNSIGNED-FOR-RELEASE: signed with a throwaway debug key. Add the AUTOSOURCARR_EXT_* secrets before releasing.
