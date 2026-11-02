@@ -1,9 +1,9 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
-const root=__dirname+'/../app/static/',source=fs.readFileSync(root+'app.js','utf8'),workbench=fs.readFileSync(root+'workbench.js','utf8');
+const root=__dirname+'/../app/static/',source=fs.readFileSync(root+'app.js','utf8'),workbench=fs.readFileSync(root+'workbench.js','utf8'),theme=fs.readFileSync(root+'theme.js','utf8');
 const section=(a,b)=>source.slice(source.indexOf(a),source.indexOf(b,source.indexOf(a)));
 const ctx={document:{querySelector:()=>null},console,esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;')};
 vm.createContext(ctx);vm.runInContext(workbench,ctx);
-vm.runInContext(section('function normalizeHexColor(', 'function syncCustomColorInputs('),ctx);
+vm.runInContext(theme,ctx);
 const parse=value=>value.startsWith('#')?ctx.hexToRgb(value):Object.fromEntries(value.match(/\d+/g).map((v,i)=>[['r','g','b'][i],Number(v)]));
 let combinations=0;
 for(const style of ['neutral','tonal','dual','paper','graphite','aurora'])for(const primary of ['#000000','#FFFFFF','#0000FF','#00FF00','#FF0000','#7DB0FF','#F1BD55','#61D49A','#B69AFF','#F08CA5','#62D4DF'])for(const secondary of ['#000000','#FFFFFF','#EEB392']){
@@ -12,7 +12,9 @@ for(const style of ['neutral','tonal','dual','paper','graphite','aurora'])for(co
   assert(ctx.colorContrast(parse(p[token]),parse(p[surface]))>=4.5,`${style} ${primary} ${secondary} ${token} on ${surface}`);
  }
  assert(ctx.colorContrast(parse(p.accent),parse(p['on-accent']))>=4.5,'Button text contrast');
- assert.deepEqual(parse(p['accent-border']),{...ctx.hexToRgb(primary)},'Primary controls the exact border hue');
+ const borderOn=['bg','panel','panel2','control','card','card-secondary','evidence-card'];
+ for(const s of borderOn)assert(ctx.colorContrast(parse(p['accent-border']),parse(p[s]))>=3,'Border reaches 3:1');
+ if(borderOn.every(s=>ctx.colorContrast(ctx.hexToRgb(primary),parse(p[s]))>=3))assert.deepEqual({...parse(p['accent-border'])},{...ctx.hexToRgb(primary)},'Primary controls the exact border hue when it already passes');
  combinations++;
 }
 console.log('PASS '+combinations+' style/color combinations retain readable text, status and action colors');

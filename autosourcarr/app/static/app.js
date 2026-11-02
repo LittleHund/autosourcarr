@@ -105,10 +105,9 @@ const UI_PREF_LOCAL_KEYS = {
   density:'autosourcarr_density',
   settingsSubtab:'autosourcarr_settings_subtab',
   customColor:'autosourcarr_custom_color',
+  colorMode:'autosourcarr.colorMode',
 };
-const UI_THEMES = new Set(['blue','amber','emerald','violet','rose','cyan','custom']);
-const DEFAULT_CUSTOM_COLOR='#ff2d78';
-const CUSTOM_THEME_VARS=['--bg','--panel','--panel2','--chrome','--control','--control-hover','--surface-highlight','--line','--accent','--accent-soft','--accent-border','--accent-text','--accent-chip','--progress'];
+// Theme constants and palette code live in theme.js (loaded before this file).
 function readLocalUiPreference(key){
   const storageKey=UI_PREF_LOCAL_KEYS[key];if(!storageKey)return undefined;
   try{const raw=localStorage.getItem(storageKey);if(raw===null)return undefined;if(['sourceSections','customizationSections'].includes(key)){try{return JSON.parse(raw);}catch(_){return undefined;}}return raw;}catch(_){return undefined;}
@@ -116,42 +115,6 @@ function readLocalUiPreference(key){
 function writeLocalUiPreference(key,value){
   const storageKey=UI_PREF_LOCAL_KEYS[key];if(!storageKey)return;
   try{if(value===null||value===undefined||value==='')localStorage.removeItem(storageKey);else localStorage.setItem(storageKey,['sourceSections','customizationSections'].includes(key)?JSON.stringify(value):String(value));}catch(_){}
-}
-function normalizeHexColor(value){
-  let raw=String(value||'').trim().replace(/^#/,'');
-  if(/^[0-9a-fA-F]{3}$/.test(raw))raw=raw.split('').map(x=>x+x).join('');
-  if(!/^[0-9a-fA-F]{6}$/.test(raw))return '';
-  return `#${raw.toUpperCase()}`;
-}
-function hexToRgb(value){const hex=normalizeHexColor(value);if(!hex)return null;return {r:parseInt(hex.slice(1,3),16),g:parseInt(hex.slice(3,5),16),b:parseInt(hex.slice(5,7),16)};}
-function rgbToHex(r,g,b){const clamp=v=>Math.max(0,Math.min(255,Number(v)||0));return '#'+[r,g,b].map(v=>Math.round(clamp(v)).toString(16).padStart(2,'0')).join('').toUpperCase();}
-function mixRgb(rgb,target,amount){const a=Math.max(0,Math.min(1,Number(amount)||0));return {r:Math.round(rgb.r+(target.r-rgb.r)*a),g:Math.round(rgb.g+(target.g-rgb.g)*a),b:Math.round(rgb.b+(target.b-rgb.b)*a)};}
-function rgbCss(rgb){return `rgb(${rgb.r} ${rgb.g} ${rgb.b})`;}
-function syncCustomColorInputs(hex){const rgb=hexToRgb(hex)||hexToRgb(DEFAULT_CUSTOM_COLOR);const normalized=rgbToHex(rgb.r,rgb.g,rgb.b);if($('#customThemePicker'))$('#customThemePicker').value=normalized;if($('#customThemeHex'))$('#customThemeHex').value=normalized;if($('#customThemeR'))$('#customThemeR').value=rgb.r;if($('#customThemeG'))$('#customThemeG').value=rgb.g;if($('#customThemeB'))$('#customThemeB').value=rgb.b;if($('#customThemePreview'))$('#customThemePreview').style.background=normalized;return normalized;}
-function applyCustomPalette(value){
-  const hex=syncCustomColorInputs(normalizeHexColor(value)||DEFAULT_CUSTOM_COLOR);
-  writeLocalUiPreference('customColor',hex);
-  applyAppearancePalette(document.documentElement.dataset.themeStyle||readLocalUiPreference('themeStyle')||'neutral','custom',hex,readLocalUiPreference('secondaryColor'));
-  return hex;
-}
-function clearCustomPalette(){for(const key of CUSTOM_THEME_VARS)document.documentElement.style.removeProperty(key);}
-function applyTheme(theme,customColor){
-  const name=UI_THEMES.has(String(theme||''))?String(theme):'blue';
-  clearCustomPalette();
-  document.documentElement.dataset.theme=name;writeLocalUiPreference('theme',name);
-  const hex=customColor||readLocalUiPreference('customColor')||DEFAULT_CUSTOM_COLOR;
-  syncCustomColorInputs(hex);
-  applyAppearancePalette(readLocalUiPreference('themeStyle')||'neutral',name,hex,readLocalUiPreference('secondaryColor'));
-  document.querySelectorAll('.themeChoice').forEach(b=>{const active=b.dataset.theme===name;b.classList.toggle('active',active);b.setAttribute('aria-checked',String(active));});
-  const customPanel=$('#customThemeControls');if(customPanel)customPanel.hidden=false;
-  const presetColors={blue:'#7DB0FF',amber:'#F1BD55',emerald:'#61D49A',violet:'#B69AFF',rose:'#F08CA5',cyan:'#62D4DF'};
-  syncCustomColorInputs(presetColors[name]||hex);
-  if($('#customThemePreview'))$('#customThemePreview').style.background=hex;
-}
-function applyThemeStyle(value,save=false){
-  const name=normalizeThemeStyle(value);writeLocalUiPreference('themeStyle',name);
-  applyTheme(readLocalUiPreference('theme')||'blue',readLocalUiPreference('customColor'));
-  if(save)queueUiPreferenceSave('themeStyle',name);
 }
 applyTheme(readLocalUiPreference('theme')||'blue',readLocalUiPreference('customColor')||DEFAULT_CUSTOM_COLOR);
 function applyDensity(value){const density=String(value||'')==='compact'?'compact':'comfortable';document.documentElement.dataset.density=density;writeLocalUiPreference('density',density);document.querySelectorAll('.densityChoice').forEach(b=>{const active=b.dataset.density===density;b.classList.toggle('active',active);b.setAttribute('aria-checked',active?'true':'false');});}
@@ -237,6 +200,7 @@ function applyUiPreferences(values){
   writeLocalUiPreference('secondaryColor',normalizeHexColor(prefs.secondaryColor||readLocalUiPreference('secondaryColor'))||'#EEB392');
   writeLocalUiPreference('tertiaryColor',normalizeHexColor(prefs.tertiaryColor||readLocalUiPreference('tertiaryColor'))||'#EEB392');
   if(prefs.colorRolesVersion!==undefined)writeLocalUiPreference('colorRolesVersion',prefs.colorRolesVersion);
+  if(prefs.colorMode!==undefined)writeLocalUiPreference('colorMode',prefs.colorMode);
   if(prefs.customizationSections!==undefined)writeLocalUiPreference('customizationSections',prefs.customizationSections);
   applyCustomizationSections();
   applyTheme(prefs.theme||readLocalUiPreference('theme')||'blue',customColor);
@@ -3798,7 +3762,6 @@ $('#refreshFeeds').onclick=async()=>{const b=$('#refreshFeeds');b.disabled=true;
 $('#scanAdditionalRecords').onclick=async()=>{const b=$('#scanAdditionalRecords');b.disabled=true;try{const r=await api('/api/v1/maintenance/discover-additional',{method:'POST',body:JSON.stringify({limit:5000})});toast(r.already_running?'Additional-record scan is already running':`Background scan queued for ${r.entries||0} entries`);loadTasks().catch(()=>{});setTimeout(()=>health().catch(()=>{}),1000);}catch(e){toast('Unable to start additional-record scan: '+e.message);}finally{b.disabled=false;}};
 
 document.querySelectorAll('.themeChoice').forEach(b=>b.onclick=()=>{const theme=b.dataset.theme||'blue';applyTheme(theme,readLocalUiPreference('customColor')||DEFAULT_CUSTOM_COLOR);queueUiPreferenceSave('theme',theme);});
-function commitCustomThemeColor(hex){const normalized=normalizeHexColor(hex);if(!normalized){toast('Enter a valid HEX color such as #FF2D78');return false;}applyCustomPalette(normalized);applyTheme('custom',normalized);queueUiPreferenceSave('customColor',normalized);queueUiPreferenceSave('theme','custom');return true;}
 if($('#applyCustomTheme'))$('#applyCustomTheme').onclick=()=>commitCustomThemeColor($('#customThemeHex')?.value||'');
 if($('#customThemeHex'))$('#customThemeHex').addEventListener('change',()=>commitCustomThemeColor($('#customThemeHex').value));
 for(const id of ['customThemeR','customThemeG','customThemeB'])if($(`#${id}`))$(`#${id}`).addEventListener('change',()=>{const hex=rgbToHex($('#customThemeR').value,$('#customThemeG').value,$('#customThemeB').value);syncCustomColorInputs(hex);commitCustomThemeColor(hex);});

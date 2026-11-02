@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
-const root=__dirname+'/../app/static/',app=fs.readFileSync(root+'app.js','utf8'),wb=fs.readFileSync(root+'workbench.js','utf8');
+const root=__dirname+'/../app/static/',app=fs.readFileSync(root+'app.js','utf8'),wb=fs.readFileSync(root+'workbench.js','utf8'),theme=fs.readFileSync(root+'theme.js','utf8');
 const ctx={document:{querySelector:()=>null},console};vm.createContext(ctx);vm.runInContext(wb,ctx);
-vm.runInContext(app.slice(app.indexOf('function normalizeHexColor('),app.indexOf('function syncCustomColorInputs(')),ctx);
+vm.runInContext(theme,ctx);
 const plain=x=>JSON.parse(JSON.stringify(x));
 const migrated=plain(ctx.migrateColorRoles({theme:'custom',customColor:'#F300E6',secondaryColor:'#5B04DC',themeStyle:'dual'}));
 assert.equal(migrated.secondaryColor,'#F300E6');assert.equal(migrated.tertiaryColor,'#5B04DC');assert.equal(migrated.colorRolesVersion,2);
@@ -12,7 +12,9 @@ const parse=x=>x.startsWith('#')?ctx.hexToRgb(x):{r:+x.match(/\d+/g)[0],g:+x.mat
 let count=0;
 for(const style of ['neutral','tonal','dual','paper','graphite','aurora']){
  const p=pal(style,'#FF0000','#008800','#0000FF'),newPrimary=pal(style,'#FFFF00','#008800','#0000FF'),newSecondary=pal(style,'#FF0000','#880000','#0000FF'),newThird=pal(style,'#FF0000','#008800','#00FFFF');
- assert.equal(p['accent-border'],'rgb(255 0 0)');
+ // The exact primary hue stays the border when it already reaches 3:1; otherwise it is adjusted.
+ for(const s of ['bg','panel','card'])assert(ctx.colorContrast(parse(p['accent-border']),parse(p[s]))>=3,style+' border on '+s);
+ if(['bg','panel','panel2','control','card','card-secondary','evidence-card'].every(s=>ctx.colorContrast({r:255,g:0,b:0},parse(p[s]))>=3))assert.equal(p['accent-border'],'#FF0000');
  assert.equal(p.card,newPrimary.card,'Primary cannot recolor the card');
  assert.notEqual(p.card,newSecondary.card,'Secondary must control the card');
  assert.equal(p.card,newThird.card,'Third color cannot recolor normal cards');

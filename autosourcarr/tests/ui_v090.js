@@ -97,7 +97,7 @@ test('Late preference GET preserves a user edit even after its save cleared pend
     api:()=>new Promise(r=>release=r),applyUiPreferences:p=>{applied=p;},updateUiPreferenceOwner:()=>{},
     setTimeout:()=>1,clearTimeout:()=>{},flushUiPreferenceSave:()=>{}};
   vm.createContext(Object.assign(ctx,{performance}));
-  const wb=fs.readFileSync(__dirname+'/../app/static/workbench.js','utf8');vm.runInContext(wb.slice(wb.indexOf('function migrateColorRoles('),wb.indexOf('function commitTertiaryColor('))+extract('function normalizeHexColor(', 'function syncCustomColorInputs('),ctx);
+  vm.runInContext(fs.readFileSync(__dirname+'/../app/static/theme.js','utf8'),ctx);
   vm.runInContext(extract('function queueUiPreferenceSave(','async function flushUiPreferenceSave(')+extract('async function loadUiPreferences(){','function rememberClientError('),ctx);
   const loading=ctx.loadUiPreferences();
   ctx.queueUiPreferenceSave('theme','green');
