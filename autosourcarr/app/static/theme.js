@@ -97,7 +97,7 @@ function buildThemePalette(options={}){
     p.chrome=tint(p.chrome,seed,.08);p.sidebar=tint(p.sidebar,seed,.08);
   }
   p['secondary-soft']=tint(p.panel,second,placement==='dual'?intensity*.65:(light?.06:.10));
-  p['accent-soft']=table&&placement!=='tonal'&&placement!=='aurora'?table['accent-soft']:tint(p.panel,seed,light?.14:.18);
+  p['accent-soft']=table&&placement!=='tonal'&&placement!=='aurora'?table['accent-soft']:tint(p.panel,seed,light?.12:.12);
   // Surfaces: strong tints must never make text or muted text unreadable.
   const darkInk={r:0,g:0,b:0},whiteInk={r:255,g:255,b:255},surfaceTarget=light?whiteInk:darkInk;
   const text=hexToRgb(p.text),muted=hexToRgb(p.muted);
@@ -120,7 +120,12 @@ function buildThemePalette(options={}){
   p['on-accent']=colorContrast(accentRgb,hexToRgb(ink))>=THEME_AA.text?ink:(colorContrast(accentRgb,darkInk)>=colorContrast(accentRgb,whiteInk)?'#000000':'#FFFFFF');
   p['on-accent-fill']=p['on-accent'];
   if(table){p.header=table.header;p['header-muted']=table['header-muted'];}
-  else{p.header=fit(mixRgb(seed,darkInk,.35),[whiteInk],5);p['header-muted']=fit(mixRgb(hexToRgb(p.header),whiteInk,.8),[hexToRgb(p.header)],THEME_AA.text);}
+  else{
+    // The header always carries white text, in both modes: darken the custom hue until it does.
+    let h=mixRgb(seed,darkInk,.35);for(let i=0;i<100&&colorContrast(h,whiteInk)<5;i++)h=mixRgb(h,darkInk,.08);
+    let hm=mixRgb(h,whiteInk,.8);for(let i=0;i<100&&colorContrast(hm,h)<THEME_AA.text;i++)hm=mixRgb(hm,whiteInk,.2);
+    p.header=rgbToHex(h.r,h.g,h.b);p['header-muted']=rgbToHex(hm.r,hm.g,hm.b);
+  }
   p['header-text']='#FFFFFF';
   p['header-line']=fit(mixRgb(hexToRgb(p.header),darkInk,.25),[],1);
   return {vars:p,adjustments,mode,placement,theme};

@@ -239,7 +239,7 @@ class PreviewHandler(BaseHTTPRequestHandler):
         if origin and origin not in (f'http://127.0.0.1:{self.server.server_port}',f'http://localhost:{self.server.server_port}'):
             self.reply({'detail':'Cross-origin changes are unavailable.'},403);return
         if path=='/api/admin/ui-preferences' and self.command=='PUT':
-            allowed={'theme','themeStyle','density','customColor','secondaryColor','tertiaryColor','cardFill','colorRolesVersion','accentStrength','thumbnailScale','matchedThumbnailScale','customizationSections','browsePageSize','sourcesSubtab','sourceSections','settingsSubtab','duplicateScope'}
+            allowed={'theme','themeStyle','colorMode','density','customColor','secondaryColor','tertiaryColor','cardFill','colorRolesVersion','accentStrength','thumbnailScale','matchedThumbnailScale','customizationSections','browsePageSize','sourcesSubtab','sourceSections','settingsSubtab','duplicateScope'}
             values=body.get('values',body)
             if isinstance(values,dict):data.preferences.update({key:value for key,value in values.items() if key in allowed})
             self.reply(dict(values=data.preferences,user='Sample library',authelia=False));return

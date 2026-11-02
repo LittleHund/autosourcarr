@@ -394,7 +394,7 @@ function initializeWorkbench(){
   document.querySelector('#exportErrors')?.addEventListener('click',exportErrors);
   document.querySelector('#downloadDiagnostics')?.addEventListener('click',()=>{openErrors();exportErrors();});
   document.querySelector('#retryPreferenceSave')?.addEventListener('click',()=>{uiPreferencesState.saveFailures=0;flushUiPreferenceSave();});
-  document.querySelectorAll('.themePicker,.themeStylePicker,.colorModePicker,[aria-label="Interface density"]').forEach(group=>group.addEventListener('keydown',event=>{
+  document.querySelectorAll('.themePicker,.themeStylePicker,[aria-label="Interface density"]').forEach(group=>group.addEventListener('keydown',event=>{
     if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
     const choices=[...group.querySelectorAll('button[role="radio"]')];const i=choices.indexOf(document.activeElement);if(i<0)return;
     event.preventDefault();const step=['ArrowLeft','ArrowUp'].includes(event.key)?-1:1;const next=choices[(i+step+choices.length)%choices.length];next.focus();next.click();
