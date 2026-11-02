@@ -30,6 +30,29 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   maintenance, startup dedup and the other `*_ON_STARTUP` settings, reset-hint replay). The
   source host answers a local pacing overflow as a deferral instead of a source error.
 
+- Phase 11 (Web UI finish):
+  - Themes: one theme module (`theme.js`) has six accents, each in a dark and a light variant.
+    - Light/dark follows the device setting by default (Settings → Customization → Mode: Device, Dark or Light).
+    - Every colour role meets WCAG AA. Controls get a stronger border (about 3.3–3.8:1, was 1.4–1.7:1).
+    - A custom colour that fails AA is adjusted, and the app says so.
+    - The "Paper & ink" placement is now the Light mode; old settings carry over.
+  - Phones and tablets: the layouts fit the screen, and on touch screens controls are at least 44×44 px.
+  - Live updates: pages update from the server's event stream instead of polling. They never move the scroll position, close a popup or replace a form you are editing; a small "Updated — refresh" button appears instead.
+  - Refresh: a browser refresh now also restores the open entry and the library page.
+  - Long lists:
+    - The Matrix shows 50 rows with "Load 50 more", and download history loads page by page.
+    - Catalogue and Matrix pages are ordered by when an entry was added (newest first), no longer by last update.
+  - Setup wizard: required steps come first; optional steps can be skipped. Cancel keeps a draft in this browser (never keys or passwords).
+  - New setting `COVER_CACHE_MAX_MB` (default 2048, 0 = no limit): when the cover cache is full, the least recently used covers are removed.
+  - The diagnostics download now hides data, config, database and library folder paths, cookies and signing keys.
+  - Repairs show "Fixed" only after you confirmed the exact installed version works; Sources → Health shows that verdict too.
+  - Entry splits now write their decision-log and "kept separate" rows in the same database write.
+  - A source is paused only by real source errors. Local timeouts, deferrals and source-engine restarts never pause it.
+  - UI preferences are now stored per account (the owner keeps the old shared profile).
+  - The web UI is bundled and minified in CI (`scripts/bundle-ui.mjs`); the image serves the bundle from phase 13.
+  - Browser tests (Playwright) run at phone, tablet and desktop size in all 12 themes.
+  - Limits: the instance backup routes come in phase 12, and the Matrix with a search or source filter still loads up to 500 rows at once.
+
 ## Unreleased
 
 - Reader extension sources moved from `extension/module/src/eu/kanade/tachiyomi/extension/all/autosourcarr/`

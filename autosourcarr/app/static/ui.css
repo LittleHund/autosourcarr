@@ -1168,6 +1168,9 @@ html[data-ui=reimagined] :is(.tablewrap,.riTableScroll,.sourceHealthTableWrap){m
 html[data-ui=reimagined] .settingsSubpane table{display:block;min-width:0;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
 /* Long addresses and file names in status text wrap instead of widening the page. */
 @media(max-width:767px){html[data-ui=reimagined] main{overflow-wrap:anywhere}html[data-ui=reimagined] .connectionRow{flex-wrap:wrap}html[data-ui=reimagined] .connectionRow>*{min-width:0}}
+/* The APK panel's text column may shrink, so a long status line wraps instead of widening the page. */
+html[data-ui=reimagined] .apkDownloadPanel>div{flex:1 1 16rem;min-width:0}html[data-ui=reimagined] .apkDownloadPanel p{overflow-wrap:anywhere}
+@media(min-width:768px) and (max-width:1199px){html[data-ui=reimagined] main{overflow-wrap:anywhere}}
 /* Source group rows wrap their actions below tablet width. */
 @media(max-width:1199px){html[data-ui=reimagined] .sourceGroupEditor{flex-wrap:wrap}}
 
