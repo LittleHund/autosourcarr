@@ -22,8 +22,10 @@ public sealed class CompatibilityList
     private static readonly Lazy<CompatibilityList> Loaded = new(Load);
 
     private CompatibilityList(string appVersion, int shareFormat, int shareMinimum, IReadOnlyList<CompatibilityReader> shareReaders,
-        string extensionApi, int profileFormat, IReadOnlyList<CompatibilityReader> profileReaders, long catalogSchema, long originsSchema)
+        string extensionApi, int profileFormat, IReadOnlyList<CompatibilityReader> profileReaders, long catalogSchema, long originsSchema,
+        int backupFormat, IReadOnlyList<CompatibilityReader> backupReaders)
     {
+        BackupFormat = backupFormat; BackupReaders = backupReaders;
         AppVersion = appVersion; ShareFormat = shareFormat; ShareFormatMinReader = shareMinimum; ShareReaders = shareReaders;
         ExtensionApi = extensionApi; ProfileFormat = profileFormat; ProfileReaders = profileReaders;
         CatalogSchema = catalogSchema; OriginsSchema = originsSchema;
@@ -54,6 +56,9 @@ public sealed class CompatibilityList
     public string ExtensionApi { get; }
     public int ProfileFormat { get; }
     public IReadOnlyList<CompatibilityReader> ProfileReaders { get; }
+    /// <summary>SET-8 instance backup format (0 when the list does not name one).</summary>
+    public int BackupFormat { get; }
+    public IReadOnlyList<CompatibilityReader> BackupReaders { get; }
     public long CatalogSchema { get; }
     public long OriginsSchema { get; }
 
@@ -72,6 +77,7 @@ public sealed class CompatibilityList
         ["share_format"] = new JsonObject { ["version"] = ShareFormat, ["min_reader_version"] = ShareFormatMinReader, ["readers"] = Readers(ShareReaders) },
         ["extension_api"] = new JsonObject { ["version"] = ExtensionApi },
         ["profile_format"] = new JsonObject { ["version"] = ProfileFormat, ["readers"] = Readers(ProfileReaders) },
+        ["backup_format"] = new JsonObject { ["version"] = BackupFormat, ["readers"] = Readers(BackupReaders) },
     };
 
     private static JsonArray Readers(IEnumerable<CompatibilityReader> readers) =>
@@ -98,7 +104,14 @@ public sealed class CompatibilityList
         if (shareMinimum < 1 || shareMinimum > shareVersion || shareReaders.All(row => row.Version != shareVersion)) throw new InvalidOperationException("compatibility.json share_format is inconsistent.");
         var profileVersion = Number(profile, "version");
         if (profileReaders.All(row => row.Version != profileVersion)) throw new InvalidOperationException("compatibility.json profile_format is inconsistent.");
-        return new CompatibilityList(Text(root, "app_version"), shareVersion, shareMinimum, shareReaders, Text(extension, "version"), profileVersion, profileReaders, catalogSchema, originsSchema);
+        var backupVersion = 0; IReadOnlyList<CompatibilityReader> backupReaders = [];
+        if (root["backup_format"] is JsonObject backup)
+        {
+            backupReaders = ReaderTable(backup); backupVersion = Number(backup, "version");
+            if (backupReaders.All(row => row.Version != backupVersion)) throw new InvalidOperationException("compatibility.json backup_format is inconsistent.");
+        }
+        return new CompatibilityList(Text(root, "app_version"), shareVersion, shareMinimum, shareReaders, Text(extension, "version"), profileVersion, profileReaders,
+            catalogSchema, originsSchema, backupVersion, backupReaders);
     }
 
     private static JsonObject Section(JsonObject root, string name) =>

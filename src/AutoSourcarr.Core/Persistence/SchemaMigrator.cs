@@ -55,8 +55,20 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
     /// <summary>Highest schema revision this build understands; newer files are refused unchanged.</summary>
     public const int SchemaRevision = 1;
 
+    /// <summary>
+    /// Where migrations are found: this assembly. Tests add their own assembly to register a test-only migration (a real
+    /// failing migration on a real older schema, phase 12); the app never changes it.
+    /// </summary>
+    internal static Assembly[] MigrationAssemblies { get; set; } = [typeof(SchemaMigrator).Assembly];
+
+    /// <summary>Migrations newer than <paramref name="applied"/> for one file (what an update would run).</summary>
+    public static IReadOnlyList<long> PendingMigrations(DatabaseFile file, long applied) => MigrationAssemblies.SelectMany(assembly => assembly.GetTypes())
+        .Select(type => (Migration: type.GetCustomAttribute<FluentMigrator.MigrationAttribute>(), Tags: type.GetCustomAttribute<FluentMigrator.TagsAttribute>()))
+        .Where(item => item.Migration is not null && item.Tags?.TagNames.Contains(file == DatabaseFile.Catalog ? CatalogTag : OriginsTag) == true && item.Migration.Version > applied)
+        .Select(item => item.Migration!.Version).Order().ToList();
+
     /// <summary>Highest FluentMigrator version per file in this build (VersionInfo).</summary>
-    public static long LatestMigration(DatabaseFile file) => typeof(SchemaMigrator).Assembly.GetTypes()
+    public static long LatestMigration(DatabaseFile file) => MigrationAssemblies.SelectMany(assembly => assembly.GetTypes())
         .Select(type => (Type: type, Migration: type.GetCustomAttribute<FluentMigrator.MigrationAttribute>(), Tags: type.GetCustomAttribute<FluentMigrator.TagsAttribute>()))
         .Where(item => item.Migration is not null && item.Tags?.TagNames.Contains(file == DatabaseFile.Catalog ? CatalogTag : OriginsTag) == true)
         .Max(item => item.Migration!.Version);
@@ -72,7 +84,7 @@ public sealed partial class SchemaMigrator(SqliteDatabase database)
                    .AddFluentMigratorCore()
                    .ConfigureRunner(runner => runner.AddSQLite()
                        .WithGlobalConnectionString(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString())
-                       .ScanIn(typeof(SchemaMigrator).Assembly).For.Migrations())
+                       .ScanIn(MigrationAssemblies).For.Migrations())
                    .Configure<RunnerOptions>(options => options.Tags = [tag])
                    .BuildServiceProvider(validateScopes: false))
         using (var scope = services.CreateScope())

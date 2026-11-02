@@ -19,7 +19,7 @@ namespace AutoSourcarr.Tests;
 /// Phase 11 integration: the whole app (external mode, forms sign-in) maps the Web UI finish routes under /api/v1 with
 /// their access level; UI preferences are kept per account (guests too, reader keys refused); the internal services
 /// read answers the 0.5.0 shape; the diagnostics download removes planted secrets, tokens, cookies, keys, passwords,
-/// e-mail addresses and absolute data paths; the backup routes that move in phase 12 answer 404 (not 401/500).
+/// e-mail addresses and absolute data paths; the old /api/admin/instance backup routes answer 404 (phase 12 serves them on /api/v1).
 /// </summary>
 public static class Phase11WiringTests
 {
@@ -31,7 +31,7 @@ public static class Phase11WiringTests
 
     public static void Register(TestSuite suite)
     {
-        suite.Add("phase 11 wiring: UI preference, internal services and diagnostics routes are mapped with their access level; backup routes of phase 12 answer 404",
+        suite.Add("phase 11 wiring: UI preference, internal services and diagnostics routes are mapped with their access level; the old /api/admin/instance backup routes answer 404 (moved to /api/v1 in phase 12)",
             () => Run(Wiring).GetAwaiter().GetResult());
         suite.Add("phase 11 ui preferences: one profile per account, guests keep their own, the owner starts from the 0.4.x profile, reader keys are refused",
             () => Run(Preferences).GetAwaiter().GetResult());
@@ -124,7 +124,7 @@ public static class Phase11WiringTests
         using var reader = app.Client(readerKey: ReaderToken);
         using (var aliased = await reader.GetAsync("/api/reader/v1/ui-preferences")) Check.True(aliased.StatusCode != HttpStatusCode.OK, "no UI preferences through the reader alias");
         using (var aliased = await reader.GetAsync("/api/reader/v1/internal-services")) Check.True(aliased.StatusCode != HttpStatusCode.OK, "no internal services through the reader alias");
-        // Task 3: the instance backup routes move with phase 12; until then they answer 404 with a JSON detail the dialog shows.
+        // Task 3: the 0.4.5 instance backup routes are not served; phase 12 moved them to /api/v1/backups (BackupTests).
         using var admin = app.Client(AdminToken);
         foreach (var (method, path) in new[] { ("GET", "/api/admin/instance/backups"), ("POST", "/api/admin/instance/backups"), ("POST", "/api/admin/instance/restore/preview") })
         {

@@ -1,6 +1,6 @@
-# Checkpoint — 2026-11-01 21:30 CET (Phases 0–10 DONE; paused before Phase 11 at the owner's request)
+# Checkpoint — 2026-11-02 20:45 CET (Phases 0–11 DONE; next Phase 12 Backup)
 
-STATUS: 0.5.0 · Phase 10/14 done · next Phase 11 Web UI finish (paused) · 84% done (146/173 plan-h) · remaining to cutover 27 plan-h + moved items (≈ 7.5 h) · 0.6.0 after that ~35 plan-h (≈ 5.5 h)
+STATUS: 0.5.0 · Phase 11/14 done · next Phase 12 Backup · 88% done (152/173 plan-h) · remaining to cutover 21 plan-h + moved items (≈ 6.5 h) · 0.6.0 after that ~35 plan-h (≈ 5.5 h)
 
 RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code on the owner's PC) against 2.35: about 1.3 h went to fixing what a recheck of phases 0–9 found and six CI probe rounds (reader extension build script, signing, flaky tests). Pace phases 0–10: 24.4 h for 146 plan-h = 0.167 h per plan-h. Phases 11 and 13 grow with the recheck items moved to them (+0.6 h, +1.0 h).
 
@@ -11,12 +11,17 @@ RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code o
 | 8 Matching | 21 | 2.3 actual | done |
 | 9 Imports/metadata/sharing | 16 | 2.1 actual | done |
 | 10 Chapters/reader | 15 | 4.0 actual (17:33–21:30) | done |
-| 11 Web UI finish | 6 | 2.0 (×1.5 Playwright; + services panel, page-first lists, event-driven UI, Fixed state, split atomicity, SourceResult) | next (paused) |
-| 12 Backup | 6 | 0.95 | |
-| 13 Pipeline | 7 | 2.65 (×1.5 image builds; + reader extension in the image, repair runner wired, WebView sandbox, PERF-2 limits, network checks, continuous discovery crawler) | |
-| 14 Cutover | 8 | 1.85 (×1.5 real data, your command) | |
-| 0.5.0 total | 173 | 24.4 done + ≈ 7.5 remaining | |
+| Ingest/import gate (owner decision) | — | 1.2 actual (2 Nov) | done |
+| 11 Web UI finish | 6 | 3.75 actual (17:00–20:45, 4 area agents + audit + 3 probes) | done |
+| 12 Backup | 6 | 1.5 | next |
+| 13 Pipeline | 7 | 3.0 (×1.5 image builds; + reader extension in the image, repair runner wired, WebView sandbox, PERF-2 limits, network checks, continuous discovery crawler) | |
+| 14 Cutover | 8 | 2.0 (×1.5 real data, your command) | |
+| 0.5.0 total | 173 | 29.35 done + ≈ 6.5 remaining | |
 | 0.6.0 (15–17) | 35 | ≈ 5.5 | |
+
+RE-ESTIMATE #12 (2 Nov 20:45). Phase 11 took 3.75 h against 2.0: the UI breadth (4 parallel area agents, two follow-up rounds), an audit with 15 findings and three Playwright probes (shared-account theme race, a lost base stylesheet line, touch targets, a tablet overflow). Remaining phases re-estimated at 6.5 h.
+
+Phase 11 (closed): conversion d6a813e CI run 41513332462 green (both jobs; the first run 41512035014 found 2 stale Python UI tests, fixed in d6a813e). Probe f0a582d green — 1212/1212 C# tests, Playwright 156/0/24 at phone/tablet/desktop in all 12 themes (sources and minified bundle), source host, repair runner, Kavita, reader extension build. Checklist docs/handoff/briefs/phase11-checklist.md. Audit: 15 findings, 12 fixed, 3 limitations (LIMIT-20261102-PHASE11). Not run: visual review by a person, Mihon device, Docker validation.
 
 Phase 10 (closed): conversion 5eae5ba CI run 41345293089 green (both jobs: .NET build and tests, Python 0.4.x checks). Local build + tests on the owner's PC (.NET SDK 10.0.403; owner decision 1 Nov: local first, one probe per round). Probe b772773 green: build, 1193/1193 C# tests, OpenAPI/client, source-host build/check/C# tests 5/5 (incl. "reader extension reads two servers with separate device keys"), repair runner, Kavita 0.8.9 (1 series, 2 chapters), reader extension build (APK + JAR, 5 slots, signed with a throwaway key: owner secrets not set). Commits 8b4129b (wiring), 20f82fa (audit fixes), e98ccdb (recheck fixes), 54668a0, 788178d, eeafd3d, 38472b6 (probe fixes). Audit: 13 findings, 8 fixed, 5 limitations. Checklist: docs/handoff/briefs/phase10-checklist.md (plan, CHAP-1..7, READ-1..5, MAT-20, port-map rows, UI pages; recheck of 0–9 with owners). Done when: Kavita ✓ (CI), two servers with separate keys ✓ (source host + built JAR, CI); Mihon on a phone not run. User duplicate set: sweep 0 wrong merges (300-pair sample incl. all 66 different-work pairs); ingest attaches 15 identical-title pairs → owner decision. Not run here: full Python suite on Linux (conversion CI runs it), Mihon device test, Docker validation.
 

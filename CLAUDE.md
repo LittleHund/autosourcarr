@@ -46,10 +46,11 @@ are no longer used. Plan: `docs/handoff/conversion-plan.md` (copy of Claude Docs
 | 8 Matching (scorer, decisions log, duplicates, mixed entries, workbench) | done | 26ef573, CI 41309786259 green |
 | 9 Imports, metadata, sharing | done | 1cc573b, CI 41321311062 green |
 | 10 Chapters/reader | done (2026-11-01, Claude Code on the PC) | see `docs/handoff/project-docs/checkpoint.md`; probe b772773 green |
-| 11 Web UI finish, 12 Backup, 13 Pipeline/image, 14 Cutover | open | — |
+| 11 Web UI finish | done (2026-11-02) | probe f0a582d green (1212 tests, Playwright 156/0/24) |
+| 12 Backup, 13 Pipeline/image, 14 Cutover | open | — |
 | 15–17 (0.6.0) | open | — |
 
-Progress: 146 of 173 plan-hours (84 %); estimate ≈ 7.5 h to cutover, ≈ 5.5 h for 0.6.0
+Progress: 152 of 173 plan-hours (88 %); estimate ≈ 6.5 h to cutover, ≈ 5.5 h for 0.6.0
 (measured pace 0.167 h per plan-hour, phases 0–10). Paused before phase 11 at the owner's request.
 
 **Phase 10 state:** four parts were written by sub-agents and saved in local WIP commit `3ed0b4e`

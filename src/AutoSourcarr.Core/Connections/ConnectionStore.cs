@@ -69,10 +69,6 @@ public sealed class ConnectionStore
         {
             ["url"] = "FLARESOLVERR_URL"
         }),
-        new("komf", "Komf (Settings)", new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["url"] = "KOMF_BROWSER_URL"
-        }),
         new("libretranslate", "LibreTranslate (Settings)", new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["url"] = "TRANSLATION_API_URL", ["api_key"] = "TRANSLATION_API_KEY"

@@ -1,0 +1,70 @@
+{
+  "records": [
+    {
+      "id": "RELEASE-0.5.0-PHASE-11",
+      "kind": "release",
+      "state": "implemented",
+      "title": "Conversion phase 11: Web UI finish (branch conversion)",
+      "body": "{\"areas\": {\"T\": \"theme.js palette table (6 accents x dark/light, device default, AA), responsive.css (phone/tablet, 44 px touch targets), stronger control border\", \"L\": \"live-events.js on /api/v1/events (precise topics, coalescing, resume, hidden-tab pause, UI-12 hints), UI-6 restore (open entry, library page chain, matrix rows), page-first matrix and download history\", \"C\": \"/api/v1/ui-preferences, /api/v1/internal-services, COVER_CACHE_MAX_MB LRU, diagnostics scrubbing, RepairConfirmations (hard rule 6), split atomicity, SourceResultTracker, keyset paging, live topics\", \"W\": \"wizard required-then-optional with draft, esbuild bundle (scripts/bundle-ui.mjs), Playwright 36 projects (3 sizes x 12 themes) with layout, touch, popup and computed contrast checks\"}, \"ci\": \"probe f0a582d green: 1212/1212 C# tests, Playwright 156 passed/0 failed/24 skipped (sources and bundle), source host, repair runner, Kavita, reader extension build\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02 (conversion phase 11)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "VERIFY-20261102-PHASE-11",
+      "kind": "verification",
+      "state": "verified",
+      "title": "Phase 11 verified: probe f0a582d all green incl. Playwright in every theme",
+      "body": "{\"probe\": \"f0a582d: restore/build/test 1212/1212, openapi, client, source host build/check/C# tests, repair runner, Kavita, reader extension build, ui_bundle, playwright 156/0/24 (461 s), playwright_bundle 156/0/24\", \"local\": \"Windows: C# 1206/1208 (two Windows-only), check-project sections 1-9, 54 node UI lines, contrast test PASS (1755950 pairs), Playwright 156/0/24 on pinned Chromium\", \"not_run\": [\"visual review by a person\", \"Mihon device\", \"Docker validation (section 10)\", \"full Python suite on Windows\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "probe/result.txt on ci-probe 8cf1cc2",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261102-PAGES-BY-ID",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "Catalogue and Matrix pages are ordered by id (newest added first)",
+      "body": "{\"why\": \"keyset paging on updated_at skipped entries updated after page 1 (audit A4)\", \"effect\": \"order is no longer recently-updated first\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "src/AutoSourcarr.Core/Catalogue/CatalogueQueries.Pages.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261102-UI-PREFS-PER-ACCOUNT",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "UI preferences are stored per account",
+      "body": "{\"rule\": \"profile key account:<id>; the owner inherits the 0.4.x local:default profile; external sign-ins keep authelia:<name>; reader and script keys refused\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "src/AutoSourcarr.Api/Endpoints/UiPreferencesV1Endpoints.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "FINDING-20261102-PHASE11-AUDIT",
+      "kind": "finding",
+      "state": "resolved",
+      "title": "Phase 11 independent audit: 15 findings, 12 fixed, 3 recorded",
+      "body": "{\"fixed\": [\"Playwright themes overridden by one shared account\", \"matrix discovery_outcomes was {} (UI crash)\", \"source-engine restarts counted as source failures (hard rule 3)\", \"keyset paging skipped updated entries\", \"split not-duplicate review outside the split transaction (hard rule 1)\", \"ui_v090/092 broken and unregistered\", \"contrast test did not see real CSS (computed-style sample added, offenders fixed)\", \"dead /api/admin services action\", \"repair verdict missing in Sources Health\", \"focused select blocked live refresh\", \"long library cursors dropped on refresh\", \"tag events without entry ids\"], \"also_found_in_probe\": [\"base stylesheet line lost in the theme rewrite (all tabs visible)\", \"touch targets below 44 px\", \"phone page wider than the screen\", \"tablet /system 840 px\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "docs/handoff/briefs/phase11-checklist.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "LIMIT-20261102-PHASE11",
+      "kind": "limitation",
+      "state": "open",
+      "title": "Phase 11 limits",
+      "body": "{\"items\": [\"the bundle runs all scripts as one file: a startup error stops later scripts (separate files isolated this)\", \"setup draft is per browser, not per account (no secrets stored)\", \"EventStream key field is fixed per topic by its first caller\", \"Matrix with a search or source filter still loads up to 500 rows\", \"UI-6 does not restore the Manage-work dialog tabs or scroll inside an open inspector\", \"instance backup routes answer 404 until phase 12\", \"no visual review by a person yet\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02",
+      "source_ref": "CHANGELOG.md 0.5.0",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    }
+  ]
+}

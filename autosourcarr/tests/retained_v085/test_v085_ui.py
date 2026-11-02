@@ -78,6 +78,7 @@ let uiPreferencesState={values:{theme:'blue'},pending:{theme:'blue'},saveFailure
 let finish, active=0, maxActive=0;
 function setTimeout(){return 1;}function clearTimeout(){}
 function writeLocalUiPreference(){}function updateUiPreferenceOwner(){}function rememberClientError(){}
+function apiV1(){return {saveUiPreferences:body=>api('/api/v1/ui-preferences',{method:'PUT',body:JSON.stringify(body)})};}
 function api(){active++;maxActive=Math.max(active,maxActive);return new Promise((resolve,reject)=>{finish=()=>{active--;FAILED?reject(Error('offline')):resolve({values:{theme:'blue'}});};});}
 '''.replace("FAILED", json.dumps(failed))
     tail = '''

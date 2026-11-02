@@ -4,6 +4,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 const source=fs.readFileSync(path.join(__dirname,'../app/static/instance-tools.js'),'utf8');
+// Phase 12: the backup dialog reads through the generated /api/v1 client.
+const client=fs.readFileSync(path.join(__dirname,'../app/static/generated/api-client.js'),'utf8');
 
 async function scenario(kind,{downloads=false}={}){
   let legacyBrowse=0,closedNavigation=0;const calls=[],nodes=new Map();
@@ -24,20 +26,21 @@ async function scenario(kind,{downloads=false}={}){
         :{items:[{id:9,entry_id:3,chapter_id:31,event:'downloaded',detail:'',created_at:'2026-10-18T12:00:00Z'}],has_more:true,next_before:9};
       return {items:[{name:'Retained task',state:'completed',updated_at:'2026-10-18T12:00:00Z'}],total:1,note:'Saved history',...(downloads?{downloads:page}:{})};
     }
-    if(url==='/api/admin/instance/backups')return {items:[],pending_restore:false};
+    if(url==='/api/v1/backups')return {items:[],update:null,limits:{manual:10,automatic_kept:3}};
     if(url==='/api/v1/downloads')return {state:'STOPPED',queue:[],revision:'fixture'};
     throw Error('Unexpected source/network action '+url);
   };
   const window={AutoSourcarrReimagined:{closeNavigation:()=>closedNavigation++}};
-  vm.runInNewContext(source,{window,document,api,AbortController,TextEncoder,URL,setTimeout,confirm:()=>false,
+  const context=vm.createContext({window,document,api,AbortController,TextEncoder,URL,setTimeout,confirm:()=>false,
     esc:value=>String(value??''),matchMedia:()=>({matches:false})});
+  vm.runInContext(client,context);vm.runInContext(source,context);
   nav.onclick({preventDefault(){},stopPropagation(){}});
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(legacyBrowse,0,'A tool must replace the legacy nav handler, which otherwise opens Browse');
   assert.equal(closedNavigation,1,'Close mobile navigation through the shell without changing the selected page');
   assert.equal(node('riInstanceDialog').open,true);
   assert.equal(calls.length,1,'Opening a tool performs only its read endpoint');
-  assert.equal(calls[0],{history:'/api/v1/activity/history?offset=0&limit=50',queue:'/api/v1/downloads',backups:'/api/admin/instance/backups'}[kind]);
+  assert.equal(calls[0],{history:'/api/v1/activity/history?offset=0&limit=50',queue:'/api/v1/downloads',backups:'/api/v1/backups'}[kind]);
   if(!downloads)return;
   // PERF-5: download events page by keyset; the older page is appended below the rows already shown.
   const rows=node('riDownloadRows');assert.match(node('riInstanceBody').innerHTML,/downloaded/);

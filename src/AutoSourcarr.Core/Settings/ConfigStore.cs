@@ -85,6 +85,13 @@ public sealed class ConfigDocument
     /// <summary>Saved external-service connections (CON-1/CON-5); absent until the first one is added. Written by ConnectionStore only.</summary>
     [JsonPropertyName("connections")]
     public List<ConfigConnection>? Connections { get; set; }
+
+    /// <summary>
+    /// Top-level keys this build does not know (a newer minor version, a hand edit) are kept as they are on every
+    /// rewrite (phase 12 audit): the retired-link cleanup and a restore must not drop them.
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Unknown { get; set; }
 }
 
 /// <summary>
@@ -248,8 +255,11 @@ public sealed class ConfigStore(string root)
         return document;
     }
 
-    public void WriteDocument(ConfigDocument document) =>
-        ConfigFiles.WriteAtomic(FilePath, JsonSerializer.SerializeToUtf8Bytes(Sorted(document), ConfigJsonContext.Default.ConfigDocument));
+    public void WriteDocument(ConfigDocument document) => ConfigFiles.WriteAtomic(FilePath, Serialize(document));
+
+    /// <summary>The exact bytes <see cref="WriteDocument"/> writes (sorted keys).</summary>
+    public static byte[] Serialize(ConfigDocument document) =>
+        JsonSerializer.SerializeToUtf8Bytes(Sorted(document), ConfigJsonContext.Default.ConfigDocument);
 
     /// <summary>Decrypted values; empty when config.json does not exist.</summary>
     public ConfigValues Load()
@@ -308,6 +318,7 @@ public sealed class ConfigStore(string root)
         ManagedKeys = document.ManagedKeys.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList(),
         Setup = document.Setup,
         Update = document.Update,
+        Unknown = document.Unknown,
         Connections = document.Connections?.Select(connection => new ConfigConnection
         {
             Id = connection.Id, Type = connection.Type, Label = connection.Label, Enabled = connection.Enabled,

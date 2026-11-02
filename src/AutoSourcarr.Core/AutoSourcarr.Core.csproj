@@ -3,6 +3,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Phase 12: tests register a test-only failing migration (SchemaMigrator.MigrationAssemblies). -->
+    <InternalsVisibleTo Include="AutoSourcarr.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Magick.NET-Q8-AnyCPU" />
     <PackageReference Include="Unidecode.NET" />
