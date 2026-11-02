@@ -76,7 +76,8 @@
   document.addEventListener('visibilitychange',changed);
   for(const node of [panel,byId('sources')])new MutationObserver(changed).observe(node,{attributes:true,attributeFilter:['class']});
   window.loadSourceHealth=load;
-  // UI-13: checks run as jobs; their events refresh the table (never while a control in it has focus, UI-12).
-  globalThis.AutoSourcarrLive?.subscribe({name:'source-health',topics:['jobs','tasks'],delayMs:1000,when:visible,busy:()=>globalThis.AutoSourcarrLive.userEditing(panel),refresh:()=>load()});
+  // UI-13: check progress and results arrive as events and refresh the table (never while a control in it has focus, UI-12).
+  // Topic source-health carries the checked source ids; the table lists every installed source, so any id counts.
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-health',topics:['source-health','sources'],delayMs:500,when:visible,busy:()=>globalThis.AutoSourcarrLive.userEditing(panel),refresh:()=>load()});
   if(visible())load();
 })();

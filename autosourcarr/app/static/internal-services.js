@@ -132,6 +132,7 @@
   document.addEventListener('visibilitychange',()=>{if(visible())load();else clearTimeout(timer);});
   window.loadInternalServices=load;
   // UI-13: no timer; a build or service change arrives as an event and refreshes this panel once per burst.
-  globalThis.AutoSourcarrLive?.subscribe({name:'internal-services',topics:['tasks','jobs','connections'],delayMs:1000,when:visible,refresh:()=>load()});
+  // Engine and connection state have their own topics; the reader build is a task (no more precise topic).
+  globalThis.AutoSourcarrLive?.subscribe({name:'internal-services',topics:['sources','connections','tasks'],delayMs:1000,when:visible,refresh:()=>load()});
   window.integratedServiceMode=()=>mode;
 })();

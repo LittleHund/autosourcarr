@@ -16,7 +16,7 @@
  */
 (function(root){
   'use strict';
-  const KNOWN_TOPICS=['tasks','jobs','errors','library','connections'];
+  const KNOWN_TOPICS=['tasks','jobs','errors','library','connections','catalogue','orphans','sources','duplicates','imports','repairs','source-health'];
   const DEFAULTS={coalesceMs:250,backoffMinMs:1000,backoffMaxMs:30000,failuresBeforeFallback:4,fallbackPollMs:30000,
     fallbackRetryMs:120000,hiddenCloseMs:20000,busyRecheckMs:1000,url:'/api/v1/events'};
 

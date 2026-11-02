@@ -60,6 +60,7 @@
     result.settingsSubtab=choice(raw.settingsSubtab,['customization','configuration','browser','services','connections','security'],'customization');
     result.taskLane=choice(raw.taskLane,['all','manual','automatic'],'all');
     result.libraryScope=choice(raw.libraryScope,['all','unmatched','missing','missing_downloads','source_gaps','verification','monitored','catalog'],'all');
+    result.matrixLoaded=Math.ceil(integer(raw.matrixLoaded,50,500,50)/50)*50;
     result.open={};for(const tab of ENTRY_TABS){const entry=id(raw.open?.[tab]);if(entry)result.open[tab]=entry;}
     const library=raw.library;
     result.library=plain(library)&&typeof library.signature==='string'&&Array.isArray(library.previous)&&library.previous.length<=50
@@ -105,6 +106,7 @@
     if(typeof activeInspector!=='undefined')for(const kind of ['matrix','subbed']){const entry=id(activeInspector?.[kind]);if(entry)result.open[kind]=entry;}
     if(restoreOpen)for(const [tab,entry] of Object.entries(restoreOpen))if(!own(result.open,tab))result.open[tab]=entry;
     result.library=globalThis.AutoSourcarrLibrary?.position?.()||null;
+    if(typeof matrixPaging!=='undefined')result.matrixLoaded=matrixPaging.loaded;
     return normalize(result);
   }
   function save(){if(!started || applying)return;saved=capture();try{sessionStorage.setItem(KEY,JSON.stringify(saved));}catch(_){}}
@@ -144,6 +146,8 @@
       setManualActionsSubtab(saved.manualSubtab);setSourceSubtab(saved.sourceSubtab,false);setSettingsSubtab(saved.settingsSubtab,false);
       applyReadOnlyDetails();
       globalThis.AutoSourcarrLibrary?.restorePosition?.(saved.library);
+      // PERF-5: the Matrix reloads as many page-first rows as were loaded before the refresh.
+      if(typeof matrixPaging!=='undefined')matrixPaging.loaded=saved.matrixLoaded;
       if(Object.keys(saved.open).length)restoreOpen={...saved.open};
       lastTab=saved.tab;
       if(saved.scroll[lastTab])pendingScroll={tab:lastTab,position:saved.scroll[lastTab],revision};

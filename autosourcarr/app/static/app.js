@@ -28,7 +28,6 @@ const entryCoverRevisions = restoreCoverRevisions('autosourcarr.entryCoverRevisi
 const sourceCoverRevisions = restoreCoverRevisions('autosourcarr.sourceCoverRevisions');
 const knownEntryThumbnails = new Map();
 const knownEntryCoverReady = new Map();
-let duplicateRetryTimer = null;
 let duplicateRefreshTimer = null;
 let matchBrowserState = null;
 let matchBrowserGeneration = 0;
@@ -58,7 +57,7 @@ let importsListRequest = null;
 const importItemRequests = new Map();
 const importSearchRequests = new Map();
 const matrixRequests = {matrix: new Map(), subbed: new Map()};
-const matrixStatsRequests={matrix:null,subbed:null},matrixViewRetry={matrix:null,subbed:null};
+const matrixStatsRequests={matrix:null,subbed:null};
 let catalogViewRevision=0;
 const matrixRecordReload = {matrix: null, subbed: null};
 function activeSurface(name){return !!document.querySelector('#'+name)?.classList.contains('active');}
@@ -366,6 +365,11 @@ function liveConnected(){return !!liveUpdates?.status().connected;}
 function liveSubscribe(config){return liveUpdates?.subscribe(config)||{unsubscribe(){},refreshNow(){}};}
 // Background job progress is frequent; views that only show results wait for the outcome.
 const liveJobOutcome=event=>event.topic!=='jobs'||!['progress','queued','started'].includes(String(event.data?.change||''));
+// Precise topics list the changed keys (at most 500, then truncated): a view reacts only to keys it shows.
+function liveKeysTouch(event,field,keys){
+  const data=event.data||{};if(data.truncated||!Array.isArray(data[field]))return true;
+  const wanted=new Set([...keys].map(String));return data[field].some(key=>wanted.has(String(key)));
+}
 // Every view's subscription is registered once at boot; each decides itself whether it is on screen.
 function startLiveUpdates(){
   subscribeTaskUpdates();subscribeEntryMetadataUpdates();subscribeDuplicateUpdates();subscribeMatrixUpdates();subscribeImportUpdates();
@@ -607,7 +611,10 @@ async function refreshSparseEntryMetadataOnce(){
 }
 // Covers and summaries fill in while background jobs run: re-read only the sparse entries on screen, once per burst.
 function subscribeEntryMetadataUpdates(){
-  liveSubscribe({name:'entry-metadata',topics:['jobs','library'],delayMs:1500,when:()=>!document.hidden&&sparseEntryIds().length>0,refresh:()=>refreshSparseEntryMetadata()});
+  liveSubscribe({name:'entry-metadata',topics:['catalogue'],delayMs:300,when:()=>!document.hidden&&sparseEntryIds().length>0,
+    filter:event=>liveKeysTouch(event,'entry_ids',sparseEntryIds()),refresh:()=>refreshSparseEntryMetadata()});
+  // Cover files are cached by hydration jobs and have no topic of their own: their outcome re-reads visible sparse covers.
+  liveSubscribe({name:'entry-covers',topics:['jobs'],delayMs:1500,filter:liveJobOutcome,when:()=>!document.hidden&&sparseEntryIds().length>0,refresh:()=>refreshSparseEntryMetadata()});
 }
 function scheduleMetadataBurst(){
   // After an import decision: one read soon; everything later follows the jobs it started.
@@ -618,22 +625,25 @@ function scheduleDuplicateLiveRefresh(delay=350){
   duplicateRefreshTimer=setTimeout(()=>{duplicateRefreshTimer=null;if(duplicateCandidatesVisible())loadDuplicates(null,{render:true,quiet:true}).catch(()=>{});},Math.max(50,delay));
 }
 function duplicateCandidatesVisible(){return !document.hidden&&activeSurface('duplicates')&&!globalThis.AutoSourcarrMatchingReview?.historyActive;}
-// Candidate groups change when matching, snapshot or merge jobs finish (not on their progress ticks).
+// Candidate groups change when the duplicate snapshot is rebuilt or marked stale (topic duplicates).
 function duplicateLiveRefresh(){
   if(!duplicateCandidatesVisible())return Promise.resolve();
   return loadDuplicates(null,{render:true,quiet:true}).catch(()=>{});
 }
 function subscribeMatrixUpdates(){
   for(const kind of ['matrix','subbed']){
-    liveSubscribe({name:'duplicate-snapshot-'+kind,topics:['jobs'],delayMs:1000,filter:liveJobOutcome,
+    liveSubscribe({name:'duplicate-snapshot-'+kind,topics:['duplicates'],delayMs:300,filter:event=>event.data?.change!=='stale',
       when:()=>!document.hidden&&activeSurface(kind)&&!!matrixDataset(kind)?.duplicates_pending,
       refresh:()=>{const d=matrixDataset(kind);return d?hydrateMatrixDuplicates(kind,d,{render:true}):undefined;}});
   }
-  liveSubscribe({name:'subbed-membership',topics:['library'],delayMs:1000,
-    when:()=>!document.hidden&&activeSurface('subbed')&&!!matrixDataset('subbed')?.subscription?.refreshing,refresh:()=>loadSubbed().catch(()=>{})});
+  // The main library status refresh finished: the Library page re-reads its current page (cursor kept).
+  liveSubscribe({name:'subbed-membership',topics:['library'],delayMs:300,filter:event=>event.data?.change==='status',
+    when:()=>!document.hidden&&activeSurface('subbed'),refresh:()=>loadSubbed().catch(()=>{})});
 }
 function subscribeDuplicateUpdates(){
-  return liveSubscribe({name:'duplicates',topics:['jobs'],delayMs:1000,filter:liveJobOutcome,when:duplicateCandidatesVisible,refresh:duplicateLiveRefresh});
+  // Snapshot rebuilt or marked stale, or (while the groups wait for it) the main library membership refreshed.
+  return liveSubscribe({name:'duplicates',topics:['duplicates','library'],delayMs:500,when:duplicateCandidatesVisible,
+    filter:event=>event.topic==='duplicates'||(event.data?.change==='status'&&!!duplicateData?.subscription_pending),refresh:duplicateLiveRefresh});
 }
 function scheduleMutationRefresh(url,method){
   const path=String(url||'').split('?')[0];if(String(method||'GET').toUpperCase()==='GET')return;
@@ -912,7 +922,6 @@ function loadImports(){
       select.innerHTML=importsState.runs.length?importsState.runs.map(r=>`<option value="${esc(r.id)}" ${String(r.id)===importsState.runId?'selected':''}>${esc(r.filename||'backup')} · ${esc(r.created_at||'')} · ${Number(r.total||0)} items</option>`).join(''):'<option value="">No imports yet</option>';
       await loadImportItems();importsState.failures=0;
       const active=importsState.runs.find(r=>String(r.id)===importsState.runId);
-      importsState.live=!!((active&&String(active.state)==='running')||importsState.enrichmentPending>0);
       if(pendingImportActions.size)schedulePendingImportPoll(250);
     }catch(error){
       if(revision===importsState.revision){importsState.failures++;importsState.error=String(error?.message||error);requestSurfaceRender('imports');scheduleImportsRetry();}
@@ -922,12 +931,14 @@ function loadImports(){
   importsListRequest.revision=revision;
   return importsListRequest;
 }
-// A running import or its enrichment follows the jobs it runs (progress included, so counts move), once per burst.
+// The open import run follows topic imports (its import id), once per burst; a list being read waits (UI-12).
 function subscribeImportUpdates(){
-  liveSubscribe({name:'imports',topics:['jobs','tasks'],delayMs:2000,when:()=>!document.hidden&&activeSurface('imports')&&!!importsState.live,
+  liveSubscribe({name:'imports',topics:['imports'],delayMs:500,when:()=>!document.hidden&&activeSurface('imports'),
+    filter:event=>!importsState.runId||liveKeysTouch(event,'import_ids',[importsState.runId]),
     busy:()=>structuralRenderBlocked('imports'),refresh:()=>loadImports().catch(()=>{})});
-  // A user's own import decision: re-read its row as soon as the job it started reports an outcome.
-  liveSubscribe({name:'import-actions',topics:['jobs'],delayMs:300,filter:liveJobOutcome,when:()=>pendingImportActions.size>0,refresh:()=>refreshPendingImportActions().catch(()=>{})});
+  // A user's own import decision: re-read its row as soon as its import run reports a change.
+  liveSubscribe({name:'import-actions',topics:['imports'],delayMs:200,when:()=>pendingImportActions.size>0,
+    filter:event=>liveKeysTouch(event,'import_ids',[...pendingImportActions.values()].map(action=>action.runId)),refresh:()=>refreshPendingImportActions().catch(()=>{})});
 }
 // Only a failed list read is retried, with back-off; a good read waits for the next event.
 function scheduleImportsRetry(){
@@ -1516,7 +1527,7 @@ function startTaskUpdates(){
 }
 function subscribeTaskUpdates(){
   liveSubscribe({name:'tasks',topics:['tasks','jobs'],delayMs:200,refresh:()=>refreshTasksLive()});
-  liveSubscribe({name:'attention',topics:['tasks','errors'],delayMs:3000,refresh:()=>loadAttention(true)});
+  liveSubscribe({name:'attention',topics:['tasks','errors','source-health','repairs'],delayMs:3000,refresh:()=>loadAttention(true)});
   liveSubscribe({name:'errors',topics:['errors'],delayMs:500,when:()=>{const panel=document.getElementById('errorPanel');return !!panel&&!panel.hidden;},refresh:()=>loadErrors()});
 }
 
@@ -2725,10 +2736,11 @@ async function hydrateMatrixChapters(kind,data){
 function loadMatrixView(kind,{render=true}={}){
   if(kind==='subbed'&&globalThis.AutoSourcarrLibrary)return globalThis.AutoSourcarrLibrary.load();
   const c=matrixControls(kind),query=String(c.search.value||''),sourceId=String(c.source?.value||'');
-  const key=JSON.stringify([query,sourceId]),requests=matrixRequests[kind];
+  const paged=matrixPaged(kind,query,sourceId),limit=paged?matrixPageLimit():500;
+  const key=JSON.stringify([query,sourceId,limit]),requests=matrixRequests[kind];
   const current=()=>String(c.search.value||'')===query&&String(c.source?.value||'')===sourceId;
   if(requests.has(key))return requests.get(key);
-  const url='/api/v1/matrix?'+(kind==='subbed'?'subbed=true&':'')+'search='+encodeURIComponent(query)+'&limit=500&include_chapter_stats=false'+(sourceId?'&source_id='+encodeURIComponent(sourceId):'');
+  const url='/api/v1/matrix?'+(kind==='subbed'?'subbed=true&':'')+'search='+encodeURIComponent(query)+'&limit='+limit+'&include_chapter_stats=false'+(sourceId?'&source_id='+encodeURIComponent(sourceId):'');
   const request=(async()=>{
     try{
       const data=await api(url,{timeoutMs:15000});
@@ -2739,14 +2751,10 @@ function loadMatrixView(kind,{render=true}={}){
       const unchanged=previous&&visible(previous)===visible(data);
       if(unchanged){data.duplicates=previous.duplicates||{};data.duplicates_pending=previous.duplicates_pending;}
       setMatrixDataset(kind,data);
+      if(kind==='matrix')noteMatrixPage(data,paged);
       if((!unchanged||String(c.count.textContent||'').startsWith('Refresh failed:'))&&(render||activeSurface(kind)))renderMatrix(kind);
       hydrateMatrixDuplicates(kind,data,{render:render||activeSurface(kind)});
       if(data.chapter_stats_pending)hydrateMatrixChapters(kind,data);
-      if(matrixViewRetry[kind]){clearTimeout(matrixViewRetry[kind]);matrixViewRetry[kind]=null;}
-      if(kind==='subbed'&&data.subscription?.refreshing){
-        // The library status refresh publishes no event yet: one slow re-check while it runs (library events come first).
-        matrixViewRetry[kind]=setTimeout(()=>{matrixViewRetry[kind]=null;if(!document.hidden&&activeSurface(kind)&&matrixDataset(kind)===data)loadSubbed().catch(()=>{});},liveConnected()?10000:3000);
-      }
       return data;
     }catch(error){
       if(current())c.count.textContent='Refresh failed: '+String(error?.message||error)+(matrixDataset(kind)?' · showing previous results':'');
@@ -2754,10 +2762,64 @@ function loadMatrixView(kind,{render=true}={}){
     }finally{requests.delete(key);}
   })();requests.set(key,request);return request;
 }
+// PERF-5: the unfiltered Matrix is page-first (keyset pages of 50, newest first). "Load more" appends the next page
+// below the rows already shown, so nothing above moves (UI-12). A reload asks for the same number of rows in one
+// request, so live refreshes and the UI-6 restore keep the loaded page chain. Search and source filters are not
+// paged by the server and keep one bounded answer (500).
+const MATRIX_PAGE=50,MATRIX_MAX=500;
+const matrixPaging={loaded:MATRIX_PAGE,nextCursor:null,loading:null,paged:false};
+function matrixPaged(kind,query,sourceId){return kind==='matrix'&&!String(query||'').trim()&&!sourceId;}
+function matrixPageLimit(){return Math.min(MATRIX_MAX,Math.max(MATRIX_PAGE,Math.ceil(Number(matrixPaging.loaded||0)/MATRIX_PAGE)*MATRIX_PAGE));}
+function noteMatrixPage(data,paged){
+  matrixPaging.paged=paged;matrixPaging.nextCursor=paged&&data?.has_more&&data.next_cursor?String(data.next_cursor):null;
+  if(paged)matrixPaging.loaded=Math.max(MATRIX_PAGE,(data?.entries||[]).length);
+  updateMatrixLoadMore();
+}
+function mergeMatrixPage(base,page){
+  const seen=new Set((base.entries||[]).map(e=>Number(e.id)));
+  const fresh=(page.entries||[]).filter(e=>!seen.has(Number(e.id)));
+  const added=new Set(fresh.map(e=>Number(e.id)));
+  const pick=list=>(list||[]).filter(row=>added.has(Number(row.entry_id)));
+  const sources=[...(base.sources||[])],known=new Set(sources.map(s=>String(s.source_id)));
+  for(const source of page.sources||[])if(!known.has(String(source.source_id))){known.add(String(source.source_id));sources.push(source);}
+  return {...base,entries:[...(base.entries||[]),...fresh],sources,matches:[...(base.matches||[]),...pick(page.matches)],variants:[...(base.variants||[]),...pick(page.variants)],
+    discovery_outcomes:[...(base.discovery_outcomes||[]),...pick(page.discovery_outcomes)],next_cursor:page.next_cursor??null,has_more:!!page.has_more,
+    chapter_stats_pending:!!(base.chapter_stats_pending||page.chapter_stats_pending),duplicates:base.duplicates||{},duplicates_pending:true};
+}
+async function loadMoreMatrix(){
+  const d=matrixDataset('matrix'),cursor=matrixPaging.nextCursor;
+  if(matrixPaging.loading)return matrixPaging.loading;
+  if(!d||!cursor||!matrixPaging.paged||(d.entries||[]).length>=MATRIX_MAX)return;
+  matrixPaging.loading=(async()=>{
+    try{
+      const page=await api('/api/v1/matrix?search=&limit='+MATRIX_PAGE+'&include_chapter_stats=false&cursor='+encodeURIComponent(cursor),{timeoutMs:15000});
+      // A reload or a filter change since the click owns the view now.
+      if(matrixDataset('matrix')!==d||matrixPaging.nextCursor!==cursor)return;
+      const merged=mergeMatrixPage(d,page);
+      setMatrixDataset('matrix',merged);
+      matrixPaging.loaded=Math.min(MATRIX_MAX,merged.entries.length);matrixPaging.nextCursor=page.has_more&&page.next_cursor?String(page.next_cursor):null;
+      requestSurfaceRender('matrix');
+      hydrateMatrixDuplicates('matrix',merged,{render:true});
+      if(merged.chapter_stats_pending)hydrateMatrixChapters('matrix',merged);
+      globalThis.AutoSourcarrNavigation?.save?.();
+    }finally{matrixPaging.loading=null;updateMatrixLoadMore();}
+  })();
+  updateMatrixLoadMore();
+  return matrixPaging.loading;
+}
+function updateMatrixLoadMore(){
+  const doc=globalThis.document,button=doc?.getElementById?.('matrixLoadMore'),note=doc?.getElementById?.('matrixPageNote');
+  if(!button)return;
+  const shown=(matrixDataset('matrix')?.entries||[]).length,full=shown>=MATRIX_MAX;
+  button.hidden=!matrixPaging.paged||!matrixPaging.nextCursor||full;button.disabled=!!matrixPaging.loading;
+  button.textContent=matrixPaging.loading?'Loading…':'Load '+MATRIX_PAGE+' more';
+  if(note)note.textContent=!matrixPaging.paged?'':full&&matrixPaging.nextCursor?'Showing the '+MATRIX_MAX+' newest entries. Search or choose a source to find others.':matrixPaging.nextCursor?'Showing the '+shown+' newest entries.':'';
+}
 function loadMatrix(options={}){return loadMatrixView('matrix',options);}
 function loadSubbed(options={}){return loadMatrixView('subbed',options);}
 async function refreshBothMatrices(){await Promise.allSettled([loadMatrix(),loadSubbed()]);}
-$('#loadMatrix').onclick=()=>loadMatrix().catch(e=>toast(e.message)); $('#loadSubbed').onclick=()=>loadSubbed().catch(e=>toast(e.message));
+$('#loadMatrix').onclick=()=>loadMatrix().catch(e=>toast(e.message));
+if($('#matrixLoadMore'))$('#matrixLoadMore').onclick=()=>loadMoreMatrix().catch(e=>toast(e.message)); $('#loadSubbed').onclick=()=>loadSubbed().catch(e=>toast(e.message));
 if($('#repairUnmatchedSubbed'))$('#repairUnmatchedSubbed').onclick=async()=>{
   const b=$('#repairUnmatchedSubbed');b.disabled=true;
   try{const r=await api('/api/v1/subbed/repair-unmatched',{method:'POST',timeoutMs:12000});toast(r.already_running?'A Subbed discovery task is already running':`Repair queued for ${Number(r.entries||0)} source-less subscribed entries`);loadTasks().catch(()=>{});}
@@ -3322,12 +3384,8 @@ async function loadDuplicates(focusId=null,{render=true,quiet=false}={}){
     if(focusId!=null&&!structuralRenderBlocked('duplicates'))renderDuplicates(focusId);
     else if(changed)requestSurfaceRender('duplicates');
   }
-  // pending/stale: the snapshot or sweep job's outcome event re-reads this view (subscribeDuplicateUpdates). The
-  // library membership refresh behind subscription_pending publishes no event yet, so only that keeps a slow re-check.
-  if(duplicateData?.subscription_pending&&!duplicateData?.pending){
-    if(duplicateRetryTimer)clearTimeout(duplicateRetryTimer);
-    duplicateRetryTimer=setTimeout(()=>{duplicateRetryTimer=null;if(duplicateCandidatesVisible())loadDuplicates(focusId,{render:true,quiet:true}).catch(()=>{});},liveConnected()?10000:3000);
-  }else if(!quiet&&duplicateRetryTimer){clearTimeout(duplicateRetryTimer);duplicateRetryTimer=null;}
+  // pending/stale/subscription_pending: the duplicates or library status event re-reads this view (subscribeDuplicateUpdates);
+  // with the stream down, live-events.js falls back to its slow tick. No timer here.
   return duplicateData;
 }
 const duplicateReviewBusy=new Set();

@@ -165,6 +165,18 @@ test('token-only mode reads the stream with fetch, sends the header and Last-Eve
   assert.equal(h.sources.length,0,'EventSource is not used when a header is needed');
 });
 
+test('precise topics: every server topic is listened to and its keys reach the filter and the refresh',async()=>{
+  const h=harness();h.live.start();
+  for(const topic of ['catalogue','library','orphans','sources','duplicates','imports','repairs','source-health'])
+    assert.equal(h.last().listeners[topic]?.length,1,'EventSource listens to '+topic);
+  h.last().open();const view=recorder();
+  h.live.subscribe({name:'entries',topics:['catalogue'],refresh:view.refresh,filter:e=>e.data.truncated||e.data.entry_ids.includes(7)});
+  h.last().send('catalogue',1,{change:'metadata',entry_ids:[3],truncated:false});await h.clock.advance(300);
+  assert.equal(view.calls.length,0,'An entry not on screen is ignored');
+  h.last().send('catalogue',2,{change:'titles',entry_ids:[7,8],truncated:false});await h.clock.advance(300);
+  assert.equal(view.calls.length,1);assert.deepEqual([...view.calls[0].events[0].data.entry_ids],[7,8]);
+});
+
 test('raw handlers: on(topic) gets each event at once and can be removed',async()=>{
   const h=harness();h.live.start();h.last().open();const seen=[];
   const off=h.live.on('jobs',data=>seen.push(data.id));h.last().send('jobs',1,{id:'a'});off();h.last().send('jobs',2,{id:'b'});

@@ -538,9 +538,9 @@ async function openSolverSettings(){
   }catch(e){toast(e.message);}
 }
 function initializeSourceBrowser(){
-  // UI-13: source restarts and browser changes report through task/job/connection events; no timer. The identity
+  // UI-13: source engine restarts (topic sources) and connection changes refresh this pane; no timer. The identity
   // draft is never overwritten (renderSourceBrowser keeps it while dirty) and a focused field holds the refresh (UI-12).
-  globalThis.AutoSourcarrLive?.subscribe({name:'source-browser',topics:['tasks','jobs','connections'],delayMs:800,when:()=>!document.hidden&&sourceBrowserVisible(),
+  globalThis.AutoSourcarrLive?.subscribe({name:'source-browser',topics:['sources','connections'],delayMs:500,when:()=>!document.hidden&&sourceBrowserVisible(),
     busy:()=>globalThis.AutoSourcarrLive.userEditing(document.querySelector('#settingsBrowserPane')),refresh:()=>loadSourceBrowser()});
   document.querySelector('#sourceUserAgentPreset')?.addEventListener('change',event=>{sourceBrowserUi.dirty=true;sourceBrowserUi.revision++;sourceBrowserDraft(event.target.value);renderSourceBrowser();});
   document.querySelector('#sourceUserAgentValue')?.addEventListener('input',()=>{sourceBrowserUi.dirty=true;sourceBrowserUi.revision++;});
