@@ -7,8 +7,13 @@ For the coordinator: paste this into `.github/workflows/probe.yml` on `ci-probe`
 - boots it, measures the boot time and checks the source host sandbox and WebView inside it;
 - runs Playwright against it.
 
-Nothing here publishes to ghcr (hard rule 15). Revision 2 (2026-11-02, area P, on b95a7d0), not run yet. It keeps
-the image/boot/Playwright block of revision 1 (first image probe: build OK, boot gate fixed in 71de9da).
+Nothing here publishes to ghcr (hard rule 15). This is revision 3 (2026-11-03, area P, on a69cbb8); it has not
+been run yet. It keeps the image/boot/Playwright block of revision 1 (first image probe: build OK, boot gate fixed
+in 71de9da).
+
+Revision 3 changes only one line of the block: the image build gets `--build-arg PACKAGES_EPOCH="$sha"`, so the
+apt-get upgrade layer reruns (PIPE-2). A missing `node` now fails the boot runtime check (exit 3) instead of skipping
+it; the runner has node.
 
 ## 1. Job settings
 
@@ -47,7 +52,7 @@ Use it as a replacement for the revision-1 "Phase 13" block, or insert it fresh.
             timeout 3600 docker buildx build -f docker/Dockerfile \
               --build-context source-host=.build/source-host-out \
               --build-context reader-extension=.build/reader-extension \
-              --build-arg VERSION="$(tr -d '\r\n' < VERSION)" --build-arg REVISION="$sha" \
+              --build-arg VERSION="$(tr -d '\r\n' < VERSION)" --build-arg REVISION="$sha" --build-arg PACKAGES_EPOCH="$sha" \
               --load -t autosourcarr:probe . > probe/image-build.log 2>&1; ib=$?
             {
               echo "result=$ib"; echo "seconds=$(( $(date +%s) - start_build ))"
@@ -119,7 +124,30 @@ none: HOME, TMPDIR, XDG caches and `java.io.tmpdir` are all under `<data>/source
 The probe commits `probe/` only. Screenshots stay on the runner; the release workflow uploads them as the
 `ui-screenshots` artifact, which is the baseline for the next release's diff.
 
-## 5. What the probe does not cover
+## 5. Release workflow notes (phase 13 audit, for the owner)
+
+- **Publishing pushes the tested image.** The release workflow pushes nothing while it builds and tests. Only when
+  a run is started by hand with `publish` ticked:
+  - the image job saves the tested image (`docker save`, artifact `tested-image`, kept 3 days);
+  - after the `release` environment approval, the publish job loads that artifact;
+  - the publish job checks that its image ID equals the tested one, then tags and pushes it.
+
+  Nothing is rebuilt for publishing. The registry digest appears in the job summary.
+- **Fresh OS packages.** `PACKAGES_EPOCH` (run id + attempt) changes on every run, so the `apt-get upgrade` layer
+  never comes from the layer cache (PIPE-2).
+- **Screenshot gate.** The diff baseline is taken only from successful runs on `v*` tags or the default branch,
+  never from other manual runs. The changed pages are listed in the job summary. More than `SCREENSHOT_MAX_CHANGED`
+  (default 0) changed or vanished pages fail the release. After reviewing them, rerun by hand with
+  `accept_screenshot_changes`. That accepted run's screenshots become the next baseline only if it runs on a tag or
+  the default branch.
+- **Pins (PIPE-3).** "Pins updated by the pipeline" is deliberately not automated. The owner does not want extra
+  GitHub runs or notification mail, so the schedule in `release.yml` stays disabled. Instead, run
+  `python3 scripts/update-pins.py` by hand before a release:
+  - it refreshes image digests;
+  - it only reports (`UPSTREAM-CHANGED`) a changed vendor hash of a downloaded tool. That hash stays pinned in the
+    repository until a person has verified the new file independently.
+
+## 6. What the probe does not cover
 
 - Publishing (owner gate) and the `release` environment.
 - The in-Docker `reader-extension` and `source-host` stages. The probe hands both in as build contexts, like the

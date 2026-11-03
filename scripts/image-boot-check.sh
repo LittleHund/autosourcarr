@@ -10,7 +10,7 @@
 # Runtime check (SRC-5, phase 13), after ready: signs in with the test owner (tests/e2e/fixtures/owner.json, a
 # throwaway loopback instance), finishes setup, reads /api/v1/health and records source_sandbox, repair_isolation and
 # the source host WebView (JCEF) state. It passes when the source host runs Landlock-sandboxed and its WebView
-# reached "ready" inside that sandbox. BOOT_RUNTIME_CHECK=0 skips it (needs node).
+# reached "ready" inside that sandbox. It needs node; without node it fails (exit 3). BOOT_RUNTIME_CHECK=0 skips it.
 #
 # Exit code 75 is the app's own restart request (setup restart, armed restore): like Compose's
 # `restart: unless-stopped`, the container is restarted by Docker and the measurement goes on; restarts are recorded.
@@ -78,8 +78,12 @@ if [ -n "$ready" ]; then
 fi
 
 # Runtime check: source host sandbox, repair isolation and the WebView inside the sandbox.
+# Only an explicit BOOT_RUNTIME_CHECK=0 skips it; a missing node is a failed check (exit 3), never a silent skip.
 runtime=skipped; sandbox=none; repair=none; webview=none
-if [ "$verdict" != fail ] && [ "${BOOT_RUNTIME_CHECK:-1}" = 1 ] && command -v node >/dev/null; then
+if [ "$verdict" != fail ] && [ "${BOOT_RUNTIME_CHECK:-1}" != 0 ] && ! command -v node >/dev/null; then
+  runtime=fail; sandbox="not-checked (node is not installed)"
+  echo "runtime check: node is required (set BOOT_RUNTIME_CHECK=0 to skip it on purpose)" > "${out%.txt}-runtime.log"
+elif [ "$verdict" != fail ] && [ "${BOOT_RUNTIME_CHECK:-1}" != 0 ]; then
   health_json="${out%.txt}-health.json"
   report=$(node "$repo/scripts/image-e2e-prepare.mjs" "http://127.0.0.1:$port" "$repo/tests/e2e/fixtures/owner.json" \
              --health "$health_json" --wait-webview "${BOOT_WEBVIEW_WAIT:-180}" 2>&1)

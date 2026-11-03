@@ -7,7 +7,13 @@ name: release
 # Publishing to ghcr.io (hard rule 15) is an OWNER GATE: the push job runs only when the run was started by hand
 # with "publish" ticked (default off) AND the "release" environment approves it (configure the environment with the
 # owner as required reviewer in the repository settings). Never start it without the owner's go. Tag pushes never
-# publish.
+# publish. The publish job pushes the exact image this run built and tested (saved as an artifact, image ID checked);
+# it never rebuilds.
+#
+# Owner note (PIPE-3 "pins updated by the pipeline"): the scheduled pin refresh below stays DISABLED on purpose. The
+# owner does not want extra GitHub runs or notification mail. Run `python3 scripts/update-pins.py` by hand before a
+# release instead: it refreshes image digests (content addresses from the registries) and only REPORTS upstream
+# changes of downloaded tool hashes, which stay pinned in the repository until a person updates them.
 on:
   workflow_dispatch:
     inputs:
@@ -19,10 +25,14 @@ on:
         description: "Run the browser checks even when no UI file changed since the previous release tag"
         type: boolean
         default: false
+      accept_screenshot_changes:
+        description: "The changed pages in the screenshot diff were reviewed and are intended (lifts the page limit)"
+        type: boolean
+        default: false
   push:
     tags: ["v*"]
-  # PIPE-3 pin refresh: scripts/update-pins.py on a schedule, opening its diff for review. Off until the owner
-  # enables it (uncomment, and add a job that runs the script and opens a pull request with the diff).
+  # PIPE-3 pin refresh: scripts/update-pins.py on a schedule, opening its diff for review. Disabled by the owner's
+  # choice (no extra runs/notifications); see the owner note above. Do not enable without the owner.
   # schedule:
   #   - cron: "17 4 * * 1"
 
@@ -39,6 +49,9 @@ env:
   # The official Playwright image (PIPE-5), same version as package-lock.json, pinned by digest.
   PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.64.1-jammy@sha256:a3966b653e8d48a30901889081b616307fca73e0d843a117fadf6609397dac38
   BOOT_PORT: "18282"
+  # PIPE-5 gate: more changed (or vanished) pages than this stop the release until reviewed
+  # (rerun with accept_screenshot_changes after checking the diff in the job summary and the release-report artifact).
+  SCREENSHOT_MAX_CHANGED: "0"
 
 jobs:
   image:
@@ -47,6 +60,7 @@ jobs:
     timeout-minutes: 180
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      image_id: ${{ steps.saved.outputs.image_id }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -163,6 +177,7 @@ jobs:
       # Layer cache in the GitHub cache: the NuGet restore layer is reused while the lock files are unchanged, the apt
       # layer is rebuilt on every release on purpose (fresh OS packages, PIPE-2).
       - name: Build the image (no push)
+        id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
@@ -170,15 +185,29 @@ jobs:
           build-contexts: |
             source-host=.build/source-host-out
             reader-extension=.build/reader-extension
+          # PACKAGES_EPOCH: a new value per run, so the apt-get upgrade layer always reruns (PIPE-2 fresh packages).
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
             REVISION=${{ github.sha }}
+            PACKAGES_EPOCH=${{ github.run_id }}-${{ github.run_attempt }}
           platforms: linux/amd64
           load: true
           push: false
           tags: autosourcarr:ci
           cache-from: type=gha,scope=autosourcarr-0.5
           cache-to: type=gha,scope=autosourcarr-0.5,mode=max
+
+      # The tested image is what gets published: its image ID (config digest) is recorded here, and when publishing was
+      # requested the image itself is saved as an artifact for the publish job (no rebuild).
+      - name: Record the tested image
+        id: saved
+        run: |
+          id=$(docker image inspect -f '{{.Id}}' autosourcarr:ci)
+          echo "image_id=$id" >> "$GITHUB_OUTPUT"
+          echo "tested image $id" | tee image-id.txt
+      - name: Save the tested image (only when publishing was requested)
+        if: github.event_name == 'workflow_dispatch' && inputs.publish == true
+        run: docker save autosourcarr:ci | zstd -T0 -10 -o autosourcarr-image.tar.zst
 
       - name: Image contents
         run: |
@@ -224,26 +253,33 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"; exit 0
 
       - name: Screenshot diff against the previous release
-        if: steps.playwright.outcome == 'success'
+        id: diff
+        if: steps.playwright.outputs.code == '0'
         env:
           GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
+          set +e -o pipefail
           mkdir -p previous-screenshots
-          # Previous release = the newest successful tag run; a manual run is the fallback before the first tag.
-          runs="$(gh run list --workflow release.yml --status success --event push --limit 20 --json databaseId -q '.[].databaseId')
-          $(gh run list --workflow release.yml --status success --event workflow_dispatch --limit 20 --json databaseId -q '.[].databaseId')"
+          # Baseline = the newest successful run on a v* tag, else on the default branch; never another manual run.
+          runs=$(gh run list --workflow release.yml --status success --limit 50 --json databaseId,headBranch,event \
+            -q '[.[] | select(.event == "push" and (.headBranch | startswith("v")))] + [.[] | select(.headBranch == env.DEFAULT_BRANCH)] | .[].databaseId')
           for id in $runs; do
             [ "$id" = "${{ github.run_id }}" ] && continue
             gh run download "$id" -n ui-screenshots -D previous-screenshots 2>/dev/null && { echo "previous screenshots: run $id"; break; }
           done
-          node scripts/screenshot-diff.mjs previous-screenshots screenshots --out screenshot-diff | tee screenshot-diff.txt
+          limit="$SCREENSHOT_MAX_CHANGED"
+          [ "${{ inputs.accept_screenshot_changes }}" = true ] && limit=1000000
+          node scripts/screenshot-diff.mjs previous-screenshots screenshots --out screenshot-diff \
+            --max-changed "$limit" --summary "$GITHUB_STEP_SUMMARY" 2>&1 | tee screenshot-diff.txt; code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"; exit 0
 
       - name: Stop the image
         if: always()
         run: docker rm -f autosourcarr-boot > /dev/null 2>&1 || true
 
       - name: Upload screenshots (baseline of the next release)
-        if: steps.playwright.outputs.code == '0'
+        if: steps.playwright.outputs.code == '0' && steps.diff.outputs.code == '0'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ui-screenshots
@@ -285,8 +321,17 @@ jobs:
             screenshot-diff.txt
             screenshot-diff/
             playwright-report/
+            image-id.txt
           if-no-files-found: ignore
           retention-days: 30
+      - name: Upload the tested image (publish runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.publish == true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tested-image
+          path: autosourcarr-image.tar.zst
+          compression-level: 0
+          retention-days: 3
 
       - name: Release gates (boot budget, sandbox, benchmark, contrast, layout)
         run: |
@@ -302,6 +347,11 @@ jobs:
           [ "${{ steps.contrast.outputs.code }}" = 0 ] || { echo "::error::Contrast gate failed (see contrast.txt)."; fail=1; }
           if [ "${{ steps.meta.outputs.ui_changed }}" = true ]; then
             [ "${{ steps.playwright.outputs.code }}" = 0 ] || { echo "::error::Browser/layout checks failed or did not run (see playwright-image.txt)."; fail=1; }
+            case "${{ steps.diff.outputs.code }}" in
+              0) ;;
+              4) echo "::error::Screenshot diff: more pages changed than SCREENSHOT_MAX_CHANGED; review the job summary, then rerun with accept_screenshot_changes."; fail=1 ;;
+              *) echo "::error::Screenshot diff failed or did not run (see screenshot-diff.txt)."; fail=1 ;;
+            esac
           else
             echo "No UI file changed since ${{ steps.meta.outputs.previous }}: browser checks skipped."
           fi
@@ -319,41 +369,35 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - name: Source host jar (same cache entry as the tested build)
-        id: host-cache
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: .build/source-host-out
-          key: source-host-jar-${{ hashFiles('source-host/**', 'scripts/build-source-host.sh') }}
-          fail-on-cache-miss: true
-      - name: Reader extension (the tested build)
+      - name: The tested image
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: reader-extension
-          path: .build/reader-extension
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+          name: tested-image
+      - name: Load it and check it is the tested image
+        env:
+          TESTED_ID: ${{ needs.image.outputs.image_id }}
+        run: |
+          set -euo pipefail
+          zstd -dc autosourcarr-image.tar.zst | docker load
+          id=$(docker image inspect -f '{{.Id}}' autosourcarr:ci)
+          echo "loaded $id, tested $TESTED_ID"
+          [ -n "$TESTED_ID" ] && [ "$id" = "$TESTED_ID" ] || { echo "::error::The image artifact is not the tested image."; exit 1; }
       - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Push the image
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
-        with:
-          context: .
-          file: docker/Dockerfile
-          build-contexts: |
-            source-host=.build/source-host-out
-            reader-extension=.build/reader-extension
-          build-args: |
-            VERSION=${{ needs.image.outputs.version }}
-            REVISION=${{ github.sha }}
-          platforms: linux/amd64
-          push: true
-          provenance: true
-          sbom: true
-          tags: |
-            ${{ env.IMAGE }}:${{ needs.image.outputs.version }}
-            ${{ env.IMAGE }}:latest
-          cache-from: type=gha,scope=autosourcarr-0.5
+      - name: Push the tested image
+        env:
+          VERSION: ${{ needs.image.outputs.version }}
+          TESTED_ID: ${{ needs.image.outputs.image_id }}
+        run: |
+          set -euo pipefail
+          for tag in "$VERSION" latest; do
+            docker tag autosourcarr:ci "$IMAGE:$tag"
+            [ "$(docker image inspect -f '{{.Id}}' "$IMAGE:$tag")" = "$TESTED_ID" ] || { echo "::error::Tag $tag does not point at the tested image."; exit 1; }
+            docker push "$IMAGE:$tag"
+          done
+          digest=$(docker image inspect -f '{{index .RepoDigests 0}}' "$IMAGE:$VERSION")
+          { echo "### Published"; echo; echo "- image ID (tested): \`$TESTED_ID\`"; echo "- registry digest: \`$digest\`"; } >> "$GITHUB_STEP_SUMMARY"
+          echo "published $digest (image ID $TESTED_ID)"

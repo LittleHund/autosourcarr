@@ -3,13 +3,18 @@
 // unintended changes are seen before release. A report, not a gate (the layout and contrast checks are the gates).
 //
 //   node scripts/screenshot-diff.mjs PREVIOUS_DIR CURRENT_DIR [--out DIFF_DIR] [--threshold 0.001]
+//                                    [--max-changed N] [--summary FILE]
 //
 // Both folders hold <project>/<page>.png (tests/e2e writes them with E2E_SCREENSHOT_DIR). A missing or empty
 // PREVIOUS_DIR means "first run": every page is listed as the new baseline. A page counts as changed when its size
 // differs or more than --threshold of its pixels differ by more than 16 in any channel. With --out, a diff image
 // (changed pixels in magenta over a faded copy) is written per changed page. No dependencies: PNG is decoded with
 // node:zlib (8-bit greyscale/RGB/RGBA, non-interlaced, which is what Chromium writes).
-import {existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync} from 'node:fs';
+//
+// As a release gate (phase 13 audit): --max-changed N exits 4 when more than N pages changed or are gone, so the
+// pipeline stops until a person reviewed them; --summary FILE appends a Markdown list of the changed pages (for
+// $GITHUB_STEP_SUMMARY). Exit codes: 0 ok (or first baseline), 1 an image could not be read, 2 usage, 4 over the limit.
+import {appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync} from 'node:fs';
 import {dirname, join, relative} from 'node:path';
 import {deflateSync, inflateSync} from 'node:zlib';
 
@@ -17,6 +22,12 @@ const args = process.argv.slice(2);
 const option = name => { const i = args.indexOf(name); return i >= 0 ? args.splice(i, 2)[1] : undefined; };
 const outDir = option('--out');
 const threshold = Number(option('--threshold') ?? 0.001);
+const maxChangedText = option('--max-changed');
+const maxChanged = maxChangedText === undefined ? Infinity : Number(maxChangedText);
+const summaryFile = option('--summary');
+if (!Number.isFinite(threshold) || threshold < 0 || Number.isNaN(maxChanged) || maxChanged < 0) {
+  console.error('--threshold and --max-changed must be non-negative numbers'); process.exit(2);
+}
 const [previousDir, currentDir] = args;
 if (!currentDir) { console.error('Usage: node scripts/screenshot-diff.mjs PREVIOUS_DIR CURRENT_DIR [--out DIR] [--threshold 0.001]'); process.exit(2); }
 
@@ -80,7 +91,9 @@ function encode({width, height, pixels}) {
 
 const before = new Set(list(previousDir)), after = list(currentDir);
 if (!before.size) {
-  console.log(`screenshot-diff: no previous screenshots; ${after.length} page screenshot(s) form the first baseline.`);
+  const line = `screenshot-diff: no previous screenshots; ${after.length} page screenshot(s) form the first baseline.`;
+  console.log(line);
+  if (summaryFile) appendFileSync(summaryFile, `### Screenshot diff\n\n${line}\n`);
   process.exit(0);
 }
 const changed = [], added = [], failed = [];
@@ -109,4 +122,13 @@ const removed = [...before];
 console.log(`screenshot-diff: ${after.length} page screenshot(s): ${same} unchanged, ${changed.length} changed, ${added.length} new, ${removed.length} gone, ${failed.length} unreadable.`);
 for (const [title, items] of [['Changed', changed], ['New', added], ['Gone', removed], ['Unreadable', failed]])
   if (items.length) { console.log(`${title}:`); for (const item of items) console.log(`  ${item}`); }
-process.exit(failed.length ? 1 : 0);
+const over = changed.length + removed.length > maxChanged;
+if (summaryFile) {
+  const lines = [`### Screenshot diff`, '', `${same} unchanged, ${changed.length} changed, ${added.length} new, ${removed.length} gone, ${failed.length} unreadable`
+    + (Number.isFinite(maxChanged) ? ` (limit ${maxChanged} changed or gone${over ? ': **over the limit, review needed**' : ''})` : '') + '.', ''];
+  for (const [title, items] of [['Changed', changed], ['Gone', removed], ['New', added], ['Unreadable', failed]])
+    if (items.length) { lines.push(`**${title}**`, ''); for (const item of items) lines.push(`- \`${item}\``); lines.push(''); }
+  appendFileSync(summaryFile, lines.join('\n') + '\n');
+}
+if (over) console.log(`screenshot-diff: ${changed.length + removed.length} page(s) changed or gone, more than the limit of ${maxChanged}; review them before releasing.`);
+process.exit(failed.length ? 1 : over ? 4 : 0);
