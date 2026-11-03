@@ -103,7 +103,7 @@ public static class LegacyBackupReader
             var name = entry.FullName;
             var parts = name.Split('/');
             if (name.StartsWith('/') || name.Contains('\\', StringComparison.Ordinal) || name.Contains(':', StringComparison.Ordinal) || parts.Length < 2
-                || parts.Any(part => part is "" or "." or "..") || !Roots.Contains(parts[0]))
+                || parts.Any(part => part is "" or "." or ".." || WindowsUnsafe(part)) || !Roots.Contains(parts[0]))
                 throw new BackupRefusedException("Unsafe backup path.");
             if (parts.Skip(1).Any(Excluded.Contains) || parts[^1] is "instance-restore.json" or "database-relocation.json")
                 throw new BackupRefusedException("Backup contains a reserved instance path.");
@@ -138,6 +138,19 @@ public static class LegacyBackupReader
         foreach (var required in new[] { "db/catalog.sqlite", "db/chapter-origins.sqlite" })
             if (!files.ContainsKey(required)) throw new BackupRefusedException("Backup is missing " + required + ".");
         return new LegacyBackupManifest(Text(manifest, "version"), Text(manifest, "created_at"), paths, files.Count);
+    }
+
+    /// <summary>
+    /// Names Windows cannot hold as written (the tool runs on the owner's PC): device names (CON, PRN, AUX, NUL, COM1-9,
+    /// LPT1-9, with any extension), a trailing dot or space, and the characters &lt;&gt;"|?* or control characters.
+    /// </summary>
+    public static bool WindowsUnsafe(string part)
+    {
+        ArgumentNullException.ThrowIfNull(part);
+        if (part.EndsWith('.') || part.EndsWith(' ') || part.Any(c => c < 32 || "<>\"|?*".Contains(c, StringComparison.Ordinal))) return true;
+        var stem = part.Split('.')[0].TrimEnd(' ').ToUpperInvariant();
+        return stem is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$"
+            || stem.Length == 4 && (stem.StartsWith("COM", StringComparison.Ordinal) || stem.StartsWith("LPT", StringComparison.Ordinal)) && stem[3] is >= '0' and <= '9' or '¹' or '²' or '³';
     }
 
     private static string Text(JsonObject node, string name) => node[name] is JsonValue value && value.TryGetValue<string>(out var text) ? text : "";

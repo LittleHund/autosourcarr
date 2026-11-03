@@ -16,7 +16,10 @@
 #>
 param(
     [Parameter(Mandatory = $true, Position = 0)][string]$Source,
-    [Parameter(Mandatory = $true, Position = 1)][string]$Destination
+    [Parameter(Mandatory = $true, Position = 1)][string]$Destination,
+    # Optional: the 0.4.x Compose file, when its environment: sets DATA_DIR or DATABASE_DIR (and the service for two instances).
+    [string]$Compose,
+    [string]$Service
 )
 $ErrorActionPreference = 'Stop'
 function Fail([string]$Message, [int]$Code = 2) { [Console]::Error.WriteLine($Message); exit $Code }
@@ -56,15 +59,22 @@ if ($stale) {
     if ($LASTEXITCODE -ne 0) { Fail 'dotnet build failed.' 3 }
 }
 
-& dotnet $dll --migrate-0.4 $Source $Destination
+$toolArgs = @('--migrate-0.4', $Source, $Destination)
+if ($Compose) { $toolArgs += @('--compose', $Compose) }
+if ($Service) { $toolArgs += @('--service', $Service) }
+& dotnet $dll @toolArgs
 $code = $LASTEXITCODE
 $report = Join-Path $Destination 'parity-report.md'
 Write-Host ''
 if (Test-Path -LiteralPath $report) {
-    $verdict = Select-String -LiteralPath $report -Pattern '^\*\*PARITY ' | Select-Object -First 1
+    $verdict = Select-String -LiteralPath $report -Pattern '^\*\*(PARITY|MIGRATION) ' | Select-Object -First 1
     if ($verdict) { Write-Host ($verdict.Line.Trim('*')) }
     Write-Host "Report:  $report"
+}
+if ($code -eq 0) {
     Write-Host "Output:  $Destination (data\ -> /data, config\ -> /config)"
-    if ($code -eq 0) { Write-Host 'Next: read the report, then follow docs/upgrade-from-0.4.md (deploy only after your go).' }
+    Write-Host 'Next: read the report, then follow docs/upgrade-from-0.4.md (deploy only after your go).'
+} else {
+    Write-Host 'DO NOT DEPLOY this output. Read the report (or MIGRATION-INCOMPLETE.txt); your 0.4.x data is unchanged.'
 }
 exit $code

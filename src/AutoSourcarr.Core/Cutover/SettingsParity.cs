@@ -31,13 +31,42 @@ public static partial class SettingsParity
 
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
-    public static string Mask(string? value) => value is null ? "" : UrlCredentials().Replace(value, "***@");
+    [GeneratedRegex(@"([?&;][^=&#;\s]+=)[^&#;\s]*", RegexOptions.CultureInvariant)]
+    private static partial Regex QueryValues();
+
+    [GeneratedRegex(@"#\S*", RegexOptions.CultureInvariant)]
+    private static partial Regex Fragment();
+
+    /// <summary>Path segments that look like tokens (webhook ids, keys): 16+ URL-safe characters with a digit, or 24+.</summary>
+    [GeneratedRegex(@"(?<=/)(?=[A-Za-z0-9_\-.~]*\d)[A-Za-z0-9_\-.~]{16,}(?=/|$|\?|#)|(?<=/)[A-Za-z0-9_\-.~]{24,}(?=/|$|\?|#)", RegexOptions.CultureInvariant)]
+    private static partial Regex PathTokens();
+
+    /// <summary>
+    /// A non-secret setting value as the report may show it: in anything that looks like a URL the credentials, every
+    /// query value, the fragment and token-like path segments are replaced by ***.
+    /// </summary>
+    public static string Mask(string? value)
+    {
+        if (value is null) return "";
+        if (!value.Contains("://", StringComparison.Ordinal)) return value;
+        var masked = UrlCredentials().Replace(value, "***@");
+        masked = QueryValues().Replace(masked, "$1***");
+        masked = Fragment().Replace(masked, "#***");
+        return PathTokens().Replace(masked, "***");
+    }
 
     public static List<SettingParityItem> Compare(string originalConfig, string migratedConfig)
     {
         var items = new List<SettingParityItem>();
         var store = new ConfigStore(migratedConfig);
-        var values = store.Exists ? store.Load() : ConfigValues.Empty;
+        ConfigValues values;
+        try { values = store.Exists ? store.Load() : ConfigValues.Empty; }
+        catch (ConfigurationException error)
+        {
+            // config.json that 0.5.0 cannot read (for example config.key missing): every setting counts as lost.
+            items.Add(new("config.json", "config.json", false, "LOST: " + error.Message, null, null, true));
+            values = ConfigValues.Empty;
+        }
         foreach (var (file, section) in new[] { (EnvConversion.MainEnv, "main"), (EnvConversion.SourceHostEnv, "host") })
         {
             var path = Path.Combine(originalConfig, file);
@@ -81,7 +110,13 @@ public static partial class SettingsParity
         foreach (var key in UpdateNotices.RetiredLinkSettings.Where(before.ContainsKey))
             lines.Add(new(key, "dropped", key + " was removed: 0.5.0 no longer shows Komf or AI-dashboard shortcut links (SET-4). Nothing else depends on it."));
         if (document is null) return lines;
-        var values = store.Load(document);
+        ConfigValues values;
+        try { values = store.Load(document); }
+        catch (ConfigurationException error)
+        {
+            lines.Add(new("config.json", "must_change", "0.5.0 cannot read config.json: " + error.Message));
+            return lines;
+        }
         AutoSourcarrSettings? settings = null;
         try { settings = SettingsLoader.Load(configuration: values.Settings, managedOverrides: values.Settings.Where(pair => document.ManagedKeys.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)); }
         catch (ConfigurationException error) { lines.Add(new("config.json", "must_change", "0.5.0 would refuse to start with these settings: " + error.Message)); }

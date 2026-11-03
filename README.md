@@ -30,7 +30,8 @@ for your own Komga/Suwayomi servers.
 runner, reader extension repository and Web UI inside. A main Suwayomi is optional. Coming from 0.4.x? Follow
 [Upgrade from 0.4.x](docs/upgrade-from-0.4.md) first.
 
-1. Copy [docker-compose.0.5.0.yml](docker-compose.0.5.0.yml) and change its paths to your datasets. Mounts:
+1. Copy [docker-compose.0.5.0.yml](docker-compose.0.5.0.yml) and change its paths to your datasets (coming from
+   0.4.x: the new datasets filled by the migration tool, never the 0.4.x ones). Mounts:
    `/data` (databases, source host, covers), `/config` (`config.json`, `config.key`, accounts) and, optionally,
    your library or old downloads (read-only). Delete the `private-*` services for a single instance.
 2. Give UID/GID **568:568** the data and config folders. The image runs as 568:568 without a Docker socket or
@@ -55,8 +56,7 @@ Behind a reverse proxy ([Authelia](docs/reverse-proxy/authelia.md), [Nginx Proxy
 
 The Python 0.4.5 app (`autosourcarr/`, its own `autosourcarr/VERSION`) stays in the project unchanged until the
 0.5.0 deploy is confirmed. It builds its image from source with `docker-compose.yml` / `docker-compose.truenas.yml`;
-see the [0.4.x installation guide](docs/INSTALLATION.md). Before rolling back, read the rollback notes in the
-[changelog](CHANGELOG.md) (remove `"connections"` from `config.json` first).
+see the [0.4.x installation guide](docs/INSTALLATION.md). Rollback: 0.5.0 runs on **new** datasets filled by the migration tool; the 0.4.x datasets stay untouched. To go back, stop 0.5.0 and start 0.4.5 with its old Compose file on the original 0.4.x datasets. Never point 0.4.x at the 0.5.0 folders: the 0.5.0 database migrations are forward-only, and 0.4.5 never reads `config.json` (it reads only `autosourcarr.env` and `source-host.env`), so everything changed in 0.5.0 would silently be missing. Decisions made in 0.5.0 after the switch are not in the 0.4.x data.
 
 1. Follow the [Docker Compose / TrueNAS installation guide](docs/INSTALLATION.md).
 2. Open the Web UI, complete setup and install your sources under **Sources**.

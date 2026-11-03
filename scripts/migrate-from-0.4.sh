@@ -8,8 +8,8 @@
 # The output gets data/ and config/ (mount them in docker-compose.0.5.0.yml), original-0.4/ (the untouched copy the
 # comparison used) and parity-report.md / parity-report.json. Needs the .NET 10 SDK; no Docker.
 set -euo pipefail
-if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <0.4.5 backup file | folder with data/ and config/> <new or empty output folder>" >&2
+if [[ $# -ne 2 && $# -ne 4 && $# -ne 6 ]]; then
+  echo "Usage: $0 <0.4.5 backup file | folder with data/ and config/> <new or empty output folder> [--compose <0.4.x compose file> [--service <name>]]" >&2
   exit 2
 fi
 repo=$(cd "$(dirname "$0")/.." && pwd)
@@ -17,6 +17,7 @@ project="$repo/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj"
 dll="$repo/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll"
 source=$1
 destination=$2
+extra=("${@:3}")
 
 if [[ ! -e "$source" ]]; then echo "The source does not exist: $source" >&2; exit 2; fi
 source=$(cd "$(dirname "$source")" && pwd)/$(basename "$source")
@@ -50,15 +51,19 @@ if [[ ! -f "$dll" ]] || [[ -n "$(find "$repo/src" \( -name bin -o -name obj \) -
 fi
 
 set +e
-dotnet "$dll" --migrate-0.4 "$source" "$destination"
+dotnet "$dll" --migrate-0.4 "$source" "$destination" "${extra[@]}"
 code=$?
 set -e
 report="$destination/parity-report.md"
 echo
 if [[ -f "$report" ]]; then
-  grep -m 1 '^\*\*PARITY ' "$report" | tr -d '*' || true
+  grep -m 1 -E '^\*\*(PARITY|MIGRATION) ' "$report" | tr -d '*' || true
   echo "Report:  $report"
+fi
+if [[ $code -eq 0 ]]; then
   echo "Output:  $destination (data/ -> /data, config/ -> /config)"
-  if [[ $code -eq 0 ]]; then echo "Next: read the report, then follow docs/upgrade-from-0.4.md (deploy only after your go)."; fi
+  echo "Next: read the report, then follow docs/upgrade-from-0.4.md (deploy only after your go)."
+else
+  echo "DO NOT DEPLOY this output. Read the report (or MIGRATION-INCOMPLETE.txt); your 0.4.x data is unchanged."
 fi
 exit $code

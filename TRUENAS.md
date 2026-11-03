@@ -3,15 +3,20 @@
 ## 0.5.0 (current release)
 
 0.5.0 is the C#/.NET 10 image (`docker/Dockerfile`, project root as build context). Coming from 0.4.x: follow
-[docs/upgrade-from-0.4.md](docs/upgrade-from-0.4.md) before switching; keep the 0.4.5 datasets until 0.5.0 works.
+[docs/upgrade-from-0.4.md](docs/upgrade-from-0.4.md) first: it migrates a copy on your PC and proves nothing was lost.
+0.5.0 then runs on **new** datasets; the 0.4.x datasets stay untouched for a rollback.
 
-1. Datasets (owner **568:568**, the TrueNAS `apps` user; the image runs as 568:568):
+1. Datasets (owner **568:568**, the TrueNAS `apps` user; the image runs as 568:568). Coming from 0.4.x, fill the two
+   `-0.5.0` datasets with the tool's `<output>/config` and `<output>/data`; never reuse the 0.4.x `config/` or
+   `autosourcarr-data/` datasets:
 
    ```text
    /mnt/POOL/apps/autosourcarr/
-   ├── project/              # extracted project (contains docker/Dockerfile and docker-compose.0.5.0.yml)
-   ├── config/               # /config: config.json, config.key, accounts/ (an old autosourcarr.env is converted once)
-   └── autosourcarr-data/    # /data: catalog.sqlite, chapter-origins.sqlite, source-host/, covers, backups
+   ├── project/                    # extracted project (contains docker/Dockerfile and docker-compose.0.5.0.yml)
+   ├── config-0.5.0/               # /config: config.json, config.key, accounts/
+   ├── autosourcarr-data-0.5.0/    # /data: catalog.sqlite, chapter-origins.sqlite, source-host/, covers, backups
+   ├── config/                     # 0.4.x, untouched (rollback)
+   └── autosourcarr-data/          # 0.4.x, untouched (rollback)
    ```
 
    Optional: your library or old downloads, mounted read-only (for example `/mnt/manga-downloads`).
@@ -32,8 +37,7 @@
    Reinstall the AutoSourcarr extension from that repository.
 7. Repairs that run code need Linux Landlock ABI ≥ 6; without it they are refused and everything else works.
 
-Rollback: stop 0.5.0, remove the `"connections"` key from `config.json` (keep a copy), and start the 0.4.5 app again
-with its retained Compose file (sections below).
+Rollback: 0.5.0 runs on **new** datasets filled by the migration tool; the 0.4.x datasets stay untouched. To go back, stop 0.5.0 and start 0.4.5 with its old Compose file on the original 0.4.x datasets. Never point 0.4.x at the 0.5.0 folders: the 0.5.0 database migrations are forward-only, and 0.4.5 never reads `config.json` (it reads only `autosourcarr.env` and `source-host.env`), so everything changed in 0.5.0 would silently be missing. Decisions made in 0.5.0 after the switch are not in the 0.4.x data. The 0.4.x setup is described below.
 
 ## Previous version (rollback): 0.4.5 and older
 
