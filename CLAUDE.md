@@ -134,8 +134,9 @@ user is deferred to phase 13. A user's own main Suwayomi is optional (connection
 - Migrations: FluentMigrator per file; 0.4.4 baseline `2026103101`, `2026103102`; then `2026110180`
   (decision_log), `2026110184` (mixed_entry_findings), `2026110192` (library, phase 10 WIP).
   0.3.27 and 0.4.4 files upgrade in place (fixtures in `tests/AutoSourcarr.Tests/Fixtures/legacy`).
-- `config.json` + `config.key` — settings and Connections (secrets encrypted per field); 0.4.x cannot read a
-  `config.json` that contains `connections` (rollback note in CHANGELOG). Accounts: `config/accounts/accounts.json`.
+- `config.json` + `config.key` — settings and Connections (secrets encrypted per field). The Python 0.4.5 app
+  never reads `config.json`; rollback = start 0.4.5 on its untouched original datasets, never on the 0.5.0 folders
+  (migrations are forward-only; see `docs/upgrade-from-0.4.md`). Accounts: `config/accounts/accounts.json`.
 - Postgres: planned for 0.6.0 (phase 16); not implemented.
 - **`AutoSourcarr-knowledge.sqlite3`** (in `F:\claude projects\autosourcarr data\`) — development
   knowledge DB for agent continuity (requirements, decisions, findings, releases, indexed ZIPs).
