@@ -28,7 +28,8 @@
  *
  * Filesystem: read+execute /usr /lib /lib64 /bin /sbin /opt, read-only /etc /proc /sys and the --ro paths,
  * read-write the data folder, the --rw paths and a few devices (/dev/null, /dev/zero, /dev/random, /dev/urandom,
- * /dev/shm for Chromium). Everything else (the app's /config, /data, /app, the user's library) is unreachable.
+ * /dev/shm for Chromium). /dev/shm stays shared with the app (Chromium needs it): it is not a place for secrets, and
+ * the app keeps none there. Everything else (the app's /config, /data, /app, the user's library) is unreachable.
  * Signals: Landlock ABI 6 signal scoping, so code in the JVM cannot signal the app. Abstract unix sockets are NOT
  * scoped: Xlib reaches the app's Xvfb through one. Network: not restricted here (sources browse the web directly).
  *
@@ -38,6 +39,8 @@
  * app's user ("separated":0, reason "identity-unavailable"), still Landlock-sandboxed. When it succeeds, this process
  * stays as a small supervisor in the app's process group (the app can signal it; it cannot signal the other user):
  * it kills the host's process group when it is told to stop or when the host exits, and exits with the host's status.
+ * Below it a guard (the low-rights user, leader of the host's own process group) starts the JVM; when the supervisor
+ * dies, even by SIGKILL, the guard gets SIGTERM and kills the whole group, so no JCEF helper outlives the host.
  */
 
 #define PROOF "AUTOSOURCARR_SOURCE_SANDBOX_V1"
@@ -90,9 +93,18 @@ static int allow(int ruleset, const char *path, uint64_t access, int optional)
     return result == 0 ? 0 : -1;
 }
 
+/* An absolute path without "." or ".." components (also not trailing ones such as "/data/..") and without "//". */
 static int absolute(const char *path)
 {
-    return path && path[0] == '/' && strlen(path) < PATH_MAX && !strstr(path, "/../") && !strstr(path, "/./");
+    if (!path || path[0] != '/' || strlen(path) >= PATH_MAX || strstr(path, "//")) return 0;
+    for (const char *part = path + 1; *part; ) {
+        const char *end = strchr(part, '/');
+        size_t length = end ? (size_t)(end - part) : strlen(part);
+        if ((length == 1 && part[0] == '.') || (length == 2 && part[0] == '.' && part[1] == '.')) return 0;
+        if (!end) break;
+        part = end + 1;
+    }
+    return 1;
 }
 
 static int parse_id(const char *text, unsigned *value)
@@ -103,6 +115,14 @@ static int parse_id(const char *text, unsigned *value)
     if (errno || !end || *end || text[0] == '\0' || parsed == 0 || parsed > 0x7fffffffUL) return -1;
     *value = (unsigned)parsed;
     return 0;
+}
+
+/* The guard (the host's process-group leader, same user as the host) stops the whole group, helpers included. */
+static void kill_group(int signal_number)
+{
+    (void)signal_number;
+    kill(0, SIGKILL);
+    _exit(143);
 }
 
 static void stop_host(int signal_number)
@@ -159,43 +179,74 @@ int main(int argc, char **argv)
     int separated = 0;
     if (want_identity && uid != geteuid()) {
         pid_t supervisor = getpid();
-        int pipefd[2];
+        int pipefd[2], statusfd[2];
         if (pipe2(pipefd, O_CLOEXEC) != 0) { reason = "identity-unavailable"; goto sandbox; }
+        if (pipe2(statusfd, O_CLOEXEC) != 0) { close(pipefd[0]); close(pipefd[1]); reason = "identity-unavailable"; goto sandbox; }
+        /* The supervisor stops the host's group on SIGTERM/SIGINT/SIGHUP from the first moment a group can exist. */
+        struct sigaction action;
+        memset(&action, 0, sizeof action);
+        action.sa_handler = stop_host;
+        sigaction(SIGTERM, &action, NULL);
+        sigaction(SIGINT, &action, NULL);
+        sigaction(SIGHUP, &action, NULL);
         pid_t child = fork();
-        if (child < 0) { close(pipefd[0]); close(pipefd[1]); reason = "identity-unavailable"; goto sandbox; }
+        if (child < 0) { close(pipefd[0]); close(pipefd[1]); close(statusfd[0]); close(statusfd[1]); reason = "identity-unavailable"; goto sandbox; }
         if (child == 0) {
-            close(pipefd[0]);
-            /* The host's own process group, so the supervisor can stop the host and every helper it started. */
+            /* Guard: leader of the host's own process group, switched to the low-rights user. */
+            close(pipefd[0]); close(statusfd[0]);
+            signal(SIGTERM, SIG_DFL); signal(SIGINT, SIG_DFL); signal(SIGHUP, SIG_DFL);
             if (setsid() < 0 || prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0 || getppid() != supervisor) _exit(70);
             char ok = 0;
             if (setgroups(0, NULL) == 0 && setresgid(gid, gid, gid) == 0 && setresuid(uid, uid, uid) == 0
-                && prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) == 0 && getppid() == supervisor && clear_capabilities() == 0)
+                && getppid() == supervisor && clear_capabilities() == 0)
                 ok = 1;
             if (write(pipefd[1], &ok, 1) != 1) _exit(70);
             close(pipefd[1]);
             if (!ok) _exit(77); /* the supervisor goes on without a separate user */
-            separated = 1;
-            goto sandbox;
+            /* The supervisor dying (even by SIGKILL) reaches the guard as SIGTERM: it then kills the whole group
+             * (the JVM and every JCEF helper), which as the same user it may do. Set after the uid change, which
+             * clears the parent-death signal. */
+            struct sigaction guard_action;
+            memset(&guard_action, 0, sizeof guard_action);
+            guard_action.sa_handler = kill_group;
+            sigaction(SIGTERM, &guard_action, NULL);
+            sigaction(SIGINT, &guard_action, NULL);
+            sigaction(SIGHUP, &guard_action, NULL);
+            if (prctl(PR_SET_PDEATHSIG, SIGTERM, 0, 0, 0) != 0 || getppid() != supervisor) _exit(70);
+            pid_t guard = getpid();
+            pid_t jvm = fork();
+            if (jvm < 0) _exit(70);
+            if (jvm == 0) {
+                close(statusfd[1]);
+                signal(SIGTERM, SIG_DFL); signal(SIGINT, SIG_DFL); signal(SIGHUP, SIG_DFL);
+                if (prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0) != 0 || getppid() != guard) _exit(70);
+                separated = 1;
+                goto sandbox;
+            }
+            int jvm_status = 0;
+            while (waitpid(jvm, &jvm_status, 0) < 0 && errno == EINTR) { }
+            unsigned char code = (unsigned char)(WIFEXITED(jvm_status) ? WEXITSTATUS(jvm_status) : 128 + (WIFSIGNALED(jvm_status) ? WTERMSIG(jvm_status) : 0));
+            if (write(statusfd[1], &code, 1) != 1) { /* the supervisor then reports the guard's own end */ }
+            kill(0, SIGKILL); /* helpers left in the group, and the guard itself */
+            _exit(code);
         }
-        close(pipefd[1]);
+        close(pipefd[1]); close(statusfd[1]);
         char ok = 0;
         ssize_t got = read(pipefd[0], &ok, 1);
         close(pipefd[0]);
         if (got == 1 && ok) {
             host = child;
             keep_only_kill();
-            struct sigaction action;
-            memset(&action, 0, sizeof action);
-            action.sa_handler = stop_host;
-            sigaction(SIGTERM, &action, NULL);
-            sigaction(SIGINT, &action, NULL);
-            sigaction(SIGHUP, &action, NULL);
             int status = 0;
             while (waitpid(child, &status, 0) < 0 && errno == EINTR) { }
-            kill(-child, SIGKILL); /* helpers left in the host's group */
+            kill(-child, SIGKILL); /* anything left in the host's group */
+            unsigned char code = 0;
+            if (read(statusfd[0], &code, 1) == 1) _exit(code);
             if (WIFEXITED(status)) _exit(WEXITSTATUS(status));
             _exit(128 + (WIFSIGNALED(status) ? WTERMSIG(status) : 0));
         }
+        close(statusfd[0]);
+        signal(SIGTERM, SIG_DFL); signal(SIGINT, SIG_DFL); signal(SIGHUP, SIG_DFL);
         int status = 0;
         while (waitpid(child, &status, 0) < 0 && errno == EINTR) { }
         reason = "identity-unavailable";
