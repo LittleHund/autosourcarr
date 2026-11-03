@@ -156,7 +156,7 @@ jobs:
             timeout 3600 docker buildx build -f docker/Dockerfile \
               --build-context source-host=.build/source-host-out \
               --build-context reader-extension=.build/reader-extension \
-              --build-arg VERSION="$(tr -d '\r\n' < VERSION)" --build-arg REVISION="$sha" \
+              --build-arg VERSION="$(tr -d '\r\n' < VERSION)" --build-arg REVISION="$sha" --build-arg PACKAGES_EPOCH="$sha" \
               --load -t autosourcarr:probe . > probe/image-build.log 2>&1; ib=$?
             {
               echo "result=$ib"; echo "seconds=$(( $(date +%s) - start_build ))"
