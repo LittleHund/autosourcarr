@@ -31,7 +31,9 @@ internal static class AccountsV1Endpoints
                     ["setup_required"] = access.Accounts.SetupRequired && method != "external",
                     ["setup_code_required"] = access.Accounts.SetupCodeRequired,
                     ["signed_in"] = caller.Role != Role.None,
-                    ["user"] = caller.Name, ["role"] = Roles.Name(caller.Role)
+                    ["user"] = caller.Name, ["role"] = Roles.Name(caller.Role),
+                    // Phase 13 audit: external sign-in without AUTH_TRUSTED_PROXIES trusts nobody; the login page says why.
+                    ["notice"] = method == "external" ? AutoSourcarr.Core.Settings.TrustedProxies.Problems(services.Settings().AuthTrustedProxies, external: true).FirstOrDefault() : null,
                 }, json.JsonObject);
             }))
             .WithName("getAuthStatus")

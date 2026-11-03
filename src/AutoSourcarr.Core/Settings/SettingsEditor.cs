@@ -439,6 +439,11 @@ public sealed partial class SettingsEditor
         if ((updates.ContainsKey("AUTO_MATCH_THRESHOLD") || updates.ContainsKey("FUZZY_REVIEW_THRESHOLD"))
             && Number(Value("FUZZY_REVIEW_THRESHOLD")) > Number(Value("AUTO_MATCH_THRESHOLD")))
             throw new SettingsValidationException("Candidate threshold must not exceed the automatic threshold.");
+        // Phase 13 audit: external sign-in trusts identity headers only from listed proxies; loopback and this
+        // container's own addresses are refused (the source host runs here).
+        if ((updates.ContainsKey("AUTH_METHOD") || updates.ContainsKey("AUTH_TRUSTED_PROXIES"))
+            && TrustedProxies.Problems(Value("AUTH_TRUSTED_PROXIES"), Value("AUTH_METHOD") == "external") is { Count: > 0 } problems)
+            throw new SettingsValidationException(problems[0]);
     }
 
     private static double Number(string value) =>

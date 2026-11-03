@@ -72,7 +72,10 @@ location / {
 ```
 
 With *external* sign-in in AutoSourcarr (AUTH_METHOD=external), AutoSourcarr reads
-`Remote-User`/`Remote-Groups` only from the trusted proxy (AUTH_TRUSTED_PROXIES).
+`Remote-User`/`Remote-Groups` only from the trusted proxy. Set AUTH_TRUSTED_PROXIES to the
+NPM container's IP or its Docker network (for example `172.18.0.0/16`; `docker network inspect`
+shows it). It is required: with an empty list nobody can sign in through the proxy. Loopback and
+the AutoSourcarr container's own address are never trusted.
 
 Do not add a custom location for `/api/v1`, `/api/admin` or `/api/reader/` as a whole
 without Authelia. Check the result with the `curl` lines in [authelia.md](authelia.md).

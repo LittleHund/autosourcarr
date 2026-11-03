@@ -20,6 +20,9 @@ internal sealed partial class ApplicationRuntime
         {
             ["source_host"] = SourceHostService(),
             ["source_sandbox"] = SourceSandboxService(),
+            ["sign_in"] = settings.AuthMethod != "external" ? Service("Sign-in", "ready", "Sign-in method: " + settings.AuthMethod + ".")
+                : SignInProblem is { } problem ? Service("Sign-in", "degraded", problem)
+                : Service("Sign-in", "ready", "External sign-in trusts identity headers only from AUTH_TRUSTED_PROXIES."),
             ["webview"] = WebViewService(),
             ["solver"] = SolverService(),
             ["repair"] = RepairService(integrated),

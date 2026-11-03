@@ -133,27 +133,13 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
 
     public const string TrustedProxyItem = "AutoSourcarr.TrustedProxy";
 
-    /// <summary>AUTH_TRUSTED_PROXIES (IPs or CIDR); empty trusts loopback and private networks only.</summary>
-    public static bool FromTrustedProxy(System.Net.IPAddress? remote, string configured)
-    {
-        if (remote is null) return true; // in-process or Unix socket: no network peer at all
-        if (remote.IsIPv4MappedToIPv6) remote = remote.MapToIPv4();
-        var entries = configured.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (entries.Length == 0)
-        {
-            if (System.Net.IPAddress.IsLoopback(remote)) return true;
-            var bytes = remote.GetAddressBytes();
-            return remote.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
-                ? bytes[0] == 10 || bytes[0] == 172 && bytes[1] is >= 16 and <= 31 || bytes[0] == 192 && bytes[1] == 168
-                : (bytes[0] & 0xfe) == 0xfc;
-        }
-        foreach (var entry in entries)
-        {
-            if (System.Net.IPNetwork.TryParse(entry, out var network) && network.Contains(remote)) return true;
-            if (System.Net.IPAddress.TryParse(entry, out var single) && single.Equals(remote)) return true;
-        }
-        return false;
-    }
+    /// <summary>
+    /// AUTH_TRUSTED_PROXIES (IPs or CIDR). Phase 13 (audit): only addresses explicitly listed there may send identity
+    /// headers (Remote-User, Remote-Groups) or X-Forwarded-For/-Proto. An empty list trusts nobody (fail closed). Loopback
+    /// and this container's own interface addresses are never trusted, even inside a listed subnet: the source host (third-
+    /// party extension code) runs in this container and reaches the app from there.
+    /// </summary>
+    public static bool FromTrustedProxy(System.Net.IPAddress? remote, string configured) => AutoSourcarr.Core.Settings.TrustedProxies.Trusted(remote, configured);
 
     private async Task<Caller> ResolveAsync(HttpContext context)
     {
