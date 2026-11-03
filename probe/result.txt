@@ -1,4 +1,4 @@
-sha=352d9c6cd2b92fc095dba30ad419b4469249a17d
+sha=5678e8867a64c6f2f86a8a4ec7e4c396ab054ce6
 restore=0
 build=0
 test=0
@@ -17,5 +17,5 @@ sandbox_check=0
 linux_runtime=0
 benchmark=0
 image_build=0
-boot_seconds=6.5
+boot_seconds=3.9
 image_playwright=0

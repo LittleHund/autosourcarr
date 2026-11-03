@@ -1,8 +1,8 @@
 {
   "ok": true,
   "version": "0.4.3-migration",
-  "captured_at": "2026-11-02T23:46:12.0777005+00:00",
-  "instance_id": "a166c3504850",
+  "captured_at": "2026-11-03T17:06:07.1883597+00:00",
+  "instance_id": "511bde1b27f7",
   "source_host": {
     "ok": true,
     "checked": true,
@@ -35,7 +35,11 @@
     "separate_user": false,
     "uid": 568,
     "reason": "",
-    "message": "The source host and its WebView run in the Landlock sandbox (ABI 8): only its own data folder is writable, the app's configuration and databases are unreachable, and it cannot signal the app; it runs as the app's user."
+    "message": "The source host and its WebView run in the Landlock sandbox (ABI 8): it can write only its own data folder and cannot read the app's configuration, databases or library files, and it cannot signal the app. Not covered: the network is open (sources browse the web, and the host can reach the app's HTTP port, which is why identity headers are never trusted from this container), /dev/shm is shared; it runs as the app's user."
+  },
+  "sign_in": {
+    "method": "forms",
+    "problem": null
   },
   "repair_isolation": {
     "available": true,
@@ -123,9 +127,9 @@
       "database_dir": "/data",
       "database_bytes": 1163832,
       "data_dir": "/data",
-      "data_bytes": 10007248
+      "data_bytes": 10007693
     },
-    "captured_at": "2026-11-02T23:46:12.0714037+00:00",
+    "captured_at": "2026-11-03T17:06:07.1843421+00:00",
     "cache_age_seconds": 0
   },
   "errors": {
