@@ -211,12 +211,15 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         || key.StartsWith("PYTHON", StringComparison.Ordinal);
 
     private static async Task<ApplicationRuntime> OpenAsync(StartupConfigurationSnapshot startup,
-        IReadOnlyDictionary<string, string?> environment, bool hosted, CancellationToken cancellationToken)
+        IReadOnlyDictionary<string, string?> environment, bool hosted, CancellationToken cancellationToken, bool offline = false)
     {
         ArgumentNullException.ThrowIfNull(startup); ArgumentNullException.ThrowIfNull(environment);
-        var owner = new ApplicationRuntime(startup.Settings);
+        var owner = new ApplicationRuntime(startup.Settings) { _offline = offline };
         try
         {
+            // Phase 14 offline open (cutover tool): the job queue holds everything queued during composition, so no
+            // background job (feeds, metadata lookups, imports) runs; the one-time startup steps run in RunOfflineStartupAsync.
+            if (offline) await owner.Jobs.StopBackgroundAsync("offline migration run").ConfigureAwait(false);
             owner.Privacy.Register(environment);
             owner.Privacy.Register(SettingsLoader.ToEnvironment(startup.Settings, includeSecrets: true)
                 .ToDictionary(pair => pair.Key, pair => (string?)pair.Value, StringComparer.Ordinal));
@@ -401,7 +404,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                     rawRoutes = null;
                 }
             }
-            owner._healthMonitor = Task.Run(() => owner._health.RunMonitorAsync(error => owner.Errors.Record("Source health", error.Message, "source-health-monitor"),
+            if (!offline) owner._healthMonitor = Task.Run(() => owner._health.RunMonitorAsync(error => owner.Errors.Record("Source health", error.Message, "source-health-monitor"),
                 owner._healthStop.Token));
             owner._library = new AutoSourcarr.Core.Sources.Library.SuwayomiLibrary(owner.Database, owner.Preferences, () => owner.Settings,
                 () => owner._main, owner.Io, error => owner.Logs.Record("Main library", error.Message));
@@ -517,7 +520,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             }
             // CON-3: Suwayomi change feed (subscriptions, library diff, polling fallback) keeps the main-library view current.
             // It reads the same server as the library (Settings' MAIN_SUWAYOMI_URL first); a damaged connection only skips it.
-            owner.StartSuwayomiFeed();
+            if (!offline) owner.StartSuwayomiFeed();
             // CON-5: a solver change restarts the source host (its solver list is read at launch); a Suwayomi change
             // reconnects the change feed.
             owner._connections.Changed += owner.OnConnectionChanged;
@@ -534,6 +537,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             { owner.Logs.Record("Main library", "Saved library snapshot could not be read (" + error.GetType().Name + ")."); }
             cancellationToken.ThrowIfCancellationRequested();
             owner._writer = owner.WriteLogsAsync();
+            if (offline) return owner;
             owner._sourceWatch = owner.WatchSourceAsync();
             owner._sourceStateWatch = owner.WatchSourceStateAsync();
             await owner._source.StartAsync().ConfigureAwait(false);
