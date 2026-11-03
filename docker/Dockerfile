@@ -12,9 +12,10 @@
 # rebuilt when its files change; extension signed with the owner's secrets outside the image build). A plain
 # `docker build` builds both itself.
 #
-# PIPE-3: every base image is pinned by digest and every download by sha256/sha512; scripts/update-pins.py
-# refreshes them and prints the diff for review. OS packages are not pinned: each build installs the current signed
-# Ubuntu packages (apt-get upgrade) and records the list in /opt/autosourcarr-image-packages.txt (PIPE-1/PIPE-2).
+# PIPE-3: every base image is pinned by digest and every download by sha256/sha512 in this file. Run by hand,
+# scripts/update-pins.py refreshes the image digests (diff for review) and only reports changed upstream tool hashes,
+# which a person verifies and edits here. OS packages are not pinned: each build installs the current signed Ubuntu
+# packages (apt-get upgrade, forced by PACKAGES_EPOCH) and records the list in /opt/autosourcarr-image-packages.txt.
 #
 # Users (ARC-8, hard rule 13): the app runs as 568:568 (TrueNAS "apps"); the source host has its own low-rights
 # account 569:569 "asc-source" (no shell, no groups, home /home/asc-source) for area R to start the extension JVM
@@ -167,8 +168,11 @@ LABEL org.opencontainers.image.title="AutoSourcarr" \
 USER root
 # Fresh OS packages at every build (PIPE-1/PIPE-2). Xvfb + X11/NSS/GTK libraries for JCEF (R25), tini as PID 1 (child
 # reaping for Xvfb and Chromium helpers), curl for the health check, tzdata for TZ, fontconfig for AWT.
+# PACKAGES_EPOCH changes for every release build (the pipeline passes its run id), so this layer is never a layer-cache
+# hit from an earlier release: apt-get upgrade really runs each time. A plain local build without it uses "local".
+ARG PACKAGES_EPOCH=local
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    set -eu; rm -f /etc/apt/apt.conf.d/docker-clean; \
+    set -eu; echo "OS package refresh, epoch ${PACKAGES_EPOCH}"; rm -f /etc/apt/apt.conf.d/docker-clean; \
     apt-get update; DEBIAN_FRONTEND=noninteractive apt-get -y upgrade; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       tini curl ca-certificates tzdata util-linux fontconfig fonts-liberation libfreetype6 libgomp1 \
