@@ -98,6 +98,35 @@ public static partial class SettingsParity
     /// kept-but-unused keys, defaults that changed), plus what 0.5.0 needs at deploy time (sign-in behind a proxy).
     /// Only key names and fixed text; never a value.
     /// </summary>
+    /// <summary>
+    /// The 0.4.x Compose <c>environment:</c> values (they overrode autosourcarr.env in 0.4.x and override config.json in
+    /// 0.5.0 when you keep them). A value 0.5.0 refuses is lost; a retired key is dropped; secrets are never shown.
+    /// </summary>
+    public static List<SettingParityItem> CompareCompose(IReadOnlyDictionary<string, string> environment)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        var items = new List<SettingParityItem>();
+        var known = AutoSourcarrSettings.Definitions.Select(definition => definition.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in environment.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            var secret = SettingsSecrets.IsSecretKey(key);
+            string status; var lost = false;
+            if (UpdateNotices.RetiredLinkSettings.Contains(key, StringComparer.Ordinal)) status = "dropped: retired link setting (SET-4)";
+            else if (!known.Contains(key)) status = "Compose override not used by 0.5.0 (kept only if you keep it in Compose)";
+            else
+            {
+                try
+                {
+                    SettingsLoader.Load(environment: new Dictionary<string, string?>(StringComparer.Ordinal) { [key] = value });
+                    status = "Compose override: keep it in docker-compose.0.5.0.yml to keep this value (it overrides config.json)";
+                }
+                catch (ConfigurationException) { status = "LOST: 0.5.0 refuses this Compose value; change it before deploying"; lost = true; }
+            }
+            items.Add(new("compose environment", key, secret, status, secret ? null : Mask(value), null, lost));
+        }
+        return items;
+    }
+
     public static List<UpdateNoticeLine> Notices(string originalConfig, string migratedConfig)
     {
         var lines = new List<UpdateNoticeLine>();
@@ -148,6 +177,10 @@ public sealed class FileParityResult
     public int Added { get; set; }
     /// <summary>Keys and keystores (presence only).</summary>
     public List<FileParityItem> Keys { get; } = [];
+    /// <summary>Missing or changed files that are not on the allowlist (repair packages, state files, uploads, ...): any → FAILED.</summary>
+    public List<FileParityItem> Lost { get; } = [];
+    /// <summary>Missing or changed files on the allowlist, with the reason.</summary>
+    public List<FileParityItem> Allowed { get; } = [];
 
     public JsonObject ToJson() => new()
     {
@@ -155,6 +188,8 @@ public sealed class FileParityResult
         ["changed"] = new JsonArray(Changed.Select(item => (JsonNode)item.ToJson()).ToArray()),
         ["missing"] = new JsonArray(Missing.Select(item => (JsonNode)item.ToJson()).ToArray()),
         ["keys"] = new JsonArray(Keys.Select(item => (JsonNode)item.ToJson()).ToArray()),
+        ["lost"] = new JsonArray(Lost.Select(item => (JsonNode)item.ToJson()).ToArray()),
+        ["allowed"] = new JsonArray(Allowed.Select(item => (JsonNode)item.ToJson()).ToArray()),
     };
 }
 
@@ -165,6 +200,20 @@ public static partial class FileParity
     private static partial Regex KeyFile();
 
     private static readonly string[] DatabaseNames = ["catalog.sqlite", "chapter-origins.sqlite"];
+
+    /// <summary>
+    /// Files 0.5.0 may change or drop on purpose (prefix of "config/..." or "data/..." → reason). Everything else that
+    /// is missing or changed after the migration fails: last-working repair packages (hard rule 5), source and repair
+    /// state, setup state, import uploads, reset hints, keys.
+    /// </summary>
+    public static readonly IReadOnlyList<(string Prefix, string Reason)> Allowlist =
+    [
+        ("data/cover-cache/", "cover cache, refetched"), ("data/cache/", "cache"), ("data/.cache/", "cache"), ("data/diagnostics/", "diagnostic logs the app appends to"),
+        ("data/support-logs/", "support logs the app appends to"), ("data/logs/", "logs the app appends to"),
+        ("data/instance-backups/upgrade-state.json", "the update guard records the version it migrated to"),
+    ];
+
+    public static string? AllowedReason(string name) => Allowlist.FirstOrDefault(item => name.StartsWith(item.Prefix, StringComparison.Ordinal)).Reason;
 
     public static bool IsDatabaseFile(string name) => DatabaseNames.Any(db => name == db || name == db + "-wal" || name == db + "-shm" || name == db + "-journal");
 
@@ -186,10 +235,17 @@ public static partial class FileParity
                 {
                     result.Missing.Add(new(name, "missing after the migration"));
                     if (keyFile) result.Keys.Add(new(name, "MISSING"));
+                    else if (AllowedReason(name) is { } why) result.Allowed.Add(new(name, "missing: " + why));
+                    else result.Lost.Add(new(name, "MISSING after the migration"));
                     continue;
                 }
                 if (Hash(path) == Hash(now)) result.Same++;
-                else result.Changed.Add(new(name, "content changed"));
+                else
+                {
+                    result.Changed.Add(new(name, "content changed"));
+                    if (AllowedReason(name) is { } why) result.Allowed.Add(new(name, "changed: " + why));
+                    else result.Lost.Add(new(name, "CHANGED by the migration"));
+                }
                 if (keyFile) result.Keys.Add(new(name, "present"));
             }
             foreach (var relative in after.Keys.Where(key => !before.ContainsKey(key)))

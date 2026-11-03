@@ -24,9 +24,9 @@ public static class TableCoverage
         ["due_work"] = "monitoring clocks, rebuilt from library_tracking", ["quality_attempts"] = "quality probe attempts, re-measured",
         ["quality_samples"] = "page quality samples, re-measured", ["source_record_scans"] = "chapter scan cursors, rescanned",
         ["candidate_pages"] = "page lists of chapter versions, refetched", ["chapter_candidates"] = "chapter versions found on sources, rescanned (choices are compared via served_origin/serving_choices)",
-        ["catalogue_exchange_stages"] = "staging of an unfinished shared-catalogue import", ["gallery_records"] = "gallery metadata of source records, refetched",
+        ["gallery_records"] = "gallery metadata of source records, refetched",
         ["gallery_layout_candidates"] = "gallery split candidates, recomputed", ["source_color_profiles"] = "detected colour profiles, re-detected",
-        ["source_discovery_outcomes"] = "last discovery result per entry and source, rediscovered", ["source_health"] = "source health checks, rechecked",
+        ["source_discovery_outcomes"] = "last discovery result per entry and source, rediscovered",
         ["source_record_tags"] = "tags read from source records, re-read", ["thumbnail_fingerprints"] = "cover fingerprints, recomputed",
         ["library_complete_observations"] = "library completeness observations, re-observed", ["general_task_history"] = "0.4.x task list; 0.5.0 keeps its own task journal",
         ["entry_preferred_titles"] = "derived title index of entries", ["tags"] = "tag index (tag reviews are compared by tag name)",
@@ -68,21 +68,27 @@ public static class TableCoverage
         }.Select(table => ("catalog", table)),
     ];
 
-    /// <summary>Count-only kinds for the counted identity tables and for any 0.4.x table nobody classified (fewer rows = lost).</summary>
+    /// <summary>
+    /// Whole-row kinds (every column as stored, keyed by the primary key, or by all columns when there is none) for the
+    /// shared-catalogue identity tables and for any 0.4.x table nobody classified, so nothing can disappear or change unseen.
+    /// </summary>
     public static IEnumerable<ParityKind> CountedKinds(LegacyDatabase catalog, LegacyDatabase origins, IEnumerable<ParityKind> kinds)
     {
         ArgumentNullException.ThrowIfNull(catalog); ArgumentNullException.ThrowIfNull(origins);
         var compared = kinds.Select(kind => (kind.Origins ? "origins" : "catalog") + "." + kind.Table).ToHashSet(StringComparer.Ordinal);
         foreach (var table in CountedIdentity.Where(catalog.HasTable).Where(table => !compared.Contains("catalog." + table)))
-            yield return Count(table, false, "Shared-catalogue identity rows.");
+            yield return WholeTable(catalog, table, false, "Shared-catalogue identity rows.");
         foreach (var (file, database) in new[] { ("catalog", catalog), ("origins", origins) })
             foreach (var table in database.Tables.Order(StringComparer.Ordinal))
                 if (!compared.Contains(file + "." + table) && !Rebuildable.ContainsKey(table) && !CountedIdentity.Contains(table, StringComparer.Ordinal))
-                    yield return Count(table, file == "origins", "Not classified by the tool: counted so nothing can disappear unseen.");
+                    yield return WholeTable(database, table, file == "origins", "Not classified by the tool: compared row by row so nothing can disappear unseen.");
     }
 
-    private static ParityKind Count(string table, bool origins, string description) =>
-        new("Counted: " + table, ParityGroup.History, origins, table, "SELECT COUNT(*) AS n FROM " + table, [], [], [], description, CountOnly: true);
+    private static ParityKind WholeTable(LegacyDatabase database, string table, bool origins, string description)
+    {
+        var (columns, key) = database.Schema(table);
+        return new("Rows: " + table, ParityGroup.History, origins, table, "SELECT * FROM \"" + table + "\"", key.Count > 0 ? [.. key] : [.. columns], [], description) { Raw = true };
+    }
 
     /// <summary>The coverage table of the report: every known 0.4.5 table and every table found in the 0.4.x files.</summary>
     public static List<TableCoverageItem> Describe(LegacyDatabase catalog, LegacyDatabase origins, IEnumerable<ParityKind> kinds)
@@ -96,13 +102,16 @@ public static class TableCoverage
         {
             var present = (file == "origins" ? origins : catalog).HasTable(table);
             var mine = all.Where(kind => (kind.Origins ? "origins" : "catalog") == file && (kind.Table == table || kind.Sql.Contains(" " + table + " ", StringComparison.Ordinal))).ToList();
-            var compared = mine.Where(kind => !kind.CountOnly).Select(kind => kind.Name).ToList();
-            var counted = mine.Where(kind => kind.CountOnly).Select(kind => kind.Name).ToList();
             string treatment, detail;
-            if (compared.Count > 0) { treatment = "compared"; detail = string.Join("; ", compared) + (Rebuildable.TryGetValue(table, out var rest) ? " (" + rest + ")" : ""); }
-            else if (counted.Count > 0) { treatment = "counted (fewer rows = lost)"; detail = string.Join("; ", counted); }
+            if (mine.Count > 0)
+            {
+                treatment = mine.All(kind => kind.Raw) ? "compared: every column as stored" : "compared: whole rows minus pure timestamps";
+                detail = string.Join("; ", mine.Select(kind => kind.Name + (kind.Exclude.Length > 0 || kind.ExcludeReason.Length > 0
+                    ? " (not compared: " + (kind.Exclude.Length > 0 ? string.Join(", ", kind.Exclude) + " — " : "") + kind.ExcludeReason + ")" : "")))
+                    + (Rebuildable.TryGetValue(table, out var rest) ? "; other rows: " + rest : "");
+            }
             else if (Rebuildable.TryGetValue(table, out var reason)) { treatment = "counted only (rebuildable)"; detail = reason; }
-            else { treatment = "counted (fewer rows = lost)"; detail = "not classified"; }
+            else { treatment = "compared: every column as stored"; detail = "not classified"; }
             items.Add(new(file, table, present ? treatment : "not in this 0.4.x", detail));
         }
         return items;

@@ -146,13 +146,14 @@ internal static class LegacyMigrationTool
     }
 
     /// <summary>Where DATA_DIR and DATABASE_DIR pointed in 0.4.x, where the databases are in the copy, and where that came from.</summary>
-    private sealed record Layout(string ContainerData, string ContainerDb, string DatabaseFolder, string Source);
+    private sealed record Layout(string ContainerData, string ContainerDb, string DatabaseFolder, string Source, IReadOnlyDictionary<string, string> Compose);
 
     private static Layout FolderLayout(string input, MigrationOptions options)
     {
         var env = ReadEnv(Path.Combine(input, "config", EnvConversion.MainEnv));
         string? data = env.GetValueOrDefault("DATA_DIR"), db = env.GetValueOrDefault("DATABASE_DIR");
         var sources = new List<string>();
+        IReadOnlyDictionary<string, string> composeEnvironment = new Dictionary<string, string>(StringComparer.Ordinal);
         if (!string.IsNullOrWhiteSpace(data)) sources.Add("DATA_DIR from config/autosourcarr.env");
         if (!string.IsNullOrWhiteSpace(db)) sources.Add("DATABASE_DIR from config/autosourcarr.env");
         if (options.ComposeFile is { } compose)
@@ -171,6 +172,7 @@ internal static class LegacyMigrationTool
                     + ". Pass --service <name> for the instance this snapshot belongs to.");
                 chosen = relevant.Select(pair => pair.Value).FirstOrDefault();
             }
+            composeEnvironment = chosen ?? new Dictionary<string, string>(StringComparer.Ordinal);
             if (chosen?.GetValueOrDefault("DATA_DIR") is { Length: > 0 } composeData) { data = composeData; sources.Add("DATA_DIR from " + Path.GetFileName(compose) + " (overrides the env file)"); }
             if (chosen?.GetValueOrDefault("DATABASE_DIR") is { Length: > 0 } composeDb) { db = composeDb; sources.Add("DATABASE_DIR from " + Path.GetFileName(compose) + " (overrides the env file)"); }
         }
@@ -186,14 +188,14 @@ internal static class LegacyMigrationTool
             if (!inDatabase) throw new MigrationRefusedException("DATABASE_DIR (" + containerDb + ") is outside DATA_DIR (" + containerData + "): copy that folder into the snapshot as 'database'.");
             if (File.Exists(Path.Combine(input, "data", "catalog.sqlite")))
                 throw new MigrationRefusedException("Both 'data' and 'database' hold a catalog.sqlite: it is unclear which one 0.4.x used. Keep only the one in DATABASE_DIR (" + containerDb + ").");
-            return new(containerData, containerDb, "database", string.Join("; ", sources));
+            return new(containerData, containerDb, "database", string.Join("; ", sources), composeEnvironment);
         }
         if (inDatabase)
             throw new MigrationRefusedException("The snapshot has a 'database' folder, but DATABASE_DIR (" + containerDb + ") is inside DATA_DIR (" + containerData + "): it is unclear which databases 0.4.x used. Remove the extra copy.");
         var folder = Path.Combine("data", relative);
         if (!File.Exists(Path.Combine(input, folder, "catalog.sqlite")))
             throw new MigrationRefusedException("The 0.4.x catalog.sqlite was not found in " + folder.Replace('\\', '/') + " (DATABASE_DIR " + containerDb + ").");
-        return new(containerData, containerDb, folder, string.Join("; ", sources));
+        return new(containerData, containerDb, folder, string.Join("; ", sources), composeEnvironment);
     }
 
     private static async Task<MigrationOutcome> MigrateCoreAsync(string input, string output, bool isFile, Layout? layout, Func<string> passphrase, TextWriter log,
@@ -280,13 +282,20 @@ internal static class LegacyMigrationTool
         warnings.AddRange((started["warnings"] as JsonArray ?? []).Select(node => node?.ToString() ?? "").Where(text => text.Length > 0));
         var notCovered = (started["not_covered"] as JsonArray ?? []).Select(node => node?.ToString() ?? "").ToList();
         // Fold the write-ahead logs into the migrated files, so copying the folder to the server cannot miss committed rows.
+        // A busy checkpoint or a write-ahead log that is not empty afterwards means the files are not complete on their own.
         foreach (var name in new[] { "catalog.sqlite", "chapter-origins.sqlite" })
         {
-            using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + Path.Combine(outDb, name) + ";Pooling=False");
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
-            command.ExecuteNonQuery();
+            using (var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + Path.Combine(outDb, name) + ";Pooling=False"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+                using var reader = command.ExecuteReader();
+                if (!reader.Read() || reader.GetInt64(0) != 0)
+                    problems.Add(name + ": the write-ahead log could not be checkpointed (busy); the copied file would miss committed rows");
+            }
+            var wal = new FileInfo(Path.Combine(outDb, name + "-wal"));
+            if (wal.Exists && wal.Length != 0) problems.Add(name + ": the write-ahead log is not empty after the checkpoint (" + wal.Length.ToString(CultureInfo.InvariantCulture) + " bytes)");
         }
         if (problems.Count > 0)
         {
@@ -310,6 +319,9 @@ internal static class LegacyMigrationTool
         {
             var kinds = DecisionParity.Kinds.ToList();
             kinds.AddRange(TableCoverage.CountedKinds(oldCatalog, oldOrigins, kinds).ToList());
+            var merges = MergeRecheck.Run(newCatalog);
+            var settingItems = SettingsParity.Compare(Path.Combine(original, "config"), config);
+            if (layout?.Compose is { Count: > 0 } composeValues) settingItems.AddRange(SettingsParity.CompareCompose(composeValues));
             report = new ParityReport
             {
                 Input = (isFile ? "backup file " : "folder ") + input, FromVersion = fromVersion, ToVersion = ApplicationRuntime.Version,
@@ -318,10 +330,13 @@ internal static class LegacyMigrationTool
                 Counts = [.. DecisionParity.Counts(oldCatalog, newCatalog, "catalog"), .. DecisionParity.Counts(oldOrigins, newOrigins, "origins")],
                 UnresolvedEntries = DecisionParity.UnresolvedEntries(oldCatalog, newCatalog),
                 OriginalEntries = new EntryIds(oldCatalog).EntryCount,
-                Settings = SettingsParity.Compare(Path.Combine(original, "config"), config),
+                Settings = settingItems,
                 Notices = SettingsParity.Notices(Path.Combine(original, "config"), config),
                 Files = FileParity.Compare([("config", Path.Combine(original, "config"), config), ("data", Path.Combine(original, "data"), data)]),
-                Merges = MergeRecheck.Run(newCatalog),
+                Merges = merges,
+                NewMerges = DecisionParity.NewMerges(oldCatalog, newCatalog, DecisionParity.DecisionEntries(oldCatalog, oldOrigins, kinds),
+                    merges.Failing.Select(item => item.Duplicate).ToHashSet()),
+                EmptiedEntries = DecisionParity.EmptiedEntries(oldCatalog, newCatalog),
                 DroppedTables = [.. DecisionParity.DroppedTables(oldCatalog, newCatalog, "catalog"), .. DecisionParity.DroppedTables(oldOrigins, newOrigins, "origins")],
                 Coverage = TableCoverage.Describe(oldCatalog, oldOrigins, kinds),
                 Run = run, Warnings = warnings, MigrationProblems = problems, NotCovered = notCovered,
