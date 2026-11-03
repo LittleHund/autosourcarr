@@ -94,6 +94,13 @@ if run proof "$runner" /usr/bin/true && head -1 "$work/err" | grep -Eq "^AUTOSOU
 else
     fail "runner proof line or clean exit: $(head -c 600 "$work/err")"
 fi
+# Phase 13 (PERF-2): --limits-gate waits for one stdin byte (the app applies cgroup/nice limits first) or EOF.
+if printf 'x' | timeout 60 "$runner" --limits-gate "$job" "$port" -- /usr/bin/true >"$work/out" 2>"$work/err" \
+    && timeout 60 "$runner" --limits-gate "$job" "$port" -- /usr/bin/true >"$work/out" 2>"$work/err" </dev/null; then
+    pass "the limits gate releases the program after the app's byte or EOF"
+else
+    fail "limits gate: $(head -c 400 "$work/err")"
+fi
 
 # a. /config
 if ! run a "$runner" /usr/bin/cat "$config_secret" && ! grep -q "$secret_text" "$work/out"; then

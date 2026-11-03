@@ -683,8 +683,16 @@ int main(int argc, char **argv)
         nproc_budget = (rlim_t)atoi(budget);
     }
 #endif
+    /* --limits-gate: the app applies CPU/memory limits (cgroup, nice) to this process and then writes one byte to
+     * stdin; the runner forks the program only after that byte (or EOF), so the limits cover the program too. */
+    int limits_gate = 0;
+    if (argc > 1 && strcmp(argv[1], "--limits-gate") == 0) {
+        limits_gate = 1;
+        argv++;
+        argc--;
+    }
     if (argc < 5 || strcmp(argv[3], "--") != 0)
-        refuse("usage: repair-runner <job-dir> <proxy-port> -- <program> [args...]");
+        refuse("usage: repair-runner [--limits-gate] <job-dir> <proxy-port> -- <program> [args...]");
     if (geteuid() == 0)
         refuse("The repair runner must not run as root");
     unsigned port = proxy_port(argv[2]);
@@ -761,6 +769,14 @@ int main(int argc, char **argv)
     lower_limit(RLIMIT_NOFILE, 4096);
     lower_limit(RLIMIT_FSIZE, 4ULL << 30);
     lower_limit(RLIMIT_CORE, 0);
+
+    if (limits_gate) {
+        char gate;
+        ssize_t got;
+        do got = read(0, &gate, 1); while (got < 0 && errno == EINTR);
+        if (got < 0)
+            fail("Cannot read the limits gate");
+    }
 
     int channel[2];
     if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, channel) != 0)

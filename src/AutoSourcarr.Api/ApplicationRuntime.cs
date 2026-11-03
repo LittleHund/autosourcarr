@@ -303,6 +303,8 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             await owner._journal.StartAsync(cancellationToken).ConfigureAwait(false);
             owner.RecordUpgrade();
             owner.RecordSignInNotice();
+            // PERF-2: cgroups for job processes are named per instance, so two instances never share one.
+            AutoSourcarr.Core.Jobs.ProcessResourceLimits.InstanceName = owner.Identity.InstanceId.Length > 12 ? owner.Identity.InstanceId[..12] : owner.Identity.InstanceId;
             owner._attention = new(owner.Database, owner.Io, privacy: owner.Privacy);
             owner._source.Client.Attention = owner._attention;
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,

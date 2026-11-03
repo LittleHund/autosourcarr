@@ -10,7 +10,7 @@ public sealed record AppliedLimits(string Mode, string Detail);
 public interface IProcessLimitHost
 {
     bool Linux { get; }
-    /// <summary>The app's own cgroup v2 directory (from /proc/self/cgroup "0::/path" under /sys/fs/cgroup), or null.</summary>
+    /// <summary>The app's own cgroup v2 directory (from /proc/self/cgroup "0::/path" under /sys/fs/cgroup, the mount root for "/"), or null.</summary>
     string? OwnCgroup();
     bool TryWrite(string path, string value);
     bool TryCreateDirectory(string path);
@@ -25,23 +25,26 @@ public interface IProcessLimitHost
 /// work (C# jobs) shares the app's process and is bounded by the queue's workers, run limits and minimum shares.
 /// <list type="bullet">
 /// <item>cgroup v2, when the container's cgroup is delegated and writable (needs no host permission, only a writable
-/// cgroup mount): a sibling group <c>autosourcarr-&lt;type&gt;</c> next to the app's own leaf with <c>cpu.weight</c> and
-/// <c>memory.max</c>; the process is moved there.</item>
-/// <item>otherwise: <c>setpriority</c> (a higher nice value for lower-priority work; raising nice needs no capability) and
-/// <c>prlimit(RLIMIT_AS)</c> for memory (lowering a limit of an own child needs no capability).</item>
+/// cgroup mount): groups inside the app's OWN cgroup subtree, per instance: <c>autosourcarr-&lt;instance&gt;-app</c> holds the
+/// app's own processes (cgroup v2 allows controllers for children only when the parent itself holds no processes),
+/// <c>autosourcarr-&lt;instance&gt;-&lt;type&gt;</c> gets <c>cpu.weight</c> and <c>memory.max</c> and the process.</item>
+/// <item>otherwise: <c>setpriority</c> (a higher nice value for lower-priority work; raising nice needs no capability) and,
+/// when the type asks for it, <c>prlimit(RLIMIT_AS)</c> (lowering a limit of an own child needs no capability).</item>
 /// </list>
 /// Nothing fails when neither works: the result says "none" and the job still runs with the queue's limits.
 /// </summary>
-public sealed class ProcessResourceLimits(IProcessLimitHost? host = null)
+public sealed class ProcessResourceLimits(IProcessLimitHost? host = null, string? instance = null)
 {
+    /// <summary>Set once at startup (a short form of the instance id), so two instances never share a group.</summary>
+    public static string InstanceName { get; set; } = "default";
     private readonly IProcessLimitHost _host = host ?? LinuxProcessLimitHost.Instance;
+    private readonly string _instance = Clean(instance ?? InstanceName);
 
     public AppliedLimits Apply(int processId, string typeName, ProcessLimits limits)
     {
         ArgumentNullException.ThrowIfNull(limits);
         if (!_host.Linux || processId <= 1) return new("none", "process limits need Linux");
-        var name = new string(typeName.Select(c => char.IsAsciiLetterOrDigit(c) || c == '-' ? c : '-').ToArray());
-        if (Cgroup(processId, name, limits) is { } applied) return applied;
+        if (Cgroup(processId, Clean(typeName), limits) is { } applied) return applied;
         var parts = new List<string>();
         if (limits.Nice > 0 && _host.SetNice(processId, Math.Clamp(limits.Nice, 1, 19))) parts.Add("nice " + limits.Nice.ToString(CultureInfo.InvariantCulture));
         if (limits.AddressSpaceBytes is { } bytes && bytes > 0 && _host.LimitAddressSpace(processId, bytes))
@@ -50,22 +53,38 @@ public sealed class ProcessResourceLimits(IProcessLimitHost? host = null)
             : new("nice", string.Join(", ", parts) + " (the cgroup is not writable)");
     }
 
-    private AppliedLimits? Cgroup(int processId, string name, ProcessLimits limits)
+    private static string Clean(string value)
+    {
+        var text = new string(value.Select(c => char.IsAsciiLetterOrDigit(c) || c == '-' ? char.ToLowerInvariant(c) : '-').ToArray());
+        return text.Length == 0 ? "default" : text.Length > 40 ? text[..40] : text;
+    }
+
+    private AppliedLimits? Cgroup(int processId, string type, ProcessLimits limits)
     {
         if (_host.OwnCgroup() is not { } own) return null;
-        var parent = Path.GetDirectoryName(own.TrimEnd('/'));
-        if (parent is null || !_host.Exists(Path.Combine(parent, "cgroup.subtree_control"))) return null;
-        var controllers = _host.Read(Path.Combine(parent, "cgroup.controllers")) ?? "";
-        if (!controllers.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("cpu") || !controllers.Contains("memory", StringComparison.Ordinal)) return null;
-        // The parent's subtree must hand cpu and memory to its children (the app's own leaf is one of them already).
-        if (!_host.TryWrite(Path.Combine(parent, "cgroup.subtree_control"), "+cpu +memory")) return null;
-        var group = Path.Combine(parent, "autosourcarr-" + name);
+        own = own.TrimEnd('/');
+        var leafName = "autosourcarr-" + _instance + "-app";
+        // Once the app moved itself into its leaf, the subtree root is the leaf's parent.
+        if (Path.GetFileName(own) == leafName && Path.GetDirectoryName(own) is { } parent) own = parent.Replace('\\', '/');
+        var controllers = (_host.Read(own + "/cgroup.controllers") ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!controllers.Contains("cpu") || !controllers.Contains("memory")) return null;
+        if (!_host.TryWrite(own + "/cgroup.subtree_control", "+cpu +memory"))
+        {
+            // The app's cgroup still holds processes (cgroup v2 refuses controllers then): move them into the app leaf.
+            var leaf = own + "/" + leafName;
+            if (!_host.Exists(leaf) && !_host.TryCreateDirectory(leaf)) return null;
+            foreach (var line in (_host.Read(own + "/cgroup.procs") ?? "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                _ = _host.TryWrite(leaf + "/cgroup.procs", line);
+            if (!_host.TryWrite(own + "/cgroup.subtree_control", "+cpu +memory")) return null;
+        }
+        var group = own + "/autosourcarr-" + _instance + "-" + type;
         if (!_host.Exists(group) && !_host.TryCreateDirectory(group)) return null;
-        if (!_host.TryWrite(Path.Combine(group, "cpu.weight"), Math.Clamp(limits.CpuWeight, 1, 10000).ToString(CultureInfo.InvariantCulture))) return null;
+        var weight = Math.Clamp(limits.CpuWeight, 1, 10000).ToString(CultureInfo.InvariantCulture);
+        if (!_host.TryWrite(group + "/cpu.weight", weight)) return null;
         var memory = limits.MemoryBytes is { } bytes && bytes > 0 ? bytes.ToString(CultureInfo.InvariantCulture) : "max";
-        if (!_host.TryWrite(Path.Combine(group, "memory.max"), memory)) return null;
-        if (!_host.TryWrite(Path.Combine(group, "cgroup.procs"), processId.ToString(CultureInfo.InvariantCulture))) return null;
-        return new("cgroup", group + " cpu.weight " + Math.Clamp(limits.CpuWeight, 1, 10000).ToString(CultureInfo.InvariantCulture) + ", memory.max " + memory);
+        if (!_host.TryWrite(group + "/memory.max", memory)) return null;
+        if (!_host.TryWrite(group + "/cgroup.procs", processId.ToString(CultureInfo.InvariantCulture))) return null;
+        return new("cgroup", group + " cpu.weight " + weight + ", memory.max " + memory);
     }
 }
 
@@ -82,9 +101,8 @@ public sealed partial class LinuxProcessLimitHost : IProcessLimitHost
                 if (line.StartsWith("0::", StringComparison.Ordinal))
                 {
                     var relative = line[3..].Trim().TrimStart('/');
-                    // In the container's own cgroup namespace the app usually sits at "/": no sibling can be made safely.
-                    if (relative.Length == 0) return null;
-                    return Path.Combine("/sys/fs/cgroup", relative);
+                    // In the container's own cgroup namespace the app usually sits at "/" (the mount root).
+                    return relative.Length == 0 ? "/sys/fs/cgroup" : "/sys/fs/cgroup/" + relative;
                 }
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { _ = error; }

@@ -13,11 +13,20 @@ public static class JobResourceTests
         public bool Writable { get; init; } = true;
         public ConcurrentDictionary<string, string> Written { get; } = new(StringComparer.Ordinal);
         public List<string> Calls { get; } = [];
+        /// <summary>The app's cgroup holds processes: the first subtree_control write fails until they moved to the leaf.</summary>
+        public bool Busy { get; set; }
         public string? OwnCgroup() => Cgroup;
-        public bool TryWrite(string path, string value) { if (!Writable) return false; Written[path.Replace('\\', '/')] = value; return true; }
+        public bool TryWrite(string path, string value)
+        {
+            path = path.Replace('\\', '/');
+            if (!Writable) return false;
+            if (path.EndsWith("/cgroup.subtree_control", StringComparison.Ordinal) && Busy) return false;
+            if (path.EndsWith("-app/cgroup.procs", StringComparison.Ordinal)) Busy = false;
+            Written[path] = value; return true;
+        }
         public bool TryCreateDirectory(string path) => Writable;
-        public bool Exists(string path) => path.Replace('\\', '/').EndsWith("cgroup.subtree_control", StringComparison.Ordinal);
-        public string? Read(string path) => "cpuset cpu io memory pids";
+        public bool Exists(string path) => false;
+        public string? Read(string path) => path.EndsWith("cgroup.procs", StringComparison.Ordinal) ? "1\n7\n" : "cpuset cpu io memory pids";
         public bool SetNice(int processId, int nice) { Calls.Add("nice " + nice); return true; }
         public bool LimitAddressSpace(int processId, long bytes) { Calls.Add("as " + bytes); return true; }
     }
@@ -90,21 +99,55 @@ public static class JobResourceTests
             finally { queue.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
         });
 
-        suite.Add("jobs: process limits use a writable cgroup v2 (cpu.weight, memory.max), else nice and an address-space limit", () =>
+        suite.Add("jobs: process limits use groups inside the app's own cgroup, per instance (moving the app into its leaf first), else nice and RLIMIT_AS", () =>
         {
-            var host = new FakeLimitHost();
-            var applied = new ProcessResourceLimits(host).Apply(1234, "repair runner", new ProcessLimits(CpuWeight: 50, MemoryBytes: 3L << 30, Nice: 10));
+            var host = new FakeLimitHost { Busy = true };
+            var applied = new ProcessResourceLimits(host, "inst1").Apply(1234, "repair runner", new ProcessLimits(CpuWeight: 50, MemoryBytes: 3L << 30, Nice: 10));
             Check.Equal("cgroup", applied.Mode);
-            Check.Equal("50", host.Written["/sys/fs/cgroup/app/autosourcarr-repair-runner/cpu.weight"]);
-            Check.Equal((3L << 30).ToString(System.Globalization.CultureInfo.InvariantCulture), host.Written["/sys/fs/cgroup/app/autosourcarr-repair-runner/memory.max"]);
-            Check.Equal("1234", host.Written["/sys/fs/cgroup/app/autosourcarr-repair-runner/cgroup.procs"]);
+            const string Own = "/sys/fs/cgroup/app/main";
+            Check.Equal("7", host.Written[Own + "/autosourcarr-inst1-app/cgroup.procs"]); // the app's processes moved into its leaf
+            Check.Equal("+cpu +memory", host.Written[Own + "/cgroup.subtree_control"]);
+            Check.Equal("50", host.Written[Own + "/autosourcarr-inst1-repair-runner/cpu.weight"]);
+            Check.Equal((3L << 30).ToString(System.Globalization.CultureInfo.InvariantCulture), host.Written[Own + "/autosourcarr-inst1-repair-runner/memory.max"]);
+            Check.Equal("1234", host.Written[Own + "/autosourcarr-inst1-repair-runner/cgroup.procs"]);
+            Check.True(!host.Written.Keys.Any(key => key.StartsWith("/sys/fs/cgroup/app/autosourcarr", StringComparison.Ordinal)), "never a sibling outside the app's subtree");
+            // After the move /proc/self/cgroup names the leaf: the next group still goes beside it, inside the same subtree.
+            var moved = new FakeLimitHost { Cgroup = Own + "/autosourcarr-inst1-app" };
+            new ProcessResourceLimits(moved, "inst1").Apply(99, "source-host", new ProcessLimits(MemoryBytes: 4L << 30));
+            Check.True(moved.Written.ContainsKey(Own + "/autosourcarr-inst1-source-host/cgroup.procs"), string.Join(",", moved.Written.Keys));
             var readOnly = new FakeLimitHost { Writable = false };
             var fallback = new ProcessResourceLimits(readOnly).Apply(1234, "repair-runner", new ProcessLimits(Nice: 10, AddressSpaceBytes: 8L << 30));
             Check.Equal("nice", fallback.Mode);
             Check.True(readOnly.Calls.SequenceEqual(new[] { "nice 10", "as " + (8L << 30).ToString(System.Globalization.CultureInfo.InvariantCulture) }), string.Join(",", readOnly.Calls));
-            var rootNamespace = new FakeLimitHost { Cgroup = null, Writable = false };
-            Check.Equal("none", new ProcessResourceLimits(rootNamespace).Apply(1234, "x", new ProcessLimits()).Mode);
+            Check.Equal("none", new ProcessResourceLimits(new FakeLimitHost { Cgroup = null, Writable = false }).Apply(1234, "x", new ProcessLimits()).Mode);
             Check.Equal("none", new ProcessResourceLimits(new FakeLimitHost { Linux = false }).Apply(1234, "x", new ProcessLimits(Nice: 5)).Mode);
+        });
+
+        if (OperatingSystem.IsLinux() && File.Exists("/bin/sleep"))
+            suite.Add("jobs (linux): real process limits apply to a child (its cgroup inside the app's subtree, or its nice value)", () =>
+            {
+                using var child = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("/bin/sleep", "20") { UseShellExecute = false })!;
+                try
+                {
+                    var applied = new ProcessResourceLimits(instance: "probe").Apply(child.Id, "probe", new ProcessLimits(CpuWeight: 50, MemoryBytes: 256L << 20, Nice: 10));
+                    if (applied.Mode == "cgroup")
+                        Check.True(File.ReadAllText("/proc/" + child.Id + "/cgroup").Contains("autosourcarr-probe-probe", StringComparison.Ordinal), applied.Detail);
+                    else if (applied.Mode == "nice")
+                        Check.Equal("10", File.ReadAllText("/proc/" + child.Id + "/stat").Split(')')[1].Split(' ', StringSplitOptions.RemoveEmptyEntries)[16]);
+                    Console.WriteLine("INFO process limits on this runner: " + applied.Mode + " (" + applied.Detail + ")");
+                }
+                finally { try { child.Kill(); } catch (InvalidOperationException) { } }
+            });
+        else Console.WriteLine("SKIP jobs (linux): real process limits need Linux");
+
+        suite.Add("jobs: production job types carry their PERF-2 shares and limits", () =>
+        {
+            Check.Equal(1, AutoSourcarr.Api.Endpoints.SourceRepairV1Endpoints.DomainRepairJob.MinimumShare);
+            Check.True(AutoSourcarr.Api.Endpoints.SourceRepairV1Endpoints.DomainRepairJob.Limits == AutoSourcarr.Core.Repair.Runner.Egress.IsolatedRunner.RepairLimits);
+            Check.True(AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher.AttemptJob.Limits is { CpuWeight: 50, Nice: 10 });
+            Check.Equal(1, AutoSourcarr.Core.Imports.ImportRuns.ResolveJob.MinimumShare);
+            Check.Equal(1, AutoSourcarr.Core.Catalogue.Chapters.ChapterRefresh.EntryJob.MinimumShare);
+            Check.True(AutoSourcarr.Core.Sources.Runtime.SourceHostProcess.DefaultLimits is { CpuWeight: 100, MemoryBytes: 4L << 30, AddressSpaceBytes: null });
         });
     }
 }

@@ -39,6 +39,14 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     /// </summary>
     public SourceHostSandboxOptions? Sandbox { get; init; }
 
+    /// <summary>
+    /// PERF-2 limits for the host process (cgroup v2 cpu.weight/memory.max when writable, else nothing: a JVM must not get
+    /// an address-space limit). Default: normal CPU weight and 4 GiB memory, so a runaway extension cannot take the
+    /// container's memory; the app itself stays outside that group.
+    /// </summary>
+    public AutoSourcarr.Core.Jobs.ProcessLimits? Limits { get; init; } = DefaultLimits;
+    public static readonly AutoSourcarr.Core.Jobs.ProcessLimits DefaultLimits = new(CpuWeight: 100, MemoryBytes: 4L << 30);
+
     /// <summary>What the running host runs under (from the launcher's proof line), for health.</summary>
     public SourceHostSandboxState SandboxState { get { lock (_gate) return _sandbox; } }
 
@@ -240,6 +248,12 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             _process = process; _group = setsid is not null; _healthy = false;
         }
         _log("Source host started (process " + process.Id.ToString(CultureInfo.InvariantCulture) + ").");
+        if (Limits is { } limits && OperatingSystem.IsLinux())
+        {
+            // The launcher execs the JVM in this process (or forks it right away); limits apply to it and its children.
+            var applied = new AutoSourcarr.Core.Jobs.ProcessResourceLimits().Apply(process.Id, "source-host", limits);
+            _log("Source host limits: " + applied.Mode + " (" + applied.Detail + ").");
+        }
     }
 
     /// <summary>The launcher to use, or null with the reason the host runs unsandboxed.</summary>
