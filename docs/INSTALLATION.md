@@ -2,9 +2,10 @@
 
 [Back to the overview](../README.md) · [User guide](USER_GUIDE.md)
 
-These instructions describe **0.4.4**, which builds a local Docker image from the
-complete project. The approved C#/.NET and prebuilt-image migration is still in
-progress. A published AutoSourcarr image is not yet available from this project.
+**Previous version (rollback).** These instructions describe the Python **0.4.x** app
+(0.4.5), which builds a local Docker image from `autosourcarr/`. For the current release
+**0.5.0** see [Install 0.5.0](../README.md#install-050), [TrueNAS 0.5.0](../TRUENAS.md#050-current-release)
+and [Upgrade from 0.4.x](upgrade-from-0.4.md).
 
 ## Docker Compose
 

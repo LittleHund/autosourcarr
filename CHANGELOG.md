@@ -1,6 +1,36 @@
-## 0.5.0 (in progress)
+## 0.5.0 - YYYY-MM-DD
 
-C#/.NET conversion (ARC-11); notes are added per conversion phase.
+0.5.0 is AutoSourcarr rewritten in C#/.NET 10 (ARC-11): one image (`docker/Dockerfile`) that runs on its own, with the
+source host (extension sources and WebView), the repair runner, the reader extension repository and the Web UI
+inside; a main Suwayomi is optional. Settings live in `config.json`. The Python 0.4.5 app stays available as the
+rollback until the 0.5.0 deploy is confirmed.
+
+**Upgrade from 0.4.x:** follow [docs/upgrade-from-0.4.md](docs/upgrade-from-0.4.md) (back up, migrate a copy, compare,
+then switch). Install: `docker-compose.0.5.0.yml` (see README and TRUENAS.md).
+
+**Check before you deploy:**
+
+- **External sign-in (Authelia or another proxy):** set `AUTH_TRUSTED_PROXIES` to the reverse proxy's address or
+  network. Without it nobody can sign in through the proxy (the admin token and API keys still work).
+- **Reader extension repository:** add a GET/HEAD-only bypass for `/api/reader/repo/` in Authelia/NPM
+  (`docs/reverse-proxy/`). The `^/api/reader/v1([/?].*)?$` rule is unchanged.
+- **Settings:** `config.json` (+ `config.key`) replaces `autosourcarr.env`. An old `/config/autosourcarr.env` is
+  converted on first start and kept as a backup.
+- **Rollback:** 0.4.x cannot read a `config.json` that contains `connections`. Before going back to 0.4.x, remove the
+  `"connections"` key (keep a copy). 0.4.x ignores the new catalogue tables.
+- **Restarts:** the app exits with code 75 when it must restart itself. Keep the Compose restart policy at
+  `unless-stopped`, `always` or `on-failure`, never `no`.
+- **Reader extension:** install it again from the new repository (System → Reader setup: repository link and QR
+  code per server slot). Its version is 0.5.0 (version code 5000).
+- **Retired link settings:** `KOMF_BROWSER_URL` and `REPAIR_AI_BROWSER_URL` are removed; a saved value is dropped. A
+  Komf connection under Settings → Connections is unaffected.
+
+Version note: the release, the C# app, the 0.5.0 image, the compatibility list and the reader extension are 0.5.0
+(root `VERSION`). The Python app under `autosourcarr/` keeps its own `autosourcarr/VERSION` at 0.4.5 and its image is
+unchanged. The owner's duplicate decisions (`duplicate-pairs.user.json`) were removed from the repository; the
+synthetic duplicate set still runs in CI.
+
+Notes per conversion phase:
 
 - Phase 7 (Connections): connections are saved in `config.json` under a new top-level
   `"connections"` key, with secrets encrypted by `config.key`. 0.4.x refuses a
@@ -12,8 +42,7 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
   2026110192) and the setting `LIBRARY_DIR`. 0.4.x ignores these tables. The reader extension
   repository is served at `/api/reader/repo/` without a key (GET/HEAD only); the reader API at
   `/api/reader/v1` keeps its key and Authelia rule. Add the repo path to Authelia/NPM when you
-  deploy 0.5.0 (`docs/reverse-proxy/`). Limits: the reader extension is not yet built into the
-  image (phase 13).
+  deploy 0.5.0 (`docs/reverse-proxy/`). The reader extension is built into the image since phase 13.
 - Ingest and import gate (owner decision 2026-11-02): a new source record no longer attaches to
   an existing entry on its title alone; it needs an agreeing creator, cover or summary, and
   otherwise becomes its own entry. Once its details are fetched the duplicate review is rescored,
@@ -160,9 +189,14 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
       capabilities and is documented as not recommended;
     - the public-suffix list is a compact built-in one;
     - translation enrichment from the crawler is not ported.
-
-## Unreleased
-
+- Phase 14 (Cutover, release preparation):
+  - Versions: root `VERSION`, `Directory.Build.props`, `ApplicationRuntime.Version` (was `0.4.3-migration`), the
+    compatibility list, the static asset `?v=` and the reader extension are 0.5.0; `autosourcarr/VERSION` and
+    `autosourcarr/bundled/build/VERSION` stay 0.4.5 for the Python image. `check-project.sh` checks both sides and
+    `print-compatibility.py --check` checks the list against `VERSION`.
+  - `tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json` is removed and git-ignored; the user-set
+    duplicate test runs only with a local copy or `AUTOSOURCARR_DUPLICATE_TEST_SET`.
+  - Limits: the file is still in the git history (rewriting public history is the owner's decision).
 - Reader extension sources moved from `extension/module/src/eu/kanade/tachiyomi/extension/all/autosourcarr/`
   to `extension/module/src/autosourcarr/`. The Kotlin package, the APK package name and
   the source ID are unchanged; `build-in-container.sh` still places the files at the

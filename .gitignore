@@ -26,3 +26,5 @@ lockfiles.txt
 autosourcarr/app/static/dist/
 test-results/
 playwright-report/
+# The owner's duplicate decisions (removed before cutover); a local copy stays out of the repository
+tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json

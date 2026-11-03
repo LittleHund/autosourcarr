@@ -4,7 +4,7 @@
 Reads src/AutoSourcarr.Core/Compatibility/compatibility.json and adds what the build derives itself:
 the database schema (latest FluentMigrator migration per database file, as SchemaMigrator.LatestMigration does).
 It also checks that the listed extension API equals libVersion in extension/module/build.gradle.kts, so a release
-cannot publish a stale list.
+cannot publish a stale list, and that app_version equals the release version in the root VERSION file.
 
 Usage (CI, per release):
     python scripts/print-compatibility.py > compatibility-<version>.json      # attach to the release
@@ -42,6 +42,9 @@ def lib_version():
 def build():
     data = json.loads(LIST.read_text(encoding='utf-8'))
     problems = []
+    release = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
+    if data['app_version'] != release:
+        problems.append(f"app_version {data['app_version']} != release VERSION {release}")
     if data['extension_api']['version'] != lib_version():
         problems.append(f"extension_api.version {data['extension_api']['version']} != libVersion {lib_version()}")
     for name in ('share_format', 'profile_format', 'backup_format'):

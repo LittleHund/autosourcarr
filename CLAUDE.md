@@ -22,13 +22,14 @@ inside the instance. The catalogue must be shareable/migratable into other peopl
   (initial commit only), `conversion` (the migration; last pushed commit 1cc573b = phase 9),
   `ci-probe` (scratch compile/test branch, see §4), `handoff/phase-10-wip` (this handoff; triggers no CI).
   To continue: `git checkout conversion && git merge --ff-only origin/handoff/phase-10-wip`.
-- Released app: **0.4.5** (`VERSION`), Python 3.12 FastAPI + SQLite, UI "Reimagined"
+- Released app: **0.4.5** (`autosourcarr/VERSION`; root `VERSION` is the 0.5.0 release), Python 3.12 FastAPI + SQLite, UI "Reimagined"
   (vanilla JS, Sonarr v5 style), image built on `ghcr.io/suwayomi/suwayomi-server:v2.3.2243`,
   deployed by TrueNAS Compose behind Authelia, UID/GID 568:568, Europe/Amsterdam. Whether 0.4.5 is
   deployed on the NAS: **unverified** (it was an open user item on 2026-10-31).
 - Target: **0.5.0** = the Python → C#/.NET 10 conversion, standalone (Suwayomi optional),
   settings in `config.json`. **0.6.0** = new features (phases 15–17) after the Python app retires.
-  C# assembly version is still `0.4.3-migration` (`Directory.Build.props`, `ApplicationRuntime.Version`).
+  Phase 14 release prep set the C# app, image, compatibility list and reader extension to `0.5.0`; the Python app
+  keeps `autosourcarr/VERSION` = 0.4.5 (version split in §4).
 
 ### Migration state (plan: Claude Docs "AutoSourcarr conversion plan", 14 phases to cutover)
 
@@ -171,6 +172,16 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
   external solver); repair-runner check 22 PASS; Python 2706 passed, 27 failed (the baseline in
   `tests/python-baseline-failures.txt`), 4 skipped. Known flaky (retried by `ci-pytest.sh`):
   `test_v094_runtime.py::test_websocket_relays_text_binary_and_closes_remote`.
+- **Version split (phase 14, until the Python app retires).** Two sides, each aligned on its own;
+  `check-project.sh` step 7 ("version alignment") asserts both:
+
+  | Side | Files | Value |
+  | --- | --- | --- |
+  | Release / C# / 0.5.0 image | root `VERSION` (copied by `docker/Dockerfile`, read by `scripts/build-reader-extension.sh`), `Directory.Build.props` `VersionPrefix`, `ApplicationRuntime.Version`, `docker/Dockerfile` `ARG VERSION`, `compatibility.json` `app_version` (`print-compatibility.py --check` compares it with `VERSION`), static asset `?v=` in `index.html` (the 0.5.0 image serves the UI; `UI_BUILD_VERSION` reads it), `extension/module/build.gradle.kts` fallback | 0.5.0 (reader extension version code 5000) |
+  | Python 0.4.5 (rollback) | `autosourcarr/VERSION` (read by the Python app and its `autosourcarr/Dockerfile`), `autosourcarr/bundled/build/VERSION` (synced from it by `sync-bundled-tools.py`), `repair-worker/server.py` status version, the image tag in `scripts/build-integrated-image.sh` | 0.4.5 |
+
+  The `?v=` change does not affect the Python app (it is a cache key and the UI's diagnostic version). When the
+  Python app retires, drop the Python side of the check.
 - Analyzer note: the ASP.NET RouteHandlerAnalyzer crashes intermittently (AD0001) — kept as a warning
   in `AutoSourcarr.Api.csproj`; always pass Map* handlers as cast lambdas `(Func<...>)(...)`.
   `InvalidDataException` is sealed in .NET 10; `$$"""` raw strings must not contain `}}}`.
@@ -210,7 +221,7 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 | 2026-11-01 | This PC has a .NET 10 SDK and nuget access: build and test locally first, then one ci-probe per round (owner decision). | decision |
 | 2026-11-02 | Ingest and import gate decided (option C): a title alone never matches automatically, summaries never admit below 0.94, duplicates rescored after hydration (877306c). | resolved |
 | 2026-11-01 | Open owner decisions: MAT-11/MAT-22/Komf/AUTH-8; AI repair worker port target; AUTH-7/9 marked 0.6.0. | open |
-| 2026-11-01 | `duplicate-pairs.user.json` (2,680 pairs from the user's decisions) committed locally for CI; user agreed it need not be private but **must be removed once everything functions**. | open (remove before cutover) |
+| 2026-11-01 | `duplicate-pairs.user.json` (2,680 pairs from the user's decisions) committed locally for CI; user agreed it need not be private but **must be removed once everything functions**. | resolved (phase 14: removed and git-ignored; the test runs only with a local copy or `AUTOSOURCARR_DUPLICATE_TEST_SET`; still in git history — rewriting it is an owner decision) |
 | 2026-11-01 | Reader extension signing: user must add GitHub secrets `AUTOSOURCARR_EXT_KEYSTORE_B64`, `_KEYSTORE_PASSWORD`, `_KEY_PASSWORD`, `_KEY_ALIAS` (= `autosourcarr`); without them CI signs with a throwaway key. | waiting on user |
 | 2026-11-01 | Reader extension slot count is fixed at build time (5); "add more from Mihon" is not possible with the Keiyoushi plugin. | limitation |
 | 2026-11-01 | Mihon's next backup format is unpublished; only a probe sample exists; `mihon-backup-watch.py` tracks releases. | open |
@@ -226,7 +237,7 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 | 2026-10-31 | Open user decisions: (2) custom C# test runner vs xUnit; (3) SET-5 default `/config` vs `/data`; (1) host entry: default taken (stays in Api). | open |
 | 2026-10-31 | User items: delete old `src\eu` folders (stage 2), run `scripts\stage3-remove-old.ps1`, delete `src\AutoSourcarr.Core\Text`, deploy 0.4.5, optionally allow nuget/dotnet domains, delete `ci-probe` at the end, add the `/api/reader/repo/` Authelia/NPM bypass at 0.5.0 deploy. | open |
 | 2026-10-29 | Requirements proposals PROP-1..4 (release split, defer CON-4/SRC-9/MAT-21, drop UI-3 theme research, hand-maintained backup schema): `requirements.md` §18 records them as accepted on 2026-10-29. | resolved |
-| 2026-10-25 | C# runtime version constant still `0.4.3-migration`; the compatibility list describes 0.5.0. | fix at release |
+| 2026-10-25 | C# runtime version constant still `0.4.3-migration`; the compatibility list describes 0.5.0. | resolved (phase 14: 0.5.0, version split in §4) |
 
 ## 7. User skills used on this project
 

@@ -19,7 +19,9 @@ SCRIPTS = ('cleanup-old-helper-files.sh','check-linux-text.py')
 
 
 def sources(project: Path) -> dict[str, Path]:
-    files: dict[str, Path] = {'build/VERSION': project / 'VERSION'}
+    # The bundled tools belong to the Python 0.4.5 image, so they carry its version (autosourcarr/VERSION), not the
+    # 0.5.0 release version in the root VERSION (CLAUDE.md §4, version split).
+    files: dict[str, Path] = {'build/VERSION': project / 'autosourcarr/VERSION'}
     for src in sorted((project / 'repair-worker').glob('*.py')):
         files['repair-worker/' + src.name] = src
     for src in sorted((project / 'source_tools').glob('*.py')):

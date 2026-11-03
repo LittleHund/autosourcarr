@@ -26,9 +26,10 @@ public static class DuplicateTests
             Check.True(result.Ingest is { } ingest && ingest.Pairs == result.Pairs, "the ingest path is evaluated over the same pairs");
             Check.True(result.Ingest!.WrongMerges.Count == 0, "Ingest wrong merges: " + string.Join("; ", result.Ingest!.WrongMerges));
         });
-        // The user's own decisions (2,680 pairs; committed until cutover). The whole set takes longer than the CI job, so
-        // the regular suite runs every different-work pair (the only ones that can merge wrongly) plus an even sample of
-        // the same-work pairs, 300 in all; the CI probe runs the whole set through the environment variable.
+        // The user's own decisions (2,680 pairs). Removed from the repository at cutover (phase 14): the test registers
+        // only when a local copy exists at DuplicateTestSet.UserPath (git-ignored) or the environment variable names one.
+        // With the local copy the suite runs every different-work pair (the only ones that can merge wrongly) plus an
+        // even sample of the same-work pairs, 300 in all; the environment variable runs the whole set.
         // Pairs labelled same came from historical automatic merges, so recall is reported, never asserted.
         var privateSet = Environment.GetEnvironmentVariable(DuplicateTestSet.EnvironmentVariable);
         var whole = !string.IsNullOrWhiteSpace(privateSet) && File.Exists(privateSet);
