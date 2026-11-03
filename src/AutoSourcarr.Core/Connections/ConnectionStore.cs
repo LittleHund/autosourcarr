@@ -53,7 +53,7 @@ public sealed class ConnectionStore
     /// <summary>CON-5 update notices: what happens after a change of a connection of that type.</summary>
     public const string SolverChangeNotice = "The source host restarts to use the new solver list.";
     public const string SuwayomiChangeNotice = "The Suwayomi change feed reconnects.";
-    public const string RollbackNotice = "Connections are saved in config.json under \"connections\"; before going back to AutoSourcarr 0.4.x, remove that key, because 0.4.x refuses to start with it.";
+    public const string RollbackNotice = "Connections are saved in config.json under \"connections\". AutoSourcarr 0.4.x never reads config.json: a rollback starts 0.4.5 on its untouched 0.4.x folders, where this connection does not exist.";
     private const int MaxValueLength = 4096;
     private const int MaxLabelLength = 100;
     private const int MaxMessageLength = 500;

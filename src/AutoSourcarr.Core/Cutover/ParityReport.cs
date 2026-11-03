@@ -27,27 +27,52 @@ public sealed class ParityReport
     public required MergeRecheckResult Merges { get; init; }
     public JsonObject Run { get; init; } = [];
     public List<string> Warnings { get; init; } = [];
+    /// <summary>Why the migration itself did not complete (safe mode, a failed update, a failed required step). Any → MIGRATION FAILED.</summary>
+    public List<string> MigrationProblems { get; init; } = [];
+    /// <summary>0.4.x tables the migrated files no longer have (none is retired on purpose).</summary>
+    public List<string> DroppedTables { get; init; } = [];
+    public List<TableCoverageItem> Coverage { get; init; } = [];
+    /// <summary>First-start work that needs the network and therefore is not covered by this verdict.</summary>
+    public List<string> NotCovered { get; init; } = [];
 
     public int LostSubscriptions => Decisions.Where(result => result.Kind.Group == ParityGroup.Subscription).Sum(result => result.Lost);
     public int LostDecisions => Decisions.Where(result => result.Kind.Group != ParityGroup.Subscription).Sum(result => result.Lost);
     public int LostSettings => Settings.Count(item => item.Lost);
-    public bool Ok => LostSubscriptions == 0 && LostDecisions == 0 && LostSettings == 0;
+    public int MissingKeyFiles => Files.Keys.Count(item => item.Status.StartsWith("MISSING", StringComparison.Ordinal));
+    public bool MigrationCompleted => MigrationProblems.Count == 0;
+    public bool Ok => MigrationCompleted && LostSubscriptions == 0 && LostDecisions == 0 && LostSettings == 0 && UnresolvedEntries.Count == 0
+        && DroppedTables.Count == 0 && MissingKeyFiles == 0;
 
-    public string Verdict => Ok
-        ? "PARITY OK: 0 lost manual decisions, 0 lost subscriptions"
-        : string.Create(CultureInfo.InvariantCulture, $"PARITY FAILED: {LostDecisions} lost manual decisions, {LostSubscriptions} lost subscriptions, {LostSettings} lost settings")
-          + " (" + string.Join("; ", Decisions.Where(result => result.Lost > 0).Select(result => result.Kind.Name + ": " + result.Lost.ToString(CultureInfo.InvariantCulture))
-              .Concat(Settings.Where(item => item.Lost).Select(item => "setting " + item.Key))) + ")";
+    public string Verdict
+    {
+        get
+        {
+            if (!MigrationCompleted) return "MIGRATION FAILED: " + string.Join("; ", MigrationProblems) + " — do not deploy this output";
+            if (Ok) return "PARITY OK: 0 lost manual decisions, 0 lost subscriptions";
+            var reasons = Decisions.Where(result => result.Lost > 0).Select(result => result.Kind.Name + ": " + result.Lost.ToString(CultureInfo.InvariantCulture))
+                .Concat(Settings.Where(item => item.Lost).Select(item => "setting " + item.Key))
+                .Concat(UnresolvedEntries.Count > 0 ? [UnresolvedEntries.Count.ToString(CultureInfo.InvariantCulture) + " entries gone"] : [])
+                .Concat(DroppedTables.Select(table => "table " + table + " dropped"))
+                .Concat(Files.Keys.Where(item => item.Status.StartsWith("MISSING", StringComparison.Ordinal)).Select(item => "key file " + item.Path + " missing"));
+            return string.Create(CultureInfo.InvariantCulture, $"PARITY FAILED: {LostDecisions} lost manual decisions, {LostSubscriptions} lost subscriptions, {LostSettings} lost settings")
+                + " (" + string.Join("; ", reasons) + ") — do not deploy this output";
+        }
+    }
 
     public JsonObject ToJson() => new()
     {
-        ["verdict"] = Verdict, ["ok"] = Ok, ["lost_manual_decisions"] = LostDecisions, ["lost_subscriptions"] = LostSubscriptions, ["lost_settings"] = LostSettings,
+        ["verdict"] = Verdict, ["ok"] = Ok, ["migration_completed"] = MigrationCompleted,
+        ["migration_problems"] = new JsonArray(MigrationProblems.Select(text => (JsonNode)text).ToArray()),
+        ["dropped_tables"] = new JsonArray(DroppedTables.Select(text => (JsonNode)text).ToArray()), ["missing_key_files"] = MissingKeyFiles,
+        ["not_covered"] = new JsonArray(NotCovered.Select(text => (JsonNode)text).ToArray()),
+        ["table_coverage"] = new JsonArray(Coverage.Select(item => (JsonNode)item.ToJson()).ToArray()), ["lost_manual_decisions"] = LostDecisions, ["lost_subscriptions"] = LostSubscriptions, ["lost_settings"] = LostSettings,
         ["input"] = Input, ["from_version"] = FromVersion, ["to_version"] = ToVersion, ["created_at"] = CreatedAt, ["run"] = Run.DeepClone(),
         ["warnings"] = new JsonArray(Warnings.Select(text => (JsonNode)text).ToArray()),
         ["decisions"] = new JsonArray(Decisions.Select(result => (JsonNode)new JsonObject
         {
             ["name"] = result.Kind.Name, ["group"] = result.Kind.Group.ToString().ToLowerInvariant(), ["table"] = result.Kind.Table,
-            ["compared"] = result.Compared, ["original"] = result.Original, ["migrated"] = result.Migrated,
+            ["compared"] = result.Compared, ["note"] = result.Note, ["original"] = result.Original, ["migrated"] = result.Migrated,
+            ["preexisting"] = new JsonArray(result.Preexisting.Select(item => (JsonNode)item.ToJson()).ToArray()),
             ["missing"] = new JsonArray(result.Missing.Select(item => (JsonNode)item.ToJson()).ToArray()),
             ["changed"] = new JsonArray(result.Changed.Select(item => (JsonNode)item.ToJson()).ToArray()),
         }).ToArray()),
@@ -71,6 +96,18 @@ public sealed class ParityReport
         Line();
         Line("Created " + CreatedAt + " from " + Input + ". This report stays on your PC: it lists your manga titles and setting names, never a secret value.");
         Line();
+        if (MigrationProblems.Count > 0)
+        {
+            Line("## The migration did not complete"); Line();
+            foreach (var problem in MigrationProblems) Line("- " + problem);
+            Line(); Line("Do not deploy this output. The comparison below is shown for diagnosis only."); Line();
+        }
+        if (NotCovered.Count > 0)
+        {
+            Line("## Not covered by this verdict (needs the network; runs at the first real start)"); Line();
+            foreach (var item in NotCovered) Line("- " + item);
+            Line();
+        }
         if (Warnings.Count > 0)
         {
             Line("## Warnings"); Line();
@@ -83,7 +120,7 @@ public sealed class ParityReport
         foreach (var result in Decisions)
             Line(result.Compared
                 ? string.Create(CultureInfo.InvariantCulture, $"| {Cell(result.Kind.Name)} | {result.Kind.Group} | {result.Original} | {result.Migrated} | {result.Missing.Count} | {result.Changed.Count} |")
-                : $"| {Cell(result.Kind.Name)} | {result.Kind.Group} | not in this 0.4.x | | | |");
+                : $"| {Cell(result.Kind.Name)} | {result.Kind.Group} | {Cell(result.Note ?? "not in this 0.4.x")} | | | |");
         Line();
         Line("Entry ids are compared through the merge aliases (canonical ids). Reader progress: not stored by 0.4.x (Mihon keeps it), nothing to compare.");
         Line();
@@ -94,6 +131,12 @@ public sealed class ParityReport
             foreach (var item in result.Missing.Concat(result.Changed).Take(ListLimit))
                 Line($"| {Cell(item.Key)} | {Cell(item.Title)} | {Cell(item.Before)} | {Cell(item.After ?? "(missing)")} |");
             if (result.Lost > ListLimit) Line(string.Create(CultureInfo.InvariantCulture, $"| … {result.Lost - ListLimit} more in parity-report.json | | | |"));
+            Line();
+        }
+        foreach (var result in Decisions.Where(result => result.Preexisting.Count > 0))
+        {
+            Line("### " + result.Kind.Name + " — already so in 0.4.x (not caused by the update)"); Line();
+            foreach (var item in result.Preexisting.Take(ListLimit)) Line("- " + Cell(item.Key) + " " + Cell(item.Title) + ": " + Cell(item.Before));
             Line();
         }
         Line("## Entries"); Line();
@@ -121,6 +164,11 @@ public sealed class ParityReport
         foreach (var item in Files.Missing.Take(ListLimit)) Line("- missing: " + Cell(item.Path));
         foreach (var item in Files.Changed.Take(ListLimit)) Line("- changed: " + Cell(item.Path));
         Line("- Accounts: 0.4.x had none (Authelia only); 0.5.0 keeps them in config/accounts/accounts.json.");
+        Line();
+        Line("## Table coverage (every 0.4.5 table)"); Line();
+        if (DroppedTables.Count > 0) Line("Dropped by the migration (FAILED): " + string.Join(", ", DroppedTables) + ".");
+        Line("| File | Table | Treatment | Detail |"); Line("| --- | --- | --- | --- |");
+        foreach (var item in Coverage) Line($"| {item.File} | {item.Table} | {Cell(item.Treatment)} | {Cell(item.Detail)} |");
         Line();
         Line("## Row counts (every table in both files)"); Line();
         Line("| File | Table | 0.4.x | 0.5.0 |"); Line("| --- | --- | ---: | ---: |");
