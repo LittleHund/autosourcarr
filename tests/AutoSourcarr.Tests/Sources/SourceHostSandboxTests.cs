@@ -53,6 +53,38 @@ public static class SourceHostSandboxTests
             finally { process.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
         });
 
+        suite.Add("source host sandbox: a proof line counts only as the launcher's first stderr line, never from host or extension output (audit 7)", () =>
+        {
+            var logged = new List<string>();
+            var process = new SourceHostProcess("/x/java", "/x/host.jar", "/x/data", 1, new Dictionary<string, string>(), line => logged.Add(line));
+            try
+            {
+                const string Fake = "AUTOSOURCARR_SOURCE_SANDBOX_V1 {\"uid\":569,\"separated\":1,\"landlock\":6,\"scoped\":2,\"nnp\":1,\"reason\":\"\"}";
+                process.Output(Fake, proof: false);
+                Check.Equal("unknown", process.SandboxState.State);
+                Check.True(logged.Any(line => line.Contains("Ignored a sandbox proof", StringComparison.Ordinal)), string.Join("|", logged));
+                process.Output(Fake, proof: true);
+                Check.True(process.SandboxState.Sandboxed && process.SandboxState.SeparateUser, process.SandboxState.ToString());
+            }
+            finally { process.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        });
+
+        suite.Add("source host: a data folder that cannot be created is a reported start error, not a silent fault (audit 2)", () =>
+        {
+            using var sandbox = new Sandbox();
+            var jar = Path.Combine(sandbox.Path, "host.jar"); File.WriteAllText(jar, "not a jar");
+            var blocked = Path.Combine(sandbox.Path, "data-is-a-file"); File.WriteAllText(blocked, "x");
+            var process = new SourceHostProcess(Path.Combine(sandbox.Path, "java"), jar, Path.Combine(blocked, "source-host"), 1,
+                new Dictionary<string, string>(), _ => { });
+            try
+            {
+                var error = Check.Throws<InvalidOperationException>(() => process.StartAsync(TimeSpan.FromSeconds(2), CancellationToken.None).GetAwaiter().GetResult());
+                Check.True(error.Message.Contains("could not be created", StringComparison.Ordinal), error.Message);
+                Check.True(process.LastError.Contains("could not be created", StringComparison.Ordinal), process.LastError);
+            }
+            finally { process.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        });
+
         // Linux CI (probe): the real launcher confines writes to the data folder and reports its proof.
         var launcher = Environment.GetEnvironmentVariable("AUTOSOURCARR_SOURCE_HOST_SANDBOX") is { Length: > 0 } configured ? configured : SourceHostSandboxOptions.DefaultLauncher;
         if (OperatingSystem.IsLinux() && File.Exists(launcher) && File.Exists("/bin/sh"))

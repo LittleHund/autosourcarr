@@ -432,5 +432,13 @@
     "allow_empty": true,
     "advanced": true,
     "description": "Optional header supplied by your trusted authentication proxy to identify users. Your proxy handles its own login; do not put your Authelia password here."
+  },
+  {
+    "key": "AUTH_TRUSTED_PROXIES",
+    "step": "access",
+    "label": "Trusted reverse proxy addresses",
+    "kind": "text",
+    "allow_empty": true,
+    "description": "Required for external sign-in (AUTH_METHOD=external): the address of the reverse proxy that sends Remote-User, for example the Authelia or Nginx Proxy Manager container IP or its Docker network (172.18.0.0/16). Comma-separated IPs or CIDR ranges. Loopback and this container's own address are refused."
   }
 ]

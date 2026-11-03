@@ -16,7 +16,8 @@ public sealed class ChapterRefresh(SqliteDatabase database, object sourceWriteGa
     Func<long, bool, bool, CancellationToken, Task<JsonObject>> fetch, Func<TimeSpan>? sourceTimeout = null, TimeProvider? clock = null)
 {
     public static readonly JobType CheckJob = new("chapter-check", "Check chapters", JobPriority.High, RunLimit: 2, StallTimeout: TimeSpan.FromMinutes(5));
-    public static readonly JobType EntryJob = new("entry-chapter-refresh", "Refresh chapters", JobPriority.Normal, RunLimit: 2, StallTimeout: TimeSpan.FromMinutes(10));
+    public static readonly JobType EntryJob = new("entry-chapter-refresh", "Refresh chapters", JobPriority.Normal, RunLimit: 2, StallTimeout: TimeSpan.FromMinutes(10))
+    { MinimumShare = 1 }; // PERF-2: readers wait on chapter lists; one worker slot stays theirs while one waits
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private CatalogueQueries Queries => new(database, sourceWriteGate, _ => false);
 

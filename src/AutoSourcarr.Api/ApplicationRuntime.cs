@@ -190,9 +190,21 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         return result;
     }
 
+    /// <summary>The external sign-in problem (no or unusable AUTH_TRUSTED_PROXIES), or null.</summary>
+    internal string? SignInProblem => Settings.AuthMethod == "external"
+        ? AutoSourcarr.Core.Settings.TrustedProxies.Problems(Settings.AuthTrustedProxies, external: true).FirstOrDefault() : null;
+
+    /// <summary>Phase 13 audit: a persistent admin notice while external sign-in cannot trust any proxy.</summary>
+    private void RecordSignInNotice()
+    {
+        if (SignInProblem is { } problem)
+            Errors.Record("Sign-in", problem, key: "auth-trusted-proxies", pinned: true, statusCode: 503, errorType: "AuthTrustedProxiesMissing");
+    }
+
     /// <summary>Environment keys that load or inject code (dynamic loader, .NET/CLR hooks, JVM option files) or are not plain names.</summary>
     internal static bool LoaderKey(string key) =>
         key.Length is 0 or > 128 || !key.All(c => char.IsAsciiLetterOrDigit(c) || c == '_') || char.IsAsciiDigit(key[0])
+        || key is "GTK_MODULES" or "GTK_PATH" or "GIO_EXTRA_MODULES" or "GDK_PIXBUF_MODULE_FILE" or "GCONV_PATH" or "LOCPATH" || key.StartsWith("MALLOC_", StringComparison.Ordinal)
         || key is "_JAVA_OPTIONS" or "JDK_JAVA_OPTIONS" or "CLASSPATH" or "BASH_ENV" or "ENV" or "SHELLOPTS"
         || key.StartsWith("LD_", StringComparison.Ordinal) || key.StartsWith("DOTNET_", StringComparison.Ordinal)
         || key.StartsWith("CORECLR_", StringComparison.Ordinal) || key.StartsWith("COMPlus_", StringComparison.Ordinal)
@@ -290,6 +302,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             owner._journal = new TaskJournal(owner.Database, owner.Tasks, owner.Io, owner.Privacy);
             await owner._journal.StartAsync(cancellationToken).ConfigureAwait(false);
             owner.RecordUpgrade();
+            owner.RecordSignInNotice();
+            // PERF-2: cgroups for job processes are named per instance, so two instances never share one.
+            AutoSourcarr.Core.Jobs.ProcessResourceLimits.InstanceName = owner.Identity.InstanceId.Length > 12 ? owner.Identity.InstanceId[..12] : owner.Identity.InstanceId;
             owner._attention = new(owner.Database, owner.Io, privacy: owner.Privacy);
             owner._source.Client.Attention = owner._attention;
             owner._catalogue = await CatalogueRuntime.CreateAsync(owner.Database, owner._catalogueWriteGate,
@@ -777,6 +792,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             ["source_host"] = source,
             // SRC-5 / phase 13: what the source host and its WebView run under (Landlock sandbox, user); never blocks sources.
             ["source_sandbox"] = _hostProcess?.SandboxState.Json(),
+            ["sign_in"] = new JsonObject { ["method"] = settings.AuthMethod, ["problem"] = SignInProblem },
             ["repair_isolation"] = _repairIsolation?.Probe().Json(),
             ["main_suwayomi"] = MainSuwayomiHealth(settings),
             ["translation"] = _translationHealth?.Snapshot(_healthStop.Token)

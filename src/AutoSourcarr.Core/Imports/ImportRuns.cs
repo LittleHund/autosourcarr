@@ -43,7 +43,8 @@ public sealed partial class ImportRuns
     public static readonly JobType ImportJob = new("backup-import", "Import Mihon/Tachiyomi backup", JobPriority.Normal, JobFlags.LongRunning,
         StallTimeout: TimeSpan.FromMinutes(30));
     public static readonly JobType ResolveJob = new("import-resolve", "Resolve imported entry", JobPriority.High, RunLimit: 2,
-        StallTimeout: TimeSpan.FromMinutes(10));
+        StallTimeout: TimeSpan.FromMinutes(10))
+    { MinimumShare = 1 }; // PERF-2: a person waits on a resolve; a flood of background work never takes its last slot
     public static readonly JobType RejectJob = new("import-reject", "Reject imported match", JobPriority.High, StallTimeout: TimeSpan.FromMinutes(10));
     public static readonly JobType DiscoveryJob = new("import-discovery", "Find import match candidates", JobPriority.Low, JobFlags.LongRunning,
         StallTimeout: TimeSpan.FromMinutes(30));

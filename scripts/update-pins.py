@@ -5,12 +5,15 @@
   python3 scripts/update-pins.py --check     report stale pins only (exit 1 when one is stale, 0 when all are current)
   python3 scripts/update-pins.py --list      print every pin that was found, nothing is fetched
 
-What is pinned (and therefore refreshed here):
+What is pinned:
   * every container image written as  <registry>/<repo>:<tag>@sha256:<digest>  in the files below: the tag is
-    kept and the digest is set to what the registry serves for that tag today (the multi-arch index digest);
+    kept and the digest is set to what the registry serves for that tag today (the multi-arch index digest). A
+    digest is the content address itself, so refreshing it is safe to automate; the diff is still reviewed.
   * every downloaded tool written as a pair of Dockerfile build arguments  ARG <NAME>_URL=<url>  and
-    ARG <NAME>_SHA256=<hex> / ARG <NAME>_SHA512=<hex>: the hash is taken from <url>.checksum when the vendor
-    publishes one (JetBrains does), otherwise the file is downloaded and hashed (skipped with --no-downloads).
+    ARG <NAME>_SHA256=<hex> / ARG <NAME>_SHA512=<hex>. These hashes are pinned IN THE REPOSITORY and never rewritten
+    here: the upstream value (the vendor's <url>.checksum line for exactly that file name, or a download with
+    --download) is only REPORTED as "UPSTREAM-CHANGED" for a person to verify independently and edit by hand. A
+    checksum served by the same host as the file is not an independent proof.
 
 Not refreshed here, on purpose: git commit pins (Suwayomi v2.4.2366 in scripts/build-source-host.sh, Keiyoushi in
 extension/keiyoushi-default.lock) and package versions (package-lock.json, Directory.Packages.props + lock files).
@@ -18,8 +21,11 @@ Those change behaviour and are updated by hand with their own tests. OS packages
 the current, signed Ubuntu packages at build time (PIPE-1/PIPE-2 "fresh OS packages"); the build records the list in
 /opt/autosourcarr-image-packages.txt.
 
-The release workflow may run this on a schedule and open the diff as a pull request, but that schedule is commented
-out until the owner enables it (.github/workflows/release.yml). Only the Python standard library is used.
+Owner note: the release workflow's scheduled run of this script stays disabled (the owner does not want extra GitHub
+runs or notification mail); run it by hand before a release. Only the Python standard library is used.
+
+Registry tokens are fetched only from the realm a registry names when that realm is https and belongs to the
+registry itself (or Docker Hub's auth.docker.io); anything else is refused.
 """
 from __future__ import annotations
 
@@ -67,10 +73,18 @@ def _request(url: str, method: str = "GET", headers: dict | None = None):
     return urllib.request.urlopen(request, timeout=60)
 
 
-def _bearer(challenge: str, repo: str) -> str:
+# Token services a registry may send us to (its own host, or Docker Hub's separate auth host).
+TOKEN_HOSTS = {"registry-1.docker.io": {"auth.docker.io"}}
+
+
+def _bearer(challenge: str, repo: str, registry: str) -> str:
     fields = dict(re.findall(r'(\w+)="([^"]*)"', challenge))
+    realm = urllib.parse.urlsplit(fields.get("realm", ""))
+    allowed = {registry} | TOKEN_HOSTS.get(registry, set())
+    if realm.scheme != "https" or realm.hostname not in allowed or realm.username or realm.password:
+        raise RuntimeError(f"{registry}: refused token realm {fields.get('realm', '')!r} (expected https on {sorted(allowed)})")
     query = {"service": fields.get("service", ""), "scope": fields.get("scope") or f"repository:{repo}:pull"}
-    with _request(fields["realm"] + "?" + urllib.parse.urlencode(query)) as response:
+    with _request(realm.geturl() + ("&" if realm.query else "?") + urllib.parse.urlencode(query)) as response:
         body = json.load(response)
     return body.get("token") or body.get("access_token") or ""
 
@@ -91,20 +105,27 @@ def image_digest(registry: str, repo: str, tag: str) -> str:
         except urllib.error.HTTPError as error:
             challenge = error.headers.get("WWW-Authenticate", "")
             if error.code == 401 and challenge.lower().startswith("bearer") and "Authorization" not in headers:
-                headers["Authorization"] = "Bearer " + _bearer(challenge, repo)
+                headers["Authorization"] = "Bearer " + _bearer(challenge, repo, registry)
                 continue
             raise RuntimeError(f"{registry}/{repo}:{tag}: HTTP {error.code}") from error
     raise RuntimeError(f"{registry}/{repo}:{tag}: not authorised")
 
 
 def tool_hash(url: str, algo: str, downloads: bool) -> str | None:
+    """The upstream hash of one file: the <url>.checksum line naming exactly that file, else (with downloads) the hash
+    of the downloaded file. Only reported, never written (see the module notes)."""
     size = 64 if algo == "SHA256" else 128
+    name = urllib.parse.urlsplit(url).path.rsplit("/", 1)[-1]
+    if urllib.parse.urlsplit(url).scheme != "https":
+        raise RuntimeError(f"{url}: only https downloads are checked")
     try:
         with _request(url + ".checksum") as response:
             text = response.read(4096).decode("ascii", "replace")
-        found = re.search(r"\b([0-9a-f]{%d})\b" % size, text)
-        if found:
-            return found.group(1)
+        for line in text.splitlines():
+            parts = line.split()
+            # "<hex>  <file>" or "<hex> *<file>" (sha*sum format), for this file name only.
+            if len(parts) == 2 and re.fullmatch(r"[0-9a-f]{%d}" % size, parts[0]) and parts[1].lstrip("*") == name:
+                return parts[0]
     except (urllib.error.URLError, TimeoutError):
         pass
     if not downloads:
@@ -120,10 +141,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--check", action="store_true", help="report stale pins, change nothing")
     parser.add_argument("--list", action="store_true", help="list the pins, fetch nothing")
-    parser.add_argument("--no-downloads", action="store_true", help="never download a tool to hash it")
+    parser.add_argument("--download", action="store_true", help="download a tool to hash it when no checksum file names it")
     args = parser.parse_args()
 
     stale: list[str] = []
+    upstream: list[str] = []
     errors: list[str] = []
     for path in PINNED_FILES:
         if not path.exists():
@@ -158,15 +180,15 @@ def main() -> int:
                 errors.append(f"{rel}: {name}_{algo}: no literal {name}_URL argument to check it against")
                 continue
             try:
-                current = tool_hash(url, algo, not args.no_downloads)
-            except (urllib.error.URLError, TimeoutError) as error:
+                current = tool_hash(url, algo, args.download)
+            except (RuntimeError, urllib.error.URLError, TimeoutError) as error:
                 errors.append(f"{rel}: {name}: {error}")
                 continue
             if current is None:
-                errors.append(f"{rel}: {name}: no published checksum and downloads are off")
+                errors.append(f"{rel}: {name}: no checksum file names {url.rsplit('/', 1)[-1]} (use --download to hash it)")
             elif current != old:
-                stale.append(f"{rel}: {name} {algo} {old[:12]} -> {current[:12]}")
-                text = text.replace(f"ARG {name}_{algo}={old}", f"ARG {name}_{algo}={current}")
+                # Never rewritten: a person verifies the new file independently and edits the pin by hand.
+                upstream.append(f"{rel}: {name}_{algo} pinned {old[:16]}..., upstream now {current[:16]}... ({url})")
         if text != original and not args.check:
             path.write_text(text, encoding="utf-8", newline="\n")
 
@@ -176,14 +198,16 @@ def main() -> int:
         print("ERROR " + line, file=sys.stderr)
     for line in stale:
         print(("STALE " if args.check else "UPDATED ") + line)
-    if not stale:
+    for line in upstream:
+        print("UPSTREAM-CHANGED " + line + " -- verify independently, then edit the pin by hand")
+    if not stale and not upstream:
         print("All pins are current." if not errors else "No stale pins found (see errors).")
-    elif not args.check:
+    if stale and not args.check:
         # The diff is the review: nothing is committed or pushed by this script.
         subprocess.run(["git", "-C", str(ROOT), "--no-pager", "diff", "--", *[str(p) for p in PINNED_FILES if p.exists()]], check=False)
     if errors:
         return 2
-    return 1 if (stale and args.check) else 0
+    return 1 if ((stale and args.check) or upstream) else 0
 
 
 if __name__ == "__main__":

@@ -27,6 +27,8 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
         public TaskCompletionSource Start { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task Work { get; set; } = Task.CompletedTask;
         public Task Observer { get; set; } = Task.CompletedTask;
+        /// <summary>Set when the run ended because exclusive work (backup, restore, reset) was waiting.</summary>
+        public volatile bool Yielded;
     }
     private readonly object _gate = new();
     private readonly SourceHealthStore _store;
@@ -136,7 +138,12 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
                         Interlocked.Exchange(ref started, 1);
                         using var link = context.CancellationToken.Register(() => { try { queued.Cancel.Cancel(); } catch (ObjectDisposedException) { } });
                         queued.Beat = context.Heartbeat;
-                        await RunAsync(snapshot, origin, queued).ConfigureAwait(false);
+                        // Audit 6: a waiting backup/restore/reset needs every running job to end; the remaining sources
+                        // stay due and the next daily tick (or the user) checks them later.
+                        var run = RunAsync(snapshot, origin, queued);
+                        _ = AutoSourcarr.Core.Jobs.ExclusiveYield.WatchAsync(() => queue.ExclusivePending,
+                            () => { queued.Yielded = true; try { queued.Cancel.Cancel(); } catch (ObjectDisposedException) { } }, run);
+                        await run.ConfigureAwait(false);
                     }, origin == "manual" ? JobPriority.Normal : JobPriority.Low, origin: origin, title: "Check source health",
                         context: rows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " source variant(s)");
                     if (handle.Merged) { queued.Cancel.Dispose(); lease.Dispose(); return new() { ["queued"] = false, ["task_id"] = handle.Id, ["coalesced"] = true }; }
@@ -305,6 +312,8 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
             if (states.Any(pair => pair.Key != "working")) _tasks.Fail(job.TaskId, message, message);
             else _tasks.Complete(job.TaskId, message);
         }
+        catch (OperationCanceledException) when (job.Yielded)
+        { _tasks.Complete(job.TaskId, "Paused for a backup, restore or reset; the remaining sources are checked later"); }
         catch (OperationCanceledException) { _tasks.Cancel(job.TaskId, "Source health check cancelled"); throw; }
         catch (Exception error) { _tasks.Fail(job.TaskId, _privacy.Text(error.Message)); throw; }
         finally { job.Lease.Dispose(); }

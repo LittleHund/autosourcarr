@@ -103,6 +103,63 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
     decisions, import auto-resolve and shared catalogue decisions.
   - Limits: safe mode under the native launcher (Suwayomi image) is not tested; an admin token kept in the browser still
     downloads through a buffered request (a plain link cannot carry the header).
+- Phase 13 (Pipeline completion):
+  - New 0.5.0 image (`docker/Dockerfile`, repo root as build context; the 0.4.5 image `autosourcarr/Dockerfile` is
+    unchanged until cutover). It contains:
+    - the app published ReadyToRun;
+    - a trimmed Java 25 runtime for the source host, with a class cache from a training run;
+    - JCEF and Xvfb;
+    - the repair runner;
+    - the prebuilt reader extension;
+    - the minified UI.
+  - It runs as 568:568 under `tini`, with no Docker socket and no helper services. Base images and tools are pinned by
+    digest; OS packages are upgraded at each build.
+  - Measured in CI: the image boots in about 6.5 s, and Playwright passes against the running image.
+  - Compose for 0.5.0: `docker-compose.0.5.0.yml` (AutoSourcarr plus an optional main Suwayomi, no helpers). It also
+    holds the Authelia notes: the `^/api/reader/v1([/?].*)?$` rule is unchanged, and `/api/reader/repo/` is a public
+    GET/HEAD path.
+  - The app exits with code 75 when it asks for a restart (after an armed restore or setup restart). Keep the restart
+    policy at `unless-stopped`, `always` or `on-failure`.
+  - **Upgrade note (external sign-in, e.g. Authelia):** set `AUTH_TRUSTED_PROXIES` to your reverse proxy's address
+    (the Authelia or Nginx Proxy Manager container IP, or its Docker network such as `172.18.0.0/16`). Only those
+    addresses may send `Remote-User`/`Remote-Groups` and `X-Forwarded-For`/`-Proto`. Without it nobody can sign in
+    through the proxy (the admin token and API keys still work); the login page, Status and an admin notice say so.
+    Loopback and the container's own addresses are never trusted and are refused as entries, because the source host
+    runs in the same container. 0.4.5 used these headers only for UI preferences (access was the admin token behind
+    Authelia), and 0.5.0 before this fix trusted loopback and private networks when the list was empty.
+  - The source host (extension code, WebView) now runs inside a Landlock sandbox. It can only write to its data folder,
+    cannot read the app's configuration, databases or library, and cannot signal the app. Not covered: its network is
+    open (it browses sources and can reach the app's HTTP port) and `/dev/shm` is shared. Without Landlock it runs
+    unsandboxed, and Status and health say so.
+  - Repairs that run code go only through the isolated runner. Without Landlock ABI 6 they are refused with
+    "Isolation unavailable".
+  - The egress proxy now checks more:
+    - each host is resolved once, and private, loopback and link-local answers are refused;
+    - the TLS server name must match the requested host;
+    - cookies for public suffixes are dropped.
+  - The job queue reserves a minimum share per job type and limits CPU and memory for the processes it starts.
+    Source health checks, source-code archiving and shared catalogue reviews now run as queue jobs.
+  - Restored from 0.4.5:
+    - the continuous catalogue crawler, now a job, which never treats a local timeout as a source failure;
+    - the media-variant refresh at startup.
+  - Release workflow `release.yml`, started by hand or by a tag. It runs:
+    - the image build;
+    - the boot-time gate (fails over 5 min, warns over 1 min);
+    - the sandbox and WebView check;
+    - the Linux runtime tests;
+    - the performance benchmark gate;
+    - Playwright screenshots compared with the previous release;
+    - the contrast gate;
+    - the compatibility list.
+  - Publishing to `ghcr.io/littlehund/autosourcarr` is a separate job. It runs only when started by hand with
+    `publish: true`, and only after approval in the `release` environment.
+  - Removed: the native PID 1 launcher and startup resolver (`src/AutoSourcarr.Host`, `native/container-entry.c` and
+    the files only it used).
+  - Limits:
+    - the source host runs as the app's user (568) inside the sandbox; a separate user needs extra container
+      capabilities and is documented as not recommended;
+    - the public-suffix list is a compact built-in one;
+    - translation enrichment from the crawler is not ported.
 
 ## Unreleased
 

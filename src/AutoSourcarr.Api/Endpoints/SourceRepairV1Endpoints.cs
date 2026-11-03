@@ -24,8 +24,10 @@ public sealed class SourceRepairServices
 internal static class SourceRepairV1Endpoints
 {
     /// <summary>One repair per package at a time (same type and key merge); it waits for the shared source admin lock itself.</summary>
+    // PERF-2: one worker slot is kept for repairs while one waits; repair processes run with the repair limits.
     public static readonly JobType DomainRepairJob = new("source-domain-repair", "Repair source domain", JobPriority.High,
-        StallTimeout: TimeSpan.FromMinutes(10));
+        StallTimeout: TimeSpan.FromMinutes(10))
+    { MinimumShare = 1, Limits = AutoSourcarr.Core.Repair.Runner.Egress.IsolatedRunner.RepairLimits };
     public static readonly JobType RollbackJob = new("source-repair-rollback", "Restore source jar", JobPriority.High,
         StallTimeout: TimeSpan.FromMinutes(5));
 

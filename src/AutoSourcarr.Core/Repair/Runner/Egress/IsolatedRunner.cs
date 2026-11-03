@@ -68,7 +68,7 @@ public sealed partial class IsolatedRunner(string instanceDataRoot, Action<strin
         };
         // The runner clears its environment anyway; nothing of ours is handed over even briefly.
         start.Environment.Clear();
-        foreach (var argument in new[] { job, proxy.Port.ToString(System.Globalization.CultureInfo.InvariantCulture), "--", request.Program }.Concat(request.Arguments))
+        foreach (var argument in new[] { "--limits-gate", job, proxy.Port.ToString(System.Globalization.CultureInfo.InvariantCulture), "--", request.Program }.Concat(request.Arguments))
             start.ArgumentList.Add(argument);
         RunnerChild? owned = null;
         // PDEATHSIG follows the creating thread, which DedicatedHardwareProcess keeps alive.
@@ -95,6 +95,9 @@ public sealed partial class IsolatedRunner(string instanceDataRoot, Action<strin
         RunnerProof? proof = null;
         try
         {
+            // PERF-2: the runner waits for this byte (--limits-gate) before it forks the program, so the limits above
+            // apply to the runner and everything it starts. A runner that already exited just sees a closed pipe.
+            try { process.Input.WriteByte(1); process.Input.Flush(); } catch (Exception gateError) when (gateError is IOException or ObjectDisposedException) { _ = gateError; }
             process.Input.Dispose();
             var output = DrainAsync(process.Output, request.MaximumOutputBytes);
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

@@ -108,6 +108,8 @@ public static class ApplicationRuntimeTests
         Check.Equal("1", environment["KEEP_ME"]); Check.Equal("UTC", environment["TZ"]); Check.Equal("/usr/bin:/bin", environment["PATH"]);
         Check.Equal("false", environment["FLARESOLVERR_ENABLED"]); // solver intent stays separate from the launch value
         Check.Equal("[redacted]", privacy.Text("synthetic-host-source-secret"));
+        foreach (var key in new[] { "GTK_MODULES", "GTK_PATH", "GIO_EXTRA_MODULES", "GDK_PIXBUF_MODULE_FILE", "GCONV_PATH", "LOCPATH", "MALLOC_CHECK_", "MALLOC_ARENA_MAX" })
+            Check.True(ApplicationRuntime.LoaderKey(key), key + " loads code or changes the allocator (audit 9)");
         Check.True(ApplicationRuntime.LoaderKey("1BAD") && ApplicationRuntime.LoaderKey("BAD-KEY") && ApplicationRuntime.LoaderKey(new string('X', 129)) && !ApplicationRuntime.LoaderKey("SOURCE_MIN_INTERVAL_MS"));
     }
     private static async Task RestartExit()

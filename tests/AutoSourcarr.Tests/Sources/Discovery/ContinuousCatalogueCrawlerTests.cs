@@ -64,8 +64,10 @@ public static class ContinuousCatalogueCrawlerTests
             };
             var fresh = new List<long>();
             var crawler = setup.Crawler(pages, fresh: fresh);
-            var first = crawler.StepAsync(CancellationToken.None).GetAwaiter().GetResult();
+            var beats = 0;
+            var first = crawler.StepAsync(CancellationToken.None, () => beats++).GetAwaiter().GetResult();
             Check.Equal("fetched", first.Outcome);
+            Check.True(beats >= 1, "the watchdog heartbeat runs during page ingest");
             Check.Equal("1", first.SourceId);
             Check.Equal(1, first.NewItems);
             var second = crawler.StepAsync(CancellationToken.None).GetAwaiter().GetResult();
