@@ -7,8 +7,8 @@ PASS a file outside the allowed paths is unreadable
 PASS cannot signal processes outside the sandbox
 PASS a separate user without capabilities degrades to the app's user
 PASS relative paths are refused (usage)
-PASS refused data path /tmp/tmp.O0EwiMxLRU/data/..
-PASS refused data path /tmp/tmp.O0EwiMxLRU/data/../config
-PASS refused data path /tmp/tmp.O0EwiMxLRU//data
-PASS refused data path /tmp/tmp.O0EwiMxLRU/./data
+PASS refused data path /tmp/tmp.nJmzmzXmB7/data/..
+PASS refused data path /tmp/tmp.nJmzmzXmB7/data/../config
+PASS refused data path /tmp/tmp.nJmzmzXmB7//data
+PASS refused data path /tmp/tmp.nJmzmzXmB7/./data
 source-host-sandbox check: 0 failure(s)
