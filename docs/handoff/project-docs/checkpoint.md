@@ -21,7 +21,7 @@ RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code o
 
 RE-ESTIMATE #13 (3 Nov). Phase 12 took 2.7 h and phase 13 about 3.6 h, run in parallel. Remaining: phase 14 cutover ≈ 2 h (owner gate), 0.6.0 ≈ 5.5 h (owner gate).
 
-Phase 13 (closed): probe 5678e88 all green — 1138/1138 C# tests, image builds and boots in 3.9 s, in-image source_sandbox=sandboxed, repair_isolation=available, webview=ready, Playwright against the image 156/0/24, sandbox check, Linux runtime 2/2, benchmark within budgets, repair-runner check. Audit: 12 findings, all fixed (incl. HIGH: identity headers only from AUTH_TRUSTED_PROXIES). Checklist docs/handoff/briefs/phase13-checklist.md.
+Phase 13 (closed): conversion 99ea659 CI run 41682490188 green (both jobs). ZIPs: autosourcarr-0.5.0-phase-12.zip (b4a0b00, sha256 7a18bb9c…8014) and autosourcarr-0.5.0-phase-13.zip (99ea659, sha256 b05ed130…1ade); knowledge DB indexed and imported, check ok; PC sync 119 files + 40 moved to _to_delete/phase12-13. Probe 5678e88 all green — 1138/1138 C# tests, image builds and boots in 3.9 s, in-image source_sandbox=sandboxed, repair_isolation=available, webview=ready, Playwright against the image 156/0/24, sandbox check, Linux runtime 2/2, benchmark within budgets, repair-runner check. Audit: 12 findings, all fixed (incl. HIGH: identity headers only from AUTH_TRUSTED_PROXIES). Checklist docs/handoff/briefs/phase13-checklist.md.
 
 Phase 12 (closed): code complete (eff800c, fc14eb2, 93cf430, 1dd9a7d); two audits, 24 findings fixed; covered by the phase 13 probes (Linux 1223→1138 tests after the native path removal).
 
