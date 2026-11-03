@@ -117,7 +117,8 @@ public static class DuplicateTestSet
 {
     public const string EnvironmentVariable = "AUTOSOURCARR_DUPLICATE_TEST_SET";
     public static string SyntheticPath => ConfigurationTests.Fixture(Path.Combine("matching", "duplicate-pairs.synthetic.json"));
-    /// <summary>The user's own decisions as pairs (phase 10: committed temporarily, removed before cutover).</summary>
+    /// <summary>The user's own decisions as pairs. Removed from the repository at cutover (phase 14) and git-ignored; a
+    /// local copy at this path (or <see cref="EnvironmentVariable"/>) still enables the user-set test.</summary>
     public static string UserPath => ConfigurationTests.Fixture(Path.Combine("matching", "duplicate-pairs.user.json"));
 
     /// <summary>
