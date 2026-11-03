@@ -13,6 +13,9 @@ internal static class Program
 {
     private static async Task<int> Main(string[] args)
     {
+        // Phase 14 cutover tool: migrates a 0.4.x snapshot on the owner's PC (no Linux image, no source engine, no network).
+        if (args.Length > 0 && args[0] == "--migrate-0.4")
+            return await AutoSourcarr.Api.Cutover.LegacyMigrationTool.RunAsync(args[1..], Console.Out).ConfigureAwait(false);
         StopSignals? signals = null;
         try
         {

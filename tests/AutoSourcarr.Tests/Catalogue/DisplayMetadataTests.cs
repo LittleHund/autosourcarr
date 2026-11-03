@@ -115,7 +115,7 @@ public static class DisplayMetadataTests
         using var lanes = new AsyncScope<WholeTaskCoordinator>(new(settings, tasks)); var unexpected = 0;
         using var host = new HostBuilder().ConfigureWebHost(web => web.UseTestServer().ConfigureServices(services => services.AddRouting()).Configure(app =>
         {
-            app.UseAutoSourcarrHttp("0.4.3-migration", () => settings, (_, _) => { unexpected++; return "unexpected"; }, new RequestAdmissionGate(), lanes.Value, tasks, new SupportPrivacy(), _ => { });
+            app.UseAutoSourcarrHttp("0.5.0", () => settings, (_, _) => { unexpected++; return "unexpected"; }, new RequestAdmissionGate(), lanes.Value, tasks, new SupportPrivacy(), _ => { });
             app.UseEndpoints(routes => routes.MapDisplayMetadata(f.Store, io.Value, () => settings));
         })).Build();
         host.Start(); using var client = host.GetTestClient();

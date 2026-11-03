@@ -87,9 +87,11 @@ services:
       - 8282:8282
     environment:
       TZ: Europe/Amsterdam
+    # NEW datasets filled from the migration tool's output (docs/upgrade-from-0.4.md); the 0.4.x datasets
+    # (autosourcarr-data, config) stay untouched as the rollback. Never mount the 0.4.x datasets here.
     volumes:
-      - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/autosourcarr-data:/data
-      - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/config:/config
+      - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/autosourcarr-data-0.5.0:/data
+      - /mnt/ssd/apps/komga/automation-apps/manga/autosourcarr/config-0.5.0:/config
       # Optional: the CBZ library (LIBRARY_DIR in Settings) and old downloads to import, read-only.
       - /mnt/hdd/storage/komga/manga:/mnt/manga-downloads:ro
     networks: [autosourcarr]
@@ -110,8 +112,8 @@ services:
     environment:
       TZ: Europe/Amsterdam
     volumes:
-      - /mnt/ssd/apps/komga/automation-apps/manga/private-autosourcarr/autosourcarr-data:/data
-      - /mnt/ssd/apps/komga/automation-apps/manga/private-autosourcarr/config:/config
+      - /mnt/ssd/apps/komga/automation-apps/manga/private-autosourcarr/autosourcarr-data-0.5.0:/data
+      - /mnt/ssd/apps/komga/automation-apps/manga/private-autosourcarr/config-0.5.0:/config
     networks: [autosourcarr]
 
   private-suwayomi:

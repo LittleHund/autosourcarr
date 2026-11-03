@@ -14,9 +14,13 @@ def root() -> Path:
 
 def test_v077_version_alignment():
     r = root()
-    current = tuple(int(x) for x in (r / "VERSION").read_text().strip().split("."))
+    # 0.5.0 version split (CLAUDE.md §4): the root VERSION is the release (C# app), autosourcarr/VERSION the Python
+    # app; the Python image's copies stay aligned with each other and never run ahead of the release.
+    release = tuple(int(x) for x in (r / "VERSION").read_text().strip().split("."))
+    current = tuple(int(x) for x in (r / "autosourcarr/VERSION").read_text().strip().split("."))
     assert current >= (0, 2, 77)
-    assert tuple(int(x) for x in (r / "autosourcarr/VERSION").read_text().strip().split(".")) == current
+    assert tuple(int(x) for x in (r / "autosourcarr/bundled/build/VERSION").read_text().strip().split(".")) == current
+    assert release >= current
     assert "0.2.77 → 1.4.2077" in (r / "CHANGELOG.md").read_text()
 
 

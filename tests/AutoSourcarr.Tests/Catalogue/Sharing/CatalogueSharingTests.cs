@@ -325,7 +325,7 @@ public static class CatalogueSharingTests
             _lanes = new(settings, Tasks); _reviews = new(World.Exchange, Tasks, _lanes, _io);
             _host = new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services => services.AddRouting()).Configure(app =>
             {
-                app.UseAutoSourcarrHttp("0.4.3-migration", () => settings, (_, _) => { Unexpected++; return "unexpected"; }, new RequestAdmissionGate(), _lanes, Tasks, privacy, _ => { });
+                app.UseAutoSourcarrHttp("0.5.0", () => settings, (_, _) => { Unexpected++; return "unexpected"; }, new RequestAdmissionGate(), _lanes, Tasks, privacy, _ => { });
                 var identities = new PortableIdentityResolver(World.Database);
                 var services = new CatalogueSharingV1Services { Exchange = World.Exchange, Identities = identities, Reviews = _reviews, IdentityReview = new IdentityReview(World.Database, World.Gate, identities), AdminLock = _admin, Io = _io };
                 app.UseEndpoints(endpoints => CatalogueSharingV1Endpoints.Map(endpoints.MapGroup("/api/v1").AddEndpointFilter(new AdminAuthorizationFilter(() => settings)), ApiJsonContext.Default, services));

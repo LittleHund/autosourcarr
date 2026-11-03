@@ -1,5 +1,48 @@
 # TrueNAS deployment
 
+## 0.5.0 (current release)
+
+0.5.0 is the C#/.NET 10 image (`docker/Dockerfile`, project root as build context). Coming from 0.4.x: follow
+[docs/upgrade-from-0.4.md](docs/upgrade-from-0.4.md) first: it migrates a copy on your PC and proves nothing was lost.
+0.5.0 then runs on **new** datasets; the 0.4.x datasets stay untouched for a rollback.
+
+1. Datasets (owner **568:568**, the TrueNAS `apps` user; the image runs as 568:568). Coming from 0.4.x, fill the two
+   `-0.5.0` datasets with the tool's `<output>/config` and `<output>/data`; never reuse the 0.4.x `config/` or
+   `autosourcarr-data/` datasets:
+
+   ```text
+   /mnt/POOL/apps/autosourcarr/
+   ├── project/                    # extracted project (contains docker/Dockerfile and docker-compose.0.5.0.yml)
+   ├── config-0.5.0/               # /config: config.json, config.key, accounts/
+   ├── autosourcarr-data-0.5.0/    # /data: catalog.sqlite, chapter-origins.sqlite, source-host/, covers, backups
+   ├── config/                     # 0.4.x, untouched (rollback)
+   └── autosourcarr-data/          # 0.4.x, untouched (rollback)
+   ```
+
+   Optional: your library or old downloads, mounted read-only (for example `/mnt/manga-downloads`).
+2. **Apps → Install via YAML** with [docker-compose.0.5.0.yml](docker-compose.0.5.0.yml). Change the `build.context`
+   and volume paths to your datasets. It builds `autosourcarr:0.5.0-local` from the project folder; the published
+   `ghcr.io/littlehund/autosourcarr:0.5.0` line is for after the image is published. Delete the `private-*`
+   services for a single instance; the main Suwayomi service is optional.
+3. Keep `restart: unless-stopped` (or `always`/`on-failure`): the app exits with code 75 when it restarts itself
+   (setup changes, an armed restore). Keep `cap_drop: [ALL]` and `no-new-privileges`; no Docker socket, no helpers.
+4. Open `http://NAS:8282`, finish the setup wizard, connect your own Suwayomi under **Connections → Suwayomi**
+   (`http://suwayomi:30058` inside the Compose network) if you use one.
+5. Reverse proxy: see [Authelia](docs/reverse-proxy/authelia.md) and
+   [Nginx Proxy Manager](docs/reverse-proxy/nginx-proxy-manager.md). Keep the `^/api/reader/v1([/?].*)?$` bypass,
+   add the GET/HEAD-only `/api/reader/repo/` bypass, and with Authelia sign-in set `AUTH_TRUSTED_PROXIES` to the
+   proxy container's address or Docker network (for example `172.18.0.0/16`; Settings or `config.json`).
+6. Readers: **System → Reader setup** shows per server slot a QR code/link for the repository
+   (`https://<your address>/api/reader/repo/index.min.json`) and one with the slot's address and device key.
+   Reinstall the AutoSourcarr extension from that repository.
+7. Repairs that run code need Linux Landlock ABI ≥ 6; without it they are refused and everything else works.
+
+Rollback: 0.5.0 runs on **new** datasets filled by the migration tool; the 0.4.x datasets stay untouched. To go back, stop 0.5.0 and start 0.4.5 with its old Compose file on the original 0.4.x datasets. Never point 0.4.x at the 0.5.0 folders: the 0.5.0 database migrations are forward-only, and 0.4.5 never reads `config.json` (it reads only `autosourcarr.env` and `source-host.env`), so everything changed in 0.5.0 would silently be missing. Decisions made in 0.5.0 after the switch are not in the 0.4.x data. The 0.4.x setup is described below.
+
+## Previous version (rollback): 0.4.5 and older
+
+Everything below describes the Python 0.4.x app (`autosourcarr/Dockerfile`, `docker-compose.truenas.yml`).
+
 ## Upgrading to 0.3.42 — installed Health and procfs diagnosis
 
 Preserve destination env files, both app databases, source profiles, manual choices,

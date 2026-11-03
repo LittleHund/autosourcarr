@@ -1,19 +1,54 @@
-## 0.5.0 (in progress)
+## 0.5.0 - YYYY-MM-DD
 
-C#/.NET conversion (ARC-11); notes are added per conversion phase.
+0.5.0 is AutoSourcarr rewritten in C#/.NET 10 (ARC-11): one image (`docker/Dockerfile`) that runs on its own, with the
+source host (extension sources and WebView), the repair runner, the reader extension repository and the Web UI
+inside; a main Suwayomi is optional. Settings live in `config.json`. The Python 0.4.5 app stays available as the
+rollback until the 0.5.0 deploy is confirmed.
+
+**Upgrade from 0.4.x:** follow [docs/upgrade-from-0.4.md](docs/upgrade-from-0.4.md) (back up, migrate a copy, compare,
+then switch). Install: `docker-compose.0.5.0.yml` (see README and TRUENAS.md).
+
+**Check before you deploy:**
+
+- **Migrate a copy first:** run `scripts/migrate-from-0.4.ps1` (Windows) or `scripts/migrate-from-0.4.sh` on a 0.4.5
+  backup or a stopped-app copy of `/data` + `/config` ([docs/upgrade-from-0.4.md](docs/upgrade-from-0.4.md)). Deploy
+  only when the report says `PARITY OK: 0 lost manual decisions, 0 lost subscriptions`; `PARITY FAILED` or
+  `MIGRATION FAILED` means do not deploy.
+- **Sign-in:** 0.5.0 has its own sign-in. The default `AUTH_METHOD=forms` asks you to create the owner account at the
+  first visit. To keep Authelia (or another proxy) as the only sign-in, set `AUTH_METHOD=external` and
+  `AUTH_TRUSTED_PROXIES` to the reverse proxy's address or network; without it nobody can sign in through the proxy
+  (the admin token and API keys still work).
+- **Compose:** remove the old `env_file:` line. Values under `environment:` override `config.json` (settings saved in
+  the app still win), so keep only the ones you mean. An external `DATABASE_DIR` must be mounted at the same path
+  (the tool writes it to `<output>/database`).
+- **Reader extension repository:** add a GET/HEAD-only bypass for `/api/reader/repo/` in Authelia/NPM
+  (`docs/reverse-proxy/`). The `^/api/reader/v1([/?].*)?$` rule is unchanged.
+- **Settings:** `config.json` (+ `config.key`) replaces `autosourcarr.env`. An old `/config/autosourcarr.env` is
+  converted on first start and kept as a backup.
+- **Rollback:** 0.5.0 runs on **new** datasets filled by the migration tool; the 0.4.x datasets stay untouched. To go back, stop 0.5.0 and start 0.4.5 with its old Compose file on the original 0.4.x datasets. Never point 0.4.x at the 0.5.0 folders: the 0.5.0 database migrations are forward-only, and 0.4.5 never reads `config.json` (it reads only `autosourcarr.env` and `source-host.env`), so everything changed in 0.5.0 would silently be missing. Decisions made in 0.5.0 after the switch are not in the 0.4.x data.
+- **Restarts:** the app exits with code 75 when it must restart itself. Keep the Compose restart policy at
+  `unless-stopped`, `always` or `on-failure`, never `no`.
+- **Reader extension:** install it again from the new repository (System → Reader setup: repository link and QR
+  code per server slot). Its version is 0.5.0 (version code 5000).
+- **Retired link settings:** `KOMF_BROWSER_URL` and `REPAIR_AI_BROWSER_URL` are removed; a saved value is dropped. A
+  Komf connection under Settings → Connections is unaffected.
+
+Version note: the release, the C# app, the 0.5.0 image, the compatibility list and the reader extension are 0.5.0
+(root `VERSION`). The Python app under `autosourcarr/` keeps its own `autosourcarr/VERSION` at 0.4.5 and its image is
+unchanged. The owner's duplicate decisions (`duplicate-pairs.user.json`) were removed from the repository; the
+synthetic duplicate set still runs in CI.
+
+Notes per conversion phase:
 
 - Phase 7 (Connections): connections are saved in `config.json` under a new top-level
-  `"connections"` key, with secrets encrypted by `config.key`. 0.4.x refuses a
-  `config.json` with keys it does not know, so before rolling back to 0.4.x remove the
-  `"connections"` key (keep a copy to restore later). The first connection you add
-  shows this note in the app.
+  `"connections"` key, with secrets encrypted by `config.key`. 0.4.5 never reads `config.json`; see the rollback
+  note above (roll back on the untouched 0.4.x datasets).
 - Phase 10 (Chapters and reader): new catalogue tables for the CBZ library (`library_series`,
   `download_queue`, `library_downloads`, `download_history`, `library_state`; migration
   2026110192) and the setting `LIBRARY_DIR`. 0.4.x ignores these tables. The reader extension
   repository is served at `/api/reader/repo/` without a key (GET/HEAD only); the reader API at
   `/api/reader/v1` keeps its key and Authelia rule. Add the repo path to Authelia/NPM when you
-  deploy 0.5.0 (`docs/reverse-proxy/`). Limits: the reader extension is not yet built into the
-  image (phase 13).
+  deploy 0.5.0 (`docs/reverse-proxy/`). The reader extension is built into the image since phase 13.
 - Ingest and import gate (owner decision 2026-11-02): a new source record no longer attaches to
   an existing entry on its title alone; it needs an agreeing creator, cover or summary, and
   otherwise becomes its own entry. Once its details are fetched the duplicate review is rescored,
@@ -160,9 +195,30 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
       capabilities and is documented as not recommended;
     - the public-suffix list is a compact built-in one;
     - translation enrichment from the crawler is not ported.
-
-## Unreleased
-
+- Phase 14 (Cutover, release preparation):
+  - Versions: root `VERSION`, `Directory.Build.props`, `ApplicationRuntime.Version` (was `0.4.3-migration`), the
+    compatibility list, the static asset `?v=` and the reader extension are 0.5.0; `autosourcarr/VERSION` and
+    `autosourcarr/bundled/build/VERSION` stay 0.4.5 for the Python image. `check-project.sh` checks both sides and
+    `print-compatibility.py --check` checks the list against `VERSION`.
+  - `tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json` is removed and git-ignored; the user-set
+    duplicate test runs only with a local copy or `AUTOSOURCARR_DUPLICATE_TEST_SET`.
+  - Limits: the file is still in the git history (rewriting public history is the owner's decision).
+  - Cutover tool: `AutoSourcarr.Api --migrate-0.4 <0.4.5 backup | snapshot folder> <empty output>` (wrappers
+    `scripts/migrate-from-0.4.ps1` / `.sh`, optional `--compose <file> --service <name>` for DATA_DIR/DATABASE_DIR set in
+    Compose) migrates a copy on the PC without Docker or network: reads 0.4.5 backups (ASCBK2, passphrase asked, never
+    stored), converts the env files, opens 0.5.0 offline (update guard, migrations, every network-free first-start step
+    incl. the startup duplicate sweep) and writes `parity-report.md`/`.json`. The verdict compares every manual and
+    user-owned kind through merge aliases (row counts per key, violated "different works" pairs and re-attached separate
+    records fail), history tables by count, every 0.4.x entry id, settings (secrets by presence only), key files and
+    dropped tables, plus an IMP-9 dry-run recheck of earlier merges; a table lists how each of the 86 0.4.5 tables is
+    covered. Safe mode, a failed update or a failed step is `MIGRATION FAILED`; a crash leaves `MIGRATION-INCOMPLETE.txt`
+    and no report. A committed fixture made by the real Python `InstanceBackups.create`
+    (`scripts/make-legacy-backup-fixture.py`) tests the reader.
+  - `docker-compose.0.5.0.yml` mounts new `-0.5.0` datasets; the 0.4.x datasets stay the rollback.
+  - Limits of the tool: network first-start work (Subbed orphan aliases, identity and cover hydration, metadata repair,
+    additional-record scan, feeds, translation) is listed in the report as not covered; the subscriptions themselves live
+    in the main Suwayomi (the tool checks AutoSourcarr's saved view of them); the live-instance check is best effort;
+    the Compose reader handles plain `environment:` blocks only (no anchors or interpolation).
 - Reader extension sources moved from `extension/module/src/eu/kanade/tachiyomi/extension/all/autosourcarr/`
   to `extension/module/src/autosourcarr/`. The Kotlin package, the APK package name and
   the source ID are unchanged; `build-in-container.sh` still places the files at the

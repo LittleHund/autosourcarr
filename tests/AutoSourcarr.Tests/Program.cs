@@ -163,4 +163,5 @@ AutoSourcarr.Tests.Backup.BackupTests.Register(suite);
 SourceResultTrackerTests.Register(suite);
 PageFirstTests.Register(suite);
 LiveTopicTests.Register(suite);
+AutoSourcarr.Tests.Cutover.CutoverTests.Register(suite);
 return suite.Run(filters);

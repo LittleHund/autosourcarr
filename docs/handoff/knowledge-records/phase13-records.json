@@ -1,0 +1,81 @@
+{
+  "records": [
+    {
+      "id": "RELEASE-0.5.0-PHASE-13",
+      "kind": "release",
+      "state": "implemented",
+      "title": "Conversion phase 13: pipeline completion and the 0.5.0 image (branch conversion)",
+      "body": "{\"areas\": {\"P\": \"docker/Dockerfile (R2R app, jlink Java 25 + AOT cache, JCEF + Xvfb, repair runner/launcher, source-host sandbox launcher, reader extension, UI bundle, tini, 568:568, pinned digests, PACKAGES_EPOCH), release.yml (boot/runtime/benchmark/Linux runtime/screenshot/contrast gates; publish of the exact tested image gated by publish input + release environment), update-pins.py, mihon watch, docker-compose.0.5.0.yml\", \"R\": \"RepairIsolation (fails closed), source-host Landlock sandbox, PERF-2 shares and process limits, health/raw archive/catalogue review as jobs, egress proxy hardening, continuous catalogue crawler, RefreshMediaVariants, exit code 75 restart, native PID 1 path removed, trusted proxies only for identity headers\"}}",
+      "origin": "Claude Code session on the owner's PC 2026-11-02/03 (conversion phase 13)",
+      "source_ref": "docs/port-map.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "VERIFY-20261103-PHASE-13",
+      "kind": "verification",
+      "state": "verified",
+      "title": "Phase 13 verified: probe 5678e88 all green, image boots in 3.9 s",
+      "body": "{\"probe\": \"5678e88: build, 1138/1138 C# tests, openapi/client, source host build/check/C# tests, repair-runner check, Kavita, reader extension build, Playwright 156/0/24 (sources + bundle), UI bundle, sandbox check 0 failures, Linux runtime 2/2, benchmark within budgets, image build, boot 3.9 s (target 60, budget 300), in-image health source_sandbox=sandboxed, repair_isolation=available (ready), webview=ready, Playwright against the image 156/0/24\", \"local\": \"Windows build clean, 1137/1139 (two Windows-only), check-project sections 1-9, benchmark gate\", \"not_run\": [\"release.yml itself (never run; publishing is an owner gate)\", \"the optional uid 569 source-host variant\", \"Docker on the PC\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-03",
+      "source_ref": "probe/result.txt on ci-probe",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261103-TRUSTED-PROXIES-ONLY",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "Identity headers are honoured only from AUTH_TRUSTED_PROXIES; never from loopback or the container's own addresses",
+      "body": "{\"why\": \"phase 13 audit: loopback and private ranges were implicitly trusted, so source-host extension code, Docker peers or LAN clients could send Remote-User and become owner\", \"effect\": \"owners using Authelia/external sign-in must set AUTH_TRUSTED_PROXIES at the 0.5.0 deploy; the app shows a notice, the wizard requires it\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-03",
+      "source_ref": "src/AutoSourcarr.Core/Settings/TrustedProxies.cs",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261103-SOURCE-HOST-SAME-USER-SANDBOXED",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "The source host runs as the app user (568) inside a Landlock sandbox; a separate uid is optional and not recommended",
+      "body": "{\"why\": \"a uid switch needs CAP_SETUID, which the image drops (cap_drop ALL, no-new-privileges); Landlock needs no capability\", \"limits\": \"network is open (it can reach the app's HTTP port; identity headers are refused from loopback); /dev/shm shared\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-03",
+      "source_ref": "native/source-host-sandbox.c",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "DECISION-20261103-PINS-MANUAL",
+      "kind": "decision",
+      "state": "implemented",
+      "title": "Pin updates stay manual (scheduled workflow disabled)",
+      "body": "{\"why\": \"the owner does not want extra GitHub runs or notification mail\", \"how\": \"scripts/update-pins.py refreshes image digests and reports changed tool hashes for human review\"}",
+      "origin": "Claude Code session on the owner's PC 2026-11-03",
+      "source_ref": ".github/workflows/release.yml",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "FINDING-20261103-PHASE13-AUDIT",
+      "kind": "finding",
+      "state": "resolved",
+      "title": "Phase 13 audit: 12 findings, all fixed",
+      "body": "{\"fixed\": [\"identity headers trusted from loopback/private ranges (HIGH)\", \"source host folder errors stopped the restart loop\", \"PERF-2 shares/limits defined but unused; runner forked before limits\", \"apt layer cached across releases; publish rebuilt instead of pushing the tested image\", \"screenshot diff did not gate\", \"health checks and raw archive did not yield to exclusive jobs\", \"sandbox proof could be faked\", \"sandbox launcher ordering, path parts, group kill\", \"loader keys\", \"egress 6to4 and invalid cookie domains\", \"pin tool trusted same-host checksums\", \"boot check skipped silently without node\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-03",
+      "source_ref": "docs/handoff/briefs/phase13-checklist.md",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    },
+    {
+      "id": "LIMIT-20261103-PHASE13",
+      "kind": "limitation",
+      "state": "open",
+      "title": "Phase 13 limits",
+      "body": "{\"items\": [\"release.yml has never run; the first release run is also the screenshot baseline\", \"publishing to ghcr needs the owner: publish input + release environment with the owner as reviewer\", \"BuildKit provenance/SBOM not attached (docker push of the tested image)\", \"compact built-in public-suffix list\", \"translation enrichment from the crawler not ported\", \"the optional uid 569 variant is untested\", \"reader extension signed with a throwaway key until the owner adds the AUTOSOURCARR_EXT_* secrets\"]}",
+      "origin": "Claude Code session on the owner's PC 2026-11-03",
+      "source_ref": "CHANGELOG.md 0.5.0",
+      "applies_to": "Conversion plan",
+      "confidence": "high"
+    }
+  ]
+}

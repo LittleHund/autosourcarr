@@ -22,13 +22,14 @@ inside the instance. The catalogue must be shareable/migratable into other peopl
   (initial commit only), `conversion` (the migration; last pushed commit 1cc573b = phase 9),
   `ci-probe` (scratch compile/test branch, see §4), `handoff/phase-10-wip` (this handoff; triggers no CI).
   To continue: `git checkout conversion && git merge --ff-only origin/handoff/phase-10-wip`.
-- Released app: **0.4.5** (`VERSION`), Python 3.12 FastAPI + SQLite, UI "Reimagined"
+- Released app: **0.4.5** (`autosourcarr/VERSION`; root `VERSION` is the 0.5.0 release), Python 3.12 FastAPI + SQLite, UI "Reimagined"
   (vanilla JS, Sonarr v5 style), image built on `ghcr.io/suwayomi/suwayomi-server:v2.3.2243`,
   deployed by TrueNAS Compose behind Authelia, UID/GID 568:568, Europe/Amsterdam. Whether 0.4.5 is
   deployed on the NAS: **unverified** (it was an open user item on 2026-10-31).
 - Target: **0.5.0** = the Python → C#/.NET 10 conversion, standalone (Suwayomi optional),
   settings in `config.json`. **0.6.0** = new features (phases 15–17) after the Python app retires.
-  C# assembly version is still `0.4.3-migration` (`Directory.Build.props`, `ApplicationRuntime.Version`).
+  Phase 14 release prep set the C# app, image, compatibility list and reader extension to `0.5.0`; the Python app
+  keeps `autosourcarr/VERSION` = 0.4.5 (version split in §4).
 
 ### Migration state (plan: Claude Docs "AutoSourcarr conversion plan", 14 phases to cutover)
 
@@ -47,10 +48,12 @@ are no longer used. Plan: `docs/handoff/conversion-plan.md` (copy of Claude Docs
 | 9 Imports, metadata, sharing | done | 1cc573b, CI 41321311062 green |
 | 10 Chapters/reader | done (2026-11-01, Claude Code on the PC) | see `docs/handoff/project-docs/checkpoint.md`; probe b772773 green |
 | 11 Web UI finish | done (2026-11-02) | probe f0a582d green (1212 tests, Playwright 156/0/24) |
-| 12 Backup, 13 Pipeline/image, 14 Cutover | open | — |
+| 12 Backup | done (2026-11-02) | covered by the phase 13 probes |
+| 13 Pipeline/image | done (2026-11-03) | probe 5678e88 green (1138 tests, image boot 3.9 s, Playwright 156/0/24 against the image) |
+| 14 Cutover | open — owner gate | — |
 | 15–17 (0.6.0) | open | — |
 
-Progress: 152 of 173 plan-hours (88 %); estimate ≈ 6.5 h to cutover, ≈ 5.5 h for 0.6.0
+Progress: 165 of 173 plan-hours (95 %); estimate ≈ 2 h to cutover, ≈ 5.5 h for 0.6.0
 (measured pace 0.167 h per plan-hour, phases 0–10). Paused before phase 11 at the owner's request.
 
 **Phase 10 state:** four parts were written by sub-agents and saved in local WIP commit `3ed0b4e`
@@ -131,8 +134,9 @@ user is deferred to phase 13. A user's own main Suwayomi is optional (connection
 - Migrations: FluentMigrator per file; 0.4.4 baseline `2026103101`, `2026103102`; then `2026110180`
   (decision_log), `2026110184` (mixed_entry_findings), `2026110192` (library, phase 10 WIP).
   0.3.27 and 0.4.4 files upgrade in place (fixtures in `tests/AutoSourcarr.Tests/Fixtures/legacy`).
-- `config.json` + `config.key` — settings and Connections (secrets encrypted per field); 0.4.x cannot read a
-  `config.json` that contains `connections` (rollback note in CHANGELOG). Accounts: `config/accounts/accounts.json`.
+- `config.json` + `config.key` — settings and Connections (secrets encrypted per field). The Python 0.4.5 app
+  never reads `config.json`; rollback = start 0.4.5 on its untouched original datasets, never on the 0.5.0 folders
+  (migrations are forward-only; see `docs/upgrade-from-0.4.md`). Accounts: `config/accounts/accounts.json`.
 - Postgres: planned for 0.6.0 (phase 16); not implemented.
 - **`AutoSourcarr-knowledge.sqlite3`** (in `F:\claude projects\autosourcarr data\`) — development
   knowledge DB for agent continuity (requirements, decisions, findings, releases, indexed ZIPs).
@@ -169,6 +173,16 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
   external solver); repair-runner check 22 PASS; Python 2706 passed, 27 failed (the baseline in
   `tests/python-baseline-failures.txt`), 4 skipped. Known flaky (retried by `ci-pytest.sh`):
   `test_v094_runtime.py::test_websocket_relays_text_binary_and_closes_remote`.
+- **Version split (phase 14, until the Python app retires).** Two sides, each aligned on its own;
+  `check-project.sh` step 7 ("version alignment") asserts both:
+
+  | Side | Files | Value |
+  | --- | --- | --- |
+  | Release / C# / 0.5.0 image | root `VERSION` (copied by `docker/Dockerfile`, read by `scripts/build-reader-extension.sh`), `Directory.Build.props` `VersionPrefix`, `ApplicationRuntime.Version`, `docker/Dockerfile` `ARG VERSION`, `compatibility.json` `app_version` (`print-compatibility.py --check` compares it with `VERSION`), static asset `?v=` in `index.html` (the 0.5.0 image serves the UI; `UI_BUILD_VERSION` reads it), `extension/module/build.gradle.kts` fallback | 0.5.0 (reader extension version code 5000) |
+  | Python 0.4.5 (rollback) | `autosourcarr/VERSION` (read by the Python app and its `autosourcarr/Dockerfile`), `autosourcarr/bundled/build/VERSION` (synced from it by `sync-bundled-tools.py`), `repair-worker/server.py` status version, the image tag in `scripts/build-integrated-image.sh` | 0.4.5 |
+
+  The `?v=` change does not affect the Python app (it is a cache key and the UI's diagnostic version). When the
+  Python app retires, drop the Python side of the check.
 - Analyzer note: the ASP.NET RouteHandlerAnalyzer crashes intermittently (AD0001) — kept as a warning
   in `AutoSourcarr.Api.csproj`; always pass Map* handlers as cast lambdas `(Func<...>)(...)`.
   `InvalidDataException` is sealed in .NET 10; `$$"""` raw strings must not contain `}}}`.
@@ -208,22 +222,23 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 | 2026-11-01 | This PC has a .NET 10 SDK and nuget access: build and test locally first, then one ci-probe per round (owner decision). | decision |
 | 2026-11-02 | Ingest and import gate decided (option C): a title alone never matches automatically, summaries never admit below 0.94, duplicates rescored after hydration (877306c). | resolved |
 | 2026-11-01 | Open owner decisions: MAT-11/MAT-22/Komf/AUTH-8; AI repair worker port target; AUTH-7/9 marked 0.6.0. | open |
-| 2026-11-01 | `duplicate-pairs.user.json` (2,680 pairs from the user's decisions) committed locally for CI; user agreed it need not be private but **must be removed once everything functions**. | open (remove before cutover) |
+| 2026-11-01 | `duplicate-pairs.user.json` (2,680 pairs from the user's decisions) committed locally for CI; user agreed it need not be private but **must be removed once everything functions**. | resolved (phase 14: removed and git-ignored; the test runs only with a local copy or `AUTOSOURCARR_DUPLICATE_TEST_SET`; still in git history — rewriting it is an owner decision) |
 | 2026-11-01 | Reader extension signing: user must add GitHub secrets `AUTOSOURCARR_EXT_KEYSTORE_B64`, `_KEYSTORE_PASSWORD`, `_KEY_PASSWORD`, `_KEY_ALIAS` (= `autosourcarr`); without them CI signs with a throwaway key. | waiting on user |
 | 2026-11-01 | Reader extension slot count is fixed at build time (5); "add more from Mihon" is not possible with the Keiyoushi plugin. | limitation |
 | 2026-11-01 | Mihon's next backup format is unpublished; only a probe sample exists; `mihon-backup-watch.py` tracks releases. | open |
-| 2026-11-01 | Split paths are not written in the same transaction as their decision-log entry (merges are). | open |
-| 2026-11-01 | `CatalogueDiscovery.SourceResult` (source health) not wired. | open |
+| 2026-11-01 | Split paths are not written in the same transaction as their decision-log entry (merges are). | resolved (phase 11) |
+| 2026-11-01 | `CatalogueDiscovery.SourceResult` (source health) not wired. | resolved (phase 11, SourceResultTracker) |
 | 2026-11-01 | Phase 10 carried in: import exact-thumbnail tie-break, machine translation in search, gallery identity, page colour sampling (`IPageImageSource`). | in WIP |
 | 2026-11-01 | Older guidance files (PC workspace-root `CLAUDE.md`, Project `claude/CLAUDE.md`) said "paused at stage 26"; both now point here. This file supersedes them. | resolved |
 | 2026-10-31 | Real Cloudflare managed challenge not passed from CI (GitHub network); WebView passes the local challenge. | open, needs user network |
-| 2026-10-31 | Source host runs as the same user as the app; separate low-rights user + runner binary in image → phase 13. | deferred |
+| 2026-10-31 | Source host runs as the same user as the app; separate low-rights user + runner binary in image → phase 13. | decided (phase 13): same user inside a Landlock sandbox; runner in the image |
+| 2026-11-03 | Deploy note: with Authelia/external sign-in set `AUTH_TRUSTED_PROXIES` to the proxy's address (identity headers are refused otherwise). | open (at 0.5.0 deploy) |
 | 2026-10-31 | Two-factor (AUTH-7), owner transfer/recovery (AUTH-9), AI providers + Postgres connections (CON-4, phase 16), SRC-9 AI benchmark. | deferred to 0.6.0 |
 | 2026-11-01 | Checkpoint item "(4) private duplicate test set in CI via encrypted fixture" is superseded: the user allowed committing it plainly (it must still be removed before cutover). | resolved |
 | 2026-10-31 | Open user decisions: (2) custom C# test runner vs xUnit; (3) SET-5 default `/config` vs `/data`; (1) host entry: default taken (stays in Api). | open |
 | 2026-10-31 | User items: delete old `src\eu` folders (stage 2), run `scripts\stage3-remove-old.ps1`, delete `src\AutoSourcarr.Core\Text`, deploy 0.4.5, optionally allow nuget/dotnet domains, delete `ci-probe` at the end, add the `/api/reader/repo/` Authelia/NPM bypass at 0.5.0 deploy. | open |
 | 2026-10-29 | Requirements proposals PROP-1..4 (release split, defer CON-4/SRC-9/MAT-21, drop UI-3 theme research, hand-maintained backup schema): `requirements.md` §18 records them as accepted on 2026-10-29. | resolved |
-| 2026-10-25 | C# runtime version constant still `0.4.3-migration`; the compatibility list describes 0.5.0. | fix at release |
+| 2026-10-25 | C# runtime version constant still `0.4.3-migration`; the compatibility list describes 0.5.0. | resolved (phase 14: 0.5.0, version split in §4) |
 
 ## 7. User skills used on this project
 

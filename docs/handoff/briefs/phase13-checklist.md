@@ -10,17 +10,17 @@ it without the owner's go.
 
 | Item | Area | State |
 | --- | --- | --- |
-| Multi-stage 0.5.0 image: ReadyToRun .NET 10 app, `jlink` Java 25 runtime, JCEF + Xvfb, AOT class cache from a training run | P pipeline | |
-| NuGet and Gradle caches; Kotlin host built only when its files change; Playwright only when UI files change | P | |
-| Pinned base-image digests and package/tool hashes; pins updated by the pipeline (PIPE-3) | P | |
-| Image target `ghcr.io/littlehund/autosourcarr` (public) — publish step prepared, gated | P | |
-| Compatibility list published with each build (PIPE-4) | P | |
-| Playwright screenshots with diff against the previous release, in the official Playwright image (PIPE-5) | P | |
-| Contrast and boot-time gates; boot under 5 min measured (PERF-7, PIPE-8) | P | |
-| Mihon release watch reports backup-schema changes (PIPE-9) | P | |
-| Job-queue tuning: benchmark (large-library page load, queue under load), CPU/memory limits per job type (PERF-2, PIPE-8) | R runtime | |
-| Image serves the minified UI bundle (`dist/`) | P | |
-| Done when: one pipeline run produces the image and the reader extension, with boot under 5 min measured | P | |
+| Multi-stage 0.5.0 image: ReadyToRun .NET 10 app, `jlink` Java 25 runtime, JCEF + Xvfb, AOT class cache from a training run | P pipeline | done |
+| NuGet and Gradle caches; Kotlin host built only when its files change; Playwright only when UI files change | P | done |
+| Pinned base-image digests and package/tool hashes; pins updated by the pipeline (PIPE-3) | P | done |
+| Image target `ghcr.io/littlehund/autosourcarr` (public) — publish step prepared, gated | P | done |
+| Compatibility list published with each build (PIPE-4) | P | done |
+| Playwright screenshots with diff against the previous release, in the official Playwright image (PIPE-5) | P | done |
+| Contrast and boot-time gates; boot under 5 min measured (PERF-7, PIPE-8) | P | done |
+| Mihon release watch reports backup-schema changes (PIPE-9) | P | done |
+| Job-queue tuning: benchmark (large-library page load, queue under load), CPU/memory limits per job type (PERF-2, PIPE-8) | R runtime | done |
+| Image serves the minified UI bundle (`dist/`) | P | done |
+| Done when: one pipeline run produces the image and the reader extension, with boot under 5 min measured | P | done |
 
 ## (b) Requirements
 
@@ -50,3 +50,5 @@ permissions · PERF-2 · PERF-7 · SRC-5 WebView in the low-rights runner.
 Green probe incl. an image build + boot-time run · local build/tests/check-project · independent audit, findings fixed or
 recorded · push `conversion`, green CI (run id) · ZIP + sha256 · knowledge records `phase13-records.json` · port-map ticks ·
 PC sync · checkpoint · report. Then STOP: phase 14 (cutover) needs the owner.
+
+Result (2026-11-03): all rows done; probe 5678e88 all green (image boot 3.9 s, sandboxed source host, repair isolation, Playwright against the image). The separate low-rights uid is an optional documented variant (no CAP_SETUID in the image); the source host runs as 568 inside Landlock. Pin updates stay manual (owner: no extra runs). Audit: 12 findings fixed.
