@@ -50,6 +50,31 @@ public static class JobResourceTests
             finally { queue.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
         });
 
+        suite.Add("jobs: long-running work watched by ExclusiveYield ends so a waiting exclusive job runs (audit 6: raw archive, health)", () =>
+        {
+            var queue = new JobQueue(new TaskRegistry());
+            try
+            {
+                var yielded = false;
+                var longType = new JobType("long-capture", "Capture", JobPriority.Low, JobFlags.LongRunning);
+                var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var capture = queue.Enqueue(longType, "c", async job =>
+                {
+                    using var cancel = CancellationTokenSource.CreateLinkedTokenSource(job.CancellationToken);
+                    var run = Task.Delay(Timeout.Infinite, cancel.Token);
+                    started.TrySetResult();
+                    _ = ExclusiveYield.WatchAsync(() => queue.ExclusivePending, () => { yielded = true; cancel.Cancel(); }, run);
+                    try { await run; } catch (OperationCanceledException) when (yielded) { job.Result("yielded"); }
+                });
+                started.Task.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+                var exclusive = queue.Enqueue(new JobType("backup-test", "Backup", JobPriority.High, JobFlags.Exclusive), "b", _ => Task.CompletedTask);
+                Check.Equal(JobOutcome.Completed, exclusive.Completion.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult());
+                Check.Equal(JobOutcome.Completed, capture.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+                Check.True(yielded, "the long job ended for the exclusive one");
+            }
+            finally { queue.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        });
+
         suite.Add("jobs: two types with shares on one free slot do not block each other (no reservation deadlock)", () =>
         {
             var queue = new JobQueue(new TaskRegistry(), options: new JobQueueOptions { Workers = 1 });

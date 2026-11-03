@@ -97,7 +97,7 @@ public sealed class ContinuousCatalogueCrawler
         {
             if (!_settings().ContinuousCatalogDiscovery) { job.Result("Switched off (CONTINUOUS_CATALOG_DISCOVERY)"); return; }
             if (_release?.Invoke() == true) { job.Result("Paused for exclusive work after " + passes.ToString(CultureInfo.InvariantCulture) + " passes"); return; }
-            var step = await StepAsync(token).ConfigureAwait(false);
+            var step = await StepAsync(token, job.Heartbeat).ConfigureAwait(false);
             passes++; items += step.Items; added += step.NewItems;
             job.Report(message: Describe(step) + " · " + added.ToString(CultureInfo.InvariantCulture) + " new records so far");
             job.Result(passes.ToString(CultureInfo.InvariantCulture) + " passes, " + items.ToString(CultureInfo.InvariantCulture) + " records read, "
@@ -108,7 +108,8 @@ public sealed class ContinuousCatalogueCrawler
     }
 
     /// <summary>One crawler pass (the body of the 0.4.5 loop): at most one source page fetched.</summary>
-    public async Task<CrawlStep> StepAsync(CancellationToken cancellationToken)
+    /// <param name="beat">Heartbeat for the job watchdog, called for every ingested record (a long page never looks frozen).</param>
+    public async Task<CrawlStep> StepAsync(CancellationToken cancellationToken, Action? beat = null)
     {
         var settings = _settings();
         var interval = TimeSpan.FromSeconds(Math.Max(0.5, settings.ContinuousCatalogIntervalSeconds));
@@ -168,6 +169,7 @@ public sealed class ContinuousCatalogueCrawler
             foreach (var manga in _pending.Ready(workKey, Math.Max(1, settings.FederatedItemsPerSource)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                beat?.Invoke();
                 var mangaId = manga["id"]!.GetValue<long>();
                 try
                 {

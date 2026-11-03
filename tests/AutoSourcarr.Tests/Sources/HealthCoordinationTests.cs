@@ -41,6 +41,20 @@ public static class HealthCoordinationTests
             Check.Equal("cancelled", f.Coordinator.SnapshotAsync().GetAwaiter().GetResult()["items"]![0]!["state"]!.GetValue<string>());
             Check.Equal(0, f.Lanes.Snapshot.ManualActive);
         });
+        suite.Add("source health coordination: a queued check ends for a waiting exclusive job (backup/restore/reset) instead of holding it (audit 6)", () =>
+        {
+            using var f = new Fixture(queued: true);
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            f.Engine.BeforeSend = async (_, token) => { entered.TrySetResult(); await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false); };
+            var queued = f.Coordinator.Queue([f.Selection()], "manual");
+            entered.Task.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+            var ran = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var exclusive = f.Jobs!.Enqueue(new JobType("test-exclusive", "Backup", JobPriority.High, JobFlags.Exclusive), "x", _ => { ran.TrySetResult(); return Task.CompletedTask; });
+            ran.Task.WaitAsync(TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
+            Check.Equal(JobOutcome.Completed, exclusive.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+            var task = f.Registry.Find(queued["task_id"]!.GetValue<string>())!;
+            Check.True(task.Message.Contains("Paused for a backup", StringComparison.Ordinal), task.Message);
+        });
         suite.Add("source health coordination: waiting daily work yields to explicit checks and rechecks due state", () =>
         {
             using var f = new Fixture(); using var interactive = f.Lanes.BeginInteractive();
@@ -79,20 +93,22 @@ public static class HealthCoordinationTests
         public TestSourceEngine Engine { get; } = new();
         public SuwayomiClient Client { get; }
         public SourceHealthCoordinator Coordinator { get; }
-        public Fixture()
+        public JobQueue? Jobs { get; }
+        public Fixture(bool queued = false)
         {
+            if (queued) Jobs = new JobQueue(Registry);
             Database = new(new AutoSourcarrSettings { DataDir = _temp.Path }); new SchemaMigrator(Database).Initialize();
             Database.Write(DatabaseFile.Catalog, session => session.Execute("""
                 INSERT INTO source_config(source_id,name,lang,base_url,last_seen) VALUES('-1','Sample','en','https://sample.test','2026-10-19')
                 """));
             Lanes = new(new AutoSourcarrSettings { BackgroundIdleSeconds = .01 }, Registry); Client = Engine.Client();
             Coordinator = new(new SourceHealthStore(Database, clock: () => 100000), Client, Io, Lanes, Registry,
-                new Repairs(), () => true, new SupportPrivacy(), () => 100000, TimeSpan.Zero);
+                new Repairs(), () => true, new SupportPrivacy(), () => 100000, TimeSpan.Zero) { Jobs = Jobs };
         }
         public JsonObject Selection() => Coordinator.SnapshotAsync().GetAwaiter().GetResult()["items"]![0]!.AsObject();
         public void Dispose()
         {
-            Coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult(); Client.Dispose(); Lanes.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            Coordinator.DisposeAsync().AsTask().GetAwaiter().GetResult(); Jobs?.DisposeAsync().AsTask().GetAwaiter().GetResult(); Client.Dispose(); Lanes.DisposeAsync().AsTask().GetAwaiter().GetResult();
             Io.DisposeAsync().AsTask().GetAwaiter().GetResult(); Database.Dispose(); _temp.Dispose();
         }
     }
