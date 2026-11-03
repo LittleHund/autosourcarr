@@ -204,6 +204,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     /// <summary>Environment keys that load or inject code (dynamic loader, .NET/CLR hooks, JVM option files) or are not plain names.</summary>
     internal static bool LoaderKey(string key) =>
         key.Length is 0 or > 128 || !key.All(c => char.IsAsciiLetterOrDigit(c) || c == '_') || char.IsAsciiDigit(key[0])
+        || key is "GTK_MODULES" or "GTK_PATH" or "GIO_EXTRA_MODULES" or "GDK_PIXBUF_MODULE_FILE" or "GCONV_PATH" or "LOCPATH" || key.StartsWith("MALLOC_", StringComparison.Ordinal)
         || key is "_JAVA_OPTIONS" or "JDK_JAVA_OPTIONS" or "CLASSPATH" or "BASH_ENV" or "ENV" or "SHELLOPTS"
         || key.StartsWith("LD_", StringComparison.Ordinal) || key.StartsWith("DOTNET_", StringComparison.Ordinal)
         || key.StartsWith("CORECLR_", StringComparison.Ordinal) || key.StartsWith("COMPlus_", StringComparison.Ordinal)

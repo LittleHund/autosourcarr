@@ -208,6 +208,12 @@ public static class EgressProxyTests
             Check.True(!PublicSuffix.CookieDomainAllowed("www.example.co.uk", ".co.uk"));
             Check.True(!PublicSuffix.CookieDomainAllowed("user.github.io", "github.io"));
             Check.True(PublicSuffix.CookieDomainAllowed("site.test", null));
+            // Audit 10: a present but invalid, quoted or empty Domain is refused instead of becoming host-only.
+            foreach (var bad in new[] { "\"site.test\"", "", ".", "si te.test", "site..test" })
+                Check.True(!PublicSuffix.CookieDomainAllowed("site.test", bad), "Domain=" + bad);
+            // 6to4 (2002::/16) embeds any IPv4 address, private ones included: never a global egress target.
+            Check.True(!AutoSourcarr.Core.Repair.RawCodeRules.IsGlobalAddress(System.Net.IPAddress.Parse("2002:c0a8:0101::1")), "6to4");
+            Check.True(AutoSourcarr.Core.Repair.RawCodeRules.IsGlobalAddress(System.Net.IPAddress.Parse("2606:4700::1111")), "ordinary global IPv6");
         });
 
         suite.Add("isolated runner proof: exact evidence parses; weakened or foreign evidence is refused", () =>

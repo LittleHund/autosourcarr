@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
@@ -84,10 +85,10 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     public async Task StartAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
         if (!File.Exists(_jar)) throw new FileNotFoundException("The source host jar is missing.", _jar);
-        Directory.CreateDirectory(_dataDirectory);
-        await StartDisplayAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            CreateFolder(_dataDirectory);
+            await StartDisplayAsync(cancellationToken).ConfigureAwait(false);
             Launch();
             await WaitHealthyAsync(timeout, cancellationToken).ConfigureAwait(false);
         }
@@ -204,7 +205,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         {
             // Inside the sandbox only the data folder is writable: the JVM's and Chromium's home and temp files live there.
             var home = Path.Combine(_dataDirectory, "home"); var temp = Path.Combine(_dataDirectory, "tmp");
-            Directory.CreateDirectory(home); Directory.CreateDirectory(temp);
+            CreateFolder(home); CreateFolder(temp);
             start.Environment["HOME"] = home; start.Environment["TMPDIR"] = temp;
             start.Environment["XDG_CACHE_HOME"] = Path.Combine(home, ".cache"); start.Environment["XDG_CONFIG_HOME"] = Path.Combine(home, ".config");
         }
@@ -215,8 +216,16 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         start.Environment["SOURCE_HOST_TOKEN"] = Token;
         lock (_gate) if (_displayName.Length > 0) start.Environment["DISPLAY"] = _displayName;
         var process = Process.Start(start) ?? throw new InvalidOperationException("The source host could not be started.");
-        process.OutputDataReceived += (_, line) => Output(line.Data);
-        process.ErrorDataReceived += (_, line) => Output(line.Data);
+        // The sandbox proof counts only as the launcher's first stderr line, written before the JVM exists; the same
+        // text later (or on stdout) comes from host or extension code and is ignored.
+        var proofLine = new StrongBox<bool>(sandbox is not null);
+        process.OutputDataReceived += (_, line) => Output(line.Data, proof: false);
+        process.ErrorDataReceived += (_, line) =>
+        {
+            var first = proofLine.Value && line.Data is not null;
+            if (line.Data is not null) proofLine.Value = false;
+            Output(line.Data, first);
+        };
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         lock (_gate)
@@ -246,13 +255,25 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         return (options.LauncherPath, null);
     }
 
-    private void Output(string? line)
+    /// <summary>Creates a host folder; a failure becomes the start error (reported, restart ladder) instead of an unhandled fault.</summary>
+    private static void CreateFolder(string path)
+    {
+        try { Directory.CreateDirectory(path); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        { throw new InvalidOperationException("The source host folder " + Path.GetFileName(path) + " could not be created: " + error.Message, error); }
+    }
+
+    internal void Output(string? line, bool proof)
     {
         if (string.IsNullOrEmpty(line)) return;
-        if (line.StartsWith(SourceHostSandboxState.ProofPrefix, StringComparison.Ordinal) && SourceHostSandboxState.Parse(line) is { } proof)
+        if (line.StartsWith(SourceHostSandboxState.ProofPrefix, StringComparison.Ordinal))
         {
-            lock (_gate) _sandbox = proof;
-            _log(proof.Message());
+            if (proof && SourceHostSandboxState.Parse(line) is { } state)
+            {
+                lock (_gate) _sandbox = state;
+                _log(state.Message());
+            }
+            else _log("Ignored a sandbox proof line that did not come from the launcher.");
             return;
         }
         // Only errors before the host answers count as its error: a failing source call logs exceptions too.
