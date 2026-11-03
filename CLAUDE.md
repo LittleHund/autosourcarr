@@ -47,10 +47,12 @@ are no longer used. Plan: `docs/handoff/conversion-plan.md` (copy of Claude Docs
 | 9 Imports, metadata, sharing | done | 1cc573b, CI 41321311062 green |
 | 10 Chapters/reader | done (2026-11-01, Claude Code on the PC) | see `docs/handoff/project-docs/checkpoint.md`; probe b772773 green |
 | 11 Web UI finish | done (2026-11-02) | probe f0a582d green (1212 tests, Playwright 156/0/24) |
-| 12 Backup, 13 Pipeline/image, 14 Cutover | open | — |
+| 12 Backup | done (2026-11-02) | covered by the phase 13 probes |
+| 13 Pipeline/image | done (2026-11-03) | probe 5678e88 green (1138 tests, image boot 3.9 s, Playwright 156/0/24 against the image) |
+| 14 Cutover | open — owner gate | — |
 | 15–17 (0.6.0) | open | — |
 
-Progress: 152 of 173 plan-hours (88 %); estimate ≈ 6.5 h to cutover, ≈ 5.5 h for 0.6.0
+Progress: 165 of 173 plan-hours (95 %); estimate ≈ 2 h to cutover, ≈ 5.5 h for 0.6.0
 (measured pace 0.167 h per plan-hour, phases 0–10). Paused before phase 11 at the owner's request.
 
 **Phase 10 state:** four parts were written by sub-agents and saved in local WIP commit `3ed0b4e`
@@ -212,12 +214,13 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 | 2026-11-01 | Reader extension signing: user must add GitHub secrets `AUTOSOURCARR_EXT_KEYSTORE_B64`, `_KEYSTORE_PASSWORD`, `_KEY_PASSWORD`, `_KEY_ALIAS` (= `autosourcarr`); without them CI signs with a throwaway key. | waiting on user |
 | 2026-11-01 | Reader extension slot count is fixed at build time (5); "add more from Mihon" is not possible with the Keiyoushi plugin. | limitation |
 | 2026-11-01 | Mihon's next backup format is unpublished; only a probe sample exists; `mihon-backup-watch.py` tracks releases. | open |
-| 2026-11-01 | Split paths are not written in the same transaction as their decision-log entry (merges are). | open |
-| 2026-11-01 | `CatalogueDiscovery.SourceResult` (source health) not wired. | open |
+| 2026-11-01 | Split paths are not written in the same transaction as their decision-log entry (merges are). | resolved (phase 11) |
+| 2026-11-01 | `CatalogueDiscovery.SourceResult` (source health) not wired. | resolved (phase 11, SourceResultTracker) |
 | 2026-11-01 | Phase 10 carried in: import exact-thumbnail tie-break, machine translation in search, gallery identity, page colour sampling (`IPageImageSource`). | in WIP |
 | 2026-11-01 | Older guidance files (PC workspace-root `CLAUDE.md`, Project `claude/CLAUDE.md`) said "paused at stage 26"; both now point here. This file supersedes them. | resolved |
 | 2026-10-31 | Real Cloudflare managed challenge not passed from CI (GitHub network); WebView passes the local challenge. | open, needs user network |
-| 2026-10-31 | Source host runs as the same user as the app; separate low-rights user + runner binary in image → phase 13. | deferred |
+| 2026-10-31 | Source host runs as the same user as the app; separate low-rights user + runner binary in image → phase 13. | decided (phase 13): same user inside a Landlock sandbox; runner in the image |
+| 2026-11-03 | Deploy note: with Authelia/external sign-in set `AUTH_TRUSTED_PROXIES` to the proxy's address (identity headers are refused otherwise). | open (at 0.5.0 deploy) |
 | 2026-10-31 | Two-factor (AUTH-7), owner transfer/recovery (AUTH-9), AI providers + Postgres connections (CON-4, phase 16), SRC-9 AI benchmark. | deferred to 0.6.0 |
 | 2026-11-01 | Checkpoint item "(4) private duplicate test set in CI via encrypted fixture" is superseded: the user allowed committing it plainly (it must still be removed before cutover). | resolved |
 | 2026-10-31 | Open user decisions: (2) custom C# test runner vs xUnit; (3) SET-5 default `/config` vs `/data`; (1) host entry: default taken (stays in Api). | open |

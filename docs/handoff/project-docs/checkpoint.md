@@ -1,6 +1,6 @@
-# Checkpoint — 2026-11-02 20:45 CET (Phases 0–11 DONE; next Phase 12 Backup)
+# Checkpoint — 2026-11-03 (Phases 0–13 DONE; next Phase 14 Cutover — owner gate)
 
-STATUS: 0.5.0 · Phase 11/14 done · next Phase 12 Backup · 88% done (152/173 plan-h) · remaining to cutover 21 plan-h + moved items (≈ 6.5 h) · 0.6.0 after that ~35 plan-h (≈ 5.5 h)
+STATUS: 0.5.0 · Phase 13/14 done · next Phase 14 Cutover (needs the owner) · 95% done (165/173 plan-h) · remaining to cutover 8 plan-h (≈ 2 h) · 0.6.0 after that ~35 plan-h (≈ 5.5 h)
 
 RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code on the owner's PC) against 2.35: about 1.3 h went to fixing what a recheck of phases 0–9 found and six CI probe rounds (reader extension build script, signing, flaky tests). Pace phases 0–10: 24.4 h for 146 plan-h = 0.167 h per plan-h. Phases 11 and 13 grow with the recheck items moved to them (+0.6 h, +1.0 h).
 
@@ -13,11 +13,19 @@ RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code o
 | 10 Chapters/reader | 15 | 4.0 actual (17:33–21:30) | done |
 | Ingest/import gate (owner decision) | — | 1.2 actual (2 Nov) | done |
 | 11 Web UI finish | 6 | 3.75 actual (17:00–20:45, 4 area agents + audit + 3 probes) | done |
-| 12 Backup | 6 | 1.5 | next |
-| 13 Pipeline | 7 | 3.0 (×1.5 image builds; + reader extension in the image, repair runner wired, WebView sandbox, PERF-2 limits, network checks, continuous discovery crawler) | |
+| 12 Backup | 6 | 2.7 actual (2 Nov 20:40–23:20, two audits) | done |
+| 13 Pipeline | 7 | 3.6 actual (2 Nov 21:40 – 3 Nov, image + runtime agents, one audit) | done |
 | 14 Cutover | 8 | 2.0 (×1.5 real data, your command) | |
-| 0.5.0 total | 173 | 29.35 done + ≈ 6.5 remaining | |
+| 0.5.0 total | 173 | 35.65 done + ≈ 2 remaining (cutover) | |
 | 0.6.0 (15–17) | 35 | ≈ 5.5 | |
+
+RE-ESTIMATE #13 (3 Nov). Phase 12 took 2.7 h and phase 13 about 3.6 h, run in parallel. Remaining: phase 14 cutover ≈ 2 h (owner gate), 0.6.0 ≈ 5.5 h (owner gate).
+
+Phase 13 (closed): probe 5678e88 all green — 1138/1138 C# tests, image builds and boots in 3.9 s, in-image source_sandbox=sandboxed, repair_isolation=available, webview=ready, Playwright against the image 156/0/24, sandbox check, Linux runtime 2/2, benchmark within budgets, repair-runner check. Audit: 12 findings, all fixed (incl. HIGH: identity headers only from AUTH_TRUSTED_PROXIES). Checklist docs/handoff/briefs/phase13-checklist.md.
+
+Phase 12 (closed): code complete (eff800c, fc14eb2, 93cf430, 1dd9a7d); two audits, 24 findings fixed; covered by the phase 13 probes (Linux 1223→1138 tests after the native path removal).
+
+Before cutover (owner): go for phase 14; AUTOSOURCARR_EXT_* signing secrets; GitHub `release` environment with the owner as reviewer; at deploy set AUTH_TRUSTED_PROXIES and the /api/reader/repo/ Authelia/NPM bypass; remove duplicate-pairs.user.json (agreed, phase 14 step).
 
 RE-ESTIMATE #12 (2 Nov 20:45). Phase 11 took 3.75 h against 2.0: the UI breadth (4 parallel area agents, two follow-up rounds), an audit with 15 findings and three Playwright probes (shared-account theme race, a lost base stylesheet line, touch targets, a tablet overflow). Remaining phases re-estimated at 6.5 h.
 
