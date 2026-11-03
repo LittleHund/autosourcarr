@@ -245,6 +245,23 @@ Counts: 84 modules, 470 service methods (+131 nested helpers that port inside th
 | UI pages | done: instance tools backup dialog on `/api/v1` (plain download link, multipart passphrase, restore confirmation with decisions and chapter-provenance warnings) |
 | Audit fixes (two fresh-agent audits) | 13 + 11 findings, all fixed (safe mode, no migration loop, next-start restore with journal, crash points at 12 update and 7 restore steps, streaming, decision digest, account-only owner choices, unknown config keys kept) |
 
+### Phase 13 (pipeline completion), ticked 2026-11-03
+
+| Row | Result |
+| --- | --- |
+| 0.5.0 image | done: `docker/Dockerfile` (R2R app, jlink Java 25 + AOT class cache, JCEF + Xvfb, repair runner/launcher, source-host sandbox launcher, reader extension, UI bundle, tini, 568:568, pinned digests); probe: builds, boots in 6.5 s, Playwright 156/0/24 against it |
+| Release pipeline | done: `.github/workflows/release.yml` (manual/tag; caches, host only on change, Playwright only on UI change, boot gate, sandbox/WebView runtime check, Linux runtime tests, benchmark gate, screenshot diff, contrast gate, compatibility list; ghcr publish gated by `publish` input + `release` environment) |
+| Pins (PIPE-3) | done: `scripts/update-pins.py` (base digests, JCEF sha512, actions by SHA); schedule left off |
+| PIPE-9 Mihon watch | done: release-to-release schema diff, sample per backup family |
+| Repair runner in the app | done: RepairIsolation (fails closed, "Isolation unavailable"); probe: available (ready) in the image |
+| Source host sandbox (SRC-5) | done: `native/source-host-sandbox.c` (Landlock, signal scoping); probe: sandboxed, WebView ready |
+| Low-rights source host user | design: no CAP_SETUID in the image; the host runs as 568 inside the sandbox; uid 569 variant documented (not recommended) |
+| PERF-2 / PIPE-8 | done: minimum shares, process limits, health/raw archive/catalogue review as jobs, `--benchmark --gate` (CI: all within budget) |
+| Egress proxy hardening | done: DNS pinning, private ranges, SNI match, public-suffix cookies |
+| `schedule_continuous_catalog_discovery` | done: ContinuousCatalogueCrawler (job) |
+| `RefreshMediaVariants` | done: MixedEntries.RefreshMediaVariants at startup |
+| `lifecycle.py` / native PID 1 | done: removed (`src/AutoSourcarr.Host`, `native/container-entry.c` and dependants); the Api is the entry under tini |
+
 ### Route groups without a phase (assigned 2026-10-31)
 
 Section 3 left 124 of the 246 routes without a phase. Each phase now owns its routes (moved under `/api/v1`, with their UI pages):
