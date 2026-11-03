@@ -48,7 +48,8 @@ public sealed class AutoRepairWatcher
     public const string StateFile = "auto-repair.json";
     /// <summary>The job type of one automatic attempt (Tasks → Repairs shows it as kind "auto").</summary>
     public static readonly JobType AttemptJob = new("source-auto-repair", "Repair moved source automatically", JobPriority.Low,
-        StallTimeout: TimeSpan.FromMinutes(10));
+        StallTimeout: TimeSpan.FromMinutes(10))
+    { Limits = Runner.Egress.IsolatedRunner.RepairLimits };
     /// <summary>Task.Delay's largest wait is about 24.8 days; waits are clamped well below it.</summary>
     private static readonly TimeSpan MaximumWait = TimeSpan.FromDays(7);
     private const int MaximumState = 4 * 1024 * 1024;

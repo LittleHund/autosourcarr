@@ -120,8 +120,17 @@ C#/.NET conversion (ARC-11); notes are added per conversion phase.
     GET/HEAD path.
   - The app exits with code 75 when it asks for a restart (after an armed restore or setup restart). Keep the restart
     policy at `unless-stopped`, `always` or `on-failure`.
-  - The source host (extension code, WebView) now runs inside a Landlock sandbox. It can only write to its data folder
-    and cannot signal the app. Without Landlock it runs unsandboxed, and Status and health say so.
+  - **Upgrade note (external sign-in, e.g. Authelia):** set `AUTH_TRUSTED_PROXIES` to your reverse proxy's address
+    (the Authelia or Nginx Proxy Manager container IP, or its Docker network such as `172.18.0.0/16`). Only those
+    addresses may send `Remote-User`/`Remote-Groups` and `X-Forwarded-For`/`-Proto`. Without it nobody can sign in
+    through the proxy (the admin token and API keys still work); the login page, Status and an admin notice say so.
+    Loopback and the container's own addresses are never trusted and are refused as entries, because the source host
+    runs in the same container. 0.4.5 used these headers only for UI preferences (access was the admin token behind
+    Authelia), and 0.5.0 before this fix trusted loopback and private networks when the list was empty.
+  - The source host (extension code, WebView) now runs inside a Landlock sandbox. It can only write to its data folder,
+    cannot read the app's configuration, databases or library, and cannot signal the app. Not covered: its network is
+    open (it browses sources and can reach the app's HTTP port) and `/dev/shm` is shared. Without Landlock it runs
+    unsandboxed, and Status and health say so.
   - Repairs that run code go only through the isolated runner. Without Landlock ABI 6 they are refused with
     "Isolation unavailable".
   - The egress proxy now checks more:

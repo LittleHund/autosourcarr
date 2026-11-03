@@ -54,6 +54,19 @@ public static class SettingsSchemaTests
             Check.Equal(null, N("TZ", "null"));
         });
 
+        suite.Add("settings editor: external sign-in needs AUTH_TRUSTED_PROXIES; loopback is refused, a proxy subnet is saved (phase 13 audit)", () =>
+        {
+            using var temp = new Sandbox();
+            var editor = new SettingsEditor(temp.Path, () => new AutoSourcarrSettings(), new Dictionary<string, string?>());
+            static Dictionary<string, JsonElement> Changes(string json) => JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json)!;
+            var missing = Check.Throws<SettingsValidationException>(() => editor.Save(Changes("""{"AUTH_METHOD":"external"}"""), editor.Revision()));
+            Check.True(missing.Message.Contains("AUTH_TRUSTED_PROXIES", StringComparison.Ordinal), missing.Message);
+            var loopback = Check.Throws<SettingsValidationException>(() => editor.Save(Changes("""{"AUTH_METHOD":"external","AUTH_TRUSTED_PROXIES":"127.0.0.1"}"""), editor.Revision()));
+            Check.True(loopback.Message.Contains("loopback", StringComparison.Ordinal), loopback.Message);
+            var saved = editor.Save(Changes("""{"AUTH_METHOD":"external","AUTH_TRUSTED_PROXIES":"172.18.0.0/16"}"""), editor.Revision());
+            Check.True(saved.ChangedKeys.Contains("AUTH_TRUSTED_PROXIES"), string.Join(',', saved.ChangedKeys));
+        });
+
         suite.Add("settings editor: one transaction saves once; stale revisions and combination rules refuse without writing", () =>
         {
             using var temp = new Sandbox();

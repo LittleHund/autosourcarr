@@ -86,8 +86,9 @@ public sealed record SourceHostSandboxState(string State, int LandlockAbi, bool 
             : "as the app's user" + (Reason == "identity-unavailable" ? " (a separate user needs CAP_SETUID/CAP_SETGID, which this container does not grant)" : "");
         return State switch
         {
-            "sandboxed" => "The source host and its WebView run in the Landlock sandbox (ABI " + LandlockAbi.ToString(CultureInfo.InvariantCulture) + "): only its own data folder is writable, the app's configuration and databases are unreachable"
-                + (SignalsScoped ? ", and it cannot signal the app" : "; signal scoping needs Landlock ABI 6") + "; it runs " + user + ".",
+            "sandboxed" => "The source host and its WebView run in the Landlock sandbox (ABI " + LandlockAbi.ToString(CultureInfo.InvariantCulture) + "): it can write only its own data folder and cannot read the app's configuration, databases or library files"
+                + (SignalsScoped ? ", and it cannot signal the app" : "; signal scoping needs Landlock ABI 6")
+                + ". Not covered: the network is open (sources browse the web, and the host can reach the app's HTTP port, which is why identity headers are never trusted from this container), /dev/shm is shared; it runs " + user + ".",
             "unsandboxed" => "The source host runs WITHOUT a sandbox (" + Describe(Reason) + "); it runs " + user + ". Sources still work.",
             _ => "The source host sandbox is not known yet (the host has not started).",
         };

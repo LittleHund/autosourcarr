@@ -36,5 +36,8 @@ proof=$("$sandbox" --uid 569 --gid 569 --data "$work/data" -- /bin/true 2>&1 | h
 echo "$proof" | grep -q '"separated":0' && echo "$proof" | grep -q 'identity-unavailable' \
     && pass "a separate user without capabilities degrades to the app's user" || fail "identity switch without capabilities: $proof"
 "$sandbox" --data relative -- /bin/true 2>/dev/null; [ $? -eq 64 ] && pass "relative paths are refused (usage)" || fail "relative data path accepted"
+for bad in "$work/data/.." "$work/data/../config" "$work//data" "$work/./data"; do
+    "$sandbox" --data "$bad" -- /bin/true 2>/dev/null; [ $? -eq 64 ] && pass "refused data path $bad" || fail "accepted data path with . or .. components: $bad"
+done
 echo "source-host-sandbox check: $failures failure(s)"
 exit $failures

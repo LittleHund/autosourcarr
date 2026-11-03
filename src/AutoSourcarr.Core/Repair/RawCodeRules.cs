@@ -70,7 +70,7 @@ public static class RawCodeRules
                 !(b[0] == 198 && (b[1] is 18 or 19 || b[1] == 51 && b[2] == 100)) && !(b[0] == 203 && b[1] == 0 && b[2] == 113);
         // Globally routed IPv6 unicast, excluding documentation and special-use ranges.
         return b.Length == 16 && (b[0] & 0xe0) == 0x20 && !(b[0] == 0x20 && b[1] == 1 && b[2] < 2) &&
-            !(b[0] == 0x20 && b[1] == 1 && b[2] == 0x0d && b[3] == 0xb8) && !(b[0] == 0x3f && b[1] == 0xff && (b[2] & 0xf0) == 0);
+            !(b[0] == 0x20 && b[1] == 1 && b[2] == 0x0d && b[3] == 0xb8) && !(b[0] == 0x20 && b[1] == 2) /* 6to4 2002::/16 embeds any IPv4 */ && !(b[0] == 0x3f && b[1] == 0xff && (b[2] & 0xf0) == 0);
     }
     public static JsonObject Metadata(JsonObject value)
     {

@@ -47,8 +47,10 @@ public static class PublicSuffix
     public static bool CookieDomainAllowed(string requestHost, string? domainAttribute)
     {
         var host = Normalize(requestHost);
-        var domain = Normalize(domainAttribute ?? "");
-        if (domain.Length == 0) return true;
+        if (domainAttribute is null) return true; // no Domain attribute: a host-only cookie
+        var domain = Normalize(domainAttribute);
+        // A Domain attribute that is present but empty, quoted or not a host name is refused, not taken as host-only.
+        if (domain.Length == 0) return false;
         if (host.Length == 0) return false;
         var matches = host == domain || host.EndsWith("." + domain, StringComparison.Ordinal);
         if (!matches) return false;

@@ -26,6 +26,8 @@ public sealed class SourceRawService : IAsyncDisposable
         public TaskCompletionSource Start { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task Work { get; set; } = Task.CompletedTask;
         public Task Observer { get; set; } = Task.CompletedTask;
+        /// <summary>Set when the capture ended because exclusive work (backup, restore, reset) was waiting.</summary>
+        public volatile bool Yielded;
     }
     private readonly object _gate = new();
     private readonly Func<SourceRawCatalog> _factory;
@@ -187,12 +189,20 @@ public sealed class SourceRawService : IAsyncDisposable
                     {
                         Interlocked.Exchange(ref started, 1);
                         using var link = context.CancellationToken.Register(() => { try { queued.Cancellation.Cancel(); } catch (ObjectDisposedException) { } });
-                        await RunAsync(operation, origin, queued, waitForEngine).ConfigureAwait(false);
+                        // Audit 6: a waiting backup/restore/reset ends this capture; it is queued again behind that work.
+                        var run = RunAsync(operation, origin, queued, waitForEngine);
+                        _ = ExclusiveYield.WatchAsync(() => queue.ExclusivePending,
+                            () => { queued.Yielded = true; try { queued.Cancellation.Cancel(); } catch (ObjectDisposedException) { } }, run);
+                        await run.ConfigureAwait(false);
                     }, origin == "manual" ? JobPriority.Normal : JobPriority.Low, origin: origin, title: "Archive source code", context: package);
                     if (handle.Merged) { queued.Cancellation.Dispose(); lease.Dispose(); lease = null!; return new() { ["queued"] = false, ["task_id"] = handle.Id, ["coalesced"] = true }; }
                     queued.Id = handle.Id; queued.Work = handle.Completion; queued.Observer = handle.Completion; _jobs[handle.Id] = queued;
                     if (key is not null) _keys[key] = queued;
-                    _ = handle.Completion.ContinueWith(_ => { if (Volatile.Read(ref started) == 0) queued.Lease.Dispose(); }, CancellationToken.None,
+                    _ = handle.Completion.ContinueWith(done =>
+                    {
+                        if (Volatile.Read(ref started) == 0) queued.Lease.Dispose();
+                        else if (queued.Yielded && !_owner.IsStopping) _ = Queue(operation, package, key, origin, waitForEngine);
+                    }, CancellationToken.None,
                         TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                     queued.Start.TrySetResult(); lease = null!;
                     return new() { ["queued"] = true, ["task_id"] = handle.Id };
@@ -230,6 +240,7 @@ public sealed class SourceRawService : IAsyncDisposable
             finally { _serial.Release(); }
             _tasks.Complete(job.Id, "Raw-code capture finished; missing code appears in Tasks → Repairs.");
         }
+        catch (OperationCanceledException) when (job.Yielded) { _tasks.Complete(job.Id, "Paused for a backup, restore or reset; queued again behind it"); }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { _tasks.Fail(job.Id, "Cancelled"); throw; }
         catch (Exception error) { var message = Clip(_privacy.Text(error.GetType().Name + ": " + error.Message), 1000); _log(message); _tasks.Fail(job.Id, message); }
         finally

@@ -130,7 +130,16 @@ public static class AccessControlTests
         var assets = Path.Combine(root, "assets"); Directory.CreateDirectory(assets);
         File.WriteAllText(Path.Combine(assets, "index.html"), "app-page"); File.WriteAllText(Path.Combine(assets, "login.html"), "login-page");
         var host = new HostBuilder().ConfigureWebHost(web => web.UseTestServer().ConfigureServices(services => services.AddRouting())
-            .Configure(app => runtime.ConfigureHttp(app, assets))).Build();
+            .Configure(app =>
+            {
+                // The test server has no network peer: X-Test-Peer stands in for the connection's remote address.
+                app.Use(next => context =>
+                {
+                    if (System.Net.IPAddress.TryParse(context.Request.Headers["X-Test-Peer"].ToString(), out var peer)) context.Connection.RemoteIpAddress = peer;
+                    return next(context);
+                });
+                runtime.ConfigureHttp(app, assets);
+            })).Build();
         await host.StartAsync();
         return new App { Runtime = runtime, Host = host };
     }
@@ -196,7 +205,7 @@ public static class AccessControlTests
             Check.Equal(HttpStatusCode.Forbidden, (await crossSite.PostAsync("/API/V1/ACCOUNTS", new StringContent("{}"))).StatusCode);
         Check.True(AccessPolicy.Required("POST", "/API/V1/ACCOUNTS/") == AccessLevel.Owner);
         // Proxy identity headers count only from trusted proxies.
-        Check.True(AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("172.18.0.5"), ""));
+        Check.True(!AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("172.18.0.5"), ""), "an empty list trusts nobody (phase 13 audit)");
         Check.True(!AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("203.0.113.9"), ""));
         Check.True(!AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("192.168.1.20"), "172.18.0.0/16"));
         Check.True(AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("172.18.3.4"), "10.0.0.1, 172.18.0.0/16"));
@@ -250,19 +259,56 @@ public static class AccessControlTests
             Check.Equal(HttpStatusCode.OK, (await owner.PostAsync("/api/v1/auth/logout", null)).StatusCode);
         }
         using var externalRoot = new Sandbox();
-        await using (var app = await Start(externalRoot.Path, Settings(externalRoot.Path, "external") with { AuthOwnerExternalUser = "boss" }))
+        await using (var app = await Start(externalRoot.Path, Settings(externalRoot.Path, "external") with { AuthOwnerExternalUser = "boss", AuthTrustedProxies = "172.18.0.0/16" }))
         {
-            using var boss = app.Client(("Remote-User", "boss"), ("Sec-Fetch-Site", "same-origin"));
+            using var boss = app.Client(("Remote-User", "boss"), ("Sec-Fetch-Site", "same-origin"), ("X-Test-Peer", "172.18.0.9"));
             Check.Equal("owner", (await boss.GetFromJsonAsync<JsonObject>("/api/v1/auth/me"))!["role"]!.GetValue<string>());
-            using var groupAdmin = app.Client(("Remote-User", "alice"), ("Remote-Groups", "users,admins"), ("Sec-Fetch-Site", "same-origin"));
+            using var groupAdmin = app.Client(("Remote-User", "alice"), ("Remote-Groups", "users,admins"), ("Sec-Fetch-Site", "same-origin"), ("X-Test-Peer", "172.18.0.9"));
             Check.Equal("admin", (await groupAdmin.GetFromJsonAsync<JsonObject>("/api/v1/auth/me"))!["role"]!.GetValue<string>());
             Check.Equal(HttpStatusCode.Forbidden, (await groupAdmin.GetAsync("/api/v1/accounts")).StatusCode);
             // A group named like the owner role never makes an owner.
-            using var pretender = app.Client(("Remote-User", "mallory"), ("Remote-Groups", "owner,family"), ("Sec-Fetch-Site", "same-origin"));
+            using var pretender = app.Client(("Remote-User", "mallory"), ("Remote-Groups", "owner,family"), ("Sec-Fetch-Site", "same-origin"), ("X-Test-Peer", "172.18.0.9"));
             Check.Equal("guest", (await pretender.GetFromJsonAsync<JsonObject>("/api/v1/auth/me"))!["role"]!.GetValue<string>());
-            using var stranger = app.Client(("Remote-User", "eve"), ("Remote-Groups", "users"), ("Sec-Fetch-Site", "same-origin"));
+            using var stranger = app.Client(("Remote-User", "eve"), ("Remote-Groups", "users"), ("Sec-Fetch-Site", "same-origin"), ("X-Test-Peer", "172.18.0.9"));
             Check.Equal(HttpStatusCode.Unauthorized, (await stranger.GetAsync("/api/v1/keys")).StatusCode);
+            Check.Equal(HttpStatusCode.OK, (await boss.GetAsync("/api/v1/keys")).StatusCode);
+            // Phase 13 audit: a spoofed owner Remote-User from loopback, this container's own address, an unlisted
+            // private address or no network peer at all is ignored (anonymous).
+            var own = AutoSourcarr.Core.Settings.TrustedProxies.OwnAddresses;
+            AutoSourcarr.Core.Settings.TrustedProxies.OwnAddresses = () => new HashSet<System.Net.IPAddress> { System.Net.IPAddress.Parse("172.18.0.5") };
+            try
+            {
+                foreach (var peer in new[] { "127.0.0.1", "::1", "172.18.0.5", "10.1.2.3", "192.168.1.20", "" })
+                {
+                    using var spoof = peer.Length == 0 ? app.Client(("Remote-User", "boss"), ("Sec-Fetch-Site", "same-origin"))
+                        : app.Client(("Remote-User", "boss"), ("Sec-Fetch-Site", "same-origin"), ("X-Test-Peer", peer));
+                    Check.True((await spoof.GetAsync("/api/v1/keys")).StatusCode == HttpStatusCode.Unauthorized, "spoofed Remote-User from " + (peer.Length == 0 ? "no peer" : peer));
+                }
+                Check.True(!AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("172.18.0.5"), "172.18.0.0/16"), "the container's own address inside a listed subnet");
+                Check.True(!AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("127.0.0.1"), "127.0.0.1"), "loopback even when listed");
+                Check.True(AccessControlMiddleware.FromTrustedProxy(System.Net.IPAddress.Parse("::ffff:172.18.0.9"), "172.18.0.0/16"), "a mapped IPv4 proxy");
+            }
+            finally { AutoSourcarr.Core.Settings.TrustedProxies.OwnAddresses = own; }
         }
+        // Without AUTH_TRUSTED_PROXIES external sign-in trusts nobody and says why (login notice, status, admin notice).
+        using var unlistedRoot = new Sandbox();
+        await using (var app = await Start(unlistedRoot.Path, Settings(unlistedRoot.Path, "external") with { AuthOwnerExternalUser = "boss" }))
+        {
+            using var boss = app.Client(("Remote-User", "boss"), ("Sec-Fetch-Site", "same-origin"), ("X-Test-Peer", "172.18.0.9"));
+            Check.Equal(HttpStatusCode.Unauthorized, (await boss.GetAsync("/api/v1/keys")).StatusCode);
+            var status = await boss.GetFromJsonAsync<JsonObject>("/api/v1/auth/status");
+            Check.True(status!["notice"]!.GetValue<string>().Contains("AUTH_TRUSTED_PROXIES", StringComparison.Ordinal), status.ToJsonString());
+            Check.True(app.Runtime.SignInProblem is not null, "the runtime reports the sign-in problem");
+            Check.True(app.Runtime.Errors.Snapshot(20, includeResolved: false).ToJsonString().Contains("AUTH_TRUSTED_PROXIES", StringComparison.Ordinal), "a persistent admin notice");
+        }
+        // The list itself: loopback and the container's own address are refused, a proxy address or subnet is fine.
+        Check.True(AutoSourcarr.Core.Settings.TrustedProxies.Problems("127.0.0.1", external: true).Count == 1);
+        Check.True(AutoSourcarr.Core.Settings.TrustedProxies.Problems("10.0.0.0/8, ::1", external: true).Count == 1);
+        Check.True(AutoSourcarr.Core.Settings.TrustedProxies.Problems("0.0.0.0/0", external: true).Count == 1);
+        Check.True(AutoSourcarr.Core.Settings.TrustedProxies.Problems("not-an-address", external: true).Count == 1);
+        Check.True(AutoSourcarr.Core.Settings.TrustedProxies.Problems("", external: true).Count == 1);
+        Check.True(AutoSourcarr.Core.Settings.TrustedProxies.Problems("", external: false).Count == 0);
+        Check.True(AutoSourcarr.Core.Settings.TrustedProxies.Problems("172.18.0.3, 172.19.0.0/16", external: true).Count == 0);
         using var basicRoot = new Sandbox();
         await using (var app = await Start(basicRoot.Path, Settings(basicRoot.Path, "basic")))
         {
