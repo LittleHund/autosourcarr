@@ -186,9 +186,11 @@ if command -v node >/dev/null 2>&1; then
     echo 'ERROR: giant duplicate-candidate query-string regression returned' >&2
     exit 1
   fi
-  grep -q '/static/mixed-entries.js?v=0.4.5' autosourcarr/app/static/index.html
-  grep -q '/static/app.js?v=0.4.5' autosourcarr/app/static/index.html
-  grep -q '/static/ui.css?v=0.4.5' autosourcarr/app/static/index.html
+  # Static asset ?v= is the release version (root VERSION, 0.5.0): the 0.5.0 image serves this UI (step 7 checks all).
+  release_version=$(tr -d '\r\n' < VERSION)
+  grep -q "/static/mixed-entries.js?v=$release_version" autosourcarr/app/static/index.html
+  grep -q "/static/app.js?v=$release_version" autosourcarr/app/static/index.html
+  grep -q "/static/ui.css?v=$release_version" autosourcarr/app/static/index.html
 grep -q 'data-tab="manual-actions"' autosourcarr/app/static/index.html
 grep -q 'data-manual-action-subtab="titles"' autosourcarr/app/static/index.html
 grep -q '/api/v1/manual-actions' autosourcarr/app/static/app.js
@@ -304,12 +306,35 @@ fi
 grep -q 'libVersion = "1.4"' extension/module/build.gradle.kts
 grep -q 'name = "AutoSourcarr"' extension/module/build.gradle.kts
 if grep -q 'name = "AutoSourcarr v\$autosourcarrVersion"' extension/module/build.gradle.kts; then echo 'Extension display name must stay AutoSourcarr.' >&2; exit 1; fi
+# Version alignment (0.5.0 version split, CLAUDE.md section 4). Two sides, each aligned on its own:
+#   release / C# 0.5.0: root VERSION (docker/Dockerfile copies it, scripts/build-reader-extension.sh reads it),
+#     Directory.Build.props VersionPrefix, ApplicationRuntime.Version, docker/Dockerfile ARG VERSION, the
+#     compatibility list app_version, every static asset ?v= and the reader extension fallback version;
+#   Python 0.4.5 (the rollback until the owner confirms the 0.5.0 deploy): autosourcarr/VERSION (the Python app and
+#     its image read it), autosourcarr/bundled/build/VERSION (synced from it), the repair worker status version and
+#     the Python image tag in scripts/build-integrated-image.sh.
 python - <<'PYVER'
 from pathlib import Path
-v=Path('VERSION').read_text().strip(); p=[int(x) for x in v.split('.')]; code=p[0]*1000000+p[1]*1000+p[2]
-assert v=='0.4.5' and code==4005
-assert Path('repair-worker/server.py').read_text().count("'version': '"+v+"'")==2, 'Repair status/new-job version drifted'
-print(f'extension version mapping OK: {v} -> 1.4.{code}')
+import json, re
+def code(v):
+    p=[int(x) for x in v.split('.')]; return p[0]*1000000+p[1]*1000+p[2]
+release=Path('VERSION').read_text().strip()
+assert release=='0.5.0' and code(release)==5000, f'release VERSION {release}'
+props=Path('Directory.Build.props').read_text()
+assert f'<VersionPrefix>{release}</VersionPrefix>' in props and '<VersionSuffix>' not in props, 'Directory.Build.props version drifted'
+assert f'internal const string Version = "{release}";' in Path('src/AutoSourcarr.Api/ApplicationRuntime.cs').read_text(), 'ApplicationRuntime.Version drifted'
+assert f'ARG VERSION={release}' in Path('docker/Dockerfile').read_text(), 'docker/Dockerfile ARG VERSION drifted'
+assert json.loads(Path('src/AutoSourcarr.Core/Compatibility/compatibility.json').read_text())['app_version']==release, 'compatibility list app_version drifted'
+assert f'orElse("{release}")' in Path('extension/module/build.gradle.kts').read_text(), 'reader extension fallback version drifted'
+assert '"$root/VERSION"' in Path('scripts/build-reader-extension.sh').read_text(), 'reader extension must take the release VERSION'
+assets=set(re.findall(r'\?v=(\d+\.\d+\.\d+)"', Path('autosourcarr/app/static/index.html').read_text()))
+assert assets=={release}, f'static asset ?v= must all be {release}: {sorted(assets)}'
+python=Path('autosourcarr/VERSION').read_text().strip()
+assert python=='0.4.5' and code(python)==4005, f'Python app VERSION {python}'
+assert Path('autosourcarr/bundled/build/VERSION').read_text().strip()==python, 'bundled build VERSION must equal autosourcarr/VERSION'
+assert Path('repair-worker/server.py').read_text().count("'version': '"+python+"'")==2, 'Repair status/new-job version drifted'
+assert '"$PROJECT_ROOT/autosourcarr/VERSION"' in Path('scripts/build-integrated-image.sh').read_text(), 'Python image tag must use autosourcarr/VERSION'
+print(f'version alignment OK: release/C# {release} -> reader extension 1.4.{code(release)}; Python app {python} -> 1.4.{code(python)}')
 PYVER
 grep -q 'HttpSource' extension/module/src/autosourcarr/AutoSourcarr.kt
 if grep -R -qE '^[[:space:]]*import kotlinx\.serialization|@Serializable|parseAs<' extension/module/src/autosourcarr; then
@@ -568,6 +593,9 @@ if ((${#obsolete_docs[@]})); then echo "Obsolete one-off docs must not ship: ${o
 for version in 0.1.0 0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8 0.1.9 0.2.0 0.2.1 0.2.2 0.2.3 0.2.4 0.2.5 0.2.6 0.2.7 0.2.8 0.2.9 0.2.10 0.2.11 0.2.12 0.2.13 0.2.14 0.2.15 0.2.16 0.2.17 0.2.18 0.2.19 0.2.20 0.2.21 0.2.22 0.2.23 0.2.24 0.2.25 0.2.26 0.2.27 0.2.28 0.2.29 0.2.30 0.2.31 0.2.32; do grep -q "^## $version\b" CHANGELOG.md || { echo "CHANGELOG missing $version" >&2; exit 1; }; done
 grep -q 'Every future AutoSourcarr release must add a new version section here' CHANGELOG.md
 test "$(grep -c '^## 0.4.5 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.4.5 section' >&2; exit 1; }
+test "$(grep -c '^## 0.5.0 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.5.0 section' >&2; exit 1; }
+test "$(grep -m1 '^## ' CHANGELOG.md)" = "$(grep -m1 '^## 0.5.0 - ' CHANGELOG.md)" || { echo 'CHANGELOG must start with the 0.5.0 section' >&2; exit 1; }
+if grep -qE '^## (0\.5\.0 \(in progress\)|Unreleased)' CHANGELOG.md; then echo 'CHANGELOG still has an in-progress or Unreleased section' >&2; exit 1; fi
 echo 'single CHANGELOG policy + complete version history OK'
 
 step 10 'Docker validation'

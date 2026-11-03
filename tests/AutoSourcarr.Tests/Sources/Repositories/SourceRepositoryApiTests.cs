@@ -174,7 +174,7 @@ public static class SourceRepositoryApiTests
             var repositories = new SourceRepositoryStore(new CanonicalConfiguration(_temp.Path));
             _host = new HostBuilder().ConfigureWebHost(web => web.UseTestServer().ConfigureServices(services => services.AddRouting()).Configure(app =>
             {
-                app.UseAutoSourcarrHttp("0.4.3-migration", () => settings, (_, _) => { Interlocked.Increment(ref Unexpected); return "unexpected"; }, new RequestAdmissionGate(), _lanes, tasks, privacy, _ => { });
+                app.UseAutoSourcarrHttp("0.5.0", () => settings, (_, _) => { Interlocked.Increment(ref Unexpected); return "unexpected"; }, new RequestAdmissionGate(), _lanes, tasks, privacy, _ => { });
                 app.UseEndpoints(routes => routes.MapSourceRepositories(repositories, Previews, _io, () => settings));
             })).Build(); _host.Start(); _client = _host.GetTestClient();
         }

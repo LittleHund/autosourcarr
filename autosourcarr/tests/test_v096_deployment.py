@@ -49,7 +49,7 @@ def test_optional_builder_tags_the_image_used_by_deployment(tmp_path):
     result=subprocess.run(['bash',str(ROOT/'scripts/build-integrated-image.sh')],env=env,capture_output=True,text=True)
     assert result.returncode==0, result.stderr
     args=json.loads(log.read_text())
-    assert args==['build','-t','autosourcarr:local','-t','autosourcarr:'+ (ROOT/'VERSION').read_text().strip(),str(ROOT/'autosourcarr')]
+    assert args==['build','-t','autosourcarr:local','-t','autosourcarr:'+ (ROOT/'autosourcarr/VERSION').read_text().strip(),str(ROOT/'autosourcarr')]
     assert 'does not switch a running container' in result.stdout
 
 

@@ -204,7 +204,7 @@ public static class EngineCompatibilityApiTests
                     try { await next(context); } catch (Exception error) { trace.Error = error; throw; }
                     finally { trace.Aborted = context.RequestAborted.IsCancellationRequested; trace.Finished.TrySetResult(); }
                 });
-                app.UseAutoSourcarrHttp("0.4.3-migration", () => settings, (_, _) => { Interlocked.Increment(ref Unexpected); return "unexpected"; }, new RequestAdmissionGate(), _lanes, tasks, privacy, _ => { });
+                app.UseAutoSourcarrHttp("0.5.0", () => settings, (_, _) => { Interlocked.Increment(ref Unexpected); return "unexpected"; }, new RequestAdmissionGate(), _lanes, tasks, privacy, _ => { });
                 app.UseEndpoints(routes => routes.MapEngineCompatibility(mapSource ? Source.Contract : null, mapMain ? Main.Contract : null, () => settings, Admin));
             })).Build();
             _host.Start(); _client = _host.GetTestClient();

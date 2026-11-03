@@ -1,5 +1,44 @@
 # TrueNAS deployment
 
+## 0.5.0 (current release)
+
+0.5.0 is the C#/.NET 10 image (`docker/Dockerfile`, project root as build context). Coming from 0.4.x: follow
+[docs/upgrade-from-0.4.md](docs/upgrade-from-0.4.md) before switching; keep the 0.4.5 datasets until 0.5.0 works.
+
+1. Datasets (owner **568:568**, the TrueNAS `apps` user; the image runs as 568:568):
+
+   ```text
+   /mnt/POOL/apps/autosourcarr/
+   ├── project/              # extracted project (contains docker/Dockerfile and docker-compose.0.5.0.yml)
+   ├── config/               # /config: config.json, config.key, accounts/ (an old autosourcarr.env is converted once)
+   └── autosourcarr-data/    # /data: catalog.sqlite, chapter-origins.sqlite, source-host/, covers, backups
+   ```
+
+   Optional: your library or old downloads, mounted read-only (for example `/mnt/manga-downloads`).
+2. **Apps → Install via YAML** with [docker-compose.0.5.0.yml](docker-compose.0.5.0.yml). Change the `build.context`
+   and volume paths to your datasets. It builds `autosourcarr:0.5.0-local` from the project folder; the published
+   `ghcr.io/littlehund/autosourcarr:0.5.0` line is for after the image is published. Delete the `private-*`
+   services for a single instance; the main Suwayomi service is optional.
+3. Keep `restart: unless-stopped` (or `always`/`on-failure`): the app exits with code 75 when it restarts itself
+   (setup changes, an armed restore). Keep `cap_drop: [ALL]` and `no-new-privileges`; no Docker socket, no helpers.
+4. Open `http://NAS:8282`, finish the setup wizard, connect your own Suwayomi under **Connections → Suwayomi**
+   (`http://suwayomi:30058` inside the Compose network) if you use one.
+5. Reverse proxy: see [Authelia](docs/reverse-proxy/authelia.md) and
+   [Nginx Proxy Manager](docs/reverse-proxy/nginx-proxy-manager.md). Keep the `^/api/reader/v1([/?].*)?$` bypass,
+   add the GET/HEAD-only `/api/reader/repo/` bypass, and with Authelia sign-in set `AUTH_TRUSTED_PROXIES` to the
+   proxy container's address or Docker network (for example `172.18.0.0/16`; Settings or `config.json`).
+6. Readers: **System → Reader setup** shows per server slot a QR code/link for the repository
+   (`https://<your address>/api/reader/repo/index.min.json`) and one with the slot's address and device key.
+   Reinstall the AutoSourcarr extension from that repository.
+7. Repairs that run code need Linux Landlock ABI ≥ 6; without it they are refused and everything else works.
+
+Rollback: stop 0.5.0, remove the `"connections"` key from `config.json` (keep a copy), and start the 0.4.5 app again
+with its retained Compose file (sections below).
+
+## Previous version (rollback): 0.4.5 and older
+
+Everything below describes the Python 0.4.x app (`autosourcarr/Dockerfile`, `docker-compose.truenas.yml`).
+
 ## Upgrading to 0.3.42 — installed Health and procfs diagnosis
 
 Preserve destination env files, both app databases, source profiles, manual choices,

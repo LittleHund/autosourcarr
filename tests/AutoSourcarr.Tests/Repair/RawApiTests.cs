@@ -152,7 +152,7 @@ public static class RawApiTests
             _service.StartAsync().GetAwaiter().GetResult();
             _host = new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services => services.AddRouting()).Configure(app =>
             {
-                app.UseAutoSourcarrHttp("0.4.3-migration", () => settings, (_, _) => { Unexpected++; return "unexpected"; }, new RequestAdmissionGate(), _lanes, tasks, privacy, _ => { });
+                app.UseAutoSourcarrHttp("0.5.0", () => settings, (_, _) => { Unexpected++; return "unexpected"; }, new RequestAdmissionGate(), _lanes, tasks, privacy, _ => { });
                 app.UseEndpoints(endpoints => endpoints.MapSourceRaws(_service, Installed, Commands, () => settings, _admin, _io, History));
             })).Build();
             _host.StartAsync().GetAwaiter().GetResult(); Server = _host.GetTestServer(); Client = Server.CreateClient();

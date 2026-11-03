@@ -297,7 +297,7 @@ public static class HttpApiTests
             snapshot = Body(client.GetAsync("/api/admin/source-health").GetAwaiter().GetResult());
             Check.Equal("working", snapshot["items"]![0]!["state"]!.GetValue<string>());
             Check.Equal(1, f.Registry.Snapshot()["completed"]!.GetValue<int>());
-            Check.Equal("0.4.3-migration", Header(queued, "X-AutoSourcarr-Version"));
+            Check.Equal("0.5.0", Header(queued, "X-AutoSourcarr-Version"));
             var disabled = Body(client.PutAsync("/api/admin/source-health/daily", new StringContent("{\"enabled\":false}", Encoding.UTF8, "application/json")).GetAwaiter().GetResult());
             Check.True(!disabled["daily"]!["enabled"]!.GetValue<bool>()); Check.Equal(0, pipeline.Unexpected);
         });
@@ -432,10 +432,10 @@ public static class HttpApiTests
         {
             _ownsLanes = lanes is null; Tasks = tasks ?? new(); Lanes = lanes ?? new(Settings, Tasks);
             var privacy = new SupportPrivacy(); privacy.Register(new Dictionary<string, string?> { ["api_key"] = "private-sentinel" });
-            Errors = new(RuntimeIdentity.Create("0.4.3-migration"), privacy);
+            Errors = new(RuntimeIdentity.Create("0.5.0"), privacy);
             _host = new HostBuilder().ConfigureWebHost(builder => builder.UseTestServer().ConfigureServices(services => services.AddRouting()).Configure(app =>
             {
-                app.UseAutoSourcarrHttp("0.4.3-migration", () => Settings, (context, error) =>
+                app.UseAutoSourcarrHttp("0.5.0", () => Settings, (context, error) =>
                 {
                     Unexpected++;
                     return LastErrorId = Errors.Record("AutoSourcarr", error.Message, $"unhandled|{context.Request.Method}|{context.Request.Path}|{error.GetType().Name}|{error.Message}",
