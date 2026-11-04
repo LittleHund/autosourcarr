@@ -633,6 +633,10 @@ public static class CutoverTests
         {
             var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out"), () => "", TextWriter.Null)).Report;
             Check.True(report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && report.Verdict.Contains("origin_recovery: 2 failed", StringComparison.Ordinal), report.Verdict);
+            // A step that reports it was skipped because of an error did not run either.
+            ApplicationRuntime.OfflineStepOverride = name => name == "merge_safety_repair" ? new JsonObject { ["skipped"] = true, ["error"] = "synthetic" } : null;
+            var skipped = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-skipped"), () => "", TextWriter.Null)).Report;
+            Check.True(skipped.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && skipped.Verdict.Contains("merge_safety_repair did not run", StringComparison.Ordinal), skipped.Verdict);
         }
         finally { ApplicationRuntime.OfflineStepOverride = null; }
     }
