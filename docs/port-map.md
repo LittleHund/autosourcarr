@@ -277,6 +277,16 @@ Section 3 left 124 of the 246 routes without a phase. Each phase now owns its ro
 | CatalogueEndpoints, DisplayMetadata / gallery / serving-upgrade / profile routes, TagEndpoints, ReaderEndpoints | 59 | 10 |
 | StaticEndpoints (Web UI), UiPreferencesEndpoints | 3 | 11 |
 
+### Phase 14 (cutover), ticked 2026-11-05
+
+| Row | Result |
+| --- | --- |
+| 0.4.x → 0.5.0 migration (plan: one command on a snapshot) | done: `AutoSourcarr.Api --migrate-0.4` (LegacyMigrationTool) with `scripts/migrate-from-0.4.ps1` / `.sh`; copies the snapshot, converts env → config.json, migrates the databases, runs the offline recovery steps |
+| Parity with the Python app (plan: counts, manual decisions, subscriptions) | done: ParityReport (`parity-report.md` / `.json`): table coverage, whole-row parity of manual decisions, subscriptions, settings, merge recheck (IMP-9); exit 0 PARITY OK / 1 FAILED / 2 refused / 3 error |
+| Release prep | done: VERSION split (0.5.0 app / 0.4.5 rollback), CHANGELOG 0.5.0, install and upgrade docs, docker-compose.0.5.0.yml, release.yml date gate; duplicate-pairs.user.json removed |
+| Re-audit of phases 0–13 (pr-review-toolkit, 2026-11-04) | done: 58 findings + 7 review follow-ups fixed (becd7c8 … f4f1369); owner decisions recorded in the knowledge records |
+| Owner run on the real snapshot, merge to `main`, ghcr publish, deploy, Python retired | open: owner gates (hard rule 15) |
+
 ## 1. Modules → feature folders
 
 | Python module | C# folder | C# class | Status |
