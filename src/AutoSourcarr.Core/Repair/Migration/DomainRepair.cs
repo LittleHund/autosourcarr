@@ -483,7 +483,8 @@ public sealed class DomainRepair
             }
             var directory = LastWorkingDirectory(packageName);
             JsonObject? record = null;
-            if (File.Exists(Path.Combine(directory, sha + ".jar")))
+            // A kept copy is reused only when its bytes still match (a damaged copy is written again through Keep).
+            if (ReadBounded(Path.Combine(directory, sha + ".jar"), SuwayomiClient.MaximumExtensionJar) is { } existing && DomainMigration.Sha(existing) == sha)
                 record = Records(directory).Where(item => item.Sha == sha).Select(item => item.Record).FirstOrDefault();
             var kept = record is null;
             record ??= Keep(packageName, jar, extension, "passed-health-check");

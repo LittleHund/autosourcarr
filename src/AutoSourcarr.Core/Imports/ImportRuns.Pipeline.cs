@@ -126,7 +126,7 @@ public sealed partial class ImportRuns
         // A temporary failure (main Suwayomi unreachable, a local deferral or timeout, a file that could not be read now)
         // keeps the upload and the "running" state: startup recovery resumes the run instead of losing the only copy.
         catch (Exception error) when (error is not OutOfMemoryException && error is not BackupDecodeException
-            && (AutoSourcarr.Core.Sources.SourceResultTracker.IsLocal(error) || error is IOException or HttpRequestException or AutoSourcarr.Core.Sources.SuwayomiException))
+            && (AutoSourcarr.Core.Sources.SourceResultTracker.IsLocal(error) || error is IOException and not HttpIOException || error is HttpRequestException { StatusCode: null }))
         {
             Recount(importId, "running");
             throw;

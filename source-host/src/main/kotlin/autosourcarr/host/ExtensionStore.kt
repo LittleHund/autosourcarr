@@ -96,6 +96,7 @@ class ExtensionStore(
         apkUrl: String,
         expectedSha256: String? = null,
     ): InstalledExtension {
+        indexError?.let { throw IllegalStateException(it) }
         val client = Injekt.get<NetworkHelper>().client
         root.mkdirs()
         val download = File.createTempFile("extension-", ".apk", root)
@@ -117,6 +118,7 @@ class ExtensionStore(
         apk: File,
         apkUrl: String? = null,
     ): InstalledExtension {
+        indexError?.let { throw IllegalStateException(it) }
         val info = PackageTools.getPackageInfo(apk.toPath())
         val pkg = info.packageName
         val features = info.reqFeatures.orEmpty().mapNotNull { it.name }
@@ -210,6 +212,7 @@ class ExtensionStore(
         pkg: String,
         upload: File,
     ): InstalledExtension {
+        indexError?.let { throw IllegalStateException(it) }
         val previous = synchronized(gate) { installed[pkg] } ?: throw NoSuchElementException("$pkg is not installed")
         val hasMain =
             try {

@@ -36,8 +36,10 @@ internal sealed class RepairConfirmationObservations(RepairConfirmations confirm
             if (current && domain is not null)
             {
                 // The host's jar now: a verdict for code that is no longer installed is not current (hard rule 6).
+                // A local timeout or deferral is no answer: the report's verdict stands (a health read never fails on it).
                 try { current = string.Equals(await domain.InstalledShaAsync(package, cancellationToken).ConfigureAwait(false), verdict.InstalledSha256, StringComparison.OrdinalIgnoreCase); }
-                catch (Exception error) when (error is not OperationCanceledException) { current = false; }
+                catch (Exception error) when (!cancellationToken.IsCancellationRequested && SourceResultTracker.IsLocal(error)) { }
+                catch (Exception error) when (!cancellationToken.IsCancellationRequested) { _ = error; current = false; }
             }
             var fixedNow = current && verdict.Verdict == RepairConfirmations.Fixed;
             var ids = new JsonArray((report?["sources_after"] as JsonArray ?? []).OfType<JsonObject>().Select(row => row["id"]?.DeepClone()).ToArray());

@@ -133,6 +133,9 @@ public sealed class LibraryDownloads : IAsyncDisposable
 
     private CancellationToken PauseToken() { lock (_gate) return _pause.Token; }
 
+    /// <summary>How long a lane waits after a local deferral before it gives the queue back.</summary>
+    private static readonly TimeSpan DeferralPause = TimeSpan.FromSeconds(30);
+
     private async Task DrainAsync(string sourceId, JobContext job)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(job.CancellationToken, PauseToken());
@@ -157,9 +160,12 @@ public sealed class LibraryDownloads : IAsyncDisposable
             }
             catch (Exception error) when (error is not OperationCanceledException && AutoSourcarr.Core.Sources.SourceResultTracker.IsLocal(error))
             {
-                // Hard rule 3: a local capacity deferral or timeout is no failed chapter: it goes back to the queue and the
-                // lane stops for now (the next drain tries again), without a "failed" history row.
+                // Hard rule 3: a local capacity deferral or timeout is no failed chapter: it goes back to the queue, without
+                // a "failed" history row, and the lane waits before it stops (the next drain would otherwise start at once
+                // and loop while the engine stays busy or unavailable).
                 _store.Requeue(item.ChapterId);
+                try { await Task.Delay(DeferralPause, _time, token).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (!job.CancellationToken.IsCancellationRequested) { }
                 break;
             }
             catch (Exception error)

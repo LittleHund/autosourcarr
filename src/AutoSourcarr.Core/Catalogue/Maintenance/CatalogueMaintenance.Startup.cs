@@ -50,10 +50,20 @@ public sealed partial class CatalogueMaintenance
             result["unsafe_auto_merge_repairs"] = RunAutomaticMergeSafetyRepair(force: false);
             result["media_changes"] = Step(_hooks.RefreshMediaVariants);
             result["cache_repairs"] = RepairCachedEntryIds();
-            // Mixed entries whose media split failed would never be split: the maintenance runs again at the next start.
+            // Mixed entries whose media split failed would never be split: the maintenance runs again at the next start, at
+            // most three times (a split refused for good must not rerun the whole maintenance at every start).
             var incomplete = result["media_changes"] is JsonObject media && media["failed"] is JsonValue count && count.TryGetValue<int>(out var failures) && failures > 0;
-            if (incomplete) result["incomplete"] = "media splits failed; the startup maintenance runs again at the next start";
-            else _settings.Set(StartupMaintenanceKey, StartupMaintenanceVersion);
+            var attempts = (_settings.Get(StartupMaintenanceKey + "_media_attempts") is JsonValue tried && tried.TryGetValue<int>(out var n) ? n : 0) + 1;
+            if (incomplete && attempts < 3)
+            {
+                _settings.Set(StartupMaintenanceKey + "_media_attempts", attempts);
+                result["incomplete"] = "media splits failed; the startup maintenance runs again at the next start (attempt " + attempts.ToString(System.Globalization.CultureInfo.InvariantCulture) + " of 3)";
+            }
+            else
+            {
+                if (incomplete) result["incomplete"] = "media splits still failed after 3 starts; the failed entries are listed for review and the maintenance is not repeated";
+                _settings.Set(StartupMaintenanceKey, StartupMaintenanceVersion);
+            }
             _log.Record(new DecisionEvent("maintenance.startup", DecisionActor.Upgrade("startup-catalog-maintenance-" + StartupMaintenanceVersion), [], [],
                 "Startup catalogue maintenance", After: (JsonObject)result.DeepClone()));
             return result;
