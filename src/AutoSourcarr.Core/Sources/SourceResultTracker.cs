@@ -34,7 +34,7 @@ public sealed class SourceResultTracker(Func<AutoSourcarrSettings> settings, Tim
     public static bool IsLocal(Exception error) => error switch
     {
         // SourceEngineUnavailableException is a SourceWorkDeferredException.
-        SourceWorkDeferredException or TimeoutException or OperationCanceledException => true,
+        SourceWorkDeferredException or TimeoutException or OperationCanceledException or Concurrency.WorkDeferredException => true,
         AggregateException aggregate => aggregate.InnerExceptions.Count > 0 && aggregate.InnerExceptions.All(IsLocal),
         // A transport failure has no HTTP status: the app could not reach its source engine (the engine reports a site's
         // own failure as an answer with its message), so it is never the source's fault.

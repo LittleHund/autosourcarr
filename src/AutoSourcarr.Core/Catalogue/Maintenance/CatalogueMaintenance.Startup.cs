@@ -50,7 +50,10 @@ public sealed partial class CatalogueMaintenance
             result["unsafe_auto_merge_repairs"] = RunAutomaticMergeSafetyRepair(force: false);
             result["media_changes"] = Step(_hooks.RefreshMediaVariants);
             result["cache_repairs"] = RepairCachedEntryIds();
-            _settings.Set(StartupMaintenanceKey, StartupMaintenanceVersion);
+            // Mixed entries whose media split failed would never be split: the maintenance runs again at the next start.
+            var incomplete = result["media_changes"] is JsonObject media && media["failed"] is JsonValue count && count.TryGetValue<int>(out var failures) && failures > 0;
+            if (incomplete) result["incomplete"] = "media splits failed; the startup maintenance runs again at the next start";
+            else _settings.Set(StartupMaintenanceKey, StartupMaintenanceVersion);
             _log.Record(new DecisionEvent("maintenance.startup", DecisionActor.Upgrade("startup-catalog-maintenance-" + StartupMaintenanceVersion), [], [],
                 "Startup catalogue maintenance", After: (JsonObject)result.DeepClone()));
             return result;

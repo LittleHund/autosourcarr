@@ -74,9 +74,19 @@ public static class DuplicateTests
             var other = S(["Other Name"], "Different Person"); other["identity_details"] = trusted["identity_details"]!.DeepClone();
             Check.True(gate.Decide(trusted, other).Eligible, "a locked/manual shared identity is trusted proof");
             Check.True(!gate.Decide(S(["The Long Journey Home"], "A, B"), S(["The Long Journey Home"], "A, C")).Eligible, "two adaptations with different artists never merge");
-            // Exact titles without creators on one side prove a merge only when one of them is specific (4+ words / 24+ chars).
+            // Hard rule 2 / owner decision C (2026-11-04: the sweep too): a title alone never merges automatically. Exact
+            // titles need agreeing creators; a summary, an exact cover or a shared identity are the other corroborations.
             Check.True(!gate.Decide(S(["Blue Flag", "Ao no Flag"], ""), S(["Blue Flag", "Ao no Flag"])).Eligible, "short exact titles with a creator missing are not proof");
-            Check.True(gate.Decide(S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], ""), S(["Nagai Tabiji no Kaeri", "The Long Journey Home"])).Eligible, "specific exact titles still merge");
+            Check.True(!gate.Decide(S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], ""), S(["Nagai Tabiji no Kaeri", "The Long Journey Home"])).Eligible,
+                "specific exact titles with a creator missing are not proof either");
+            Check.True(!gate.Decide(S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], ""), S(["Nagai Tabiji no Kaeri", "The Long Journey Home"], "")).Eligible,
+                "exact titles with no creators at all are not proof");
+            var withSummary = S(["The Long Journey Home"], ""); withSummary["descriptions"] = new JsonArray("A retired courier walks across the northern mountains to return a letter he never delivered forty years ago.");
+            var sameSummary = S(["The Long Journey Home"], ""); sameSummary["descriptions"] = withSummary["descriptions"]!.DeepClone();
+            Check.True(gate.Decide(withSummary, sameSummary).Eligible, "an exact distinctive title with the same summary still merges");
+            var production = new AutoSourcarr.Core.Matching.Scoring.ScoredAutomaticMatchGate(gate);
+            Check.True(!production.Decide(S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], ""), S(["Nagai Tabiji no Kaeri", "The Long Journey Home"])).Eligible,
+                "the production sweep gate refuses a title-only pair");
             var scored = new AutoSourcarr.Core.Matching.Scoring.ScoredAutomaticMatchGate(gate);
             Check.True(!scored.Decide(S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], "Writer Lee"), S(["The Long Journey Home", "Nagai Tabiji no Kaeri"], "Writer Park")).Eligible,
                 "the production gate refuses two different writers sharing name parts");

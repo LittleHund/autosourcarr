@@ -119,7 +119,11 @@ internal sealed partial class ApplicationRuntime
 
         // A reset that stopped before its rebuild finished left its hints: replay them (low priority, before speculative growth).
         var hints = Path.Combine(_dataDirectory!, CatalogueStructure.ResetHintFile);
-        if (File.Exists(hints)) _ = work.Structure.ScheduleResetHintReplay(Jobs, hints, work.Hints);
+        if (File.Exists(hints))
+            try { _ = work.Structure.ScheduleResetHintReplay(Jobs, hints, work.Hints); }
+            // An unreadable hint file is kept (it is the only copy of the pre-reset records) and reported.
+            catch (Exception error) when (error is InvalidDataException or IOException or UnauthorizedAccessException)
+            { Errors.Record("catalogue", "The reset rebuild hints could not be replayed: " + error.Message, key: "reset-hint-replay"); }
     }
 
     /// <summary>

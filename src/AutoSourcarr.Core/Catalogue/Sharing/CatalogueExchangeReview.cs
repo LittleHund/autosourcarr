@@ -82,7 +82,9 @@ public sealed partial class CatalogueExchange
             });
             if (ready is not null) { _invalidate?.Invoke(); return ready; }
             cancellationToken.ThrowIfCancellationRequested();
-            _structure!.ApplyReviewed(uid, digest, revision, structural!, records!, targets!, taskId!, cancellationToken);
+            _structure!.ApplyReviewed(uid, digest, revision, structural!, records!, targets!, taskId!, cancellationToken,
+                (c, survivor, merged) => Record("catalogue.decision." + structural!.S("kind") + ".merge", actor, [survivor, merged], records!.Select(record => record.SourceId + ":" + record.MangaId),
+                    "Reviewed catalogue choice merged two local entries", new JsonObject { ["uid"] = uid, ["digest"] = digest, ["canonical_entry_id"] = survivor, ["merged_entry_id"] = merged }));
             // The real domain operation must have committed its own recoverable journals. Re-read
             // actual local ownership; a callback returning without doing the work cannot claim success.
             var result = _database.Write(DatabaseFile.Catalog, c =>

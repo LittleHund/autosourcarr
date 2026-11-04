@@ -18,7 +18,14 @@ public sealed partial class DuplicateMatching
     /// Returns old id → current canonical id.
     /// </summary>
     public Dictionary<long, long> Consolidate(IReadOnlyCollection<long> entryIds, DecisionActor actor, DuplicateProgress? progress = null, CancellationToken cancellationToken = default)
+        => Consolidate(entryIds, actor, out _, progress, cancellationToken);
+
+    /// <summary>As <see cref="Consolidate(IReadOnlyCollection{long}, DecisionActor, DuplicateProgress?, CancellationToken)"/>;
+    /// <paramref name="refusals"/> counts eligible pairs whose merge was refused and keeps the first reason, so a sweep in
+    /// which every merge fails is never reported as a clean run.</summary>
+    public Dictionary<long, long> Consolidate(IReadOnlyCollection<long> entryIds, DecisionActor actor, out (int Count, string First) refusals, DuplicateProgress? progress = null, CancellationToken cancellationToken = default)
     {
+        refusals = (0, "");
         ArgumentNullException.ThrowIfNull(entryIds); ArgumentNullException.ThrowIfNull(actor);
         var current = Read(c => entryIds.Select(id => DuplicateEvidence.Canonical(c, id)).Distinct().ToArray());
         var remap = current.ToDictionary(id => id, id => id);
@@ -54,6 +61,8 @@ public sealed partial class DuplicateMatching
                         catch (Exception error) when (error is InvalidOperationException or KeyNotFoundException or InvalidDataException)
                         {
                             // A gallery grouping rule or a concurrent change refused this pair; the next sweep re-evaluates it.
+                            // Counted and reported: a systematic failure (damaged record data) must not look like "nothing to merge".
+                            refusals = (refusals.Count + 1, refusals.Count == 0 ? error.Message : refusals.First);
                         }
                     }
                 }
@@ -72,10 +81,13 @@ public sealed partial class DuplicateMatching
         var ids = Read(c => c.Query("SELECT id FROM entries ORDER BY id LIMIT $p0", P(Math.Max(1, limit))).Select(row => row.Integer("id")).ToArray());
         progress?.Invoke(0, 0, "Building duplicate shortlist across " + ids.Length.ToString(CultureInfo.InvariantCulture) + " catalogue entries");
         if (ids.Length < 2) return new JsonObject { ["checked"] = ids.Length, ["merged"] = 0 };
-        var remap = Consolidate(ids, actor, progress, cancellationToken);
+        var remap = Consolidate(ids, actor, out var refusals, progress, cancellationToken);
         var merged = remap.Count(pair => pair.Key != pair.Value);
-        progress?.Invoke(ids.Length, ids.Length, "Merged " + merged.ToString(CultureInfo.InvariantCulture) + " duplicate entr" + (merged == 1 ? "y" : "ies"));
-        return new JsonObject { ["checked"] = ids.Length, ["merged"] = merged };
+        progress?.Invoke(ids.Length, ids.Length, "Merged " + merged.ToString(CultureInfo.InvariantCulture) + " duplicate entr" + (merged == 1 ? "y" : "ies")
+            + (refusals.Count == 0 ? "" : " · " + refusals.Count.ToString(CultureInfo.InvariantCulture) + " eligible pair(s) refused: " + refusals.First));
+        var result = new JsonObject { ["checked"] = ids.Length, ["merged"] = merged, ["refused"] = refusals.Count };
+        if (refusals.Count != 0) result["first_refusal"] = refusals.First;
+        return result;
     }
 
     /// <summary>
@@ -100,7 +112,8 @@ public sealed partial class DuplicateMatching
             _stored.Set("automatic_duplicate_last_run", stamp);
             _stored.Set("automatic_duplicate_last_checked", Long(result["checked"]));
             _stored.Set("automatic_duplicate_last_merged", Long(result["merged"]));
-            _stored.Set("automatic_duplicate_last_error", "");
+            _stored.Set("automatic_duplicate_last_refused", Long(result["refused"]));
+            _stored.Set("automatic_duplicate_last_error", Long(result["refused"]) == 0 ? "" : Long(result["refused"]).ToString(CultureInfo.InvariantCulture) + " eligible pair(s) were refused; first: " + Str(result["first_refusal"]));
             progress?.Invoke(null, null, "Refreshing duplicate review");
             Groups(true, cancellationToken);
             if (RescanRequested && !Paused) ScheduleAutomatic(TimeSpan.FromSeconds(Math.Max(1, _settings().AutomaticDuplicateMatchingDelaySeconds)));
@@ -226,7 +239,7 @@ public sealed partial class DuplicateMatching
             var candidates = rows.Select(row => (Row: row, Key: new NativeSourceRecord(row.Text("source_id"), row.Integer("source_manga_id")), Type: row.Text("match_type").ToLowerInvariant()))
                 .Where(item => item.Key != anchorKey && !item.Row.Flag("locked") && item.Type is not ("manual" or "import" or "split-duplicate") && item.Type.StartsWith("auto", StringComparison.Ordinal))
                 .Select(item => item.Key).Distinct().ToArray();
-            var created = new List<long>();
+            var created = new List<long>(); var refused = new List<string>();
             foreach (var record in candidates)
             {
                 canonical = Read(c => DuplicateEvidence.Canonical(c, canonical));
@@ -240,14 +253,16 @@ public sealed partial class DuplicateMatching
                         ReviewIn(c, from, separate, "not_duplicate", actor, "Unbind automatic matches");
                     });
                 }
-                catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { continue; }
+                catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { refused.Add(Key(record) + ": " + error.Message); continue; }
                 created.Add(id);
             }
             Invalidate();
             return new JsonObject
             {
                 ["entry_id"] = Read(c => DuplicateEvidence.Canonical(c, canonical)), ["split_records"] = created.Count, ["new_entry_ids"] = JArray(created),
-                ["message"] = "Unbound " + created.Count.ToString(CultureInfo.InvariantCulture) + " automatic source record" + (created.Count == 1 ? "" : "s"),
+                ["refused_records"] = new JsonArray(refused.Select(item => (JsonNode)item).ToArray()),
+                ["message"] = "Unbound " + created.Count.ToString(CultureInfo.InvariantCulture) + " automatic source record" + (created.Count == 1 ? "" : "s")
+                    + (refused.Count == 0 ? "" : "; " + refused.Count.ToString(CultureInfo.InvariantCulture) + " could not be split and stay attached"),
             };
         }
     }
@@ -302,7 +317,7 @@ public sealed partial class DuplicateMatching
                 if (key == anchorKey || Curated(row)) { preserved++; continue; }
                 candidates.Add(key);
             }
-            var created = new List<long>(); var current = canonical;
+            var created = new List<long>(); var current = canonical; var refused = new List<string>();
             foreach (var record in candidates.Distinct())
             {
                 current = Read(c => DuplicateEvidence.Canonical(c, current));
@@ -311,7 +326,7 @@ public sealed partial class DuplicateMatching
                     created.Add(_structure.SplitRecords(current, [record], manual: false, "redo-anchor", (_, from, separate) =>
                         _decisions.Record(new DecisionEvent("split.redo-anchor", actor, [from, separate], [Key(record)], "Redo: automatic record moved off the clean anchor"))));
                 }
-                catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { }
+                catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException) { refused.Add(Key(record) + ": " + error.Message); }
             }
             var affected = Read(c => created.Prepend(current).Select(id => DuplicateEvidence.Canonical(c, id)).Distinct().Where(id => Exists(c, id)).ToArray());
             var stamp = Stamp();
@@ -321,10 +336,12 @@ public sealed partial class DuplicateMatching
                 {
                     c.Execute("DELETE FROM identity_links WHERE entry_id=$p0 AND locked=0", P(id));
                     c.Execute("DELETE FROM titles WHERE entry_id=$p0 AND title_type NOT IN ('manual','main-library')", P(id));
-                    c.Execute("DELETE FROM automatic_merge_lineage WHERE canonical_entry_id=$p0", P(id));
+                    // A record that could not be split still sits on the anchor: its lineage and merge events stay, so the
+                    // repair comes back to it.
+                    if (refused.Count == 0) c.Execute("DELETE FROM automatic_merge_lineage WHERE canonical_entry_id=$p0", P(id));
                     foreach (var record in ActiveRecords(c, id)) RefreshTitles(c, id, record);
                 }
-                c.Execute("UPDATE automatic_merge_events SET repaired_at=$p0 WHERE repaired_at='' AND target_entry_id=$p1", P(stamp, canonical));
+                if (refused.Count == 0) c.Execute("UPDATE automatic_merge_events SET repaired_at=$p0 WHERE repaired_at='' AND target_entry_id=$p1", P(stamp, canonical));
                 return 0;
             });
             var blocked = 0;
@@ -351,7 +368,7 @@ public sealed partial class DuplicateMatching
             {
                 ["entry_id"] = Read(c => DuplicateEvidence.Canonical(c, current)), ["split_records"] = created.Count, ["new_entry_ids"] = JArray(created), ["entry_ids"] = JArray(affected),
                 ["preserved_records"] = preserved, ["blocked_pairs"] = blocked, ["anchor_source_id"] = anchorKey.SourceId, ["anchor_source_manga_id"] = anchorKey.MangaId,
-                ["anchor_title"] = anchor.Text("source_title"),
+                ["anchor_title"] = anchor.Text("source_title"), ["refused_records"] = new JsonArray(refused.Select(item => (JsonNode)item).ToArray()),
             };
         }
     }

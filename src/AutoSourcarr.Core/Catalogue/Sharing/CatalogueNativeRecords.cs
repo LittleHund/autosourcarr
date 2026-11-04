@@ -29,7 +29,7 @@ public interface ICatalogueReviewedStructure
     // Must recheck local Separate/edition/gallery rules and exact source ownership, use journalled
     // merge/split operations, preserve aliases/pages, and reconcile a previously started operation.
     // Throw on failure or uncertainty. Never return before physical owned work is drained.
-    void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken);
+    void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken, Action<DatabaseSession, long, long>? merged = null);
 }
 
 internal sealed class CatalogueNativeRecords

@@ -930,17 +930,27 @@ public sealed class EntryIngest
         limit.CancelAfter(timeout ?? TimeSpan.FromSeconds(60));
         var results = await Task.WhenAll(records.Select(async record =>
         {
-            try { return (record, Payload: await fetch(record.Manga, fetchDetails, fetchChapters, limit.Token).ConfigureAwait(false)); }
-            catch (Exception error) when (error is HttpRequestException or TimeoutException or OperationCanceledException or IOException or InvalidOperationException)
+            try { return (record, Payload: await fetch(record.Manga, fetchDetails, fetchChapters, limit.Token).ConfigureAwait(false), Error: (Exception?)null); }
+            catch (Exception error) when (error is not OutOfMemoryException)
             {
                 if (cancellationToken.IsCancellationRequested) throw;
-                return (record, Payload: (JsonObject?)null);
+                return (record, Payload: (JsonObject?)null, Error: error);
             }
         })).ConfigureAwait(false);
         var anyDetails = false;
-        foreach (var (record, payload) in results)
+        // Per-record outcome: a record that was not answered (local timeout or capacity: hard rule 3) or failed is
+        // reported, so a refresh in which nothing answered never looks like a successful one.
+        var notAnswered = new JsonArray(); var failed = new JsonArray(); var refreshed = 0;
+        foreach (var (record, payload, error) in results)
         {
+            if (error is not null)
+            {
+                var item = new JsonObject { ["source_id"] = record.Source, ["source_manga_id"] = record.Manga, ["error"] = error.Message };
+                if (error is OperationCanceledException || Sources.SourceResultTracker.IsLocal(error)) notAnswered.Add(item); else failed.Add(item);
+                continue;
+            }
             if (payload is null) continue;
+            refreshed++;
             if (fetchDetails && payload["manga"] is JsonObject manga && manga.Count > 0)
             {
                 if (!ApplySourceDetailIfCurrent(record.Entry, record.Source, record.Manga, manga)) continue;
@@ -949,7 +959,9 @@ public sealed class EntryIngest
             if (fetchChapters && payload["chapters"] is JsonArray list) chapters?.Invoke(record.Entry, record.Source, record.Manga, list);
         }
         if (fetchDetails && anyDetails && records.Length > 0) _followUps.ChooseMetadata(records[0].Entry);
-        return GetEntry(entryId);
+        var entry = GetEntry(entryId);
+        entry["refresh"] = new JsonObject { ["records"] = records.Length, ["refreshed"] = refreshed, ["not_answered"] = notAnswered, ["failed"] = failed };
+        return entry;
     }
 
     /// <summary>entry_history: served chapter origins (origins database).</summary>

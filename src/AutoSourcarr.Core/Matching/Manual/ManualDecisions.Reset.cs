@@ -199,7 +199,7 @@ public sealed partial class ManualDecisions
             var rejected = _database.Read(DatabaseFile.Origins, o => Digest(o, RejectedChapters));
             // Rejected chapter candidates still owned by an entry that has the record attached become active again.
             var candidates = _database.Read(DatabaseFile.Origins, o => o.Query("""
-                SELECT DISTINCT cc.id,vc.entry_id,cc.source_id,cc.source_manga_id FROM chapter_candidates cc
+                SELECT DISTINCT cc.id,vc.entry_id,cc.source_id,cc.source_manga_id,cc.source_chapter_id FROM chapter_candidates cc
                 JOIN chapter_candidate_rejections r ON r.source_id=cc.source_id AND r.source_chapter_id=cc.source_chapter_id
                 JOIN virtual_chapters vc ON vc.id=cc.virtual_chapter_id
                 """));
@@ -239,15 +239,21 @@ public sealed partial class ManualDecisions
             var previewed = rejected.Rows.GroupBy(row => row, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
             _database.Write(DatabaseFile.Origins, o =>
             {
-                o.Execute("UPDATE chapter_candidates SET active=1 WHERE id IN (SELECT value FROM json_each($p0))", P(JsonSerializer.Serialize(active.Select(row => row.Integer("id")).ToArray())));
-                var removed = 0;
+                var removed = 0; var cleared = new HashSet<(string, long)>();
                 foreach (var row in o.Query(RejectedChapters))
                 {
                     var digest = RowDigest(row);
                     if (!previewed.TryGetValue(digest, out var left) || left == 0) continue;
                     previewed[digest] = left - 1;
-                    removed += o.Execute("DELETE FROM chapter_candidate_rejections WHERE source_id=$p0 AND source_chapter_id=$p1", P(row.Text("source_id"), row.Integer("source_chapter_id")));
+                    var key = (row.Text("source_id"), row.Integer("source_chapter_id"));
+                    var deleted = o.Execute("DELETE FROM chapter_candidate_rejections WHERE source_id=$p0 AND source_chapter_id=$p1", P(key.Item1, key.Item2));
+                    if (deleted > 0) cleared.Add(key);
+                    removed += deleted;
                 }
+                // Only candidates whose rejection this reset removed become active again: a rejection kept (made after
+                // the preview) keeps its candidate inactive (hard rule 1).
+                var reactivate = active.Where(row => cleared.Contains((row.Text("source_id"), row.Integer("source_chapter_id")))).Select(row => row.Integer("id")).ToArray();
+                o.Execute("UPDATE chapter_candidates SET active=1 WHERE id IN (SELECT value FROM json_each($p0))", P(JsonSerializer.Serialize(reactivate)));
                 return removed;
             });
             if (_operations is { } operations)

@@ -102,13 +102,13 @@ public sealed partial class TextAutomaticMatchGate(Func<AutoSourcarrSettings>? s
         }
 
         var identityOk = trusted.Length != 0 || shared.Length != 0 && distinctive.Length >= 1;
-        // Exact titles alone may prove a merge only when both sides name creators, or when one exact title is specific
-        // (four or more words / 24+ characters): two short exact titles with a creator missing are not proof.
-        var creatorsKnown = CreatorScore(left, right) is not null;
-        var titleOk = exact.Length >= minimumExact && distinctive.Length >= 1 && (creatorsKnown || exact.Any(Specific));
+        // A title alone never merges automatically (hard rule 2; owner decision 2026-11-02 option C, extended to the sweep
+        // on 2026-11-04): exact native titles prove a merge only with agreeing creators; a summary, an exact cover or a
+        // shared identity are the other corroborations (below). One side naming no creator is not corroboration.
+        var creatorsAgree = CreatorScore(left, right) is { } agree && agree >= 0.92;
+        var titleOk = exact.Length >= minimumExact && distinctive.Length >= 1 && creatorsAgree;
         var summaryOk = summary >= summaryThreshold && distinctive.Length >= 1;
         var thumbnailOk = thumbs && distinctive.Length >= 1;
-        var creatorsAgree = CreatorScore(left, right) is { } agree && agree >= 0.92;
         var fuzzyOk = bestTitle >= TitleFloor && (Distinctive(TextMatcher.NormalizeTitle(bestLeft)) || Distinctive(TextMatcher.NormalizeTitle(bestRight))) && creatorsAgree;
         string reason;
         if (trusted.Length != 0) reason = "trusted shared " + trusted[0].Provider + " identity " + trusted[0].Id;

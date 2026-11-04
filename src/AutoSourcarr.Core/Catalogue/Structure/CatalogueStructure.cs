@@ -38,7 +38,7 @@ public sealed partial class CatalogueStructure : ICatalogueReviewedStructure
     private string Stamp() => _clock.GetUtcNow().ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture);
     private static long Canonical(DatabaseSession c, long id) => PortableIdentityResolver.Canonical(c, id);
     private static bool Exists(DatabaseSession c, long id) => c.Scalar("SELECT 1 FROM entries WHERE id=$p0", P(id)) is not null;
-    public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken)
+    public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken, Action<DatabaseSession, long, long>? merged = null)
     {
         lock (_gate)
         {
@@ -84,7 +84,9 @@ public sealed partial class CatalogueStructure : ICatalogueReviewedStructure
                 if (payloads.Any(payload => payload["_gallery_metadata"] is JsonObject))
                     for (var i = 0; i < current.Count; i++) for (var j = i + 1; j < current.Count; j++)
                         if (_database.Read(DatabaseFile.Catalog, c => NativeGalleryPair(c, payloads[i], payloads[j]))?["eligible"]?.GetValue<bool>() != true) throw new InvalidOperationException("Current native gallery evidence does not support the reviewed group");
-                var target = owners[0]; foreach (var other in owners.Skip(1)) { cancellationToken.ThrowIfCancellationRequested(); target = Merge(target, other, "reviewed-catalogue-group"); }
+                var target = owners[0]; foreach (var other in owners.Skip(1)) { cancellationToken.ThrowIfCancellationRequested(); // Each merge commits with its own decision row, so a group stopped part-way leaves every done merge logged with
+                // its actor. The merged-away entry's manual titles stay entry-local (0.4.5 parity; kept as cached facts).
+                target = Merge(target, other, "reviewed-catalogue-group", commit: merged); }
                 _database.Write(DatabaseFile.Catalog, c => { CatalogueIdentity.Link(c, target, decision["entries"]!.AsArray().Select(value => value!.GetValue<string>())); return 0; });
             }
             else if (kind == "source-match")
@@ -94,7 +96,7 @@ public sealed partial class CatalogueStructure : ICatalogueReviewedStructure
                 if (target != record.EntryId)
                 {
                     var allowed = _database.Read(DatabaseFile.Catalog, c => CatalogueIdentity.Unverified(c, target) && c.Scalar("SELECT 1 FROM catalogue_source_facts WHERE entry_id=$p0 AND source_id=$p1 AND reference=$p2", P(target, record.Key.SourceId, records[0].Fact["reference"]!.GetValue<string>())) is not null);
-                    if (!allowed) throw new InvalidOperationException("This move needs an explicit local Match matrix review"); Merge(target, record.EntryId, "reviewed-catalogue-source");
+                    if (!allowed) throw new InvalidOperationException("This move needs an explicit local Match matrix review"); Merge(target, record.EntryId, "reviewed-catalogue-source", commit: merged);
                 }
             }
             else if (kind == "separate")

@@ -293,7 +293,11 @@ public sealed class MixedEntries
     }
 
     /// <summary>Applies an unblocked proposal as an automatic split, recomputes both entries and records the decision.</summary>
-    public JsonObject? AutoSplit(long entryId, string axis, CancellationToken cancellationToken = default)
+    public JsonObject? AutoSplit(long entryId, string axis, CancellationToken cancellationToken = default) => AutoSplit(entryId, axis, null, cancellationToken);
+
+    /// <summary>As <see cref="AutoSplit(long, string, CancellationToken)"/>; <paramref name="refused"/> receives the error when the
+    /// structure owner refused the split (null is also returned when no split is proposed).</summary>
+    public JsonObject? AutoSplit(long entryId, string axis, Action<Exception>? refused, CancellationToken cancellationToken = default)
     {
         var proposal = _database.Read(DatabaseFile.Catalog, c => KeptTogether(c, entryId) ? null : ProposeSplit(c, entryId, axis));
         if (proposal is null || proposal.Blocked) return null;
@@ -310,7 +314,7 @@ public sealed class MixedEntries
                 "Automatic " + axis + " edition split: kept " + proposal.KeepMode, proposal.Json(),
                 new JsonObject { ["original_entry_id"] = original, ["new_entry_id"] = created }));
         try { result = _splitter.SplitAutomatic(proposal.EntryId, proposal.Move, "split-duplicate", StillAllowed, Log, cancellationToken); }
-        catch (Exception error) when (error is InvalidOperationException or KeyNotFoundException) { return null; }
+        catch (Exception error) when (error is InvalidOperationException or KeyNotFoundException) { refused?.Invoke(error); return null; }
         _database.Write(DatabaseFile.Catalog, c =>
         {
             var stamp = Stamp();
@@ -336,7 +340,7 @@ public sealed class MixedEntries
     {
         if (_metadata is not { } metadata) return new JsonObject { ["changed"] = 0, ["checked"] = 0, ["skipped"] = "metadata unavailable" };
         var ids = _database.Read(DatabaseFile.Catalog, c => c.QueryAs<long>("SELECT id FROM entries ORDER BY id"));
-        var changed = 0; var checkedEntries = 0;
+        var changed = 0; var checkedEntries = 0; var failed = 0; var firstError = "";
         foreach (var id in ids)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -345,16 +349,22 @@ public sealed class MixedEntries
                 var mode = _database.Write(DatabaseFile.Catalog, c => c.Scalar("SELECT 1 FROM entries WHERE id=$id", ("$id", id)) is null ? null : metadata.RecomputeMedia(c, id));
                 if (mode is null) continue;
                 checkedEntries++;
-                if (mode == "mixed" && AutoSplit(id, "media", cancellationToken) is not null) { changed++; continue; }
+                Exception? refused = null;
+                if (mode == "mixed" && AutoSplit(id, "media", error => refused = error, cancellationToken) is not null) { changed++; continue; }
+                // A split that was refused leaves the entry mixed: it is not relabelled as if it were one edition.
+                if (refused is not null) throw refused;
                 _database.Write(DatabaseFile.Catalog, c =>
                 {
                     if (c.Scalar("SELECT 1 FROM entries WHERE id=$id", ("$id", id)) is not null) metadata.SyncRelatedMediaTitles(c, id, Stamp());
                     return 0;
                 });
             }
-            catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException or InvalidDataException) { _ = error; }
+            catch (Exception error) when (error is KeyNotFoundException or InvalidOperationException or InvalidDataException)
+            { failed++; if (firstError.Length == 0) firstError = id.ToString(CultureInfo.InvariantCulture) + ": " + error.Message; }
         }
-        return new JsonObject { ["changed"] = changed, ["checked"] = checkedEntries };
+        var result = new JsonObject { ["changed"] = changed, ["checked"] = checkedEntries, ["failed"] = failed };
+        if (failed != 0) result["first_error"] = firstError;
+        return result;
     }
 
     /// <summary>_repair_legacy_color_false_attachments: splits only records attached by the old bare-color-word bug
