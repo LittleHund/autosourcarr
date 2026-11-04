@@ -17,3 +17,8 @@ autosourcarr/bundled
 **/.gradle
 **/build
 extension/dist
+# The 0.4.x extension builder's output (reader key in BuildAuth.kt, signed APKs) never enters a build layer.
+extension/.build
+extension/dist-instances
+config/.extension-signing
+config/extension-downloads

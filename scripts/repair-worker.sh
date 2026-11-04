@@ -45,6 +45,13 @@ if [[ "$ACTION" == help ]]; then
 fi
 [[ -f "$REPAIR_ENV" ]] || { echo 'Run setup first; see README → Private source repair worker.'; exit 2; }
 BASE_COMPOSE="${AUTOSOURCARR_BASE_COMPOSE:-$PROJECT_DIR/docker-compose.truenas.yml}"
+# 0.4.5 rollback only (owner decision 2026-11-04): this overlay mounts the Docker socket and adds helper services, which
+# 0.5.0 forbids (hard rule 13; 0.5.0 repairs run inside the container). Never combine it with a 0.5.0 deployment.
+if [[ "$(basename "$BASE_COMPOSE")" == *0.5* ]] || grep -Eq 'autosourcarr:0\.([5-9]|[1-9][0-9])|autosourcarr:(latest|main)' "$BASE_COMPOSE" 2>/dev/null; then
+  echo "Refused: $BASE_COMPOSE is a 0.5.0 (or newer) deployment. The external repair worker is for the 0.4.5 rollback only;"
+  echo "0.5.0 repairs run inside the AutoSourcarr container (Tasks -> Repairs)."
+  exit 2
+fi
 COMPOSE=(docker compose --env-file "$REPAIR_ENV" -f "$BASE_COMPOSE" -f "$PROJECT_DIR/docker-compose.repair.yml")
 case "$ACTION" in
   build)
