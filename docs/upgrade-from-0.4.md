@@ -68,16 +68,18 @@ What the tool does, on the copy only:
 2. converts `autosourcarr.env` (+ `source-host.env`) to `config.json` + `config.key`, exactly as 0.5.0 does at its
    first start; the env files stay next to it and a copy goes to `config/backups/config-conversion-…`;
 3. opens 0.5.0 once **offline** on the copy: the update guard takes its automatic backup, the database migrations run,
-   and every first-start step that needs no network runs: interrupted chapter changes, merge-safety repair, startup
-   catalogue maintenance, main-title consensus (one-time steps; their versions are stored, so the real first start
-   skips them) and the startup duplicate sweep on the stored evidence (`BACKGROUND_DEDUP_ON_STARTUP`). No source
-   engine, no Suwayomi and no internet are used;
+   and the one-time first-start steps run: interrupted chapter changes, merge-safety repair, startup catalogue
+   maintenance, main-title consensus (their versions are stored, so the real first start skips them; a one-time step
+   that would run with a part this build does not have is MIGRATION FAILED instead of silently storing its marker).
+   The startup duplicate sweep is **not** run offline: an automatic merge is a change your 0.4.x data never had, so it
+   is left to the first real start (as at every 0.4.5 start). No source engine, no Suwayomi and no internet are used;
 4. compares the original 0.4.x databases (opened read-only) with the migrated ones and writes the report.
 
 **Not covered by the verdict** (these need the network and run in the background at the real first start; the report
-lists them): Subbed orphan aliases (needs the main Suwayomi), identity resolution and cover fingerprints before the
-automatic duplicate sweep, metadata repair, the additional-record scan, feed refresh and crawling, translation
-enrichment, orphan identity repair, resuming interrupted imports and reset-hint replays, and the tag index rebuild.
+lists them): the startup duplicate sweep with its identity and cover hydration (set `BACKGROUND_DEDUP_ON_STARTUP=false`
+before the first start if you want to review duplicates by hand first), Subbed orphan aliases (needs the main
+Suwayomi), metadata repair, the additional-record scan, feed refresh and crawling, translation enrichment, orphan
+identity repair, resuming interrupted imports and reset-hint replays, and the tag index rebuild.
 
 Exit code 0 = PARITY OK, 1 = PARITY FAILED or MIGRATION FAILED (see the report), 2 = refused input, 3 = the run
 stopped half-way (`<output>/MIGRATION-INCOMPLETE.txt` says why; no report is written). The input is never changed.
@@ -96,18 +98,19 @@ unexpected, or a required step failed) — the comparison is then shown for diag
 
 | Section | What it shows |
 | --- | --- |
-| Manual decisions and subscriptions | Per kind: rows in 0.4.x and 0.5.0, missing and changed items (with the work's title). Entry ids are compared through merge aliases, and the number of rows per key must stay the same (two rows that collapse into one after a merge count as lost). Subscriptions: the Subbed view of your main-Suwayomi library (each subscribed id must still open the same entry) and monitored works. Manual: titles and aliases, preferred titles, title overrides and scopes, display metadata you chose or locked, manual/locked records, every earlier merge, interrupted merges/splits (gone only when completed), manual groups and bindings, separate entries (the record must not be attached to the entry again), duplicate reviews ("different works" must stay two entries), mixed-entry and tag reviews, locked identities, deleted records, shared-catalogue bindings and decisions, source choices (incl. your official/unofficial choice) and groups, gallery policies, matching policies/presets, review workbench actions, serving profiles and policies, UI preferences, the app state in the settings table. Imports: runs, per-title decisions and suggestions, rejections, remembered manual choices. Chapter provenance: served origins, origin history, rejected chapter versions, serving choices. History tables and the shared-catalogue identity tables: by row count (fewer = lost). |
-| Entries | 0.4.x entry ids that no longer lead to an entry (any = FAILED). |
+| Manual decisions and subscriptions | Per kind: rows in 0.4.x and 0.5.0, missing, changed and added items (with the work's title). Rows are compared **whole**: every column except the key and pure timestamps; the few other columns a kind leaves out are named in the table with the reason (for example source metadata fetched from the source). History tables compare every column as stored. NULL and '' differ, and so do 1 and 1.0. Entry ids are compared as the entry each side resolves to through its own merge aliases, and the number of rows per key must stay the same. Kinds that keep records out (deleted records, separate rules, reviews, rejections) also fail on rows the migration added. Subscriptions: the Subbed view of your main-Suwayomi library (each subscribed id must still open the same entry) and monitored works. Manual: titles and aliases, preferred titles, title overrides and scopes, display metadata you chose or locked, manual/locked records, every earlier merge, interrupted merges/splits (gone only when completed), manual groups and bindings, separate entries (the record must not be attached to the entry again), duplicate reviews ("different works" must stay two entries), mixed-entry and tag reviews, locked identities, deleted records, shared-catalogue bindings and decisions, source choices (incl. your official/unofficial choice) and groups, gallery policies, matching policies/presets, review workbench actions, serving profiles and policies, UI preferences, the app state in the settings table. Imports: runs, per-title decisions and suggestions, rejections, remembered manual choices. Chapter provenance: served origins, origin history, serving choices and upgrade history resolved to (entry, chapter key, source chapter) on both sides, so a rewritten or deleted chapter or candidate fails; rejected chapter versions. History tables and the shared-catalogue identity tables: row by row. |
+| Merged by 0.5.0 | Entries the migration merged into another. A merge that involves a subscribed or monitored entry or any entry with a manual decision, or that fails the recheck, is FAILED; others are listed. |
+| Entries | 0.4.x entries that no longer exist (any = FAILED), and entries that had source records and have none afterwards (any = FAILED). |
 | Settings | Every `autosourcarr.env` / `source-host.env` key → its `config.json` value: kept, kept-but-unused, dropped (and why) or lost. Secrets (tokens, passwords, keys) are compared by presence and equality only and never printed; in URLs the credentials, query values, fragments and token-like path parts are masked. |
 | Update notice (ARC-7) | What the update had to change, drop or now needs: the env → config.json move and the `env_file` line, retired Komf/AI-dashboard links, settings 0.5.0 would refuse, the new sign-in (see step 4), the `/api/reader/repo/` bypass, Compose variables. |
 | IMP-9 | The merge log (`decision_log`) is present, and a dry run rechecks every earlier merge against the current rules: manual merges always hold; automatic merges hold, would not hold, or have no stored snapshot. Nothing is applied. |
-| Files, keys and accounts | Files of the snapshot that are unchanged, changed or missing in the output (names only); key files (`config.key`, keystores, signing keys) by presence — a missing one is FAILED. |
+| Files, keys and accounts | Every file of the snapshot (names only): a missing or changed file is FAILED — last-working repair packages, source and repair state, setup state, import uploads, reset hints, keys — except an explicit allowlist (caches and logs, the update guard's state file), each shown with its reason. |
 | Table coverage | Every one of the 86 tables 0.4.5 creates (and any other table found): compared as which kind, counted, or counted only because it is rebuildable (with the reason). A 0.4.x table missing after the migration is FAILED. |
 | Row counts | Every table in both versions. |
 | Migration run | Where DATA_DIR/DATABASE_DIR came from, what the conversion and the offline start did. |
 
-Older snapshots (0.4.0–0.4.3, and the 0.3.27 schema the tests cover): kinds whose table or columns the old schema
-does not have are listed as "not comparable" with the reason; everything that exists is compared.
+Older snapshots (0.4.0–0.4.3, and the 0.3.27 schema the tests cover): a kind compares the columns the old table has;
+a kind whose query the old schema cannot answer is fine only while that table is empty, otherwise it is FAILED.
 
 The report contains your manga titles and setting names, so keep it on your PC; it never contains secret values.
 

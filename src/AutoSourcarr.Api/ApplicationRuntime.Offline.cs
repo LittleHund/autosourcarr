@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using AutoSourcarr.Core.Matching.Decisions;
 using AutoSourcarr.Core.Settings;
 
 namespace AutoSourcarr.Api;
@@ -15,7 +14,7 @@ internal sealed partial class ApplicationRuntime
     internal static readonly string[] NetworkFirstStartWork =
     [
         "Subbed orphan aliases (one-time 0.2.80; needs the main Suwayomi library)",
-        "identity resolution and cover fingerprints before the automatic duplicate sweep (the sweep itself ran offline on the stored evidence)",
+        "the startup duplicate sweep (BACKGROUND_DEDUP_ON_STARTUP; automatic merges, as at every 0.4.5 start) with its identity and cover hydration; set BACKGROUND_DEDUP_ON_STARTUP=false before the first start to review duplicates by hand first",
         "metadata repair of sparse entries (METADATA_ENRICHMENT_ON_STARTUP)",
         "additional-record scan (AUTO_VARIANT_STARTUP_ENTRIES)",
         "browse feed refresh (BACKGROUND_REFRESH_ON_STARTUP) and the continuous crawl",
@@ -44,8 +43,7 @@ internal sealed partial class ApplicationRuntime
     /// <summary>
     /// Every network-free step of the 0.4.5 first start, in its real order: interrupted chapter changes, the merge safety
     /// repair, startup catalogue maintenance and main-title consensus (one-time; each stores its version as at a real
-    /// start, so the first real start skips them), then the startup duplicate sweep on the stored evidence
-    /// (BACKGROUND_DEDUP_ON_STARTUP; it runs again at every start and finds the same pairs unless new evidence arrives).
+    /// start, so the first real start skips them). The startup duplicate sweep is NOT run (an automatic merge is a change).
     /// The result's <c>problems</c> lists what keeps the migration from counting as complete (any → MIGRATION FAILED).
     /// </summary>
     internal async Task<JsonObject> RunOfflineStartupAsync(CancellationToken cancellationToken = default)
@@ -76,8 +74,11 @@ internal sealed partial class ApplicationRuntime
                 result[name] = node;
                 if (node is JsonObject step && step["skipped"] is JsonValue skipped && skipped.TryGetValue<bool>(out var flag) && flag && step["error"] is not null)
                     problems.Add(name + " did not run: " + Privacy.Text(step["error"]!.ToString()));
-                if (node?.ToJsonString().Contains("unavailable", StringComparison.Ordinal) == true)
-                    warnings.Add(name + ": a sub-step reported \"unavailable\" in this build (see the step result); it reports the same at a real start.");
+                // A one-time step that ran with a sub-step "unavailable" in this build still stores its version marker, so the
+                // sub-step would never run: that is a migration problem (a step already at its 0.4.x marker is skipped and fine).
+                var ran = node is JsonObject done && !(done["skipped"] is JsonValue value && value.TryGetValue<bool>(out var wasSkipped) && wasSkipped);
+                if (ran && node?.ToJsonString().Contains("unavailable", StringComparison.Ordinal) == true)
+                    problems.Add(name + " ran, but a sub-step is unavailable in this build and its one-time marker is now stored (see the step result)");
             }
             catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException)
             {
@@ -90,9 +91,9 @@ internal sealed partial class ApplicationRuntime
             Step("merge_safety_repair", () => work.Maintenance.RunAutomaticMergeSafetyRepair());
             Step("startup_catalog_maintenance", () => work.Maintenance.RunStartupCatalogMaintenance());
             Step("title_consensus", () => work.Titles.RunBoundTitleConsensusUpgrade());
-            if (Settings.BackgroundDedupOnStartup)
-                Step("startup_dedup", () => work.Duplicates.RepairCatalogDuplicates(DecisionActor.Automatic, cancellationToken: cancellationToken));
-            else result["startup_dedup"] = "off (BACKGROUND_DEDUP_ON_STARTUP=false)";
+            // Not run offline on purpose: an automatic merge is a change the 0.4.x data never had. The first real start runs
+            // the sweep as every 0.4.5 start did; it is listed under "not covered".
+            result["startup_dedup"] = Settings.BackgroundDedupOnStartup ? "not run offline (runs at the first real start)" : "off (BACKGROUND_DEDUP_ON_STARTUP=false)";
         }, cancellationToken).ConfigureAwait(false);
         // Needs the main Suwayomi: skipped here by design, stores no version, so the first real start runs it.
         result["subbed_orphan_aliases"] = await work.Library.RepairOrphanAliasesUpgradeAsync(cancellationToken: cancellationToken).ConfigureAwait(false);

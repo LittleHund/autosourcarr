@@ -16,10 +16,12 @@ public sealed class LegacyDatabase : IDisposable
     {
         if (!File.Exists(path)) throw new FileNotFoundException("Database file not found.", path);
         _connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString());
+        Path = System.IO.Path.GetFullPath(path);
         _connection.Open();
         _tables = Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").Select(row => row["name"] ?? "").ToHashSet(StringComparer.Ordinal);
     }
 
+    public string Path { get; }
     public IReadOnlySet<string> Tables => _tables;
     public bool HasTable(string table) => _tables.Contains(table);
 
@@ -49,9 +51,33 @@ public sealed class LegacyDatabase : IDisposable
         return rows;
     }
 
+    /// <summary>Attaches another file (read-only, like this one) under <paramref name="alias"/>, for joins across the two databases.</summary>
+    public void Attach(string path, string alias)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        if (!File.Exists(path)) throw new FileNotFoundException("Database file not found.", path);
+        // An attached file is opened with the flags of the main connection (read-only).
+        using var command = _connection.CreateCommand();
+        command.CommandText = "ATTACH DATABASE $path AS " + alias;
+        command.Parameters.AddWithValue("$path", System.IO.Path.GetFullPath(path));
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>The columns of a table in declaration order, and which of them form the primary key (in key order).</summary>
+    public (IReadOnlyList<string> Columns, IReadOnlyList<string> PrimaryKey) Schema(string table)
+    {
+        var rows = Query("SELECT name,pk FROM pragma_table_info($t)", ("$t", table));
+        return (rows.Select(row => row["name"] ?? "").ToList(),
+            rows.Where(row => row["pk"] is { } pk && pk != "0").OrderBy(row => int.Parse(row["pk"]!, CultureInfo.InvariantCulture)).Select(row => row["name"] ?? "").ToList());
+    }
+
+    /// <summary>
+    /// A cell as compared text: NULL stays null (distinct from ''), integers as digits, reals marked "real:" (so 1 and
+    /// 1.0 differ), blobs by SHA-256.
+    /// </summary>
     private static string Text(object value) => value switch
     {
-        double number => number.ToString("R", CultureInfo.InvariantCulture),
+        double number => "real:" + number.ToString("R", CultureInfo.InvariantCulture),
         byte[] blob => "blob:" + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(blob)),
         _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? ""
     };
