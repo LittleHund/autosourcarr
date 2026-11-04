@@ -149,7 +149,7 @@ public sealed partial class ImportRuns
         if (Superseded(importId, itemId, revision)) return SupersededAnswer(importId, itemId);
         var item = ItemPayload(ReadItem(importId, itemId));
         progress.Report(0, 3, "Binding original source and metadata");
-        var binding = await BindBackupSourceAsync(entryId, item, manual: true, token).ConfigureAwait(false);
+        var binding = await BindBackupSourceAsync(entryId, item, manual: true, token, () => Superseded(importId, itemId, revision)).ConfigureAwait(false);
         if (Superseded(importId, itemId, revision)) return SupersededAnswer(importId, itemId);
         var final = _ingest.CanonicalEntryId(binding["entry_id"]?.GetValue<long>() ?? entryId);
         progress.Report(1, 3, "Adding entry to main Suwayomi library");
@@ -228,7 +228,7 @@ public sealed partial class ImportRuns
             try
             {
                 progress.Report(2, 4, "Binding original source and metadata");
-                var binding = await BindBackupSourceAsync(rememberedId, item, manual: true, token).ConfigureAwait(false);
+                var binding = await BindBackupSourceAsync(rememberedId, item, manual: true, token, () => Superseded(importId, itemId, revision)).ConfigureAwait(false);
                 if (Superseded(importId, itemId, revision)) return SupersededAnswer(importId, itemId);
                 WriteDiscovery(importId, itemId, revision, null, null, null, item);
                 var entry = _ingest.CanonicalEntryId(binding["entry_id"]?.GetValue<long>() ?? rememberedId);
@@ -305,7 +305,7 @@ public sealed partial class ImportRuns
         try
         {
             progress.Report(2, 4, "Binding original source and metadata");
-            var binding = await BindBackupSourceAsync(chosen, item, manual: false, token).ConfigureAwait(false);
+            var binding = await BindBackupSourceAsync(chosen, item, manual: false, token, () => Superseded(importId, itemId, revision)).ConfigureAwait(false);
             if (Superseded(importId, itemId, revision)) return SupersededAnswer(importId, itemId);
             WriteDiscovery(importId, itemId, revision, null, null, null, item);
             var entry = _ingest.CanonicalEntryId(binding["entry_id"]?.GetValue<long>() ?? chosen);

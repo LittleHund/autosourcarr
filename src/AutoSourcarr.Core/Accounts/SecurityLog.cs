@@ -84,8 +84,8 @@ public sealed class SecurityLog
 /// address or one name, each further attempt waits 2, 4, 8 … up to 30 s. Only the pair (name, address) is refused
 /// outright after 20 attempts, so nobody can lock the owner out from elsewhere. Names are trimmed and compared
 /// without case. A burst (10 failures within 5 minutes across all callers) is reported once per window.
-/// Behind a reverse proxy that is not in AUTH_TRUSTED_PROXIES every caller shares the proxy's address: then the pair
-/// refusal is skipped (anyone could lock the owner out through it) and only the delays apply.
+/// Behind a reverse proxy that is not in AUTH_TRUSTED_PROXIES every caller shares the proxy's address; the refusal
+/// stays (it is the brute-force limit), and the sign-in code tells the admins to set AUTH_TRUSTED_PROXIES.
 /// </summary>
 public sealed class LoginThrottle(Func<DateTimeOffset>? clock = null)
 {
@@ -98,15 +98,14 @@ public sealed class LoginThrottle(Func<DateTimeOffset>? clock = null)
 
     public static string NameKey(string? name) => (name ?? "").Trim().ToLowerInvariant();
 
-    /// <summary>Counts this attempt and returns the delay before checking it, or null when it is refused outright.
-    /// <paramref name="sharedAddress"/>: the address is a proxy's that every client shares (no outright refusal).</summary>
-    public TimeSpan? Before(string address, string name, bool sharedAddress = false)
+    /// <summary>Counts this attempt and returns the delay before checking it, or null when it is refused outright.</summary>
+    public TimeSpan? Before(string address, string name)
     {
         var now = _clock();
         var key = NameKey(name);
         lock (_gate)
         {
-            if (!sharedAddress && Count("p:" + key + "|" + address) >= 20) return null;
+            if (Count("p:" + key + "|" + address) >= 20) return null;
             var count = Math.Max(Count("a:" + address), Count("n:" + key));
             foreach (var bucket in new[] { "a:" + address, "n:" + key, "p:" + key + "|" + address })
             {

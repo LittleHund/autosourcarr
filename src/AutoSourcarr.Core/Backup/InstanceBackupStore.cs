@@ -209,18 +209,23 @@ public sealed partial class InstanceBackupStore
         if (sharePage is not null)
         {
             report?.Invoke("Exporting the portable catalogue");
-            long after = 0;
+            long after = 0; var complete = false;
             while (share < MaxSharePages)
             {
                 var page = sharePage(after);
                 share++;
                 var name = "share-" + share.ToString("D4", CultureInfo.InvariantCulture) + ".json";
                 var file = Path.Combine(work, name);
-                File.WriteAllText(file, page["catalogue"]?.ToJsonString() ?? "{}", Encoding.UTF8);
+                // A page without its catalogue is not an empty catalogue: the export is incomplete and says so.
+                if (page["catalogue"] is not JsonObject catalogue) throw new InvalidDataException("The portable catalogue export page " + share.ToString(CultureInfo.InvariantCulture) + " has no catalogue; the backup was not made.");
+                File.WriteAllText(file, catalogue.ToJsonString(), Encoding.UTF8);
                 contents.Add(("catalogue/" + name, file));
                 if (page["next_cursor"] is JsonValue next && next.TryGetValue<long>(out var cursor) && cursor > after) after = cursor;
-                else break;
+                else { complete = true; break; }
             }
+            if (!complete)
+                notes.Add("The portable catalogue share export stopped after " + MaxSharePages.ToString(CultureInfo.InvariantCulture)
+                    + " pages and is incomplete in this " + kind + " backup; the databases are complete.");
         }
         else notes.Add("The portable catalogue share export is not included in this " + kind + " backup; the databases are.");
 
@@ -866,12 +871,16 @@ public sealed partial class InstanceBackupStore
             }
             catch (Exception error) when (CrashPoints.Handled(error))
             {
+                // An undo that failed too (DatabaseSwap keeps its journal) leaves files half-swapped: never claim "as they were".
+                var halfSwapped = error is AggregateException || DatabaseSwap.Pending(Root, _database.Paths, ConfigurationRoot);
                 result = new JsonObject
                 {
-                    ["status"] = "failed", ["backup_created_at"] = created, ["pre_restore_backup"] = before, ["error"] = Scrub(error.GetType().Name + ": " + error.Message),
-                    ["message"] = "The armed restore of the backup from " + created + " was not applied; the databases and settings are as they were.",
+                    ["status"] = halfSwapped ? "swap-pending" : "failed", ["backup_created_at"] = created, ["pre_restore_backup"] = before, ["error"] = Scrub(error.GetType().Name + ": " + error.Message),
+                    ["message"] = halfSwapped
+                        ? "The armed restore of the backup from " + created + " failed and could not be undone completely; the databases are kept as they are and AutoSourcarr starts in safe mode. Restore the backup taken before it, or ask for help."
+                        : "The armed restore of the backup from " + created + " was not applied; the databases and settings are as they were.",
                 };
-                log?.Invoke("The armed restore failed and was undone (" + error.GetType().Name + ").");
+                log?.Invoke(halfSwapped ? "The armed restore failed and its undo did not finish (" + error.GetType().Name + ")." : "The armed restore failed and was undone (" + error.GetType().Name + ").");
             }
             TryDelete(Path.Combine(Root, PendingFile));
             TryDeleteDirectory(target);

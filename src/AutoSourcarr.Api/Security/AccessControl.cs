@@ -133,12 +133,12 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
 
     public const string TrustedProxyItem = "AutoSourcarr.TrustedProxy";
 
-    /// <summary>The request came through a reverse proxy that is not trusted (it sent X-Forwarded-For): its address is
-    /// shared by every client behind it, so it must not lock a name out (set AUTH_TRUSTED_PROXIES to see real addresses).</summary>
+    /// <summary>The request looks like it came through a reverse proxy that is not trusted (a private, non-loopback peer
+    /// sent X-Forwarded-For): every client behind it shares its address. Only used to tell the admins to set
+    /// AUTH_TRUSTED_PROXIES; it never relaxes a check (the header is the client's to send).</summary>
     public static bool SharedAddress(HttpContext context) =>
         !(context.Items.TryGetValue(TrustedProxyItem, out var trusted) && trusted is true) && context.Request.Headers.ContainsKey("X-Forwarded-For")
-        // Only a private peer (a proxy on the local or Docker network): a direct caller cannot dodge the refusal this way.
-        && context.Connection.RemoteIpAddress is { } peer && (System.Net.IPAddress.IsLoopback(peer) || peer.IsIPv6LinkLocal || peer.IsIPv6UniqueLocal
+        && context.Connection.RemoteIpAddress is { } peer && !System.Net.IPAddress.IsLoopback(peer) && (peer.IsIPv6UniqueLocal
             || (peer.IsIPv4MappedToIPv6 ? peer.MapToIPv4() : peer).GetAddressBytes() is [10, ..] or [172, >= 16 and <= 31, ..] or [192, 168, ..]);
 
     /// <summary>
@@ -241,10 +241,14 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
     internal static async Task<Account?> SignInAsync(AccessControlServices services, HttpContext context, string name, string password)
     {
         var address = Address(context);
-        var wait = services.Throttle.Before(address, name, SharedAddress(context));
+        var wait = services.Throttle.Before(address, name);
         if (wait is null)
         {
             services.Log.Record("login-slowed", name, address, "refused: too many failed sign-ins in 15 minutes");
+            // Behind an untrusted proxy every client has the proxy's address: one client's failures refuse the others.
+            if (SharedAddress(context))
+                services.Burst?.Invoke("Sign-ins come through a reverse proxy at " + address + " that is not in AUTH_TRUSTED_PROXIES, so every client shares its address and "
+                    + "failed sign-ins of one refuse the others. Set AUTH_TRUSTED_PROXIES to the proxy's address.");
             return null;
         }
         if (wait > TimeSpan.Zero)

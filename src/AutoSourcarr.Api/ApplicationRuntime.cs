@@ -746,7 +746,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         try { main = _connections?.MainSuwayomi(); }
         catch (Exception error) when (error is ConfigurationException or IOException or UnauthorizedAccessException) { _ = error; }
         var feed = _suwayomiFeed is { Failing: true } ? "failing" : _suwayomiFeed?.Mode.ToString().ToLowerInvariant() ?? "off";
-        var feedError = _suwayomiFeed is { Failing: true } current ? current.PollError : null;
+        var feedError = _suwayomiFeed is { Failing: true } current ? Privacy.Text(current.PollError) : null;
         if (main is null || _connections is not { } store)
         {
             // A Suwayomi connection that is set but cannot be read is not "no main Suwayomi".
@@ -757,7 +757,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             {
                 ["ok"] = unusable.Count == 0 ? null : false, ["checked"] = false, ["configured"] = !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl) || unusable.Count != 0, ["url"] = settings.MainSuwayomiUrl,
                 ["feed"] = feed, ["feed_error"] = feedError, ["warning"] = unusable.Count == 0 ? "No main Suwayomi is set (Settings: MAIN_SUWAYOMI_URL, or a Suwayomi connection)."
-                    : "The main Suwayomi connection cannot be used: " + unusable[0] + ". Enter its secrets again in Connections.",
+                    : "The main Suwayomi connection cannot be used: " + Privacy.Text(unusable[0]) + ". Enter its secrets again in Connections.",
             };
         }
         var last = store.LastTest(main.Id);

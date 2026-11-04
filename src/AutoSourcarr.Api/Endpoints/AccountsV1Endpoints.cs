@@ -110,7 +110,7 @@ internal static class AccountsV1Endpoints
                 if (caller.Via is not ("session" or "basic") || caller.KeyId is null) return Problem(409, "Only accounts with a password can change it here.");
                 var body = await Body(context).ConfigureAwait(false);
                 var address = AccessControlMiddleware.Address(context);
-                var wait = access.Throttle.Before(address, caller.Name, AccessControlMiddleware.SharedAddress(context));
+                var wait = access.Throttle.Before(address, caller.Name);
                 if (wait is null) return Problem(429, "Too many attempts; wait 15 minutes.");
                 if (wait > TimeSpan.Zero) await Task.Delay(wait.Value, context.RequestAborted).ConfigureAwait(false);
                 try { access.Accounts.ChangePassword(caller.KeyId, Text(body["current"]), Text(body["password"])); }

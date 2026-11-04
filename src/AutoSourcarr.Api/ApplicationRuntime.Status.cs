@@ -133,7 +133,7 @@ internal sealed partial class ApplicationRuntime
             try { return _connections?.Unusable(type) ?? []; }
             catch (Exception error) when (error is Core.Settings.ConfigurationException or IOException or UnauthorizedAccessException) { return (IReadOnlyList<string>)[error.Message]; }
         }).ToArray();
-        if (unusable.Length != 0) return Service("Metadata providers", "degraded", "A metadata provider connection cannot be used: " + unusable[0] + ". Enter its secrets again in Connections.");
+        if (unusable.Length != 0) return Service("Metadata providers", "degraded", "A metadata provider connection cannot be used: " + Privacy.Text(unusable[0]) + ". Enter its secrets again in Connections.");
         if (current.Count == 0) return Service("Metadata providers", "off", "No metadata provider is enabled (Settings: METADATA_IDENTITY_PROVIDERS, or Connections).");
         return Service("Metadata providers", "ready", string.Join(", ", current.Select(client => client.Provider).Distinct(StringComparer.Ordinal)) + ".");
     }

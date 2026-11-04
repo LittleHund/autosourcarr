@@ -46,6 +46,25 @@ public static class BackupTests
         suite.Add("phase 12 backup crypto: chunked AES-GCM streams any size, refuses truncation and appended data, still reads ASCBK3", Crypto);
         suite.Add("phase 12 swap journal: a failed check or a crash mid-swap (mixed databases) is undone on the next start; after the check it is finished", SwapCrash);
         suite.Add("phase 12 config.json: unknown top-level keys survive rewrites and never enter a backup", UnknownConfigKeys);
+        suite.Add("update guard (re-audit DS4): databases missing on an instance that ran before mean safe mode, never fresh empty databases", () =>
+        {
+            using var temp = new Sandbox();
+            var data = Path.Combine(temp.Path, "data"); var config = Path.Combine(temp.Path, "config");
+            WriteConfig(config, "en", SecretA, connection: false);
+            string catalog;
+            using (var database = Populated(data))
+            {
+                UpgradeGuard.Run(new InstanceBackupStore(data, config, database, "0.5.0-test"), database, () => new SchemaMigrator(database).Initialize());
+                catalog = database.Paths.Catalog;
+            }
+            SqliteConnection.ClearAllPools();
+            foreach (var file in Directory.EnumerateFiles(data, "*.sqlite*")) File.Delete(file);
+            using var missing = new SqliteDatabase(new AutoSourcarrSettings { DataDir = data });
+            var migrated = false;
+            var outcome = UpgradeGuard.Run(new InstanceBackupStore(data, config, missing, "0.5.0-test"), missing, () => migrated = true);
+            Check.Equal("databases-missing", outcome.Status);
+            Check.True(outcome.SafeMode && !migrated && !File.Exists(catalog), "no empty replacement databases are created");
+        });
         suite.Add("phase 12 update kills (re-audit 1/7): a kill at every update and rollback step ends rolled back from the kept copies, in safe mode, without a second backup or migration", UpdateKills);
         suite.Add("phase 12 restore kills (re-audit 3/6): a kill at every restore step is decided from the journal, never applied twice; a config.json that did not exist is removed on undo", RestoreKills);
         suite.Add("phase 12 swap pending (re-audit 2/5/10): an unreadable journal or marker, or set-aside files, mean safe mode, never a fresh catalogue; a live -wal is never deleted on undo", SwapPending);
@@ -274,6 +293,21 @@ public static class BackupTests
         Check.True(!merged.Document.Settings.Secrets.ContainsKey("MAIN_SUWAYOMI_PASSWORD") && merged.MissingSecrets.Contains("settings.MAIN_SUWAYOMI_PASSWORD"),
             "secret not carried to a changed address");
         Check.True(merged.Document.Connections!.Single().Secrets.Count == 0 && merged.MissingSecrets.Contains("connections.c1.api_key"), "connection secret not carried to a changed address");
+
+        // This instance's folders and sign-in settings are its own: a restore keeps them (re-audit D1 and the restore
+        // path of C1). The backup's DATABASE_DIR would open a stale copy at the next start.
+        var paths = BackupSettings.Sanitize(new ConfigStore(configA).ReadDocument()!).Document;
+        paths.Settings.Values["DATABASE_DIR"] = "/data"; paths.Settings.Values["AUTH_METHOD"] = "external"; paths.Settings.Values["AUTH_TRUSTED_PROXIES"] = "10.9.9.9";
+        paths.ManagedKeys.Add("DATABASE_DIR");
+        var here = new ConfigStore(configA).ReadDocument()!;
+        here.Settings.Values["DATABASE_DIR"] = "/database"; here.Settings.Values.Remove("AUTH_METHOD"); here.Settings.Values.Remove("AUTH_TRUSTED_PROXIES");
+        if (!here.ManagedKeys.Contains("DATABASE_DIR")) here.ManagedKeys.Add("DATABASE_DIR");
+        var kept = BackupSettings.Merge(paths, here).Document;
+        Check.Equal("/database", kept.Settings.Values["DATABASE_DIR"]);
+        Check.True(kept.ManagedKeys.Contains("DATABASE_DIR"), "DATABASE_DIR stays managed");
+        Check.True(!kept.Settings.Values.ContainsKey("AUTH_METHOD") && !kept.Settings.Values.ContainsKey("AUTH_TRUSTED_PROXIES"), "the sign-in settings stay as they are");
+        here.ManagedKeys.Remove("DATABASE_DIR"); here.Settings.Values.Remove("DATABASE_DIR");
+        Check.True(!BackupSettings.Merge(paths, here).Document.Settings.Values.ContainsKey("DATABASE_DIR"), "a backup's DATABASE_DIR is not added");
     }
 
     private static byte[] Unzipped(byte[] raw)
