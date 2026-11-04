@@ -253,11 +253,12 @@ public static class DecisionParity
     /// <summary>The Subbed snapshot JSON ({"payload":{"entry_ids":[...]}}) as one row per subscribed entry id.</summary>
     private static IEnumerable<Dictionary<string, string?>> ExpandSubbed(Dictionary<string, string?> row)
     {
+        // A snapshot that exists but cannot be read is not "no subscriptions": it fails the kind (rows that cannot be compared).
         JsonNode? node;
         try { node = JsonNode.Parse(row["value"] ?? ""); }
-        catch (System.Text.Json.JsonException) { yield break; }
-        var ids = node?["payload"]?["entry_ids"] as JsonArray ?? node?["entry_ids"] as JsonArray;
-        if (ids is null) yield break;
+        catch (System.Text.Json.JsonException error) { throw new InvalidDataException("the Subbed snapshot cannot be read as JSON (" + error.Message + ")", error); }
+        var ids = node?["payload"]?["entry_ids"] as JsonArray ?? node?["entry_ids"] as JsonArray
+            ?? throw new InvalidDataException("the Subbed snapshot has no entry_ids list");
         foreach (var id in ids)
         {
             var text = id?.ToJsonString().Trim('"') ?? "";
@@ -289,9 +290,9 @@ public static class DecisionParity
             if (kind.NeedsOrigins) { EnsureAttached(original); EnsureAttached(migrated); }
             List<Row> before;
             try { before = Rows(o, kind, id => context.Before.Exists(id) ? context.Before.Resolve(id).ToString(CultureInfo.InvariantCulture) : MissingEntry, context.Before.Title); }
-            catch (SqliteException error)
+            catch (Exception error) when (error is SqliteException or InvalidDataException)
             {
-                // An older 0.4.x without a column this kind reads: fine only while the table is empty.
+                // An older 0.4.x without a column this kind reads, or a value it cannot read: fine only while the table is empty.
                 var rows = o.Count(kind.Table);
                 var result = new ParityKindResult { Kind = kind, Compared = false, Note = "not comparable with this 0.4.x schema (" + error.Message + ")", Original = (int)rows };
                 if (rows > 0) result.Missing.Add(new ParityItem(kind.Table, "", rows.ToString(CultureInfo.InvariantCulture) + " rows that cannot be compared", null));
@@ -303,7 +304,7 @@ public static class DecisionParity
             compared.Columns = columns;
             List<Row> after;
             try { after = m.HasTable(kind.Table) ? Rows(m, kind, id => context.After.Exists(id) ? context.After.Resolve(id).ToString(CultureInfo.InvariantCulture) : MissingEntry, _ => "") : []; }
-            catch (SqliteException error) { after = []; compared.Note = "the migrated file cannot be read for this kind (" + error.Message + ")"; }
+            catch (Exception error) when (error is SqliteException or InvalidDataException) { after = []; compared.Note = "the migrated file cannot be read for this kind (" + error.Message + ")"; }
             compared.Migrated = after.Count;
             var now = after.GroupBy(row => row.Key, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
             bool Same(Row left, Row right) => columns.All(column =>
@@ -439,7 +440,9 @@ public static class DecisionParity
                     foreach (var column in kind.Entries)
                         if (EntryIds.Id(row.Raw.GetValueOrDefault(column)) is { } id && ids.Exists(id)) result.Add(ids.Resolve(id));
             }
-            catch (SqliteException) { }
+            // Compare reads the same rows and reports an unreadable kind; here a skipped kind would only make a new merge look
+            // harmless, so an entry it may hold is not trusted: the kind's table is treated as touching every entry.
+            catch (Exception error) when (error is SqliteException or InvalidDataException) { return [.. ids.AllIds.Select(ids.Resolve)]; }
         }
         return result;
     }

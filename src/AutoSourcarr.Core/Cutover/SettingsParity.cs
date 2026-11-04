@@ -257,7 +257,8 @@ public static partial class FileParity
         return result;
     }
 
-    private static Dictionary<string, string> Files(string root) => Directory.EnumerateFiles(root, "*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint })
+    // Nothing is skipped: an unreadable folder throws instead of disappearing from both sides of the comparison.
+    private static Dictionary<string, string> Files(string root) => Directory.EnumerateFiles(root, "*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = false, AttributesToSkip = 0 })
         .ToDictionary(path => System.IO.Path.GetRelativePath(root, path).Replace('\\', '/'), path => path, StringComparer.Ordinal);
 
     private static string Hash(string path)

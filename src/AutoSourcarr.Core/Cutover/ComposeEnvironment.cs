@@ -2,8 +2,8 @@ namespace AutoSourcarr.Core.Cutover;
 
 /// <summary>
 /// Reads the <c>environment:</c> block of each service in a Compose file (both <c>KEY: value</c> and <c>- KEY=value</c>
-/// forms). Deliberately small: no anchors, merges, interpolation or env_file; the cutover tool only needs DATA_DIR and
-/// DATABASE_DIR, and says in the report where they came from.
+/// forms). Deliberately small: no anchors, merges, interpolation or env_file. A value it cannot know (from the host, or
+/// interpolated) is refused rather than guessed, so the comparison never runs on a value Compose would not use.
 /// </summary>
 public static class ComposeEnvironment
 {
@@ -41,7 +41,9 @@ public static class ComposeEnvironment
             {
                 var item = Unquote(trimmed[2..].Trim());
                 var equals = item.IndexOf('=', StringComparison.Ordinal);
-                if (equals <= 0) continue;
+                if (equals <= 0)
+                    // "- KEY" takes the value from the host shell: unknown here, so it cannot be compared.
+                    throw new InvalidDataException("service " + service + ": " + item + " has no value (it comes from the host environment); write KEY=value");
                 key = item[..equals].Trim(); value = item[(equals + 1)..];
             }
             else
@@ -50,6 +52,10 @@ public static class ComposeEnvironment
                 if (colon <= 0) continue;
                 key = trimmed[..colon].Trim(); value = Unquote(StripComment(trimmed[(colon + 1)..].Trim()));
             }
+            if (value.Length == 0 && !trimmed.StartsWith("- ", StringComparison.Ordinal))
+                throw new InvalidDataException("service " + service + ": " + key + " has no value; write KEY: value");
+            if (value.Contains("${", StringComparison.Ordinal) || value.StartsWith('$'))
+                throw new InvalidDataException("service " + service + ": " + key + " uses variable interpolation (" + value + "), which this tool does not resolve; write the value itself");
             services[service][key] = value;
         }
         return services;

@@ -23,12 +23,14 @@ public sealed class MergeRecheckResult
     public int WouldNotHold { get; set; }
     public int NotRechecked { get; set; }
     public List<MergeRecheckItem> Failing { get; } = [];
+    /// <summary>Merges whose stored snapshot cannot be read: not rechecked, and listed (a new merge among them fails the verdict).</summary>
+    public List<MergeRecheckItem> Unreadable { get; } = [];
 
     public JsonObject ToJson() => new()
     {
         ["decision_log_present"] = DecisionLogPresent, ["decision_log_rows"] = DecisionLogRows, ["merges"] = Merges,
         ["manual_merges"] = ManualMerges, ["automatic_merges"] = AutomaticMerges, ["hold"] = Hold, ["would_not_hold"] = WouldNotHold,
-        ["not_rechecked"] = NotRechecked, ["would_not_hold_items"] = new JsonArray(Failing.Select(item => (JsonNode)item.ToJson()).ToArray()),
+        ["not_rechecked"] = NotRechecked, ["unreadable_snapshots"] = new JsonArray(Unreadable.Select(item => (JsonNode)item.ToJson()).ToArray()), ["would_not_hold_items"] = new JsonArray(Failing.Select(item => (JsonNode)item.ToJson()).ToArray()),
         ["applied"] = false,
     };
 }
@@ -82,6 +84,12 @@ public static class MergeRecheck
             }
             var left = Records(merge["duplicate_snapshot_json"], fingerprints);
             var right = Records(merge["target_snapshot_json"], fingerprints);
+            if (left is null || right is null)
+            {
+                result.NotRechecked++;
+                result.Unreadable.Add(new(duplicate, canonical, ids.Title(canonical), "the stored merge snapshot cannot be read"));
+                continue;
+            }
             if (left.Count == 0 || right.Count == 0) { result.NotRechecked++; continue; }
             if (left.Any(a => right.Any(b => CatalogueMaintenance.RecordsDirectlyCompatible(a, b)))) result.Hold++;
             else
@@ -93,12 +101,13 @@ public static class MergeRecheck
         return result;
     }
 
-    private static List<RecordRepairSnapshot> Records(string? json, IReadOnlyDictionary<string, string> fingerprints)
+    /// <summary>The records of one stored merge snapshot, or null when the snapshot is not valid JSON.</summary>
+    private static List<RecordRepairSnapshot>? Records(string? json, IReadOnlyDictionary<string, string> fingerprints)
     {
         var list = new List<RecordRepairSnapshot>();
         JsonNode? node;
         try { node = JsonNode.Parse(json ?? ""); }
-        catch (System.Text.Json.JsonException) { return list; }
+        catch (System.Text.Json.JsonException) { return null; }
         foreach (var name in new[] { "matches", "variants", "records" })
             if (node?[name] is JsonArray rows)
                 foreach (var item in rows.OfType<JsonObject>())
