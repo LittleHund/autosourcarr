@@ -81,8 +81,10 @@ public static class TableCoverage
         foreach (var (file, database) in new[] { ("catalog", catalog), ("origins", origins) })
             foreach (var table in database.Tables.Order(StringComparer.Ordinal))
                 if (!compared.Contains(file + "." + table) && !Rebuildable.ContainsKey(table) && !CountedIdentity.Contains(table, StringComparer.Ordinal))
-                    yield return WholeTable(database, table, file == "origins", "Not classified by the tool: compared row by row so nothing can disappear unseen.");
+                    yield return WholeTable(database, table, file == "origins", NotClassified + ": compared row by row so nothing can disappear unseen.");
     }
+
+    private const string NotClassified = "Not classified by the tool";
 
     private static ParityKind WholeTable(LegacyDatabase database, string table, bool origins, string description)
     {
@@ -109,6 +111,7 @@ public static class TableCoverage
                 detail = string.Join("; ", mine.Select(kind => kind.Name + (kind.Exclude.Length > 0 || kind.ExcludeReason.Length > 0
                     ? " (not compared: " + (kind.Exclude.Length > 0 ? string.Join(", ", kind.Exclude) + " — " : "") + kind.ExcludeReason + ")" : "")))
                     + (Rebuildable.TryGetValue(table, out var rest) ? "; other rows: " + rest : "");
+                if (mine.All(kind => kind.Description.StartsWith(NotClassified, StringComparison.Ordinal))) detail = "not classified (compared row by row so nothing can disappear unseen)";
             }
             else if (Rebuildable.TryGetValue(table, out var reason)) { treatment = "counted only (rebuildable)"; detail = reason; }
             else { treatment = "compared: every column as stored"; detail = "not classified"; }

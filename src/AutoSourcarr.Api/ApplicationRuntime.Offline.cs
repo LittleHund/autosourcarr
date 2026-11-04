@@ -46,6 +46,9 @@ internal sealed partial class ApplicationRuntime
     /// start, so the first real start skips them). The startup duplicate sweep is NOT run (an automatic merge is a change).
     /// The result's <c>problems</c> lists what keeps the migration from counting as complete (any → MIGRATION FAILED).
     /// </summary>
+    /// <summary>Tests only: replaces one offline step's result (return null to run the real step; throw to fail it).</summary>
+    internal static Func<string, JsonNode?>? OfflineStepOverride { get; set; }
+
     internal async Task<JsonObject> RunOfflineStartupAsync(CancellationToken cancellationToken = default)
     {
         if (!_offline) throw new InvalidOperationException("Only the offline open runs the startup steps directly.");
@@ -70,7 +73,7 @@ internal sealed partial class ApplicationRuntime
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var node = run();
+                var node = OfflineStepOverride is { } replace && replace(name) is { } replaced ? replaced : run();
                 result[name] = node;
                 if (node is JsonObject step && step["skipped"] is JsonValue skipped && skipped.TryGetValue<bool>(out var flag) && flag && step["error"] is not null)
                     problems.Add(name + " did not run: " + Privacy.Text(step["error"]!.ToString()));
@@ -79,9 +82,10 @@ internal sealed partial class ApplicationRuntime
                 var ran = node is JsonObject done && !(done["skipped"] is JsonValue value && value.TryGetValue<bool>(out var wasSkipped) && wasSkipped);
                 if (ran && node?.ToJsonString().Contains("unavailable", StringComparison.Ordinal) == true)
                     problems.Add(name + " ran, but a sub-step is unavailable in this build and its one-time marker is now stored (see the step result)");
-                // Counted failures are failures (a real start fails the job on them too, ApplicationRuntime.Startup).
+                // Counted failures are failures (a real start fails the job on them too, ApplicationRuntime.Startup). The counts are
+                // stored as int, long or text depending on the step, so they are read from their JSON text.
                 foreach (var counter in new[] { "failed", "remaining" })
-                    if (node is JsonObject counted && counted[counter] is JsonValue number && number.TryGetValue<long>(out var count) && count > 0)
+                    if (node is JsonObject counted && counted[counter] is JsonValue number && long.TryParse(number.ToJsonString(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var count) && count > 0)
                         problems.Add(name + ": " + count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + counter + " (see the step result)");
             }
             catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException)

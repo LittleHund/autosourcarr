@@ -30,7 +30,8 @@ internal static class LegacyMigrationTool
     public const string IncompleteMarker = "MIGRATION-INCOMPLETE.txt";
     private static readonly System.Text.Json.JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    public static async Task<int> RunAsync(string[] args, TextWriter output)
+    /// <param name="passphrase">Tests only: the backup passphrase instead of the console prompt.</param>
+    public static async Task<int> RunAsync(string[] args, TextWriter output, Func<string>? passphrase = null)
     {
         ArgumentNullException.ThrowIfNull(args); ArgumentNullException.ThrowIfNull(output);
         string? compose = null, service = null; var positional = new List<string>();
@@ -47,7 +48,7 @@ internal static class LegacyMigrationTool
         }
         try
         {
-            var outcome = await MigrateAsync(positional[0], positional[1], () => ReadPassphrase(output), output, options: new MigrationOptions(compose, service)).ConfigureAwait(false);
+            var outcome = await MigrateAsync(positional[0], positional[1], passphrase ?? (() => ReadPassphrase(output)), output, options: new MigrationOptions(compose, service)).ConfigureAwait(false);
             await output.WriteLineAsync().ConfigureAwait(false);
             await output.WriteLineAsync(outcome.Report.Verdict).ConfigureAwait(false);
             await output.WriteLineAsync("Report:          " + outcome.ReportPath).ConfigureAwait(false);
