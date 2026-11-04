@@ -58,7 +58,11 @@ fun main() {
                 ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
         if (urls != null) {
             repos.setStores(urls)
-            Thread({ runCatching { repos.fetch() } }, "extension-store-fetch").apply { isDaemon = true }.start()
+            Thread({
+                runCatching { repos.fetch() }
+                    .onSuccess { errors -> errors.forEach { (url, message) -> logger.warn { "Extension repository $url could not be read: $message" } } }
+                    .onFailure { error -> logger.warn(error) { "Extension repositories could not be read" } }
+            }, "extension-store-fetch").apply { isDaemon = true }.start()
         } else {
             logger.warn { "EXTENSION_STORES is not a JSON array of repository URLs; repositories unchanged" }
         }

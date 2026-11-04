@@ -344,7 +344,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             var repairConfirmations = new AutoSourcarr.Core.Repair.RepairConfirmations(maintenanceRoot);
             var maintenance = new AutoSourcarr.Core.Sources.Inventory.SourceMaintenanceState(maintenanceRoot, startup.ConfigurationRoot);
             owner._health = new SourceHealthCoordinator(healthStore, owner._source.Client, owner.Io, owner.Lanes,
-                owner.Tasks, new RepairConfirmationObservations(repairConfirmations, domainRepair), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
+                owner.Tasks, new RepairConfirmationObservations(repairConfirmations, domainRepair, message => owner.Errors.Record("Source repair", message, key: "repair-confirmations")), () => owner._source.Cached().Ready || owner.Settings.SourceEngineMode == "external", owner.Privacy,
                 onWorking: package => domainRepair.QueueKeepLastWorking(package, error => owner.Errors.Record("Source repair",
                     "Keeping the last working jar of " + package + " failed: " + error.Message, "source-last-working|" + error.GetType().Name)))
             { Jobs = owner.Jobs };

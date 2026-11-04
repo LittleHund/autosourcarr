@@ -9,6 +9,10 @@ namespace AutoSourcarr.Core.Repair.Migration;
 public sealed record ContentCheckResult(bool Ok, string Step, string SourceId, string SourceName, int Titles, string Title, int Chapters,
     int Pages, int ImageBytes, string ImageType, string Error, double Seconds)
 {
+    /// <summary>The check got no answer from the source (a local timeout, capacity deferral or the deadline): it says
+    /// nothing about whether the code works (hard rule 3).</summary>
+    public bool Deferred { get; init; }
+
     public JsonObject ToJson()
     {
         var result = new JsonObject
@@ -18,6 +22,7 @@ public sealed record ContentCheckResult(bool Ok, string Step, string SourceId, s
             ["seconds"] = Math.Round(Seconds, 1),
         };
         if (!Ok) { result["failed_at"] = Step; result["error"] = Error; }
+        if (Deferred) result["deferred"] = true;
         return result;
     }
 }
@@ -76,8 +81,8 @@ public static class ContentCheck
         }
         var watch = Stopwatch.StartNew();
         var step = "search"; var found = 0; var title = ""; var chapterCount = 0; var pageCount = 0; var imageBytes = 0; var imageType = "";
-        ContentCheckResult Done(bool ok, string error) =>
-            new(ok, step, sourceId, sourceName, found, title, chapterCount, pageCount, imageBytes, imageType, error, watch.Elapsed.TotalSeconds);
+        ContentCheckResult Done(bool ok, string error, bool deferred = false) =>
+            new(ok, step, sourceId, sourceName, found, title, chapterCount, pageCount, imageBytes, imageType, error, watch.Elapsed.TotalSeconds) { Deferred = deferred };
         try
         {
             JsonArray mangas = [];
@@ -127,12 +132,12 @@ public static class ContentCheck
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && bounded.IsCancellationRequested)
         {
-            return Done(false, "the content check did not finish within " + limit.TotalSeconds.ToString("0.#", CultureInfo.InvariantCulture) + " s");
+            return Done(false, "the content check did not finish within " + limit.TotalSeconds.ToString("0.#", CultureInfo.InvariantCulture) + " s", deferred: true);
         }
         catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             var message = error.Message.Length <= 3000 ? error.Message : error.Message[..3000];
-            return Done(false, error.GetType().Name + ": " + message);
+            return Done(false, error.GetType().Name + ": " + message, deferred: SourceResultTracker.IsLocal(error));
         }
     }
 }

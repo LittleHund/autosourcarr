@@ -63,6 +63,9 @@ class ExtensionRepos(
     private data class State(
         val stores: List<Store> = emptyList(),
         val available: List<Available> = emptyList(),
+        // Index URLs whose list was read at least once: an installed package missing from a store that never answered
+        // is not "obsolete" (removed from the repository); it is unknown.
+        val fetched: List<String> = emptyList(),
     )
 
     @Volatile
@@ -72,10 +75,19 @@ class ExtensionRepos(
 
     fun available(): List<Available> = state.available
 
+    /** True when every configured store's list was read at least once (only then can a missing package be obsolete). */
+    fun complete(): Boolean = state.stores.isNotEmpty() && state.stores.all { it.indexUrl in state.fetched }
+
     /** Sets the repository list (index URLs); the next fetch reads them. */
     fun setStores(urls: List<String>) {
         val stores = urls.map { url -> state.stores.firstOrNull { it.indexUrl == url } ?: Store(indexUrl = url) }.distinctBy { it.indexUrl }
-        save(state.copy(stores = stores, available = state.available.filter { item -> stores.any { it.indexUrl == item.storeIndexUrl } }))
+        save(
+            state.copy(
+                stores = stores,
+                available = state.available.filter { item -> stores.any { it.indexUrl == item.storeIndexUrl } },
+                fetched = state.fetched.filter { url -> stores.any { it.indexUrl == url } },
+            ),
+        )
     }
 
     /** Fetches every index; a store that fails keeps its previous list and reports the error. */
@@ -83,18 +95,21 @@ class ExtensionRepos(
         val errors = linkedMapOf<String, String>()
         val stores = mutableListOf<Store>()
         val available = mutableListOf<Available>()
+        val fetched = mutableListOf<String>()
         for (store in state.stores) {
             try {
                 val (parsedStore, items) = read(store)
                 stores += parsedStore
                 available += items
+                fetched += store.indexUrl
             } catch (error: Exception) {
                 errors[store.indexUrl] = error.message ?: error.javaClass.simpleName
                 stores += store
                 available += state.available.filter { it.storeIndexUrl == store.indexUrl }
+                if (store.indexUrl in state.fetched) fetched += store.indexUrl
             }
         }
-        save(State(stores, available.distinctBy { it.pkg }))
+        save(State(stores, available.distinctBy { it.pkg }, fetched))
         return errors
     }
 
@@ -107,7 +122,11 @@ class ExtensionRepos(
             }
         val data = if (bytes.size > 2 && bytes[0] == 0x1f.toByte() && bytes[1] == 0x8b.toByte()) GZIPInputStream(bytes.inputStream()).readBytes() else bytes
         val base = store.indexUrl.substringBeforeLast('/') + "/"
-        return if (store.indexUrl.endsWith(".pb") || data.firstOrNull() != '['.code.toByte()) readProto(store, data) else readJson(store, data, base)
+        val result = if (store.indexUrl.endsWith(".pb") || data.firstOrNull() != '['.code.toByte()) readProto(store, data) else readJson(store, data, base)
+        // An empty answer (a CDN hiccup, a truncated body) is a failed fetch, not a repository without extensions: it would
+        // mark every installed package of the store obsolete (orphaned).
+        if (result.second.isEmpty()) throw IllegalStateException("The repository index has no extensions (${data.size} bytes)")
+        return result
     }
 
     /** index.pb: 1 name, 2 badge, 101 repeated extension {1 name, 2 pkg, 3 {1 apk, 2 icon}, 4 lib, 5 code, 6 version, 7 content warning, 8 sources}. */
