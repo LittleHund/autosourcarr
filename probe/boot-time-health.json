@@ -1,8 +1,8 @@
 {
   "ok": true,
   "version": "0.5.0",
-  "captured_at": "2026-11-03T19:21:43.1767558+00:00",
-  "instance_id": "b932d4777456",
+  "captured_at": "2026-11-04T22:36:24.3666896+00:00",
+  "instance_id": "058b070eb60f",
   "source_host": {
     "ok": true,
     "checked": true,
@@ -55,6 +55,7 @@
     "configured": false,
     "url": "",
     "feed": "off",
+    "feed_error": null,
     "warning": "No main Suwayomi is set (Settings: MAIN_SUWAYOMI_URL, or a Suwayomi connection)."
   },
   "translation": {
@@ -127,9 +128,9 @@
       "database_dir": "/data",
       "database_bytes": 1163832,
       "data_dir": "/data",
-      "data_bytes": 10006252
+      "data_bytes": 10007309
     },
-    "captured_at": "2026-11-03T19:21:43.1715965+00:00",
+    "captured_at": "2026-11-04T22:36:24.3620772+00:00",
     "cache_age_seconds": 0
   },
   "errors": {
