@@ -98,12 +98,15 @@ public sealed partial class CatalogueStructure
         return new JsonObject { ["path"] = path, ["records"] = count, ["bytes"] = new FileInfo(path).Length };
     }
 
-    /// <summary>Reads a hint file written by <see cref="CaptureResetRebuildHints"/> (or by 0.4.x).</summary>
+    /// <summary>Reads a hint file written by <see cref="CaptureResetRebuildHints"/> (or by 0.4.x). A file that cannot be
+    /// read or parsed throws (<see cref="InvalidDataException"/>, or the IO error): it is the only copy of the pre-reset
+    /// records, so it is never mistaken for an empty one and deleted.</summary>
     public static IReadOnlyList<ResetHint> ReadResetHints(string path)
     {
         JsonNode? root;
-        try { root = JsonNode.Parse(File.ReadAllText(path)); } catch (Exception error) when (error is JsonException or IOException) { return []; }
-        if (root?["records"] is not JsonArray records) return [];
+        try { root = JsonNode.Parse(File.ReadAllText(path)); }
+        catch (JsonException error) { throw new InvalidDataException("The reset rebuild hints in " + path + " cannot be read; the file is kept.", error); }
+        if (root?["records"] is not JsonArray records) throw new InvalidDataException("The reset rebuild hints in " + path + " have no record list; the file is kept.");
         var result = new List<ResetHint>();
         foreach (var item in records.OfType<JsonObject>())
         {
@@ -144,7 +147,10 @@ public sealed partial class CatalogueStructure
     }
 
     /// <summary>schedule_reset_hint_replay as a job: re-ingests the pre-reset catalogue from exact old source ids in
-    /// small batches with progress, then deletes the hint file. Null when there is no file or nothing in it.</summary>
+    /// small batches with progress. Null when there is no file or nothing in it. A hint whose fetch failed locally
+    /// (timeout, capacity deferral, engine unreachable: hard rule 3) has no answer yet, so it is kept: the file is
+    /// rewritten with only the unanswered hints for the next start and deleted only once every hint got a definite answer.
+    /// A file that cannot be read throws (see <see cref="ReadResetHints"/>) and is kept.</summary>
     public JobHandle? ScheduleResetHintReplay(JobQueue jobs, string path, IResetHintIngest ingest)
     {
         ArgumentNullException.ThrowIfNull(jobs); ArgumentNullException.ThrowIfNull(ingest);
@@ -153,22 +159,52 @@ public sealed partial class CatalogueStructure
         if (records.Count == 0) { File.Delete(path); return null; }
         return jobs.Enqueue(ResetHintReplayJob, "catalogue", async job =>
         {
-            var done = 0; var restored = 0; var errors = 0;
-            foreach (var batch in records.Chunk(16))
+            var done = 0; var restored = 0; var errors = 0; var deferred = new List<ResetHint>();
+            try
             {
-                foreach (var hint in batch)
+                foreach (var batch in records.Chunk(16))
                 {
-                    job.CancellationToken.ThrowIfCancellationRequested();
-                    try { if (await ingest.FetchAndIngestAsync(hint, job.CancellationToken).ConfigureAwait(false) is not null) restored++; }
-                    catch (Exception error) when (error is not OperationCanceledException) { errors++; }
-                    done++;
+                    foreach (var hint in batch)
+                    {
+                        job.CancellationToken.ThrowIfCancellationRequested();
+                        try { if (await ingest.FetchAndIngestAsync(hint, job.CancellationToken).ConfigureAwait(false) is not null) restored++; }
+                        catch (Exception error) when (error is not OperationCanceledException && Sources.SourceResultTracker.IsLocal(error)) { deferred.Add(hint); }
+                        catch (Exception error) when (error is not OperationCanceledException) { errors++; }
+                        done++;
+                    }
+                    job.Report(done, records.Count, "Revalidated " + done.ToString(CultureInfo.InvariantCulture) + "/" + records.Count.ToString(CultureInfo.InvariantCulture)
+                        + " old source ids · " + restored.ToString(CultureInfo.InvariantCulture) + " accepted · " + errors.ToString(CultureInfo.InvariantCulture) + " unavailable/changed · "
+                        + deferred.Count.ToString(CultureInfo.InvariantCulture) + " not answered yet");
                 }
-                job.Report(done, records.Count, "Revalidated " + done.ToString(CultureInfo.InvariantCulture) + "/" + records.Count.ToString(CultureInfo.InvariantCulture)
-                    + " old source ids · " + restored.ToString(CultureInfo.InvariantCulture) + " accepted · " + errors.ToString(CultureInfo.InvariantCulture) + " unavailable/changed");
             }
-            File.Delete(path);
-            job.Result("Previous catalog revalidated · " + restored.ToString(CultureInfo.InvariantCulture) + "/" + records.Count.ToString(CultureInfo.InvariantCulture) + " source records accepted under current rules");
+            finally
+            {
+                // Stopped part-way (cancel, pause): the unchecked rest stays too.
+                var remaining = deferred.Concat(records.Skip(done)).ToArray();
+                if (remaining.Length == 0) File.Delete(path); else WriteResetHints(path, remaining);
+            }
+            job.Result("Previous catalog revalidated · " + restored.ToString(CultureInfo.InvariantCulture) + "/" + records.Count.ToString(CultureInfo.InvariantCulture) + " source records accepted under current rules"
+                + (deferred.Count == 0 ? "" : " · " + deferred.Count.ToString(CultureInfo.InvariantCulture) + " not answered (local timeout or capacity), kept for the next start"));
         }, origin: "automatic", title: "Revalidate previous catalog");
+    }
+
+    /// <summary>Rewrites the hint file atomically with the hints that still have no answer.</summary>
+    private void WriteResetHints(string path, IReadOnlyList<ResetHint> hints)
+    {
+        var temporary = path + ".tmp";
+        using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject(); writer.WriteNumber("version", 1); writer.WriteString("created_at", Stamp()); writer.WriteStartArray("records");
+            foreach (var hint in hints)
+            {
+                writer.WriteStartObject(); writer.WriteString("source_id", hint.SourceId); writer.WriteNumber("source_manga_id", hint.MangaId);
+                writer.WriteNumber("previous_entry_id", hint.PreviousEntryId); writer.WriteString("source_title", hint.SourceTitle);
+                writer.WriteString("match_type", hint.MatchType); writer.WriteBoolean("locked", hint.Locked); writer.WriteEndObject();
+            }
+            writer.WriteEndArray(); writer.WriteEndObject();
+        }
+        File.Move(temporary, path, overwrite: true);
     }
 
     private static ResetHint Hint(DatabaseRow row) => new(row.Text("source_id"), row.Integer("source_manga_id"), row.Text("source_title"), row.Text("match_type"),

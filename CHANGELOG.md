@@ -207,16 +207,20 @@ Notes per conversion phase:
     `scripts/migrate-from-0.4.ps1` / `.sh`, optional `--compose <file> --service <name>` for DATA_DIR/DATABASE_DIR set in
     Compose) migrates a copy on the PC without Docker or network: reads 0.4.5 backups (ASCBK2, passphrase asked, never
     stored), converts the env files, opens 0.5.0 offline (update guard, migrations, every network-free first-start step
-    incl. the startup duplicate sweep) and writes `parity-report.md`/`.json`. The verdict compares every manual and
-    user-owned kind through merge aliases (row counts per key, violated "different works" pairs and re-attached separate
-    records fail), history tables by count, every 0.4.x entry id, settings (secrets by presence only), key files and
-    dropped tables, plus an IMP-9 dry-run recheck of earlier merges; a table lists how each of the 86 0.4.5 tables is
-    covered. Safe mode, a failed update or a failed step is `MIGRATION FAILED`; a crash leaves `MIGRATION-INCOMPLETE.txt`
+    except the startup duplicate sweep, which is left to the first real start) and writes `parity-report.md`/`.json`.
+    The verdict compares every manual, user-owned and provenance kind as whole rows (minus pure timestamps and named
+    columns with a reason), each side resolved through its own merge aliases (a merge made by the migration that touches
+    a decision fails), row counts per key, rows added to keep-out kinds, violated "different works" pairs and re-attached
+    separate records, chapter provenance resolved to entry/chapter/source chapter, history tables row by row, every
+    0.4.x entry and its records, settings (secrets by presence only), Compose overrides, every file of the snapshot
+    (allowlist for caches and logs), the WAL checkpoint and dropped tables, plus an IMP-9 dry-run recheck of earlier
+    merges; a table lists how each of the 86 0.4.5 tables is covered. Safe mode, a failed update or a failed step is `MIGRATION FAILED`; a crash leaves `MIGRATION-INCOMPLETE.txt`
     and no report. A committed fixture made by the real Python `InstanceBackups.create`
     (`scripts/make-legacy-backup-fixture.py`) tests the reader.
   - `docker-compose.0.5.0.yml` mounts new `-0.5.0` datasets; the 0.4.x datasets stay the rollback.
-  - Limits of the tool: network first-start work (Subbed orphan aliases, identity and cover hydration, metadata repair,
-    additional-record scan, feeds, translation) is listed in the report as not covered; the subscriptions themselves live
+  - Limits of the tool: network first-start work (the startup duplicate sweep with its hydration, Subbed orphan aliases,
+    metadata repair, additional-record scan, feeds, translation) is listed in the report as not covered; the 0.2.69
+    unsafe-attachment repair has no evidence source in 0.5.0, so data without its 0.4.x marker is MIGRATION FAILED; the subscriptions themselves live
     in the main Suwayomi (the tool checks AutoSourcarr's saved view of them); the live-instance check is best effort;
     the Compose reader handles plain `environment:` blocks only (no anchors or interpolation).
 - Reader extension sources moved from `extension/module/src/eu/kanade/tachiyomi/extension/all/autosourcarr/`

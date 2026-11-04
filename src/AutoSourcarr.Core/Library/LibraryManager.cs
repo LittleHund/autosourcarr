@@ -164,7 +164,8 @@ public sealed class LibraryManager : IAsyncDisposable
             try
             {
                 var current = _store.Tracking(entryId)["observation"]!.AsObject();
-                var state = error is OperationCanceledException ? "deferred" : "unknown";
+                // Hard rule 3: a local deferral or timeout is "deferred", never a failed observation.
+                var state = error is OperationCanceledException || AutoSourcarr.Core.Sources.SourceResultTracker.IsLocal(error) ? "deferred" : "unknown";
                 var failed = (JsonObject)current.DeepClone();
                 failed["download_state"] = state; failed["coverage_state"] = "verification"; failed["incomplete_reason"] = error.GetType().Name;
                 _store.SaveTracking(entryId, observation: failed);
@@ -200,11 +201,18 @@ public sealed class LibraryManager : IAsyncDisposable
         return observation;
     }
 
-    /// <summary>Downloaded chapters whose CBZ is still on disk; vanished files are forgotten so they download again.</summary>
+    /// <summary>Downloaded chapters whose CBZ is still on disk; vanished files are forgotten so they download again. Only
+    /// while the library folder itself can be read: an unmounted LIBRARY_DIR (or a permission problem) makes every file
+    /// look vanished, and forgetting them would download the whole library again and lose its provenance.</summary>
     private HashSet<long> PresentDownloads(long entryId)
     {
         var present = new HashSet<long>();
-        foreach (var (chapterId, file) in _store.Downloaded(entryId))
+        var root = new DirectoryInfo(_options.Root);
+        bool Readable(DirectoryInfo folder) { try { folder.Refresh(); return folder.Exists && folder.EnumerateFileSystemInfos().Take(1).Any(); } catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; } }
+        var recorded = _store.Downloaded(entryId).ToList();
+        if (recorded.Count != 0 && !Readable(root))
+            throw new IOException("The library folder " + _options.Root + " is missing, empty or cannot be read (not mounted?) while it holds recorded downloads; they are not checked until it is back.");
+        foreach (var (chapterId, file) in recorded)
         {
             string path;
             try { path = LibraryNames.Inside(_options.Root, file.Split('/')); }

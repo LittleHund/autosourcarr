@@ -148,12 +148,18 @@ public sealed partial class ImportRuns
                     {
                         using (var stream = File.OpenRead(kept)) rows = MihonBackupReader.Read(stream).Manga.Select(manga => manga.ToJson()).ToList();
                     }
-                    catch (Exception error) when (error is BackupDecodeException or IOException or UnauthorizedAccessException)
+                    catch (BackupDecodeException error)
                     {
                         RemoveUpload(kept);
                         Recount(importId, "failed");
-                        progress.Result("The kept upload could not be read again: " + error.Message);
+                        progress.Result("The kept upload could not be decoded again: " + error.Message);
                         return Task.CompletedTask;
+                    }
+                    // A file that could not be read now (a share hiccup, a lock) is not damaged: the upload and the "running"
+                    // state stay, so the next start resumes it; the job fails visibly instead of looking completed.
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                    {
+                        throw new IOException("The kept upload could not be read now (" + error.Message + "); it is kept and the run resumes at the next start.", error);
                     }
                     return RunImportJobAsync(importId, rows, alreadyInLibrary: false, kept, progress);
                 });

@@ -154,7 +154,7 @@ public static class RepairV1EndpointsTests
         suite.Add("repair v1: hard rule 6: only the user's Fixed makes a repair Fixed; installed-and-checked stays weaker; the verdict is bound to the jar and survives a restart", () =>
         {
             using var setup = new Setup();
-            var sha = new string('b', 64);
+            var sha = DomainMigration.Sha(FakeHost.Jar); // the repaired jar the host runs
             var id = setup.Tasks.Create("Repair source domain " + Package, context: Package, origin: "manual", kind: SourceRepairV1Endpoints.DomainRepairJob.Name);
             void Report(string installed)
             {
@@ -205,15 +205,26 @@ public static class RepairV1EndpointsTests
             Check.Equal("not-working", row["repair_confirmation"]!.GetValue<string>());
             Check.True(row["repair_working_at"] is null, "not confirmed working any more");
 
-            // A damaged store never shows anything as Fixed.
-            File.WriteAllText(Path.Combine(setup.Maintenance, "confirmations", "repair-confirmations.json"), "{not json");
-            Check.Equal(0, new RepairConfirmations(setup.Maintenance).All().Count);
+            // "Fixed" is refused while the host runs another jar (updated or uploaded without a repair report).
+            setup.Host.Running = Encoding.ASCII.GetBytes("PK\u0003\u0004 an updated jar");
+            Check.Equal(HttpStatusCode.Conflict, setup.Send(HttpMethod.Post, Root + "/jobs/" + id + "/feedback", new JsonObject { ["action"] = "fixed", ["installed_sha256"] = sha }).StatusCode);
+            Check.Equal("not-working", new RepairConfirmations(setup.Maintenance).All()[Package].Verdict);
+            setup.Host.Running = (byte[])FakeHost.Jar.Clone();
+
+            // A damaged store never shows anything as Fixed, and a new verdict never rewrites it from an empty set
+            // (every other package's verdict would be lost: hard rule 6).
+            var store = Path.Combine(setup.Maintenance, "confirmations", "repair-confirmations.json");
+            File.WriteAllText(store, "{not json");
+            Check.Throws<InvalidDataException>(() => new RepairConfirmations(setup.Maintenance).All());
+            Check.Throws<InvalidDataException>(() => new RepairConfirmations(setup.Maintenance).Record("other.package", "task", new string('f', 64), RepairConfirmations.Fixed));
+            Check.Equal("{not json", File.ReadAllText(store));
+            Check.Equal("repaired", Row()["repair_state"]!.GetValue<string>());
         });
 
         suite.Add("repair v1: Sources -> Health reads the persisted verdicts: confirmed only while the confirmed jar is installed (audit A10)", () =>
         {
             using var setup = new Setup();
-            var sha = new string('d', 64);
+            var sha = DomainMigration.Sha(FakeHost.Jar); // the repaired jar the host runs
             void Report(string installed)
             {
                 var path = setup.Domain.ReportPath(Package); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -238,6 +249,11 @@ public static class RepairV1EndpointsTests
             Check.Equal("unconfirmed", History()["current"]!["status"]!.GetValue<string>());
             Check.True(History()["working_at"] is null, "no confirmed-working time for another jar");
             Report(sha);
+            Check.Equal("confirmed", History()["current"]!["status"]!.GetValue<string>());
+            // The host runs another jar now (an update or upload writes no repair report): not confirmed (hard rule 6).
+            setup.Host.Running = Encoding.ASCII.GetBytes("PK\u0003\u0004 an updated jar");
+            Check.Equal("unconfirmed", History()["current"]!["status"]!.GetValue<string>());
+            setup.Host.Running = (byte[])FakeHost.Jar.Clone();
             confirmations.Record(Package, "aaaaaaaaaaaa", sha, RepairConfirmations.NotWorking);
             Check.Equal("reported-not-working", History()["current"]!["status"]!.GetValue<string>());
         });
@@ -299,7 +315,7 @@ public static class RepairV1EndpointsTests
             {
                 Tasks = Tasks, Jobs = Jobs,
                 SourceRepair = new SourceRepairServices { Domain = Domain },
-                Repair = new RepairV1Services { MaintenanceRoot = Maintenance, RunnerCheck = runnerCheck, Confirmations = new RepairConfirmations(Maintenance) },
+                Repair = new RepairV1Services { MaintenanceRoot = Maintenance, RunnerCheck = runnerCheck, Confirmations = new RepairConfirmations(Maintenance), ReadInstalledJar = Host.ReadJarAsync },
                 SourceInventory = new SourceInventoryServices
                 {
                     Orphans = new SourceOrphans(Maintenance, _client, new NoFetcher()), Maintenance = new SourceMaintenanceState(Maintenance, _temp.Path),
@@ -352,7 +368,9 @@ public static class RepairV1EndpointsTests
         };
         public Task<JsonObject?> ExtensionAsync(string packageName, CancellationToken cancellationToken)
         { Interlocked.Increment(ref Calls); return Task.FromResult<JsonObject?>(packageName == Package ? Row() : null); }
-        public Task<byte[]> ReadJarAsync(string packageName, CancellationToken cancellationToken) => Task.FromResult((byte[])Jar.Clone());
+        /// <summary>The jar the host runs now (an update or upload can replace the repaired jar).</summary>
+        public byte[] Running { get; set; } = (byte[])Jar.Clone();
+        public Task<byte[]> ReadJarAsync(string packageName, CancellationToken cancellationToken) => Task.FromResult((byte[])Running.Clone());
         public Task<JsonObject> InstallJarAsync(string packageName, byte[] jar, CancellationToken cancellationToken)
         { lock (Installs) Installs.Add(jar); return Task.FromResult(Row()); }
         public Task<JsonObject> BrowseAsync(string sourceId, string mode, string query, CancellationToken cancellationToken) => throw new InvalidOperationException("not reached");

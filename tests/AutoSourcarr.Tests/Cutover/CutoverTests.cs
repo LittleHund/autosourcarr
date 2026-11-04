@@ -4,7 +4,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using AutoSourcarr.Api;
 using AutoSourcarr.Api.Cutover;
+using AutoSourcarr.Core.Settings;
 using AutoSourcarr.Core.Backup;
 using AutoSourcarr.Core.Cutover;
 using AutoSourcarr.Core.Persistence;
@@ -40,6 +42,19 @@ public static class CutoverTests
         suite.Add("phase 14 cutover: DATABASE_DIR layouts (inside, outside, ambiguous) and Compose overrides", () => Run(DatabaseLayouts).GetAwaiter().GetResult());
         suite.Add("phase 14 cutover: URL tokens are masked and Windows device names are refused as backup members", Masking);
         suite.Add("phase 14 cutover: a backup made by the real Python 0.4.5 InstanceBackups.create (committed fixture) migrates with PARITY OK", () => Run(PythonFixture).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: merges by 0.5.0, relabelled merges, emptied entries, added keep-out rows, NULL vs '', violations and unanswerable kinds fail",
+            () => Run(ViolationsAndMerges).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: a missing or changed repair package, state file, upload or reset hint fails; allowlisted logs do not", () => Run(FilesKeptOrFailed).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: a one-time step that runs with an unavailable sub-step (no 0.4.x marker) is MIGRATION FAILED", () => Run(MarkerlessData).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: a write-ahead log that cannot be checkpointed is MIGRATION FAILED", () => Run(BusyCheckpoint).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: the real verdict fails on a 0.5.0 merge, an emptied entry, an added keep-out row, a lost setting and a refused Compose value", () => Run(RealVerdict).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: exit codes through the entry point (0 OK, 1 failed, 2 refused incl. wrong passphrase, 3 any other failure)", () => Run(ExitCodes).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: counted failures in a startup step (interrupted chapter work not finished) are MIGRATION FAILED", () => Run(CountedStepFailures).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: unclassified tables are compared row by row and listed as not classified", () => Run(UnclassifiedTables).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: a 0.4.5 backup with DATABASE_DIR outside DATA_DIR goes to <out>/database", () => Run(BackupDatabaseOutsideData).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: the Compose service is chosen without guessing; unknown values matter only in the chosen service", () => Run(ComposeChoice).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: the parity report is frozen once built", ReportFrozen);
+        suite.Add("phase 14 cutover: a stale database sidecar and a real link in the input are refused", () => Run(StaleSidecarsAndLinks).GetAwaiter().GetResult());
     }
 
     private static async Task Run(Func<Task> test) => await test().ConfigureAwait(false);
@@ -171,24 +186,135 @@ public static class CutoverTests
         Check.Equal(2, await LegacyMigrationTool.RunAsync(["only-one"], TextWriter.Null));
     }
 
-    /// <summary>How each kind is damaged in a copy of the migrated files (default: all rows of its table deleted).</summary>
+    /// <summary>How each kind is damaged by deletion in a copy of the migrated files (default: all rows of its table deleted). "O:" = chapter-origins.sqlite.</summary>
     private static readonly Dictionary<string, string> Damage = new(StringComparer.Ordinal)
     {
         ["Subbed (main-library subscriptions)"] = "DELETE FROM settings WHERE key='subbed_display_snapshot_v1'",
         ["Manual titles and aliases"] = "DELETE FROM titles WHERE title_type IN ('manual','main-library')",
         ["Manual preferred titles"] = "UPDATE entries SET manual_preferred_title=0",
-        ["Legacy source-keyed title overrides"] = "DELETE FROM preferred_title_override_sources; DELETE FROM manual_title_scopes",
-        ["Manual and locked source records (matches)"] = "UPDATE source_matches SET locked=0,match_type='auto'; UPDATE source_variants SET locked=0,match_type='auto'",
-        ["Pending merges (interrupted)"] = "DELETE FROM pending_entry_merges; DELETE FROM entry_aliases WHERE old_entry_id=7; INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(7,'Gamma Copy','x','x')",
-        ["Pending splits (interrupted)"] = "DELETE FROM pending_entry_splits; DELETE FROM entries WHERE id=8",
+        ["Legacy source-keyed title overrides"] = "DELETE FROM preferred_title_override_sources;;DELETE FROM manual_title_scopes",
+        ["Manual and locked source records (matches)"] = "UPDATE source_matches SET locked=0,match_type='auto';;UPDATE source_variants SET locked=0,match_type='auto'",
+        ["Pending merges (interrupted)"] = "DELETE FROM pending_entry_merges;;DELETE FROM entry_aliases WHERE old_entry_id=7;;INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(7,'Gamma Copy','x','x')",
+        ["Pending splits (interrupted)"] = "DELETE FROM pending_entry_splits;;DELETE FROM entries WHERE id=8",
         ["Source choices"] = "UPDATE source_config SET official_manual=1-official_manual",
         ["App state in the settings table"] = "DELETE FROM settings WHERE key='source_health_daily_v1'",
-        ["Hidden chapters"] = "UPDATE virtual_chapters SET hidden=0",
         ["Manual or locked identity links"] = "UPDATE identity_links SET locked=0,match_type='auto'",
+        ["Served chapter origins"] = "O:DELETE FROM served_origin",
+        ["Chapter candidate rejections"] = "O:DELETE FROM chapter_candidate_rejections",
+        ["Origin history"] = "O:DELETE FROM origin_history",
     };
+
+    /// <summary>Value changes for the kinds whose rows are not a plain "SELECT * FROM table" (joined, expanded or chosen columns).</summary>
+    private static readonly Dictionary<string, string[]> ValueDamage = new(StringComparer.Ordinal)
+    {
+        ["Subbed (main-library subscriptions)"] = ["UPDATE settings SET value=replace(value,'[1,2,4]','[1,2,999]') WHERE key='subbed_display_snapshot_v1'"],
+        ["Manual preferred titles"] = ["UPDATE entries SET preferred_title=preferred_title||'-x' WHERE manual_preferred_title=1",
+            "UPDATE entries SET manual_preferred_title=0 WHERE manual_preferred_title=1"],
+        ["Legacy source-keyed title overrides"] = ["UPDATE manual_title_scopes SET title=title||'-x'"],
+        ["Manual and locked source records (matches)"] = [.. new[] { "entry_id=entry_id+1000", "source_manga_url=source_manga_url||'-x'", "source_title=source_title||'-x'", "confidence=confidence+1",
+            "match_type=match_type||'-x'", "locked=locked+1000", "active=active+1000" }.Select(set => "UPDATE source_variants SET " + set + " WHERE locked=1")],
+        ["Tag reviews"] = ["UPDATE tag_reviews SET decision='different'"],
+        ["Manual or locked identity links"] = [.. new[] { "provider_name=provider_name||'-x'", "external_url=external_url||'-x'", "identity_scope=identity_scope||'-x'",
+            "confidence=confidence+1", "match_type=match_type||'-x'", "locked=locked+1000" }.Select(set => "UPDATE identity_links SET " + set)],
+        ["App state in the settings table"] = ["UPDATE settings SET value=value||'x' WHERE key='source_health_daily_v1'",
+            "UPDATE settings SET value='\"0.1\"' WHERE key='startup_catalog_maintenance_version'"],
+        ["Served chapter origins"] = ["O:UPDATE served_origin SET reason=reason||'-x'", "O:UPDATE chapter_candidates SET source_chapter_id=9999 WHERE id=1",
+            "O:UPDATE chapter_candidates SET source_manga_id=9999 WHERE id=1", "O:UPDATE chapter_candidates SET source_id='src-z' WHERE id=1",
+            "O:UPDATE virtual_chapters SET entry_id=2 WHERE id=1", "O:UPDATE virtual_chapters SET chapter_key='zz' WHERE id=1", "O:DELETE FROM virtual_chapters WHERE id=1",
+            "O:DELETE FROM chapter_candidates WHERE id=1", "O:UPDATE served_origin SET candidate_id=2"],
+        ["Origin history"] = ["O:UPDATE origin_history SET reason=reason||'-x'", "O:UPDATE origin_history SET source_name=source_name||'-x'", "O:UPDATE origin_history SET served_at='x'",
+            "O:UPDATE chapter_candidates SET source_chapter_id=9999 WHERE id=1", "O:UPDATE virtual_chapters SET entry_id=2 WHERE id=1",
+            "O:UPDATE virtual_chapters SET chapter_key='zz' WHERE id=1", "O:UPDATE chapter_candidates SET source_id='src-z' WHERE id=1",
+            "O:UPDATE chapter_candidates SET source_manga_id=9999 WHERE id=1", "O:UPDATE origin_history SET source_id='src-z'", "O:UPDATE origin_history SET source_manga_id=9999"],
+        ["Serving choices"] = ["UPDATE serving_choices SET revision=revision+1", "UPDATE serving_choices SET entry_id=entry_id+1000",
+            "O:UPDATE chapter_candidates SET source_chapter_id=9999 WHERE id=1", "O:UPDATE virtual_chapters SET chapter_key='zz' WHERE id=1",
+            "O:UPDATE chapter_candidates SET source_id='src-z' WHERE id=1", "O:UPDATE chapter_candidates SET source_manga_id=9999 WHERE id=1"],
+        ["Serving upgrade history"] = ["UPDATE serving_upgrade_history SET changed_at='x'", "O:UPDATE chapter_candidates SET source_chapter_id=9999 WHERE id=1",
+            "UPDATE serving_upgrade_history SET entry_id=entry_id+1000", "O:UPDATE virtual_chapters SET entry_id=2 WHERE id=1", "O:UPDATE virtual_chapters SET chapter_key='zz' WHERE id=1",
+            "UPDATE serving_upgrade_history SET old_candidate_id=999", "UPDATE serving_upgrade_history SET candidate_id=999"],
+    };
+
+    /// <summary>A generic value change of one column: numbers move by 1000, text gets a suffix, NULL becomes text.</summary>
+    /// <summary>True when the statement changes the column (UPDATE ... SET column=..., or a DELETE that removes it); a WHERE mention does not count.</summary>
+    private static bool ChangesColumn(string statement, string column) =>
+        Regex.IsMatch(statement, @"SET\s+(?:[^=]+=[^,]+,\s*)*""?" + Regex.Escape(column) + @"""?\s*=", RegexOptions.IgnoreCase)
+        || statement.Contains("DELETE FROM", StringComparison.OrdinalIgnoreCase) && Regex.IsMatch(statement, @"\b" + Regex.Escape(column) + @"\b");
+
+    /// <summary>The column a joined kind's alias reads (cc_ = chapter_candidates, chapter_ = virtual_chapters, *_candidate = the candidate id).</summary>
+    private static readonly Dictionary<string, string> JoinedColumns = new(StringComparer.Ordinal)
+    {
+        ["cc_source_id"] = "source_id", ["cc_manga_id"] = "source_manga_id", ["cc_chapter_id"] = "source_chapter_id",
+        ["chapter_entry_id"] = "entry_id", ["old_candidate"] = "old_candidate_id", ["candidate"] = "candidate_id",
+    };
+
+    private static string Change(string table, string column) =>
+        $"UPDATE \"{table}\" SET \"{column}\"=CASE WHEN \"{column}\" IS NULL THEN 'damaged' WHEN typeof(\"{column}\") IN ('integer','real') THEN \"{column}\"+1000 ELSE \"{column}\"||'-damaged' END";
+
+    /// <summary>Every compared kind, pinned by name: adding, removing or renaming one must be a deliberate change here.</summary>
+    private static readonly string[] ExpectedKinds =
+    [
+        "Subbed (main-library subscriptions)",
+        "Library tracking (monitored / main-library id)",
+        "Manual titles and aliases",
+        "Manual preferred titles",
+        "Preferred-title overrides",
+        "Legacy source-keyed title overrides",
+        "Manual title scopes",
+        "Display metadata you chose or locked",
+        "Manual and locked source records (matches)",
+        "Merges (entry aliases)",
+        "Pending merges (interrupted)",
+        "Pending splits (interrupted)",
+        "Manual match groups",
+        "Manual match bindings",
+        "Separate entries (records kept apart)",
+        "Duplicate reviews (different works / same work)",
+        "Mixed-entry reviews",
+        "Tag reviews",
+        "Manual or locked identity links",
+        "Portable identity reviews",
+        "Deleted source records (kept out)",
+        "Shared-catalogue record bindings",
+        "Shared-catalogue decisions",
+        "Unfinished shared-catalogue import",
+        "Source choices",
+        "Source groups",
+        "Source health and repair state",
+        "Gallery policies",
+        "Matching policies",
+        "Matching presets",
+        "Review workbench actions",
+        "Serving profiles",
+        "Serving upgrade policies",
+        "UI preferences",
+        "App state in the settings table",
+        "Import runs",
+        "Import decisions (items)",
+        "Import rejections",
+        "Manual import auto-resolve memory",
+        "Manual import auto-resolve state",
+        "Served chapter origins",
+        "Chapter candidate rejections",
+        "Origin history",
+        "Serving choices",
+        "Serving upgrade history",
+        "History: display_metadata_history",
+        "History: duplicate_review_history",
+        "History: duplicate_split_history",
+        "History: match_history",
+        "History: entry_preference_history",
+        "History: portable_identity_review_history",
+        "History: serving_policy_history",
+        "History: deleted_entries_history",
+        "History: automatic_merge_events",
+        "History: automatic_merge_lineage",
+        "History: policy_preview_history",
+    ];
 
     private static async Task EveryKindDamaged()
     {
+        Check.True(DecisionParity.Kinds.Select(kind => kind.Name).SequenceEqual(ExpectedKinds),
+            "the compared kinds changed: " + string.Join(", ", DecisionParity.Kinds.Select(kind => kind.Name).Except(ExpectedKinds).Concat(ExpectedKinds.Except(DecisionParity.Kinds.Select(kind => kind.Name)))));
         using var temp = new Sandbox();
         var input = Path.Combine(temp.Path, "in");
         MakeInstance(input, ManualCatalog, ManualOrigins, Env(secrets: false));
@@ -196,50 +322,221 @@ public static class CutoverTests
         Check.True(outcome.Report.Ok, outcome.Report.Verdict + "\n" + Describe(outcome.Report));
         var original = Path.Combine(temp.Path, "out", "original-0.4", "data");
         var kinds = outcome.Report.Decisions.Select(result => result.Kind).ToList();
-        var checkedKinds = 0;
-        foreach (var kind in kinds)
+        var deletions = 0; var changes = 0; var untested = new List<string>();
+        foreach (var result in outcome.Report.Decisions)
         {
-            var sql = Damage.TryGetValue(kind.Name, out var special) ? special : "DELETE FROM " + kind.Table;
-            var result = CompareDamaged(temp.Path, original, outcome.DataDirectory, kind.Origins, sql, kinds).Single(item => item.Kind.Name == kind.Name);
-            Check.True(result.Lost > 0, kind.Name + " was damaged (" + sql + ") but not reported as lost");
-            var report = Report(CompareDamaged(temp.Path, original, outcome.DataDirectory, kind.Origins, sql, kinds), outcome.Report);
-            Check.True(!report.Ok && report.Verdict.StartsWith("PARITY FAILED", StringComparison.Ordinal), kind.Name + ": " + report.Verdict);
-            checkedKinds++;
+            var kind = result.Kind;
+            // Deletion of the kind's rows.
+            var sql = Damage.TryGetValue(kind.Name, out var special) ? special : (kind.Origins ? "O:" : "") + "DELETE FROM " + kind.Table;
+            var damaged = Analyze(temp.Path, original, outcome.DataDirectory, sql, [kind]).Kinds.Single();
+            Check.True(damaged.Lost > 0, kind.Name + " was damaged (" + sql + ") but not reported as lost");
+            deletions++;
+            // A value change of every compared column, one at a time.
+            if (result.Migrated == 0) continue; // an interrupted operation the migration completed (nothing left to change)
+            string[] statements;
+            if (ValueDamage.TryGetValue(kind.Name, out var specific))
+            {
+                statements = specific;
+                // A hand-written list must change every compared column, or a new column would go untested (a kind expanded
+                // from a stored value, like the Subbed snapshot, has derived columns and is changed through that value).
+                if (kind.Expand is null)
+                    foreach (var column in result.Columns)
+                    {
+                        // Joined kinds name a column of another table with a short alias prefix (cc_source_id = chapter_candidates.source_id).
+                        var plain = JoinedColumns.GetValueOrDefault(column, column);
+                        if (!specific.Any(statement => ChangesColumn(statement, column) || ChangesColumn(statement, plain)))
+                            untested.Add(kind.Name + ": " + column);
+                    }
+            }
+            else
+            {
+                Check.True(kind.Sql.StartsWith("SELECT * FROM", StringComparison.Ordinal), kind.Name + " needs a ValueDamage entry");
+                using var schema = new LegacyDatabase(Path.Combine(outcome.DataDirectory, kind.Origins ? "chapter-origins.sqlite" : "catalog.sqlite"));
+                var tableColumns = schema.Schema(kind.Table).Columns;
+                statements = [.. result.Columns.Where(tableColumns.Contains).Select(column => (kind.Origins ? "O:" : "") + Change(kind.Table, column))];
+                Check.True(statements.Length > 0 || result.Columns.Count == 0, kind.Name + " has columns to change");
+            }
+            foreach (var statement in statements)
+            {
+                var changed = Analyze(temp.Path, original, outcome.DataDirectory, statement, [kind]).Kinds.Single();
+                Check.True(changed.Lost > 0, kind.Name + ": the value change (" + statement + ") was not reported");
+                changes++;
+            }
         }
-        Check.True(checkedKinds >= 50, "every kind was damaged once (" + checkedKinds.ToString(CultureInfo.InvariantCulture) + ")");
-
-        // Violations that keep every row: a reviewed "different works" pair merged, a separated record attached again,
-        // two monitored works merged into one (one subscription would be gone).
-        var merged = CompareDamaged(temp.Path, original, outcome.DataDirectory, false,
-            "INSERT INTO entry_aliases(old_entry_id,canonical_entry_id,reason,merged_at) VALUES(2,1,'automatic duplicate merge:x','2026-02-01'); DELETE FROM entries WHERE id=2; DELETE FROM library_tracking WHERE entry_id=2;", kinds);
-        Check.True(merged.Single(item => item.Kind.Table == "duplicate_reviews").Changed.Any(item => item.After!.StartsWith("VIOLATED", StringComparison.Ordinal)), "a merged different-works pair is violated");
-        Check.True(merged.Single(item => item.Kind.Table == "library_tracking").Lost > 0, "two monitored works merged into one lose a subscription");
-        var attached = CompareDamaged(temp.Path, original, outcome.DataDirectory, false, "UPDATE source_matches SET active=0 WHERE source_id='src-a' AND source_manga_id=102; INSERT INTO source_variants(entry_id,source_id,source_manga_id,source_title,match_type,locked,active,last_checked) VALUES(1,'src-a',102,'Beta','auto',0,1,'x')", kinds);
-        Check.True(attached.Single(item => item.Kind.Table == "manual_separate_records").Changed.Any(item => item.After!.StartsWith("VIOLATED", StringComparison.Ordinal)),
-            "a separated record attached to its entry again is violated");
-        var deletedSubscribed = CompareDamaged(temp.Path, original, outcome.DataDirectory, false, "DELETE FROM entries WHERE id=2", kinds);
-        Check.True(deletedSubscribed.Single(item => item.Kind.Name.StartsWith("Subbed", StringComparison.Ordinal)).Lost > 0, "a subscribed entry that is gone is a lost subscription");
-        var undamaged = CompareDamaged(temp.Path, original, outcome.DataDirectory, false, "SELECT 1", kinds);
-        Check.True(undamaged.All(item => item.Lost == 0), "the undamaged copy compares clean");
+        Check.True(untested.Count == 0, "columns no ValueDamage statement changes: " + string.Join("; ", untested));
+        Check.True(deletions >= 55 && changes >= 150, "every kind was damaged (" + deletions.ToString(CultureInfo.InvariantCulture) + " deletions, "
+            + changes.ToString(CultureInfo.InvariantCulture) + " value changes)");
+        var clean = Analyze(temp.Path, original, outcome.DataDirectory, "SELECT 1", kinds);
+        Check.True(clean.Ok, "the undamaged copy compares clean");
     }
 
-    private static ParityReport Report(List<ParityKindResult> decisions, ParityReport clean) => new()
+    private static async Task ViolationsAndMerges()
     {
-        Input = clean.Input, ToVersion = clean.ToVersion, CreatedAt = clean.CreatedAt, Decisions = decisions, Counts = [], UnresolvedEntries = [],
-        OriginalEntries = clean.OriginalEntries, Settings = clean.Settings, Notices = clean.Notices, Files = clean.Files, Merges = clean.Merges,
-    };
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, ManualCatalog, ManualOrigins, Env(secrets: false));
+        var outcome = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out"), () => "", TextWriter.Null);
+        var original = Path.Combine(temp.Path, "out", "original-0.4", "data");
+        var kinds = outcome.Report.Decisions.Select(result => result.Kind).ToList();
+        ParityKindResult Kind(DamageResult result, string table) => result.Kinds.First(item => item.Kind.Table == table);
 
-    private static List<ParityKindResult> CompareDamaged(string root, string original, string migrated, bool origins, string sql, IReadOnlyList<ParityKind> kinds)
+        // (1) a merge 0.5.0 made of a subscribed and tracked entry (2 into 3): the merge itself fails, and so do the rows that point at entry 2.
+        var merged = Analyze(temp.Path, original, outcome.DataDirectory,
+            "INSERT INTO entry_aliases(old_entry_id,canonical_entry_id,reason,merged_at) VALUES(2,3,'automatic duplicate merge:x','2026-02-01');;DELETE FROM entries WHERE id=2", kinds);
+        Check.True(!merged.Ok && merged.Merges.Any(merge => merge.Entry == 2 && merge.Into == 3 && merge.Fails), "a merge by 0.5.0 of a subscribed entry fails");
+        Check.True(merged.Kinds.First(item => item.Kind.Name.StartsWith("Subbed", StringComparison.Ordinal)).Lost > 0, "the subscription now opens another entry");
+        Check.True(Kind(merged, "library_tracking").Lost > 0, "the tracked work now belongs to another entry");
+        Check.True(merged.Unresolved.Count == 0, "a merged entry is listed as merged, not as gone");
+        // ... an untouched entry merged by 0.5.0 is listed, not failed.
+        var quiet = Analyze(temp.Path, original, outcome.DataDirectory,
+            "INSERT INTO entries(id,preferred_title,created_at,updated_at) VALUES(50,'Lonely','x','x')", kinds);
+        Check.True(quiet.Ok, "an entry 0.5.0 added is not a loss");
+        // (4) a manual merge relabelled automatic.
+        var relabel = Analyze(temp.Path, original, outcome.DataDirectory, "UPDATE entry_aliases SET reason='automatic duplicate merge:x' WHERE old_entry_id=4", kinds);
+        Check.True(Kind(relabel, "entry_aliases").Changed.Count > 0, "a manual merge relabelled automatic is changed");
+        // (6) an entry that lost every active record.
+        var emptied = Analyze(temp.Path, original, outcome.DataDirectory, "UPDATE source_matches SET active=0 WHERE entry_id=3;;UPDATE source_variants SET active=0 WHERE entry_id=3", kinds);
+        Check.True(!emptied.Ok && emptied.Emptied.Contains(3), "an entry without records fails");
+        // (8) rows added to kinds that keep records out. The tested set must be exactly the keep-out kinds.
+        string[] keepOutTables = ["deleted_source_records", "manual_separate_records", "duplicate_reviews", "import_match_rejections", "chapter_candidate_rejections"];
+        Check.True(DecisionParity.Kinds.Where(kind => kind.KeepOut).Select(kind => kind.Table).Order(StringComparer.Ordinal).SequenceEqual(keepOutTables.Order(StringComparer.Ordinal)),
+            "every keep-out kind has an added-row case: " + string.Join(", ", DecisionParity.Kinds.Where(kind => kind.KeepOut).Select(kind => kind.Table)));
+        foreach (var (table, sql) in new[]
+                 {
+                     ("deleted_source_records", "INSERT INTO deleted_source_records(source_id,source_manga_id,deleted_at) VALUES('src-a',101,'x')"),
+                     ("manual_separate_records", "INSERT INTO manual_separate_records(target_entry_id,source_id,source_manga_id,created_at,updated_at) VALUES(3,'src-a',101,'x','x')"),
+                     ("duplicate_reviews", "INSERT INTO duplicate_reviews(left_entry_id,right_entry_id,decision,reviewed_at) VALUES(1,3,'not_duplicate','x')"),
+                     ("import_match_rejections", "INSERT INTO import_match_rejections(backup_key,signature,rejected_at) VALUES('bk-9','sig-9','x')"),
+                     ("chapter_candidate_rejections", "O:INSERT INTO chapter_candidate_rejections(source_id,source_chapter_id,rejected_at) VALUES('src-a',1001,'x')"),
+                 })
+        {
+            var added = Analyze(temp.Path, original, outcome.DataDirectory, sql, kinds);
+            Check.True(!added.Ok && Kind(added, table).Added.Count > 0, table + ": an added keep-out row fails");
+        }
+        // (9) NULL and '' stay distinct.
+        var blank = Analyze(temp.Path, original, outcome.DataDirectory, "UPDATE import_items SET entry_id='' WHERE entry_id IS NULL", kinds);
+        Check.True(Kind(blank, "import_items").Changed.Count > 0, "NULL changed to '' is a change");
+        // Violations that keep every row.
+        var pair = Analyze(temp.Path, original, outcome.DataDirectory,
+            "INSERT INTO entry_aliases(old_entry_id,canonical_entry_id,reason,merged_at) VALUES(2,1,'automatic duplicate merge:x','2026-02-01');;DELETE FROM entries WHERE id=2;;DELETE FROM library_tracking WHERE entry_id=2", kinds);
+        Check.True(Kind(pair, "duplicate_reviews").Changed.Any(item => item.After!.StartsWith("VIOLATED", StringComparison.Ordinal)), "a merged different-works pair is violated");
+        var attached = Analyze(temp.Path, original, outcome.DataDirectory,
+            "UPDATE source_matches SET active=0 WHERE source_id='src-a' AND source_manga_id=102;;INSERT INTO source_variants(entry_id,source_id,source_manga_id,source_title,match_type,locked,active,last_checked) VALUES(1,'src-a',102,'Beta','auto',0,1,'x')", kinds);
+        Check.True(Kind(attached, "manual_separate_records").Changed.Any(item => item.After!.StartsWith("VIOLATED", StringComparison.Ordinal)), "a separated record attached again is violated");
+        // (10) a kind the schema cannot answer while its table has rows is not OK.
+        using (var oldCatalog = new LegacyDatabase(Path.Combine(original, "catalog.sqlite")))
+        using (var oldOrigins = new LegacyDatabase(Path.Combine(original, "chapter-origins.sqlite")))
+        {
+            var broken = new ParityKind("Broken query", ParityGroup.Manual, false, "manual_match_groups", "SELECT no_such_column FROM manual_match_groups", ["id"], [], "test");
+            var result = DecisionParity.Compare((oldCatalog, oldOrigins), (oldCatalog, oldOrigins), [broken]).Single();
+            Check.True(!result.Compared && result.Lost > 0, "rows that cannot be compared are not OK");
+            var empty = new ParityKind("Broken empty", ParityGroup.Manual, false, "gallery_layout_candidates", "SELECT no_such_column FROM gallery_layout_candidates", ["split_id"], [], "test");
+            Check.True(DecisionParity.Compare((oldCatalog, oldOrigins), (oldCatalog, oldOrigins), [empty]).Single().Lost == 0, "an empty table with an older schema is fine");
+        }
+    }
+
+    private sealed record DamageResult(List<ParityKindResult> Kinds, List<long> Unresolved, List<NewMerge> Merges, List<long> Emptied, bool Ok);
+
+    /// <summary>Copies the migrated databases, applies <paramref name="statements"/> (";;"-separated, "O:" = origins) and compares (the coordinator's harness).</summary>
+    private static DamageResult Analyze(string root, string original, string migrated, string statements, IReadOnlyList<ParityKind> kinds)
     {
         var copy = Path.Combine(root, "damage-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(copy);
         foreach (var name in new[] { "catalog.sqlite", "chapter-origins.sqlite" }) File.Copy(Path.Combine(migrated, name), Path.Combine(copy, name));
-        Execute(Path.Combine(copy, origins ? "chapter-origins.sqlite" : "catalog.sqlite"), sql);
+        foreach (var statement in statements.Split(";;"))
+        {
+            var origins = statement.StartsWith("O:", StringComparison.Ordinal);
+            Execute(Path.Combine(copy, origins ? "chapter-origins.sqlite" : "catalog.sqlite"), origins || statement.StartsWith("C:", StringComparison.Ordinal) ? statement[2..] : statement);
+        }
         using var oldCatalog = new LegacyDatabase(Path.Combine(original, "catalog.sqlite"));
         using var oldOrigins = new LegacyDatabase(Path.Combine(original, "chapter-origins.sqlite"));
         using var newCatalog = new LegacyDatabase(Path.Combine(copy, "catalog.sqlite"));
         using var newOrigins = new LegacyDatabase(Path.Combine(copy, "chapter-origins.sqlite"));
-        return DecisionParity.Compare((oldCatalog, oldOrigins), (newCatalog, newOrigins), kinds);
+        var results = DecisionParity.Compare((oldCatalog, oldOrigins), (newCatalog, newOrigins), kinds);
+        var merges = DecisionParity.NewMerges(oldCatalog, newCatalog, DecisionParity.DecisionEntries(oldCatalog, oldOrigins, kinds), MergeRecheck.Run(newCatalog));
+        var unresolved = DecisionParity.UnresolvedEntries(oldCatalog, newCatalog);
+        var emptied = DecisionParity.EmptiedEntries(oldCatalog, newCatalog);
+        var dropped = DecisionParity.DroppedTables(oldCatalog, newCatalog, "catalog").Concat(DecisionParity.DroppedTables(oldOrigins, newOrigins, "origins")).ToList();
+        // The verdict is the real ParityReport's (no settings or files in this harness), never a formula of its own.
+        var report = new ParityReport
+        {
+            Input = "harness", ToVersion = "0.5.0", CreatedAt = "now", Decisions = results, Counts = [], UnresolvedEntries = unresolved, OriginalEntries = 0,
+            Settings = [], Notices = [], Files = new FileParityResult(), Merges = new MergeRecheckResult(), MigrationProblems = [], DroppedTables = dropped,
+            NewMerges = merges, EmptiedEntries = emptied,
+        };
+        return new(results, unresolved, merges, emptied, report.Ok);
+    }
+
+    /// <summary>The state files of a 0.4.x instance the migration must carry over byte for byte (synthetic contents).</summary>
+    private static readonly string[] StateFiles =
+    [
+        "data/source-maintenance/archives/eu.kanade.tachiyomi.extension.en.example/last-working.jar", "data/source-maintenance/orphans.json",
+        "config/source-maintenance.json", "config/source-browser.json", "config/repair-connection.json", "config/setup-state.json",
+        "data/imports/imp-1/library.tachibk", "data/reset-rebuild-hints.json",
+    ];
+
+    private static async Task FilesKeptOrFailed()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, ManualCatalog, ManualOrigins, Env(secrets: false));
+        var old = DateTime.UtcNow.AddHours(-2);
+        foreach (var file in StateFiles.Append("data/diagnostics/support.jsonl"))
+        {
+            var path = Path.Combine(input, file.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, file.EndsWith(".json", StringComparison.Ordinal) ? "{\"synthetic\":true}" : "synthetic " + file);
+            File.SetLastWriteTimeUtc(path, old);
+        }
+        var clean = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "clean"), () => "", TextWriter.Null);
+        Check.True(clean.Report.Ok, clean.Report.Verdict + "\n" + string.Join("\n", clean.Report.Files.Lost.Select(item => item.Path + " " + item.Status)));
+        foreach (var (index, file) in StateFiles.Select((file, index) => (index, file)))
+        {
+            var removed = index % 2 == 0;
+            var outcome = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o" + index.ToString(CultureInfo.InvariantCulture)), () => "", TextWriter.Null,
+                afterMigration: (_, config) =>
+                {
+                    var target = Path.Combine(Path.GetDirectoryName(config)!, file.Replace('/', Path.DirectorySeparatorChar));
+                    if (removed) File.Delete(target); else File.AppendAllText(target, "changed");
+                });
+            Check.True(!outcome.Report.Ok && outcome.Report.Files.Lost.Any(item => item.Path == file), file + (removed ? " removed" : " changed") + " must fail: " + outcome.Report.Verdict);
+        }
+        var logs = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "logs"), () => "", TextWriter.Null,
+            afterMigration: (_, config) => File.AppendAllText(Path.Combine(Path.GetDirectoryName(config)!, "data", "diagnostics", "support.jsonl"), "more"));
+        Check.True(logs.Report.Ok && logs.Report.Files.Allowed.Any(item => item.Path == "data/diagnostics/support.jsonl"), "an allowlisted log may change");
+    }
+
+    private static async Task MarkerlessData()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false), markers: false);
+        var outcome = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out"), () => "", TextWriter.Null);
+        Check.True(outcome.Report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && outcome.Report.Verdict.Contains("unavailable", StringComparison.Ordinal), outcome.Report.Verdict);
+    }
+
+    private static async Task BusyCheckpoint()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false));
+        SqliteConnection? reader = null;
+        try
+        {
+            var outcome = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out"), () => "", TextWriter.Null,
+                afterStartup: _ =>
+                {
+                    // A reader keeps its snapshot open while a writer appends: the checkpoint cannot reset the log.
+                    var catalog = Path.Combine(temp.Path, "out", "data", "catalog.sqlite");
+                    reader = new SqliteConnection("Data Source=" + catalog + ";Pooling=False");
+                    reader.Open();
+                    using (var begin = reader.CreateCommand()) { begin.CommandText = "BEGIN; SELECT COUNT(*) FROM entries;"; begin.ExecuteScalar(); }
+                    Execute(catalog, "INSERT INTO settings(key,value) VALUES('wal-probe','1')");
+                },
+                afterMigration: (_, _) => { reader?.Dispose(); reader = null; });
+            Check.True(outcome.Report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && outcome.Report.Verdict.Contains("write-ahead log", StringComparison.Ordinal), outcome.Report.Verdict);
+        }
+        finally { reader?.Dispose(); }
     }
 
     private static async Task EntriesTablesKeys()
@@ -247,18 +544,243 @@ public static class CutoverTests
         using var temp = new Sandbox();
         var input = Path.Combine(temp.Path, "in");
         MakeInstance(input, ManualCatalog, ManualOrigins, Env(secrets: false));
-        var outcome = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out"), () => "", TextWriter.Null, afterMigration: (database, config) =>
+        // One damage per run: each must fail the verdict on its own (no second failure may carry the result).
+        foreach (var (name, damage, reason) in new (string, Action<string, string>, string)[]
+                 {
+                     ("entry", (database, _) => Execute(Path.Combine(database, "catalog.sqlite"), "PRAGMA foreign_keys=OFF; DELETE FROM entries WHERE id=3;"), "entries gone"),
+                     ("table", (database, _) => Execute(Path.Combine(database, "catalog.sqlite"), "DROP TABLE general_task_history;"), "table catalog.general_task_history dropped"),
+                     ("key", (_, config) => File.Delete(Path.Combine(config, "signing", "reader-extension.keystore")), "key file config/signing/reader-extension.keystore missing"),
+                 })
         {
-            Execute(Path.Combine(database, "catalog.sqlite"), "DELETE FROM entries WHERE id=3; DROP TABLE general_task_history;");
-            File.Delete(Path.Combine(config, "signing", "reader-extension.keystore"));
-            File.Delete(Path.Combine(config, "config.key"));
-        });
-        var report = outcome.Report;
-        Check.True(!report.Ok, "must fail");
-        Check.True(report.UnresolvedEntries.Contains(3), "entry 3 is gone");
-        Check.True(report.DroppedTables.Contains("catalog.general_task_history"), "the dropped table is listed");
-        Check.True(report.MissingKeyFiles == 1, "the missing keystore is counted");
-        Check.True(report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && report.Verdict.Contains("config.key", StringComparison.Ordinal), report.Verdict);
+            var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-" + name), () => "", TextWriter.Null, afterMigration: damage)).Report;
+            Check.True(!report.Ok && report.Verdict.StartsWith("PARITY FAILED", StringComparison.Ordinal) && report.LossReasons.Any(line => line.Contains(reason, StringComparison.Ordinal)), name + ": " + report.Verdict);
+        }
+        var keyless = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-config-key"), () => "", TextWriter.Null,
+            afterMigration: (_, config) => File.Delete(Path.Combine(config, "config.key")))).Report;
+        Check.True(keyless.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && keyless.Verdict.Contains("config.key", StringComparison.Ordinal), keyless.Verdict);
+    }
+
+    /// <summary>The real verdict (ParityReport), not the harness: a new merge, an emptied entry, an added keep-out row and a lost setting each fail it.</summary>
+    private static async Task RealVerdict()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, ManualCatalog, ManualOrigins, Env(secrets: false));
+        var keepOut = DecisionParity.Kinds.First(kind => kind.Table == "deleted_source_records").Name;
+        foreach (var (name, damage, reason) in new (string, Action<string, string>, Func<string, bool>)[]
+                 {
+                     ("merge", (database, _) => Execute(Path.Combine(database, "catalog.sqlite"),
+                         "INSERT INTO entry_aliases(old_entry_id,canonical_entry_id,reason,merged_at) VALUES(2,3,'automatic duplicate merge:x','2026-02-01'); PRAGMA foreign_keys=OFF; DELETE FROM entries WHERE id=2;"),
+                         line => line.Contains("merged into 3 by 0.5.0", StringComparison.Ordinal)),
+                     ("emptied", (database, _) => Execute(Path.Combine(database, "catalog.sqlite"), "UPDATE source_matches SET active=0 WHERE entry_id=3; UPDATE source_variants SET active=0 WHERE entry_id=3;"),
+                         line => line.Contains("entries lost all their source records", StringComparison.Ordinal)),
+                     ("keep-out", (database, _) => Execute(Path.Combine(database, "catalog.sqlite"), "INSERT INTO deleted_source_records(source_id,source_manga_id,deleted_at) VALUES('src-a',101,'x');"),
+                         line => line.StartsWith(keepOut, StringComparison.Ordinal)),
+                     ("setting", (_, config) =>
+                     {
+                         var path = Path.Combine(config, ConfigStore.FileName);
+                         var document = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+                         var values = document["settings"]!["values"]!.AsObject();
+                         const string key = "TZ";
+                         Check.True(values.ContainsKey(key), "the fixture config.json has TZ");
+                         values[key] = "changed-by-the-test";
+                         File.WriteAllText(path, document.ToJsonString());
+                     }, line => line.StartsWith("setting ", StringComparison.Ordinal)),
+                 })
+        {
+            var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-" + name), () => "", TextWriter.Null, afterMigration: damage)).Report;
+            Check.True(!report.Ok && report.Verdict.StartsWith("PARITY FAILED", StringComparison.Ordinal) && report.LossReasons.Any(reason), name + ": " + report.Verdict);
+        }
+        // A Compose value 0.5.0 refuses is lost (folder input, the only service).
+        var compose = Path.Combine(temp.Path, "compose.yml");
+        File.WriteAllText(compose, "services:\n  autosourcarr:\n    environment:\n      SOURCE_MIN_INTERVAL_MS: not-a-number\n");
+        var refused = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-compose"), () => "", TextWriter.Null, options: new MigrationOptions(compose))).Report;
+        Check.True(!refused.Ok && refused.Settings.Any(item => item.File == "compose environment" && item.Lost), refused.Verdict);
+    }
+
+    /// <summary>Every exit code through the real entry point: 0 OK, 1 failed, 2 refused (incl. a wrong passphrase), 3 any other failure.</summary>
+    private static async Task ExitCodes()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false));
+        async Task<(int Code, string Text)> Exit(string[] args, Func<string>? passphrase = null)
+        {
+            using var console = new StringWriter();
+            var code = await LegacyMigrationTool.RunAsync(args, console, passphrase);
+            return (code, console.ToString());
+        }
+        var ok = await Exit([input, Path.Combine(temp.Path, "ok")]);
+        Check.True(ok.Code == 0 && ok.Text.Contains("PARITY OK", StringComparison.Ordinal) && ok.Text.Contains("Mount at /data", StringComparison.Ordinal), ok.Text);
+        foreach (var folder in new[] { "", "data", "config" })
+            Check.True(!File.Exists(Path.Combine(temp.Path, "ok", folder, LegacyMigrationTool.IncompleteMarker)), "a finished run removes its marker (" + folder + ")");
+        var full = Path.Combine(temp.Path, "full"); Directory.CreateDirectory(full); File.WriteAllText(Path.Combine(full, "x"), "x");
+        var notEmpty = await Exit([input, full]);
+        Check.True(notEmpty.Code == 2 && notEmpty.Text.Contains("Refused:", StringComparison.Ordinal), notEmpty.Text);
+        var notBackup = Path.Combine(temp.Path, "not-a-backup.bin"); File.WriteAllText(notBackup, "hello");
+        Check.Equal(2, (await Exit([notBackup, Path.Combine(temp.Path, "nb")])).Code);
+        Check.Equal(2, (await Exit(["--service", "x", input, Path.Combine(temp.Path, "svc")])).Code);
+        var backup = Path.Combine(temp.Path, "backup.ascbackup"); File.WriteAllBytes(backup, Protect(Zip(input), "right passphrase 0451"));
+        var wrong = await Exit([backup, Path.Combine(temp.Path, "wrong")], () => "wrong passphrase 0451");
+        Check.True(wrong.Code == 2 && wrong.Text.Contains("Refused:", StringComparison.Ordinal), wrong.Text);
+        Check.Equal(0, (await Exit([backup, Path.Combine(temp.Path, "right")], () => "right passphrase 0451")).Code);
+        // A startup step that throws: a migration problem (exit 1, MIGRATION FAILED), with a report and no marker left.
+        ApplicationRuntime.OfflineStepOverride = name => name == "title_consensus" ? throw new KeyNotFoundException("synthetic") : null;
+        try
+        {
+            var crash = await Exit([input, Path.Combine(temp.Path, "crash")]);
+            Check.True(crash.Code == 1 && crash.Text.Contains("MIGRATION FAILED", StringComparison.Ordinal) && crash.Text.Contains("title_consensus failed", StringComparison.Ordinal), crash.Text);
+            Check.True(File.Exists(Path.Combine(temp.Path, "crash", "parity-report.md")) && !File.Exists(Path.Combine(temp.Path, "crash", LegacyMigrationTool.IncompleteMarker)), "a finished run with problems has a report and no marker");
+        }
+        finally { ApplicationRuntime.OfflineStepOverride = null; }
+        var corrupt = Path.Combine(temp.Path, "corrupt");
+        MakeInstance(corrupt, null, null, Env(secrets: false));
+        File.WriteAllText(Path.Combine(corrupt, "config", ConfigStore.FileName), "{ not json");
+        var three = await Exit([corrupt, Path.Combine(temp.Path, "three")]);
+        Check.True(three.Code == 3 && three.Text.Contains("MIGRATION FAILED (", StringComparison.Ordinal), three.Text);
+        Check.True(File.Exists(Path.Combine(temp.Path, "three", LegacyMigrationTool.IncompleteMarker)) && !File.Exists(Path.Combine(temp.Path, "three", "parity-report.md")), "marker, no report");
+        Check.True(File.Exists(Path.Combine(temp.Path, "three", "migration-error.log")), "the full error is kept in migration-error.log");
+    }
+
+    /// <summary>C1: counted failures in a startup step are MIGRATION FAILED in every form they can take.</summary>
+    private static async Task CountedStepFailures()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false));
+        var index = 0;
+        async Task Expect(Func<string, JsonNode?> replace, string text)
+        {
+            ApplicationRuntime.OfflineStepOverride = replace;
+            try
+            {
+                var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-" + (index++).ToString(CultureInfo.InvariantCulture)), () => "", TextWriter.Null)).Report;
+                Check.True(report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && report.Verdict.Contains(text, StringComparison.Ordinal), text + ": " + report.Verdict);
+            }
+            finally { ApplicationRuntime.OfflineStepOverride = null; }
+        }
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["checked"] = 2, ["completed"] = 0, ["failed"] = 2, ["remaining"] = 0 } : null, "origin_recovery: 2 failed");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = 0, ["remaining"] = 3 } : null, "origin_recovery: 3 remaining");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = "2" } : null, "origin_recovery: 2 failed");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = 2.0 } : null, "origin_recovery: 2 failed");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = "some" } : null, "the failed count cannot be read");
+        await Expect(name => name == "startup_catalog_maintenance" ? new JsonObject { ["splits"] = new JsonObject { ["failed"] = 1 } } : null, "startup_catalog_maintenance.splits: 1 failed");
+        await Expect(name => name == "merge_safety_repair" ? new JsonObject { ["skipped"] = true, ["error"] = "synthetic" } : null, "merge_safety_repair did not run");
+        await Expect(name => name == "subbed_orphan_aliases" ? throw new InvalidOperationException("synthetic") : null, "subbed_orphan_aliases failed (");
+        // Interrupted chapter work still pending after the recovery (the recovery is replaced, so the planted row stays).
+        var pending = Path.Combine(temp.Path, "pending");
+        MakeInstance(pending, "INSERT INTO pending_entry_merges(duplicate_entry_id,target_entry_id,created_at,last_error) VALUES(2,3,'2026-01-01','');", null, Env(secrets: false));
+        ApplicationRuntime.OfflineStepOverride = name => name == "origin_recovery" ? new JsonObject { ["failed"] = 0, ["remaining"] = 0 } : null;
+        try
+        {
+            var report = (await LegacyMigrationTool.MigrateAsync(pending, Path.Combine(temp.Path, "out-pending"), () => "", TextWriter.Null)).Report;
+            Check.True(report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && report.Verdict.Contains("interrupted chapter merges/splits are still pending", StringComparison.Ordinal), report.Verdict);
+        }
+        finally { ApplicationRuntime.OfflineStepOverride = null; }
+    }
+
+    /// <summary>A table nobody classified is still compared row by row (with and without a primary key) and listed as not classified.</summary>
+    private static async Task UnclassifiedTables()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        const string Extra = "CREATE TABLE owner_notes(id INTEGER PRIMARY KEY, note TEXT); INSERT INTO owner_notes VALUES(1,'keep me');"
+            + "CREATE TABLE owner_flags(a TEXT, b TEXT); INSERT INTO owner_flags VALUES('x','y');";
+        MakeInstance(input, Extra, null, Env(secrets: false));
+        var clean = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "clean"), () => "", TextWriter.Null)).Report;
+        Check.True(clean.Ok, clean.Verdict);
+        foreach (var table in new[] { "owner_notes", "owner_flags" })
+            Check.True(clean.Coverage.Any(item => item.Table == table && item.Treatment == "compared: every column as stored"
+                && item.Detail.StartsWith("not classified (compared row by row", StringComparison.Ordinal)), table + " is listed as not classified and compared");
+        foreach (var (table, sql) in new[] { ("owner_notes", "UPDATE owner_notes SET note='changed'"), ("owner_flags", "DELETE FROM owner_flags") })
+        {
+            var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-" + table), () => "", TextWriter.Null,
+                afterMigration: (database, _) => Execute(Path.Combine(database, "catalog.sqlite"), sql))).Report;
+            Check.True(!report.Ok && report.Decisions.Any(result => result.Kind.Table == table && result.Lost > 0), table + ": " + report.Verdict);
+        }
+    }
+
+    /// <summary>The Compose service: the 0.4.5 file (autosourcarr + suwayomi) needs no --service; unknown values matter only in the chosen service.</summary>
+    private static async Task ComposeChoice()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false));
+        string Compose(string name, string text) { var path = Path.Combine(temp.Path, name); File.WriteAllText(path, text); return path; }
+        // As shipped with 0.4.5: two services, one with env_file autosourcarr.env; the other has a host value and interpolation.
+        var shipped = Compose("shipped.yml", "services:\n  autosourcarr:\n    env_file:\n      - ./config/autosourcarr.env\n    environment:\n      TZ: Europe/Amsterdam\n      EMPTY: \"\"\n      PRICE: \"5$$\"\n"
+            + "  suwayomi:\n    environment:\n      - PUID\n      PASSWORD: ${PW}\n");
+        var outcome = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o1"), () => "", TextWriter.Null, options: new MigrationOptions(shipped));
+        Check.True(outcome.Report.Run["paths"]!["source"]!.GetValue<string>().Contains("env_file", StringComparison.Ordinal), "the service with env_file autosourcarr.env was chosen");
+        var read = ComposeEnvironment.Read(shipped);
+        Check.True(read["autosourcarr"].Environment["EMPTY"] == "" && read["autosourcarr"].Environment["PRICE"] == "5$" && read["autosourcarr"].Unknown.Count == 0, "quoted empty and $$ are read");
+        Check.True(read["suwayomi"].Unknown.Count == 2, "the other service's unknown values are recorded, not refused");
+        // The chosen service with values the tool cannot know is refused.
+        var unknown = Compose("unknown.yml", "services:\n  autosourcarr:\n    environment:\n      DATA_DIR: ${ROOT}/data\n      <<: *common\n");
+        await Refused(() => LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o2"), () => "", TextWriter.Null, options: new MigrationOptions(unknown)), "cannot be compared");
+        foreach (var value in new[] { "*anchor", "|", "[a]" })
+            Check.True(ComposeEnvironment.Read(Compose("y.yml", "services:\n  a:\n    environment:\n      K: " + value + "\n"))["a"].Unknown.Count == 1, value + " is unknown");
+        // Two services without env_file and no --service: refused, never guessed.
+        var two = Compose("two.yml", "services:\n  one:\n    environment:\n      TZ: x\n  two:\n    environment:\n      TZ: y\n");
+        await Refused(() => LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o3"), () => "", TextWriter.Null, options: new MigrationOptions(two)), "--service");
+    }
+
+    /// <summary>The report is frozen: changing the lists it was built from changes neither Ok nor Verdict.</summary>
+    private static void ReportFrozen()
+    {
+        var unresolved = new List<long>();
+        var report = new ParityReport
+        {
+            Input = "test", ToVersion = "0.5.0", CreatedAt = "now", Decisions = [], Counts = [], UnresolvedEntries = unresolved, OriginalEntries = 0,
+            Settings = [], Notices = [], Files = new FileParityResult(), Merges = new MergeRecheckResult(), MigrationProblems = [], DroppedTables = [], NewMerges = [], EmptiedEntries = [],
+        };
+        Check.True(report.Ok, report.Verdict);
+        unresolved.Add(7);
+        Check.True(report.Ok && report.UnresolvedEntries.Count == 0, "the report kept its own copy");
+    }
+
+    /// <summary>A stale database sidecar next to the database is refused; a real link in the input is refused (where links can be made).</summary>
+    private static async Task StaleSidecarsAndLinks()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false));
+        var backup = Path.Combine(temp.Path, "b.ascbackup");
+        var zipped = Path.Combine(temp.Path, "zipped");
+        MakeInstance(zipped, null, null, Env(secrets: false));
+        File.WriteAllText(Path.Combine(zipped, "data", "catalog.sqlite-shm"), "stale");
+        File.SetLastWriteTimeUtc(Path.Combine(zipped, "data", "catalog.sqlite-shm"), DateTime.UtcNow.AddHours(-2));
+        File.WriteAllBytes(backup, Protect(Zip(zipped), "sidecar passphrase 0451"));
+        await RefusedBackup(() => LegacyMigrationTool.MigrateAsync(backup, Path.Combine(temp.Path, "o1"), () => "sidecar passphrase 0451", TextWriter.Null), "stale");
+        var link = Path.Combine(input, "data", "linked");
+        try { Directory.CreateSymbolicLink(link, Path.Combine(temp.Path, "elsewhere")); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return; } // no symlink right on this machine
+        await Refused(() => LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o2"), () => "", TextWriter.Null), "link or junction");
+    }
+
+    private static async Task RefusedBackup(Func<Task> run, string text)
+    {
+        try { await run(); }
+        catch (Exception error) when (error is MigrationRefusedException or BackupRefusedException) { Check.True(error.Message.Contains(text, StringComparison.Ordinal), error.Message); return; }
+        throw new InvalidOperationException("The tool accepted an input it must refuse (" + text + ").");
+    }
+
+    /// <summary>A 0.4.5 backup whose database lived outside DATA_DIR goes to &lt;out&gt;/database with a mount note.</summary>
+    private static async Task BackupDatabaseOutsideData()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false).Replace("DATABASE_DIR=/data", "DATABASE_DIR=/db", StringComparison.Ordinal));
+        var backup = Path.Combine(temp.Path, "db-outside.ascbackup");
+        File.WriteAllBytes(backup, Protect(Zip(input, databaseDir: "/db"), "outside passphrase 0451"));
+        var outcome = await LegacyMigrationTool.MigrateAsync(backup, Path.Combine(temp.Path, "out"), () => "outside passphrase 0451", TextWriter.Null);
+        Check.True(outcome.Report.Ok, outcome.Report.Verdict);
+        Check.True(outcome.DatabaseDirectory is { } database && File.Exists(Path.Combine(database, "catalog.sqlite")), "the databases go to <out>/database");
+        Check.True(!File.Exists(Path.Combine(outcome.DataDirectory, "catalog.sqlite")), "the database is not also copied into data/");
+        Check.True(outcome.Report.Warnings.Any(text => text.Contains("is outside DATA_DIR", StringComparison.Ordinal) && text.Contains("/db", StringComparison.Ordinal)), "the report says where to mount it");
+        using var console = new StringWriter();
+        Check.Equal(0, await LegacyMigrationTool.RunAsync([backup, Path.Combine(temp.Path, "run")], console, () => "outside passphrase 0451"));
+        Check.True(console.ToString().Contains("Mount at DATABASE_DIR:", StringComparison.Ordinal), console.ToString());
     }
 
     private static async Task MigrationFailures()
@@ -317,6 +839,8 @@ public static class CutoverTests
         Check.True(outcome.Report.Ok, outcome.Report.Verdict);
         Check.True(File.Exists(Path.Combine(outcome.DataDirectory, "db", "catalog.sqlite")), "the databases stay in data/db");
         Check.True(outcome.Report.Run["paths"]!["source"]!.GetValue<string>().Contains("compose.yml", StringComparison.Ordinal), "the report names where DATABASE_DIR came from");
+        Check.True(outcome.Report.Settings.Any(item => item.File == "compose environment" && item.Key == "TZ" && item.Status.StartsWith("Compose override", StringComparison.Ordinal)),
+            "the Compose environment of the chosen service is compared");
         // Without the Compose file the databases are not where the env file says: refused, not guessed.
         await Refused(() => LegacyMigrationTool.MigrateAsync(inside, Path.Combine(temp.Path, "o3"), () => "", TextWriter.Null), "was not found");
 
@@ -389,11 +913,17 @@ public static class CutoverTests
         return Regex.Replace(text, "(?m)^MAIN_SUWAYOMI_URL=.*$", "MAIN_SUWAYOMI_URL=http://owner:" + UrlSecret + "@suwayomi:30058");
     }
 
-    private static void MakeInstance(string root, string? extraCatalog, string? extraOrigins, string env, string version = "0.4.4")
+    /// <summary>The one-time upgrade markers every running 0.4.5 has stored.</summary>
+    private const string Markers = """
+        INSERT OR REPLACE INTO settings(key,value) VALUES('startup_catalog_maintenance_version','"0.2.69"'),('automatic_merge_safety_repair_version','"0.2.69"'),
+          ('bound_title_consensus_version','"0.2.78"'),('subbed_orphan_alias_repair_version','"0.2.80"');
+        """;
+
+    private static void MakeInstance(string root, string? extraCatalog, string? extraOrigins, string env, string version = "0.4.4", bool markers = true)
     {
         Directory.CreateDirectory(Path.Combine(root, "data", "cover-cache"));
         Directory.CreateDirectory(Path.Combine(root, "config", "signing"));
-        Load(Path.Combine(root, "data", "catalog.sqlite"), "catalog-" + version + ".sql", extraCatalog);
+        Load(Path.Combine(root, "data", "catalog.sqlite"), "catalog-" + version + ".sql", (extraCatalog ?? "") + (markers ? Markers : ""));
         Load(Path.Combine(root, "data", "chapter-origins.sqlite"), "origins-" + version + ".sql", extraOrigins);
         File.WriteAllText(Path.Combine(root, "config", "signing", "reader-extension.keystore"), "synthetic keystore bytes");
         File.WriteAllText(Path.Combine(root, "config", "autosourcarr.env"), env);
@@ -419,7 +949,7 @@ public static class CutoverTests
 
     private static void Execute(string path, string sql)
     {
-        using var connection = new SqliteConnection("Data Source=" + path + ";Pooling=False");
+        using var connection = new SqliteConnection("Data Source=" + path + ";Pooling=False;Foreign Keys=False");
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = sql;
@@ -519,6 +1049,8 @@ public static class CutoverTests
         INSERT INTO catalogue_record_resolutions(uid,digest,resolution_json) VALUES('uid-1','digest-1','{}');
         INSERT INTO catalogue_exchange_receipts(digest,result_json,applied_at) VALUES('digest-1','{}','2026-01-01');
         INSERT INTO catalogue_source_facts(entry_id,reference,source_id,fact_json) VALUES(1,'ref-1','src-a','{}');
+        INSERT INTO catalogue_exchange_stages(id,payload_json,revision,created_at,result_json) VALUES('stage-1','{"entries":[]}','r1',1.5,'');
+        INSERT INTO source_health(source_id,state,message,last_repaired_at,repair_job_id,history_json) VALUES('src-a','failing','timeout',1700000000.5,'job-1','[{"state":"ok"}]');
         """;
 
     private const string ManualOrigins = """
@@ -533,7 +1065,7 @@ public static class CutoverTests
 
     // ---- the 0.4.5 backup format, re-implemented from instance_backup.py (InstanceBackups.create + protect) ------------
 
-    private static byte[] Zip(string instance)
+    private static byte[] Zip(string instance, string databaseDir = "/data")
     {
         var files = new SortedDictionary<string, string>(StringComparer.Ordinal);
         foreach (var file in Directory.EnumerateFiles(Path.Combine(instance, "config"), "*", SearchOption.AllDirectories))
@@ -547,7 +1079,7 @@ public static class CutoverTests
         var manifest = new JsonObject
         {
             ["format"] = 2, ["version"] = "0.4.5", ["created_at"] = "2026-11-03T10:00:00+00:00",
-            ["paths"] = new JsonObject { ["config"] = "/config", ["data"] = "/data", ["db"] = "/data" },
+            ["paths"] = new JsonObject { ["config"] = "/config", ["data"] = "/data", ["db"] = databaseDir },
             ["excluded"] = new JsonArray("cover-cache", "instance-backups"), ["files"] = new JsonObject(), ["directories"] = new JsonObject(),
         };
         using var buffer = new MemoryStream();

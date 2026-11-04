@@ -707,6 +707,11 @@
       "group": "Background refresh",
       "compose": "allowed"
     },
+    "AUTH_GROUPS_HEADER": {
+      "group": "Security",
+      "description": "External sign-in: the header your sign-in proxy sends the user's groups in (Authelia: Remote-Groups, the default). Set it whenever you change the user header (AUTHELIA_USER_HEADER) for another proxy; that proxy must set or remove this header, otherwise a user could send it and name their own groups.",
+      "compose": "allowed"
+    },
     "AUTH_METHOD": {
       "group": "Security",
       "description": "How people sign in: forms (login page, the default), basic (the browser's sign-in pop-up) or external (a sign-in proxy such as Authelia sends the user name and groups in headers). API keys and the admin token work with every method.",

@@ -54,7 +54,11 @@ public static class AutoRepairWatcherTests
             Check.Equal("www.second.example", world.Repairs[1].Options.OldHost);
             Check.Equal(2, summary["repaired"]!.GetValue<int>());
             var notMoved = summary["not_moved"]!.AsArray().Select(node => node!.GetValue<string>()).ToHashSet();
-            Check.True(notMoved.SetEquals([Prefix + "same", Prefix + "broken"]), "same-site and unreachable packages are not repaired");
+            Check.True(notMoved.SetEquals([Prefix + "same"]), "a same-site package is not repaired");
+            // A website that could not be observed is not evidence that it did not move: reported apart (hard rule 3).
+            var unobserved = summary["observation_failed"]!.AsArray().OfType<JsonObject>().Select(row => row["package"]!.GetValue<string>()).ToHashSet();
+            Check.True(unobserved.SetEquals([Prefix + "broken"]), "an unreachable package is listed as not observed");
+            Check.True(summary["message"]!.GetValue<string>().Contains("could not be observed", StringComparison.Ordinal), summary["message"]!.GetValue<string>());
             // One observation per distinct host: moved (once), same, broken, quiet and second.
             Check.Equal(5, world.Observed.Count);
             var state = watcher.State();

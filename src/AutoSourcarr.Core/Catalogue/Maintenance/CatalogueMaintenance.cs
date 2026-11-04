@@ -132,13 +132,18 @@ public sealed partial class CatalogueMaintenance
             return 0;
         });
         _database.Write(DatabaseFile.Origins, o => { foreach (var table in origins) o.Execute("DELETE FROM \"" + table + "\""); return 0; });
+        // A full reset discards the old rebuild hints; a file it could not remove would be replayed at the next start, so
+        // that is reported (the person can remove it before restarting).
+        string? hintError = null;
         if (full && _dataDirectory is { Length: > 0 } directory)
         {
             try { File.Delete(Path.Combine(directory, "reset-rebuild-hints.json")); }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            { hintError = "The old rebuild hints (" + Path.Combine(directory, "reset-rebuild-hints.json") + ") could not be removed: " + error.Message + ". Remove the file before the next start, or it is replayed."; }
         }
         _hooks.ResetCaches?.Invoke();
         var result = new JsonObject { ["reset"] = true, ["catalog_tables"] = catalog.Length, ["origin_tables"] = origins.Length };
+        if (hintError is not null) { result["rebuild_hints_removed"] = false; result["rebuild_hints_error"] = hintError; }
         if (full) { result["full_reset"] = true; result["configuration_kept"] = true; }
         else result["summary"] = NormalResetSummary;
         return result;
@@ -248,8 +253,11 @@ public sealed partial class CatalogueMaintenance
             jobs.Enqueue(SubscribedRebuildJob, "", async job =>
             {
                 var result = await library.RebrowseResetSeedsAsync(copy, rebuild, (done, total, message) => job.Report(done, total, message), job.CancellationToken).ConfigureAwait(false);
-                job.Result("Recovered " + Integer(result["recovered"]).ToString(CultureInfo.InvariantCulture) + " of " + Integer(result["searched"]).ToString(CultureInfo.InvariantCulture) + " subscribed entries");
-                if (resetActor is not null) _ = AfterRebuild(resetActor);
+                // IMP-9: the import recheck runs once the rebuild finished; its failure is part of this job's result.
+                var recheck = resetActor is not null ? AfterRebuild(resetActor) : null;
+                var recheckError = recheck is JsonObject failed && failed["error"] is JsonValue message ? message.ToString() : null;
+                job.Result("Recovered " + Integer(result["recovered"]).ToString(CultureInfo.InvariantCulture) + " of " + Integer(result["searched"]).ToString(CultureInfo.InvariantCulture) + " subscribed entries"
+                    + (recheckError is null ? "" : " · the accepted imports were not rechecked: " + recheckError));
             }, origin: "automatic", context: "reset");
             return true;
         }

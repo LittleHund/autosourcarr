@@ -104,7 +104,9 @@ internal static class SourceRuntimeV1Endpoints
                 // The host reads repositories at start only: hand it the saved list and refresh its catalogue first.
                 var urls = new JsonArray(services.Editor.ExtensionRepositories().Select(url => (JsonNode)JsonValue.Create(url)!).ToArray());
                 await runtime.Client.HostAsync(HttpMethod.Put, "/v1/extension-stores", new JsonObject { ["urls"] = urls }, token).ConfigureAwait(false);
-                await runtime.Client.HostAsync(HttpMethod.Post, "/v1/extensions/fetch", null, token).ConfigureAwait(false);
+                var fetched = await runtime.Client.HostAsync(HttpMethod.Post, "/v1/extensions/fetch", null, token).ConfigureAwait(false) as JsonObject;
+                // A repository whose index could not be read is reported, not shown as applied.
+                return fetched?["storeErrors"] is JsonObject errors && errors.Count != 0 ? new JsonObject { ["store_errors"] = errors.DeepClone() } : null;
             });
 
         group.MapGet("/attention", (Func<HttpContext, Task<IResult>>)(async context =>
@@ -157,7 +159,7 @@ internal static class SourceRuntimeV1Endpoints
     }
 
     private static void MapHostAction(RouteGroupBuilder group, ApiV1Services services, ApiJsonContext json, string route, string hostPath, string name, string summary,
-        Func<SourceRuntimeServices, CancellationToken, Task>? before = null)
+        Func<SourceRuntimeServices, CancellationToken, Task<JsonObject?>>? before = null)
     {
         group.MapPost(route, (Func<HttpContext, Task<IResult>>)(async context =>
             {
@@ -166,9 +168,14 @@ internal static class SourceRuntimeV1Endpoints
                 await runtime.AdminLock.WaitAsync(context.RequestAborted).ConfigureAwait(false);
                 try
                 {
-                    if (before is not null) await before(runtime, context.RequestAborted).ConfigureAwait(false);
-                    await runtime.Client.HostAsync(HttpMethod.Post, hostPath, null, context.RequestAborted).ConfigureAwait(false);
-                    return Results.Json(new JsonObject { ["queued"] = true }, json.JsonObject, statusCode: 202);
+                    var answer = new JsonObject { ["queued"] = true };
+                    if (before is not null && await before(runtime, context.RequestAborted).ConfigureAwait(false) is { } extra)
+                        foreach (var (key, value) in extra) answer[key] = value?.DeepClone();
+                    // The host lists what it could not do (extensions that failed to load again): passed on, never hidden.
+                    if (await runtime.Client.HostAsync(HttpMethod.Post, hostPath, null, context.RequestAborted).ConfigureAwait(false) is JsonObject done
+                        && done["reloadFailures"] is JsonObject failures && failures.Count != 0)
+                        answer["reload_failures"] = failures.DeepClone();
+                    return Results.Json(answer, json.JsonObject, statusCode: 202);
                 }
                 catch (Exception error) when (error is SuwayomiException or SourceWorkDeferredException or HttpRequestException)
                 { return Problem(409, "The source engine did not answer: " + error.Message); }

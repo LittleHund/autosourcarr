@@ -140,8 +140,15 @@ class HostApi(
                 reply(exchange, 200, browserJson())
             }
             method == "POST" && parts == listOf("sources", "reload") -> {
-                store.reloadAll()
-                reply(exchange, 200, health())
+                val failures = store.reloadAll()
+                reply(
+                    exchange,
+                    200,
+                    buildJsonObject {
+                        health().forEach { (key, value) -> put(key, value) }
+                        put("reloadFailures", buildJsonObject { failures.forEach { (pkg, message) -> put(pkg, message) } })
+                    },
+                )
             }
             // Diagnostic: one GET through the source client with the Cloudflare interceptor (FlareSolverr or WebView).
             method == "POST" && parts == listOf("webview", "fetch") -> {
@@ -568,7 +575,7 @@ class HostApi(
             put("versionCodeLong", (local?.versionCode?.toLong() ?: remote?.versionCode ?: 0).toString())
             put("isInstalled", local != null)
             put("hasUpdate", local != null && remote != null && remote.versionCode > local.versionCode)
-            put("isObsolete", local != null && remote == null && repos.stores().isNotEmpty())
+            put("isObsolete", local != null && remote == null && repos.complete())
             put("iconUrl", remote?.iconUrl)
             put("contentWarning", local?.contentWarning ?: remote?.contentWarning ?: 0)
             put("storeIndexUrl", remote?.storeIndexUrl)
@@ -665,6 +672,7 @@ class HostApi(
             put("compat_version", HostConfig.COMPAT_VERSION)
             put("extensions", store.installed().size)
             put("extension_load_errors", store.installed().count { it.loadError != null })
+            store.indexError?.let { put("extension_index_error", it) }
             put("sources", SourceRegistry.all().size)
             put("backed_off_sources", backoff.count())
             put("java", System.getProperty("java.version"))

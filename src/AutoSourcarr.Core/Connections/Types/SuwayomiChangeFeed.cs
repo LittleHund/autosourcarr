@@ -74,6 +74,14 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
     private Task? _socketLoop, _pollLoop;
     private int _mode = (int)SuwayomiFeedMode.Starting;
     private string _lastSocketError = "", _lastPollError = "";
+    private int _pollFailures;
+
+    /// <summary>The library poll failed three times or more in a row (a changed password, Suwayomi down): the feed is
+    /// not current even though its mode still says polling or live.</summary>
+    public bool Failing { get { lock (_gate) return _pollFailures >= 3; } }
+
+    /// <summary>The last poll error ("" after a successful poll).</summary>
+    public string PollError { get { lock (_gate) return _lastPollError; } }
     private int _pollFields;
 
     public SuwayomiChangeFeed(SuwayomiEndpoint endpoint, HttpMessageHandler http, Action<SuwayomiChange> onChange,
@@ -310,13 +318,13 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
                 }
                 else Diff(baseline, current, Mode != SuwayomiFeedMode.Live);
                 baseline = current;
-                lock (_gate) _lastPollError = "";
+                lock (_gate) { _lastPollError = ""; _pollFailures = 0; }
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
             catch (Exception error) when (error is not OutOfMemoryException)
             {
                 bool fresh;
-                lock (_gate) { fresh = error.Message != _lastPollError; _lastPollError = error.Message; }
+                lock (_gate) { fresh = error.Message != _lastPollError; _lastPollError = error.Message; _pollFailures++; }
                 if (fresh) Report(error);
             }
             var interval = Mode == SuwayomiFeedMode.Live ? _options.LivePollInterval : _options.PollInterval;
@@ -332,9 +340,14 @@ public sealed class SuwayomiChangeFeed : IAsyncDisposable
             var fields = idsOnly ? PollFields[^1] : PollFields[Math.Min(Volatile.Read(ref _pollFields), PollFields.Length - 1)];
             List<JsonObject> rows;
             try { rows = await _graph.LibraryAsync(fields, token).ConfigureAwait(false); }
-            catch (ConnectionHttpException error) when (!idsOnly && error.Message.Contains("GraphQL error", StringComparison.Ordinal) && Volatile.Read(ref _pollFields) < PollFields.Length - 1)
+            // Only a schema error about a field this query asks for means an older server: a transient or sign-in error must
+            // not turn chapter and download change detection off for the life of the feed.
+            catch (ConnectionHttpException error) when (!idsOnly && error.Message.Contains("GraphQL error", StringComparison.Ordinal) && Volatile.Read(ref _pollFields) < PollFields.Length - 1
+                && (error.Message.Contains("downloadCount", StringComparison.Ordinal) || error.Message.Contains("totalCount", StringComparison.Ordinal)
+                    || error.Message.Contains("Cannot query field", StringComparison.OrdinalIgnoreCase) || error.Message.Contains("FieldUndefined", StringComparison.Ordinal)))
             {
-                Interlocked.Increment(ref _pollFields); // an older server without downloadCount: ids only
+                Interlocked.Increment(ref _pollFields); // an older server without downloadCount: fewer fields
+                Report(new InvalidOperationException("Suwayomi does not know a library field (" + error.Message + "); polling with fewer fields."));
                 continue;
             }
             var result = new Dictionary<long, (int, int)>();

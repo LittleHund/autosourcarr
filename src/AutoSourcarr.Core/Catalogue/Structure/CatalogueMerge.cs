@@ -45,7 +45,7 @@ public sealed partial class CatalogueStructure
     /// <summary>Merges two entries in one catalogue transaction. <paramref name="automatic"/> refuses to merge away an entry
     /// with manual titles (they would be lost); <paramref name="keepManualTitles"/> (a person's merge in matching) moves the
     /// merged-away entry's manual aliases, main-title override and title scopes to the survivor instead of dropping them
-    /// (a reviewed catalogue import keeps them entry-local). <paramref name="commit"/> runs inside that same transaction
+    /// (a reviewed catalogue import keeps them entry-local: its export keeps them as cached facts). <paramref name="commit"/> runs inside that same transaction
     /// with (survivor, merged-away) so the caller's bookkeeping commits with the merge.</summary>
     private long Merge(long left, long right, string reason, bool automatic = false, Action<DatabaseSession, long, long>? commit = null, bool keepManualTitles = false)
     {

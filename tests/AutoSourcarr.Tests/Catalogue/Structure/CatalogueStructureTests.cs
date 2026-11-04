@@ -181,6 +181,30 @@ public static class CatalogueStructureTests
                 f.Native(1, "17", 111, "Native target work"); f.Native(2, "18", 222, "Other native work"); Check.Throws<InvalidOperationException>(() => f.Apply(f.Choice("source-match", [1], [("18", 222)]))); Check.Equal(2L, f.Count("entries")); Check.Equal(0L, f.Count("pending_entry_merges"));
             }
         });
+        suite.Add("catalogue structure: reset hints a local timeout left unanswered are kept, a damaged hint file is never deleted (hard rule 3)", () =>
+        {
+            using var f = new Setup();
+            var path = System.IO.Path.Combine(f.Path, CatalogueStructure.ResetHintFile);
+            File.WriteAllText(path, """{"version":1,"records":[{"source_id":"17","source_manga_id":111,"source_title":"Timed out","match_type":"auto","locked":false},{"source_id":"18","source_manga_id":222,"source_title":"Answered","match_type":"auto","locked":false}]}""");
+            var queue = new JobQueue(f.Tasks);
+            try
+            {
+                var handle = f.Owner.ScheduleResetHintReplay(queue, path, new TimeoutHints())!;
+                Check.Equal(JobOutcome.Completed, handle.Completion.WaitAsync(TimeSpan.FromSeconds(20)).GetAwaiter().GetResult());
+                var left = CatalogueStructure.ReadResetHints(path);
+                Check.Equal(1, left.Count); Check.Equal("17", left[0].SourceId);
+                File.WriteAllText(path, "{\"version\":1,\"records\":[{\"source_id\"");
+                Check.Throws<InvalidDataException>(() => f.Owner.ScheduleResetHintReplay(queue, path, new TimeoutHints()));
+                Check.True(File.Exists(path), "a hint file that cannot be read stays for the person to inspect");
+            }
+            finally { queue.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        });
+    }
+    private sealed class TimeoutHints : IResetHintIngest
+    {
+        public Task<long?> FetchAndIngestAsync(ResetHint hint, CancellationToken cancellationToken)
+            => hint.SourceId == "17" ? throw new TimeoutException("local source timeout") : Task.FromResult<long?>(null);
+        public Task<bool> RevalidateForEntryAsync(long entryId, ResetHint hint, CancellationToken cancellationToken) => Task.FromResult(false);
     }
     private static string S(JsonNode node, string key) => node[key]!.GetValue<string>();
     private static void OriginsOracle()

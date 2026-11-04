@@ -133,6 +133,9 @@ public sealed class LibraryDownloads : IAsyncDisposable
 
     private CancellationToken PauseToken() { lock (_gate) return _pause.Token; }
 
+    /// <summary>How long a lane waits after a local deferral before it gives the queue back.</summary>
+    private static readonly TimeSpan DeferralPause = TimeSpan.FromSeconds(30);
+
     private async Task DrainAsync(string sourceId, JobContext job)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(job.CancellationToken, PauseToken());
@@ -155,9 +158,18 @@ public sealed class LibraryDownloads : IAsyncDisposable
                 if (job.CancellationToken.IsCancellationRequested) throw;
                 break;
             }
+            catch (Exception error) when (error is not OperationCanceledException && AutoSourcarr.Core.Sources.SourceResultTracker.IsLocal(error))
+            {
+                // Hard rule 3: a local capacity deferral or timeout is no failed chapter: it goes back to the queue, without
+                // a "failed" history row, and the lane waits before it stops (the next drain would otherwise start at once
+                // and loop while the engine stays busy or unavailable).
+                _store.Requeue(item.ChapterId);
+                try { await Task.Delay(DeferralPause, _time, token).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (!job.CancellationToken.IsCancellationRequested) { }
+                break;
+            }
             catch (Exception error)
             {
-                // Includes source timeouts (a cancellation that is not ours): the chapter fails and the lane moves on.
                 _store.Fail(item, error.Message);
             }
             try { await Task.Delay(_options.ChapterDelay, _time, token).ConfigureAwait(false); }
@@ -217,13 +229,20 @@ public sealed class LibraryDownloads : IAsyncDisposable
             relative = place.Folder + "/" + fileName;
         }
         var target = LibraryNames.Inside(_options.Root, place.Folder, fileName);
-        var bytes = CbzFiles.Pack(target, files, ComicInfoDocument.Build(named, chapter, files.Count));
+        // The series files first: a failure there (a full disk) leaves no visible CBZ without a download record.
         await WriteSeriesFilesAsync(place, named, files[0], token).ConfigureAwait(false);
-
-        // A renumbered chapter keeps one file: the old name goes once the new one is in place.
-        if (_store.Downloaded(item.EntryId).TryGetValue(item.ChapterId, out var previous) && previous != relative)
-            DeleteRelative(previous);
-        _store.Complete(item, relative, files.Count, bytes, resolved.CandidateId);
+        var existed = File.Exists(target);
+        var bytes = CbzFiles.Pack(target, files, ComicInfoDocument.Build(named, chapter, files.Count));
+        var hadPrevious = _store.Downloaded(item.EntryId).TryGetValue(item.ChapterId, out var previous);
+        try { _store.Complete(item, relative, files.Count, bytes, resolved.CandidateId); }
+        catch
+        {
+            // Not recorded: a new file must not stay in the library as if it were downloaded.
+            if (!existed) CbzFiles.TryDelete(target);
+            throw;
+        }
+        // A renumbered chapter keeps one file: the old name goes once the new one is recorded.
+        if (hadPrevious && previous != relative) DeleteRelative(previous!);
     }
 
     private static void PrepareStaging(string staging, LibraryChapterPages resolved)
@@ -261,12 +280,14 @@ public sealed class LibraryDownloads : IAsyncDisposable
         var cover = LibraryNames.Inside(_options.Root, place.Folder, CbzFiles.CoverName);
         if (!File.Exists(cover))
         {
-            LibraryImage? image = null;
+            LibraryImage? image = null; var failed = false;
             try { image = await _pages.CoverAsync(place.EntryId, token).ConfigureAwait(false); }
-            catch (Exception error) when (error is not OperationCanceledException) { image = null; }
-            if (image is null || image.Content.Length == 0 || !CbzFiles.IsImage(image.Content))
+            catch (Exception error) when (error is not OperationCanceledException) { image = null; failed = true; }
+            // The first page stands in only when the source has no usable cover; after a failed fetch (timeout, deferral,
+            // an HTTP error) no cover is written, so a later download fetches the real one.
+            if (!failed && (image is null || image.Content.Length == 0 || !CbzFiles.IsImage(image.Content)))
                 image = new LibraryImage(await File.ReadAllBytesAsync(firstPage, token).ConfigureAwait(false), "");
-            CbzFiles.WriteAtomic(cover, Jpeg(image.Content));
+            if (image is not null && image.Content.Length != 0) CbzFiles.WriteAtomic(cover, Jpeg(image.Content));
         }
         var details = LibraryNames.Inside(_options.Root, place.Folder, CbzFiles.DetailsName);
         var content = ComicInfoDocument.Details(series);
@@ -275,17 +296,17 @@ public sealed class LibraryDownloads : IAsyncDisposable
         if (!File.Exists(details) || !File.ReadAllBytes(details).AsSpan().SequenceEqual(content)) CbzFiles.WriteAtomic(details, content);
     }
 
-    /// <summary>cover.jpg is a JPEG for every reader; other formats are converted, and kept as they are if that fails.</summary>
+    /// <summary>cover.jpg is a JPEG for every reader; other formats are converted through the bounded decoder (size,
+    /// pixel and frame limits, restrictive policy), and kept as they are if that fails.</summary>
     private static byte[] Jpeg(byte[] content)
     {
         if (CbzFiles.Extension(content) == "jpg") return content;
         try
         {
-            using var image = new MagickImage(content);
-            image.Format = MagickFormat.Jpeg;
-            return image.ToByteArray();
+            using var image = AutoSourcarr.Core.Imaging.RasterImages.Open(content);
+            return image.ToJpeg();
         }
-        catch (MagickException) { return content; }
+        catch (Exception error) when (error is MagickException or InvalidDataException or IOException or InvalidOperationException) { return content; }
     }
 
     private void DeleteRelative(string relative)

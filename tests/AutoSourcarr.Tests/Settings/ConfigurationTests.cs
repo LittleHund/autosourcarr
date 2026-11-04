@@ -13,8 +13,9 @@ public static class ConfigurationTests
         {
             using var expected = JsonDocument.Parse(File.ReadAllText(Fixture("settings-defaults.json")));
             var actual = SettingsLoader.ToEnvironment(SettingsLoader.Load(), includeSecrets: true);
-            // Phase 12 (SET-4) removed KOMF_BROWSER_URL and REPAIR_AI_BROWSER_URL (158 before).
-            Check.Equal(156, AutoSourcarrSettings.Definitions.Count);
+            // Phase 12 (SET-4) removed KOMF_BROWSER_URL and REPAIR_AI_BROWSER_URL (158 before); the 2026-11-04 re-audit added
+            // AUTH_GROUPS_HEADER.
+            Check.Equal(157, AutoSourcarrSettings.Definitions.Count);
             foreach (var field in expected.RootElement.EnumerateObject())
             {
                 if (field.Value.ValueKind == JsonValueKind.Null)

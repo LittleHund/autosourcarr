@@ -81,7 +81,8 @@ public sealed partial class SuwayomiClient
                 return new() { ["extensions"] = new JsonObject { ["nodes"] = list["extensions"]?.DeepClone() } };
             case "AutoSourcarrFetchExtensions":
                 var fetched = await Call(HttpMethod.Post, "/v1/extensions/fetch").ConfigureAwait(false) as JsonObject ?? throw new SuwayomiException("Incomplete extension list");
-                return new() { ["fetchExtensions"] = new JsonObject { ["extensions"] = fetched["extensions"]?.DeepClone(), ["extensionStores"] = fetched["extensionStores"]?.DeepClone() } };
+                // storeErrors: repositories whose index could not be read this time (their extensions are not "removed").
+                return new() { ["fetchExtensions"] = new JsonObject { ["extensions"] = fetched["extensions"]?.DeepClone(), ["extensionStores"] = fetched["extensionStores"]?.DeepClone(), ["storeErrors"] = fetched["storeErrors"]?.DeepClone() } };
             case "AutoSourcarrUpdateExtension":
             {
                 var action = (input["patch"] as JsonObject)?.Select(pair => pair.Key).FirstOrDefault(key => key is "install" or "update" or "uninstall")

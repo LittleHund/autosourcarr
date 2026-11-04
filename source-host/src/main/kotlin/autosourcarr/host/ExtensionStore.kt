@@ -34,6 +34,12 @@ class ExtensionStore(
     private val installed = linkedMapOf<String, InstalledExtension>()
     private val index = File(root, "installed.json")
 
+    // Set when installed.json could not be read: nothing may rewrite it from the partial list in memory (every other
+    // install record would be lost). The damaged file is kept next to it for the person to inspect.
+    @Volatile
+    var indexError: String? = null
+        private set
+
     @Serializable
     data class InstalledExtension(
         val pkg: String,
@@ -56,7 +62,22 @@ class ExtensionStore(
     /** Loads every extension of installed.json; one broken extension never stops the others. */
     fun loadInstalled() {
         val saved =
-            if (index.isFile) runCatching { json.decodeFromString<List<InstalledExtension>>(index.readText()) }.getOrElse { emptyList() } else emptyList()
+            if (!index.isFile) {
+                emptyList()
+            } else {
+                try {
+                    json.decodeFromString<List<InstalledExtension>>(index.readText())
+                } catch (error: Exception) {
+                    val copy = File(root, "installed.json.damaged-${System.currentTimeMillis()}")
+                    runCatching { index.copyTo(copy, overwrite = false) }
+                    val message =
+                        "installed.json cannot be read (${error.message ?: error.javaClass.simpleName}); a copy is in ${copy.name}. " +
+                            "Installs and removals are refused until it is repaired or removed."
+                    indexError = message
+                    logger.error(error) { message }
+                    emptyList()
+                }
+            }
         for (extension in saved) {
             val loaded =
                 try {
@@ -75,6 +96,7 @@ class ExtensionStore(
         apkUrl: String,
         expectedSha256: String? = null,
     ): InstalledExtension {
+        indexError?.let { throw IllegalStateException(it) }
         val client = Injekt.get<NetworkHelper>().client
         root.mkdirs()
         val download = File.createTempFile("extension-", ".apk", root)
@@ -96,6 +118,7 @@ class ExtensionStore(
         apk: File,
         apkUrl: String? = null,
     ): InstalledExtension {
+        indexError?.let { throw IllegalStateException(it) }
         val info = PackageTools.getPackageInfo(apk.toPath())
         val pkg = info.packageName
         val features = info.reqFeatures.orEmpty().mapNotNull { it.name }
@@ -131,14 +154,30 @@ class ExtensionStore(
         PackageTools.dex2jar(apk.toPath(), temporary)
         addAssets(apk, temporary.toFile())
 
-        // Unload the old version before the new jar takes its place.
+        // Unload the old version before the new jar takes its place; a new version that cannot be placed or loaded
+        // loads the old one again (as installJar does), so the package never stays registered with no sources.
         if (previous != null) unload(previous)
-        temporary.toFile().renameTo(jar.toFile())
+        fun restorePrevious() {
+            if (previous == null || previous.jar == jarName) return
+            runCatching { load(pkg, File(root, previous.jar).toPath(), previous.className, previous.contentWarning) }
+                .onFailure { failure ->
+                    logger.warn(failure) { "The previous version of $pkg could not be loaded again" }
+                    synchronized(gate) { installed[pkg] = previous.copy(loadError = failure.message ?: failure.javaClass.simpleName) }
+                }
+        }
+        if (jar.toFile().exists()) jar.toFile().delete()
+        if (!temporary.toFile().renameTo(jar.toFile())) {
+            temporary.toFile().delete()
+            restorePrevious()
+            throw IllegalStateException("The extension jar could not be placed in the extensions folder")
+        }
         val ids =
             try {
                 load(pkg, jar, className, contentWarning)
             } catch (error: Throwable) {
+                PackageTools.jarLoaderMap.remove(jar.absolutePathString())?.close()
                 jar.toFile().delete()
+                restorePrevious()
                 throw error
             }
         val langs = ids.mapNotNull { SourceRegistry.get(it)?.source?.lang }.toSet()
@@ -173,6 +212,7 @@ class ExtensionStore(
         pkg: String,
         upload: File,
     ): InstalledExtension {
+        indexError?.let { throw IllegalStateException(it) }
         val previous = synchronized(gate) { installed[pkg] } ?: throw NoSuchElementException("$pkg is not installed")
         val hasMain =
             try {
@@ -218,11 +258,24 @@ class ExtensionStore(
         load(pkg, File(root, extension.jar).toPath(), extension.className, extension.contentWarning)
     }
 
-    fun reloadAll() {
-        for (extension in installed()) runCatching { reload(extension.pkg) }
+    /** Rebuilds every package's sources; answers the packages that failed (logged, and kept as their loadError). */
+    fun reloadAll(): Map<String, String> {
+        val failures = linkedMapOf<String, String>()
+        for (extension in installed()) {
+            try {
+                reload(extension.pkg)
+            } catch (error: Throwable) {
+                val message = error.message ?: error.javaClass.simpleName
+                logger.warn(error) { "Extension ${extension.pkg} could not be reloaded" }
+                failures[extension.pkg] = message
+                synchronized(gate) { installed[extension.pkg]?.let { installed[extension.pkg] = it.copy(loadError = message) } }
+            }
+        }
+        return failures
     }
 
     fun uninstall(pkg: String): Boolean {
+        indexError?.let { throw IllegalStateException(it) }
         val extension = synchronized(gate) { installed.remove(pkg)?.also { save() } } ?: return false
         unload(extension)
         File(root, extension.jar).delete()
@@ -253,11 +306,13 @@ class ExtensionStore(
     }
 
     private fun save() {
+        indexError?.let { throw IllegalStateException(it) }
         val temporary = File(root, "installed.json.tmp")
         temporary.writeText(json.encodeToString(installed.values.toList()))
         if (!temporary.renameTo(index)) {
-            index.delete()
-            temporary.renameTo(index)
+            // A rename over an existing file can fail: replace it, and never leave the index missing silently.
+            if (!index.delete() && index.exists()) throw java.io.IOException("installed.json could not be replaced")
+            if (!temporary.renameTo(index)) throw java.io.IOException("installed.json could not be written; the new list is in ${temporary.name}")
         }
     }
 

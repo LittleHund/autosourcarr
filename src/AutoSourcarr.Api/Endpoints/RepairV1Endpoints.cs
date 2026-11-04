@@ -384,6 +384,17 @@ internal static class RepairV1Endpoints
                     return Problem(409, "Only the current installed repair takes feedback; refresh Tasks");
                 var installed = job.Report?["installed_sha256"]?.GetValue<string>() ?? "";
                 if (body["installed_sha256"]?.ToString() != installed) return Problem(409, "Source binary changed; refresh before acting");
+                // Hard rule 6: "Fixed" is recorded only for the jar the source host is running now (an update or an upload
+                // may have replaced the repaired jar without a new repair report).
+                if (action == "fixed")
+                {
+                    if (services.Repair?.ReadInstalledJar is not { } readInstalled) return Problem(503, "The installed jar cannot be read in this host; nothing was recorded.");
+                    string running;
+                    try { running = DomainMigration.Sha(await readInstalled(job.Package, context.RequestAborted).ConfigureAwait(false)); }
+                    catch (Exception error) when (!context.RequestAborted.IsCancellationRequested) { return Problem(503, "The installed jar could not be read (" + error.Message + "); nothing was recorded."); }
+                    if (!string.Equals(running, installed, StringComparison.OrdinalIgnoreCase))
+                        return Problem(409, "Another jar of this source is installed now (updated or uploaded); this repair is no longer the installed code. Refresh Tasks.");
+                }
                 var text = body["feedback"]?.GetValue<string>() ?? "";
                 if (text.Length > FeedbackTextLimit) text = text[..FeedbackTextLimit];
                 AppendFeedback(services.Repair?.MaintenanceRoot ?? throw new ApiProblem(503, "Repair feedback is not available in this host."), new JsonObject
@@ -398,8 +409,10 @@ internal static class RepairV1Endpoints
                 if (action == "revert")
                 {
                     if (!Integrated()) return Problem(409, "Integrated engine required");
-                    // The rollback installs another jar: this repair's verdict no longer applies.
-                    services.Repair?.Confirmations?.Clear(job.Package);
+                    // The rollback installs another jar: this repair's verdict no longer applies (it is bound to that jar's
+                    // sha, so a verdict file that cannot be rewritten never blocks Revert: hard rule 5).
+                    try { services.Repair?.Confirmations?.Clear(job.Package); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException) { _ = error; }
                     var handle = QueueRollback(services, job.Package, "manual");
                     return Answer(new JsonObject { ["recorded"] = true, ["queued"] = true, ["task_id"] = handle.Id, ["merged"] = handle.Merged }, 202);
                 }

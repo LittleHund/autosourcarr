@@ -1,5 +1,6 @@
-# AutoSourcarr 0.5.0 (C#/.NET 10 image, docker/Dockerfile) on TrueNAS. Not for 0.4.5: those Compose files stay as
-# they are until the cutover (phase 14). Deploying this is an owner decision (hard rules 12, 15, 16).
+# AutoSourcarr 0.5.0 (C#/.NET 10 image, docker/Dockerfile) on TrueNAS. The 0.4.5 Compose files stay unchanged as the
+# rollback. Deploy only after the migration tool reports PARITY OK (docs/upgrade-from-0.4.md) and the owner's go
+# (hard rules 12, 15, 16).
 #
 # Two instances = four services: each AutoSourcarr plus its own optional main Suwayomi. No helper services, no
 # Docker socket, no sibling containers (hard rule 13). The source host (extension sources, JCEF WebView with its own
@@ -87,6 +88,9 @@ services:
       - 8282:8282
     environment:
       TZ: Europe/Amsterdam
+      # Behind Authelia, to keep Authelia as the only sign-in (otherwise 0.5.0 uses its own forms sign-in):
+      # AUTH_METHOD: external
+      # AUTH_TRUSTED_PROXIES: 172.18.0.0/16   # the reverse proxy's address or Docker network; never loopback
     # NEW datasets filled from the migration tool's output (docs/upgrade-from-0.4.md); the 0.4.x datasets
     # (autosourcarr-data, config) stay untouched as the rollback. Never mount the 0.4.x datasets here.
     volumes:

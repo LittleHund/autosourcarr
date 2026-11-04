@@ -84,6 +84,8 @@ public sealed class SecurityLog
 /// address or one name, each further attempt waits 2, 4, 8 … up to 30 s. Only the pair (name, address) is refused
 /// outright after 20 attempts, so nobody can lock the owner out from elsewhere. Names are trimmed and compared
 /// without case. A burst (10 failures within 5 minutes across all callers) is reported once per window.
+/// Behind a reverse proxy that is not in AUTH_TRUSTED_PROXIES every caller shares the proxy's address; the refusal
+/// stays (it is the brute-force limit), and the sign-in code tells the admins to set AUTH_TRUSTED_PROXIES.
 /// </summary>
 public sealed class LoginThrottle(Func<DateTimeOffset>? clock = null)
 {

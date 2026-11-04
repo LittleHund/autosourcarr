@@ -48,8 +48,18 @@ abstract class AutoSourcarr : HttpSource(), ConfigurableSource, UnmeteredSource 
         get() = preferences.getString(PREF_ADDRESS, if (slot == 1) AUTOSOURCARR_DEFAULT_BASE_URL else "")!!
             .trim().removeSuffix("/")
 
+    // The key lives under a __PRIVATE_ name, which Mihon leaves out of its backups (rules 9/11): a .tachibk synced to cloud
+    // storage or imported elsewhere never carries it. A key saved by an older build under the plain name moves once.
     private val readerKey: String
-        get() = preferences.getString(PREF_READER_KEY, if (slot == 1) AUTOSOURCARR_READER_API_KEY else "")!!.trim()
+        get() {
+            preferences.getString(PREF_READER_KEY, null)?.let { return it.trim() }
+            val legacy = preferences.getString(LEGACY_PREF_READER_KEY, null)
+            if (legacy != null) {
+                preferences.edit().putString(PREF_READER_KEY, legacy).remove(LEGACY_PREF_READER_KEY).apply()
+                return legacy.trim()
+            }
+            return (if (slot == 1) AUTOSOURCARR_READER_API_KEY else "").trim()
+        }
 
     /** The token-protected reader API when this slot has a key; the ordinary API (Docker-internal use) otherwise. */
     private val apiPrefix: String
@@ -67,6 +77,13 @@ abstract class AutoSourcarr : HttpSource(), ConfigurableSource, UnmeteredSource 
             val request = chain.request()
             val key = readerKey
             val keyed = if (key.isNotEmpty() && sameOrigin(request.url, origin())) {
+                // Over plain http the key would cross the network readable and replayable: only to a local address.
+                if (!request.url.isHttps && !isLocalHost(request.url.host)) {
+                    throw java.io.IOException(
+                        "Server $slot is set to http:// on ${request.url.host}: the reader key is only sent over https:// or to a local " +
+                            "address. Change the server address to https://.",
+                    )
+                }
                 request.newBuilder().header("X-AutoSourcarr-API-Key", key).build()
             } else {
                 request
@@ -99,9 +116,9 @@ abstract class AutoSourcarr : HttpSource(), ConfigurableSource, UnmeteredSource 
             dialogTitle = "Server $slot address"
             dialogMessage = "AutoSourcarr's address as this device reaches it, for example https://autosourcarr.example.com"
             setDefaultValue(if (slot == 1) AUTOSOURCARR_DEFAULT_BASE_URL else "")
-            summary = baseUrl.ifEmpty { "Not set" }
+            summary = addressSummary(baseUrl)
             setOnPreferenceChangeListener { preference, value ->
-                preference.summary = (value as? String)?.trim()?.ifEmpty { "Not set" } ?: "Not set"
+                preference.summary = addressSummary((value as? String)?.trim() ?: "")
                 true
             }
         }
@@ -329,7 +346,31 @@ abstract class AutoSourcarr : HttpSource(), ConfigurableSource, UnmeteredSource 
         private const val FILTER_SOURCE_TTL_MS = 60_000L
         private const val READER_API_PREFIX = "/api/reader/v1"
         private const val PREF_ADDRESS = "autosourcarr_address"
-        private const val PREF_READER_KEY = "autosourcarr_reader_key"
+        private const val PREF_READER_KEY = "__PRIVATE_autosourcarr_reader_key"
+        private const val LEGACY_PREF_READER_KEY = "autosourcarr_reader_key"
+
+        /** Hosts a plain-http key may go to: loopback, private and link-local addresses, single-label and local names. */
+        internal fun isLocalHost(host: String): Boolean {
+            val name = host.lowercase().trimEnd('.')
+            if (name == "localhost" || (!name.contains('.') && !name.contains(':'))) return true
+            if (listOf(".local", ".lan", ".home", ".internal", ".localdomain", ".home.arpa").any { name.endsWith(it) }) return true
+            val parts = name.split('.')
+            val numbers = parts.mapNotNull { it.toIntOrNull() }
+            if (parts.size == 4 && numbers.size == 4) {
+                val first = numbers[0]
+                val second = numbers[1]
+                return first == 10 || first == 127 || (first == 172 && second in 16..31) || (first == 192 && second == 168) ||
+                    (first == 169 && second == 254) || (first == 100 && second in 64..127)
+            }
+            if (name.contains(':')) return name == "::1" || name.startsWith("fc") || name.startsWith("fd") || name.startsWith("fe80")
+            return false
+        }
+
+        private fun addressSummary(address: String): String {
+            if (address.isEmpty()) return "Not set"
+            val url = address.toHttpUrlOrNull() ?: return address
+            return if (!url.isHttps && !isLocalHost(url.host)) "$address (http to a non-local address: the reader key is not sent; use https://)" else address
+        }
         private val SLOT_SUFFIX = Regex("""\((\d+)\)$""")
     }
 }

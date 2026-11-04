@@ -482,6 +482,9 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("authelia_user_header")]
     public string AutheliaUserHeader { get; init; } = "";
 
+    [System.Text.Json.Serialization.JsonPropertyName("auth_groups_header")]
+    public string AuthGroupsHeader { get; init; } = "";
+
     public static IReadOnlyList<SettingDefinition> Definitions { get; } =
     [
         new("SETTINGS_CONFIG_DIR", nameof(SettingsConfigDir), SettingKind.Path, false, []),
@@ -634,6 +637,7 @@ public sealed partial record AutoSourcarrSettings
         new("ADMIN_TOKEN", nameof(AdminToken), SettingKind.Text, true, []),
         new("AUTOSOURCARR_READER_API_TOKEN", nameof(AutosourcarrReaderApiToken), SettingKind.Text, true, []),
         new("AUTHELIA_USER_HEADER", nameof(AutheliaUserHeader), SettingKind.Text, false, []),
+        new("AUTH_GROUPS_HEADER", nameof(AuthGroupsHeader), SettingKind.Text, false, []),
         new("AUTH_METHOD", nameof(AuthMethod), SettingKind.Text, false, ["forms", "basic", "external"]),
         new("AUTH_ADMIN_GROUPS", nameof(AuthAdminGroups), SettingKind.Text, false, []),
         new("AUTH_GUEST_GROUPS", nameof(AuthGuestGroups), SettingKind.Text, false, []),

@@ -54,7 +54,14 @@ public static class UpgradeGuard
         catch (Exception error) when (error is JsonException or IOException) { _ = error; return []; }
     }
 
-    public static JsonObject ReadState(InstanceBackupStore store) => Read(StatePath(store));
+    /// <summary>The saved state; a state file that exists but cannot be read answers {"_unreadable": true} (an instance
+    /// that ran before, whose version is unknown), never the empty state of a fresh instance.</summary>
+    public static JsonObject ReadState(InstanceBackupStore store)
+    {
+        var path = StatePath(store);
+        try { return File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path)) as JsonObject ?? new JsonObject { ["_unreadable"] = true } : []; }
+        catch (Exception error) when (error is JsonException or IOException or UnauthorizedAccessException) { _ = error; return new JsonObject { ["_unreadable"] = true }; }
+    }
 
     public static void WriteState(InstanceBackupStore store, JsonObject state) =>
         InstanceBackupStore.WriteAtomic(StatePath(store), Encoding.UTF8.GetBytes(state.ToJsonString()));
@@ -135,6 +142,9 @@ public static class UpgradeGuard
         var paths = database.Paths;
         var to = store.AppVersion;
         var previous = Text(state, "last_opened_version");
+        // A damaged state file: this instance ran before with an unknown version, so the update path (with its backup) runs.
+        var stateUnreadable = Flag(state, "_unreadable");
+        state.Remove("_unreadable");
         UpgradeOutcome Safe(string status, JsonObject? marker) =>
             new(status, Text(marker, "from_version"), to, store.Find(Text(marker, "backup_id") ?? ""), Text(marker, "error"));
 
@@ -180,6 +190,18 @@ public static class UpgradeGuard
         }
 
         var existing = BackupDatabases.Files.Where(item => File.Exists(BackupDatabases.PathOf(paths, item.File)) && new FileInfo(BackupDatabases.PathOf(paths, item.File)).Length > 0).ToList();
+        if (existing.Count == 0 && (previous is not null || stateUnreadable))
+        {
+            // This instance opened its databases before: none now means DATABASE_DIR (or DATA_DIR) is not mounted or was
+            // moved, never a fresh start. Empty databases would hide the catalogue (and Mihon would see it emptied).
+            log?.Invoke("No database files were found in " + Path.GetDirectoryName(BackupDatabases.PathOf(paths, BackupDatabases.Files.First().File)) + ", but this instance ran before; starting in safe mode.");
+            return Safe("databases-missing", new JsonObject
+            {
+                ["from_version"] = previous, ["error"] = "The databases are missing from " + Path.GetDirectoryName(BackupDatabases.PathOf(paths, BackupDatabases.Files.First().File))
+                    + " although this instance ran before (version " + (previous ?? "unknown") + "). Check that DATABASE_DIR/DATA_DIR are mounted; to start over on purpose, remove "
+                    + StateFile + " from the instance-backups folder.",
+            });
+        }
         if (existing.Count == 0)
         {
             migrate();
@@ -192,7 +214,7 @@ public static class UpgradeGuard
             ? BackupDatabases.Facts(BackupDatabases.PathOf(paths, item.File), integrity: false).Migration : 0);
         var pendingMigrations = new JsonArray(BackupDatabases.Files.SelectMany(item => SchemaMigrator.PendingMigrations(item.File, applied[item.File]))
             .Distinct().Order().Select(version => (JsonNode?)version).ToArray());
-        var versionChanged = previous is not null && previous != to;
+        var versionChanged = previous is not null && previous != to || stateUnreadable;
         if (pendingMigrations.Count == 0 && !versionChanged)
         {
             migrate();

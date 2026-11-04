@@ -249,8 +249,10 @@ public sealed class AutoRepairWatcher
     private async Task<JsonObject> PassAsync(CancellationToken cancellationToken)
     {
         var summary = new JsonObject { ["kind"] = "auto-repair-pass", ["started_at"] = Now(), ["state"] = "running" };
-        var results = new JsonArray(); var recent = new JsonArray(); var notMoved = new JsonArray();
-        summary["results"] = results; summary["skipped_recent"] = recent; summary["not_moved"] = notMoved;
+        var results = new JsonArray(); var recent = new JsonArray(); var notMoved = new JsonArray(); var unobserved = new JsonArray();
+        summary["results"] = results; summary["skipped_recent"] = recent; summary["not_moved"] = notMoved; summary["observation_failed"] = unobserved;
+        if (StateProblem() is { } problem)
+            return Finish(summary, "failed", "The automatic repair state cannot be read (" + problem + "); no package was attempted, so nothing is retried without its skip window.");
         IReadOnlyList<AutoRepairCandidate> candidates;
         try { candidates = await _candidates(cancellationToken).ConfigureAwait(false); }
         catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
@@ -279,7 +281,7 @@ public sealed class AutoRepairWatcher
             if (!_enabled()) { summary["stopped"] = "The switch was turned off during the pass."; break; }
             if (RecentlyAttempted(package)) { recent.Add(package); continue; }
 
-            string? oldHost = null; string newHost = "";
+            string? oldHost = null; string newHost = ""; var answered = 0; var observeError = "";
             foreach (var (host, baseUrl) in hosts)
             {
                 if (observed >= _options.MaxObservations) break;
@@ -287,11 +289,14 @@ public sealed class AutoRepairWatcher
                 JsonObject observation;
                 try { observation = await _observe(OriginOf(baseUrl), cancellationToken).ConfigureAwait(false); }
                 catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
-                { continue; }
+                { observeError = Short(error.Message); continue; }
+                answered++;
                 var target = RedirectTarget(observation, host);
                 if (target is null) continue;
                 oldHost = host; newHost = target; break;
             }
+            // A website that could not be observed is no evidence that the source did not move.
+            if (oldHost is null && answered == 0 && observeError.Length != 0) { unobserved.Add(new JsonObject { ["package"] = package, ["error"] = observeError }); continue; }
             if (oldHost is null) { notMoved.Add(package); continue; }
 
             attempted++;
@@ -314,13 +319,16 @@ public sealed class AutoRepairWatcher
             entry["state"] = state; entry["message"] = message;
             results.Add(entry);
             if (state == "repaired") repaired++;
-            Remember(package, state, message);
+            // Without a saved attempt the skip window does not hold: stop rather than retry the same packages every pass.
+            if (!Remember(package, state, message)) { summary["stopped"] = "The automatic repair state could not be saved; the pass stopped after " + package + "."; break; }
         }
         summary["observed"] = observed; summary["attempted"] = attempted; summary["repaired"] = repaired;
         var text = attempted == 0
             ? packages.Count == 0 ? "No failing or orphaned installed sources." : "No failing source has moved to a new address."
             : repaired.ToString(CultureInfo.InvariantCulture) + " of " + attempted.ToString(CultureInfo.InvariantCulture) + " moved source(s) repaired.";
-        return Finish(summary, "done", text);
+        if (unobserved.Count != 0) text += " " + unobserved.Count.ToString(CultureInfo.InvariantCulture) + " source website(s) could not be observed, so whether they moved is unknown.";
+        if (summary["stopped"] is JsonValue stopped) text += " " + stopped.ToString();
+        return Finish(summary, summary["stopped"] is null ? "done" : "failed", text);
     }
 
     private JsonObject Finish(JsonObject summary, string state, string message)
@@ -347,7 +355,7 @@ public sealed class AutoRepairWatcher
         }
     }
 
-    private void Remember(string package, string state, string message)
+    private bool Remember(string package, string state, string message)
     {
         lock (_gate)
         {
@@ -359,7 +367,7 @@ public sealed class AutoRepairWatcher
             foreach (var old in packages.Where(pair => pair.Value is not JsonObject row || Stamp(row["at"]) is not { } stamp || stamp < horizon)
                 .Select(pair => pair.Key).ToList())
                 packages.Remove(old);
-            WriteState(saved);
+            return WriteState(saved);
         }
     }
 
@@ -410,10 +418,25 @@ public sealed class AutoRepairWatcher
         catch (Exception error) when (error is JsonException or IOException or UnauthorizedAccessException) { return new JsonObject(); }
     }
 
-    private void WriteState(JsonObject state)
+    /// <summary>Why the saved state cannot be read (damaged, linked or oversized), or null when it can (or is absent):
+    /// a pass on unreadable state would forget every skip window and retry every package.</summary>
+    private string? StateProblem()
     {
-        try { ConfigFiles.WriteAtomic(StatePath, Encoding.UTF8.GetBytes(state.ToJsonString(Indented))); }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
+        lock (_gate)
+        {
+            var info = new FileInfo(StatePath);
+            if (!info.Exists) return null;
+            if (info.LinkTarget is not null) return "the state file is a link";
+            if (info.Length > MaximumState) return "the state file is too large";
+            try { return JsonNode.Parse(File.ReadAllBytes(info.FullName)) is JsonObject ? null : "the state file is not a JSON object"; }
+            catch (Exception error) when (error is JsonException or IOException or UnauthorizedAccessException) { return Short(error.Message); }
+        }
+    }
+
+    private bool WriteState(JsonObject state)
+    {
+        try { ConfigFiles.WriteAtomic(StatePath, Encoding.UTF8.GetBytes(state.ToJsonString(Indented))); return true; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private string Now() => _time.GetUtcNow().ToString("O", CultureInfo.InvariantCulture);

@@ -58,7 +58,9 @@ public sealed class RepairConfirmations
         return 0;
     });
 
-    /// <summary>All verdicts by package (a damaged file reads as none: nothing is ever shown as Fixed by mistake).</summary>
+    /// <summary>All verdicts by package. A damaged file throws <see cref="InvalidDataException"/>: callers show nothing as
+    /// Fixed, and <see cref="Record"/>/<see cref="Clear"/> never rewrite it from an empty set (every other verdict would
+    /// be lost, hard rule 6).</summary>
     public IReadOnlyDictionary<string, RepairConfirmation> All() => _store.Locked(Document, document => (IReadOnlyDictionary<string, RepairConfirmation>)Decode(document.Read(MaximumBytes)));
 
     /// <summary>The verdict that applies to exactly this task and installed jar, else null.</summary>
@@ -72,7 +74,7 @@ public sealed class RepairConfirmations
         if (bytes is null || bytes.Length == 0) return result;
         try
         {
-            if (JsonNode.Parse(bytes)?["packages"] is not JsonObject packages) return result;
+            if (JsonNode.Parse(bytes)?["packages"] is not JsonObject packages) throw new InvalidDataException("The saved repair verdicts (" + Document + ") have no package list; they were left unchanged.");
             foreach (var (package, node) in packages)
             {
                 if (node is not JsonObject row) continue;
@@ -83,7 +85,8 @@ public sealed class RepairConfirmations
                 result[package] = new(package, task, sha, verdict, at);
             }
         }
-        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException) { result.Clear(); }
+        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException)
+        { throw new InvalidDataException("The saved repair verdicts (" + Document + ") are damaged; they were left unchanged.", error); }
         return result;
     }
 

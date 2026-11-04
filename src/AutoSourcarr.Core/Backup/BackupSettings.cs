@@ -91,6 +91,17 @@ public static class BackupSettings
         var managed = new HashSet<string>(result.ManagedKeys, StringComparer.Ordinal);
         if (current is not null)
             foreach (var key in current.ManagedKeys.Where(key => current.Settings.Secrets.ContainsKey(key))) managed.Add(key);
+        // Storage paths belong to this instance, not to the backup: the restore places the databases where this boot found
+        // them, so config.json keeps this instance's DATA_DIR, DATABASE_DIR and LIBRARY_DIR (and whether they are managed).
+        // The backup's values would make the next start open a stale copy elsewhere, or fail on a folder that is not mounted.
+        // The sign-in settings stay too: a restore (an admin may start one) must not change who signs in or who is the
+        // owner (re-audit C1); the owner sets them again after a restore if wanted.
+        foreach (var key in PathKeys.Concat(SettingsSchema.OwnerOnly.Where(key => key != "ADMIN_TOKEN")))
+        {
+            if (current?.Settings.Values.TryGetValue(key, out var path) == true) result.Settings.Values[key] = path; else result.Settings.Values.Remove(key);
+            if (current?.ManagedKeys.Contains(key, StringComparer.Ordinal) == true) managed.Add(key); else managed.Remove(key);
+            changed.RemoveWhere(name => name.EndsWith("." + key, StringComparison.Ordinal));
+        }
         result.ManagedKeys = managed.Order(StringComparer.Ordinal).ToList();
         var added = new List<string>(); var keptConnections = new List<string>();
         var restored = result.Connections ?? [];
@@ -118,6 +129,9 @@ public static class BackupSettings
         else result.Update = null;
         return new Merged(result, kept, dropped, changed.ToList(), added, keptConnections);
     }
+
+    /// <summary>Settings that name this instance's own folders (never taken from a backup).</summary>
+    private static readonly string[] PathKeys = ["DATA_DIR", "DATABASE_DIR", "LIBRARY_DIR", "SETTINGS_CONFIG_DIR"];
 
     /// <summary>The first two name parts: MAIN_SUWAYOMI_PASSWORD and MAIN_SUWAYOMI_URL share "MAIN_SUWAYOMI".</summary>
     private static string Group(string key)

@@ -414,11 +414,14 @@ public sealed partial class ImportRuns
     private JsonObject SourceFailure(JsonObject item, string sourceId, Exception error, string query)
     {
         var name = ExpectedSourceName(item);
-        var kind = error is TimeoutException or OperationCanceledException ? "timeout" : error is HttpRequestException ? "network" : "error";
+        // Hard rule 3: a local capacity deferral (or the engine being unreachable) says nothing about the source: "deferred",
+        // and no cooldown (a cooldown would skip the source for every following row).
+        var kind = error is TimeoutException or OperationCanceledException ? "timeout"
+            : AutoSourcarr.Core.Sources.SourceResultTracker.IsLocal(error) ? "deferred" : error is HttpRequestException ? "network" : "error";
         var diagnostic = new JsonObject
         {
             ["source_id"] = sourceId, ["source_name"] = name, ["kind"] = kind,
-            ["message"] = name + (kind == "timeout" ? " timed out; Retry is available" : " could not be searched: " + error.Message),
+            ["message"] = name + (kind == "timeout" ? " timed out; Retry is available" : kind == "deferred" ? " was not searched (local capacity); it is tried again" : " could not be searched: " + error.Message),
             ["query"] = query, ["detail"] = error.Message.Length > 12000 ? error.Message[..12000] : error.Message, ["checked_at"] = Now(),
         };
         if (item[DiagnosticsKey] is not JsonObject diagnostics)
@@ -428,7 +431,7 @@ public sealed partial class ImportRuns
         }
         diagnostics[sourceId] = diagnostic;
         while (diagnostics.Count > 24) diagnostics.Remove(diagnostics.First().Key);
-        _sourceFailures[sourceId] = (_clock.GetUtcNow() + SourceCooldown, error.Message);
+        if (kind != "deferred") _sourceFailures[sourceId] = (_clock.GetUtcNow() + SourceCooldown, error.Message);
         return (JsonObject)diagnostic.DeepClone();
     }
 
@@ -489,16 +492,20 @@ public sealed partial class ImportRuns
     /// <summary>
     /// _bind_backup_source_to_entry: keeps the backup's own source record on the chosen entry when that source is enabled
     /// (accepted metadata is applied first). A record owned by another entry is never merged here: that stays for duplicate
-    /// review. Automatic binds respect separate-entry decisions and matching rules.
+    /// review. Automatic binds respect separate-entry decisions and matching rules. <paramref name="superseded"/> is asked
+    /// again right before anything is written (the source search can take seconds): a newer click on the row wins, so an
+    /// older decision never binds the record or copies metadata ("latest click wins", hard rule 1).
     /// </summary>
-    internal async Task<JsonObject> BindBackupSourceAsync(long entryId, JsonObject item, bool manual, CancellationToken cancellationToken)
+    internal async Task<JsonObject> BindBackupSourceAsync(long entryId, JsonObject item, bool manual, CancellationToken cancellationToken, Func<bool>? superseded = null)
     {
         entryId = _ingest.CanonicalEntryId(entryId);
         if (!manual && PolicyBlock(item, entryId) is { } blocked) throw new ImportPolicyBlockedException(blocked);
+        JsonObject Answer(bool bound, bool searched, string reason) => new() { ["entry_id"] = entryId, ["bound"] = bound, ["searched"] = searched, ["reason"] = reason };
+        JsonObject Newer() { var answer = Answer(false, false, "Superseded by a newer import decision"); answer["superseded"] = true; return answer; }
+        if (superseded?.Invoke() == true) return Newer();
         ApplyMetadataToEntry(entryId, item);
         var expected = ExpectedSourceName(item);
         var sourceId = CurrentSourceId(item);
-        JsonObject Answer(bool bound, bool searched, string reason) => new() { ["entry_id"] = entryId, ["bound"] = bound, ["searched"] = searched, ["reason"] = reason };
         if (sourceId.Length == 0) return Answer(false, false, expected + " is not enabled");
         var attached = Read(c => c.Scalar("""
             SELECT 1 FROM source_matches WHERE entry_id=$id AND source_id=$source AND active=1
@@ -533,6 +540,7 @@ public sealed partial class ImportRuns
             throw new ImportPolicyBlockedException("This source record was manually marked as a different work.");
         if (_ingest.FindExistingBySource(sourceId, mangaId) is { } owner && _ingest.CanonicalEntryId(owner) != entryId)
             return Answer(false, true, expected + " record belongs to another entry; left for duplicate review");
+        if (superseded?.Invoke() == true) return Newer();
         var primary = Read(c => c.Scalar("SELECT source_manga_id FROM source_matches WHERE entry_id=$id AND source_id=$source AND active=1",
             ("$id", entryId), ("$source", sourceId)));
         if (primary is long current && current != mangaId) _ingest.UpsertSourceVariant(entryId, sourceId, chosen, 1, "import", true);
@@ -908,6 +916,7 @@ public sealed partial class ImportRuns
             if (referenceFound is { } found) { reference = found; live.Add(found); }
             searchedSources.Add(backupSource);
         }
+        var unanswered = false;
         if (Sources is { } sources)
         {
             var queries = ImportQueries.BackupSourceSearchQueries(Str(item, "title"), Str(item, "url"), explicitQuery).Take(2)
@@ -923,7 +932,9 @@ public sealed partial class ImportRuns
                     try { results = await sources.SearchAsync(sourceId, search, cancellationToken).ConfigureAwait(false); }
                     catch (Exception error) when (error is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                     {
-                        SourceFailure(item, sourceId, error, search);
+                        // A source the local capacity deferred was not searched: the row stays unfinished and is searched
+                        // again on resume, instead of being marked as fully searched without that source (hard rule 3).
+                        if (Str(SourceFailure(item, sourceId, error, search), "kind") == "deferred") unanswered = true;
                         break;
                     }
                     ClearSourceFailure(item, sourceId);
@@ -951,6 +962,7 @@ public sealed partial class ImportRuns
                 .Where(id => id > 0).Distinct().Take(64).ToArray());
         result["auto_match_entry_id"] = autoMatch;
         result["auto_match_reason"] = autoMatchReason;
-        return Persist(result, true);
+        result["live_incomplete"] = unanswered;
+        return Persist(result, !unanswered || autoMatch is not null);
     }
 }

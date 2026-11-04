@@ -21,6 +21,9 @@ public sealed class SourceServices
     public string? UploadStagingRoot { get; init; }
     /// <summary>SRC-2: optional MalwareBazaar client (an enabled connection); null when none.</summary>
     public Func<AutoSourcarr.Core.Connections.Types.MalwareBazaarClient?>? HashLookup { get; init; }
+    /// <summary>Why a configured MalwareBazaar connection cannot be used (damaged secrets), or null: the preview then says
+    /// the hash check was skipped instead of looking checked.</summary>
+    public Func<string?>? HashLookupProblem { get; init; }
 }
 
 /// <summary>
@@ -319,6 +322,7 @@ internal static class SourceV1Endpoints
                         AutoSourcarr.Core.Connections.Types.MalwareBazaarPreview.DefaultBound, context.RequestAborted).ConfigureAwait(false);
                     hashLookup = lookup;
                     if (warning is not null) warnings.Add(warning);
+                    else if (bazaar is null && sources.HashLookupProblem?.Invoke() is { } problem) warnings.Add("The MalwareBazaar hash check was skipped: " + problem);
                 }
                 return Results.Json(new JsonObject
                 {

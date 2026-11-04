@@ -19,6 +19,13 @@ public sealed class RasterImage : IDisposable
         using var pixels = _image.GetPixels();
         return pixels.ToByteArray("RGBA") ?? throw new InvalidDataException("Decoded pixels are not available");
     }
+    /// <summary>The decoded image as JPEG bytes (in memory only), for library covers.</summary>
+    public byte[] ToJpeg()
+    {
+        _image.Format = MagickFormat.Jpeg;
+        _image.Quality = 90;
+        return _image.ToByteArray();
+    }
     public void Dispose() => _image.Dispose();
 }
 
@@ -120,6 +127,7 @@ public static class RasterImages
               <policy domain="module" rights="read|write" pattern="{GIF,JPEG,PNG,WEBP,HEIC,BMP}"/>
               <policy domain="coder" rights="none" pattern="*"/>
               <policy domain="coder" rights="read" pattern="{GIF,JPEG,JPG,PNG,PNG8,PNG24,PNG32,PNG48,PNG64,WEBP,AVIF,HEIC,BMP,BMP2,BMP3}"/>
+              <policy domain="coder" rights="read|write" pattern="{JPEG,JPG}"/>
             </policymap>
             """;
         // Fresh app-owned configuration is extracted internally; users run no setup script.

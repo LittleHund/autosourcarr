@@ -34,7 +34,12 @@ public sealed class GalleryLayout(SqliteDatabase database, GalleryPolicyReposito
             {
                 try { splits += Apply(sourceId, job, job.CancellationToken)["splits"]!.GetValue<int>(); }
                 catch (GalleryPolicyChangedException) when (pass < MaximumPasses) { continue; }
-                if (pass >= MaximumPasses || !policies.Pending().Contains(sourceId, StringComparer.Ordinal)) break;
+                if (!policies.Pending().Contains(sourceId, StringComparer.Ordinal)) break;
+                // The newest rules are still not applied after the last pass: fail visibly (the rules stay pending and the
+                // next save or start applies them) instead of reporting a clean run.
+                if (pass >= MaximumPasses)
+                    throw new InvalidOperationException(splits.ToString(CultureInfo.InvariantCulture) + " gallery records separated, but the newest gallery rules for " + sourceId
+                        + " are still pending after " + MaximumPasses.ToString(CultureInfo.InvariantCulture) + " passes (they kept changing); run Apply rules again.");
             }
             job.Result(splits.ToString(CultureInfo.InvariantCulture) + " gallery records separated");
         }, origin: origin, context: sourceId);

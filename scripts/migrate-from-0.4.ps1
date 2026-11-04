@@ -17,11 +17,13 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)][string]$Source,
     [Parameter(Mandatory = $true, Position = 1)][string]$Destination,
-    # Optional: the 0.4.x Compose file, when its environment: sets DATA_DIR or DATABASE_DIR (and the service for two instances).
+    # Optional: the 0.4.x Compose file, so its environment: values are compared (-Service for two AutoSourcarr instances).
     [string]$Compose,
     [string]$Service
 )
 $ErrorActionPreference = 'Stop'
+# A profile that turns native exit codes into errors would hide the tool's own exit code: this script reads it itself.
+$PSNativeCommandUseErrorActionPreference = $false
 function Fail([string]$Message, [int]$Code = 2) { [Console]::Error.WriteLine($Message); exit $Code }
 $repo = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $repo 'src/AutoSourcarr.Api/AutoSourcarr.Api.csproj'
@@ -29,7 +31,10 @@ $dll = Join-Path $repo 'src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Ap
 
 if (-not (Test-Path -LiteralPath $Source)) { Fail "The source does not exist: $Source" 2 }
 $Source = (Resolve-Path -LiteralPath $Source).Path
-$Destination = [System.IO.Path]::GetFullPath($Destination)
+# Relative to the PowerShell location (not the process directory, which differs after Set-Location).
+$Destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
+if ($Compose) { $Compose = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Compose) }
+if ($Service -and -not $Compose) { Fail '-Service needs -Compose <file>.' 2 }
 if ((Test-Path -LiteralPath $Destination) -and @(Get-ChildItem -LiteralPath $Destination -Force).Count -gt 0) {
     Fail "The destination folder is not empty: $Destination. Choose a new or empty folder." 2
 }
@@ -44,8 +49,11 @@ if (Test-Path -LiteralPath $Source -PathType Container) {
     if ($Source -match '^\\\\wsl(\$|\.localhost)\\docker-desktop') { Fail 'This is a live Docker volume. Copy the folders first.' 2 }
 }
 
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { Fail 'The .NET 10 SDK (dotnet) is needed: https://dotnet.microsoft.com/download' 2 }
-$stale = -not (Test-Path -LiteralPath $dll)
+# AUTOSOURCARR_DOTNET lets the wrapper test replace dotnet with a stub; normally it is the dotnet on PATH.
+$dotnet = if ($env:AUTOSOURCARR_DOTNET) { $env:AUTOSOURCARR_DOTNET } else { 'dotnet' }
+if (-not (Get-Command $dotnet -ErrorAction SilentlyContinue)) { Fail 'The .NET 10 SDK (dotnet) is needed: https://dotnet.microsoft.com/download' 2 }
+# AUTOSOURCARR_FORCE_BUILD=1 (the wrapper test) always builds.
+$stale = [bool]$env:AUTOSOURCARR_FORCE_BUILD -or -not (Test-Path -LiteralPath $dll)
 if (-not $stale) {
     $built = (Get-Item -LiteralPath $dll).LastWriteTimeUtc
     $stale = [bool](Get-ChildItem -LiteralPath (Join-Path $repo 'src') -Recurse -File -Include '*.cs', '*.csproj', '*.json', '*.sql' |
@@ -53,16 +61,16 @@ if (-not $stale) {
 }
 if ($stale) {
     Write-Host 'Building AutoSourcarr (Release)...'
-    & dotnet restore --locked-mode $project
-    if ($LASTEXITCODE -ne 0) { Fail 'dotnet restore failed.' 3 }
-    & dotnet build -c Release --no-restore $project
-    if ($LASTEXITCODE -ne 0) { Fail 'dotnet build failed.' 3 }
+    & $dotnet restore --locked-mode $project
+    if ($LASTEXITCODE -ne 0) { Fail 'dotnet restore failed. DO NOT DEPLOY anything; nothing was migrated.' 3 }
+    & $dotnet build -c Release --no-restore $project
+    if ($LASTEXITCODE -ne 0) { Fail 'dotnet build failed. DO NOT DEPLOY anything; nothing was migrated.' 3 }
 }
 
 $toolArgs = @('--migrate-0.4', $Source, $Destination)
 if ($Compose) { $toolArgs += @('--compose', $Compose) }
 if ($Service) { $toolArgs += @('--service', $Service) }
-& dotnet $dll @toolArgs
+& $dotnet $dll @toolArgs
 $code = $LASTEXITCODE
 $report = Join-Path $Destination 'parity-report.md'
 Write-Host ''

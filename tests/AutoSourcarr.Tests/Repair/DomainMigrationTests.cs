@@ -261,6 +261,39 @@ public static class DomainMigrationTests
             Check.Throws<DomainRepairException>(() => repair.RunAsync("../escape").GetAwaiter().GetResult());
         });
 
+        suite.Add("domain repair: a local deferral in the content check is not checked, not failed; a health check never keeps the repaired jar; a damaged kept jar refuses rollback (hard rules 3, 5)", () =>
+        {
+            using var temp = new Sandbox();
+            var original = SampleJar();
+            var host = new FakeHost(original) { ContentWorks = true };
+            var repair = new DomainRepair(Path.Combine(temp.Path, "source-maintenance"), host, new SemaphoreSlim(1, 1));
+            foreach (var deferral in new Exception[] { new AutoSourcarr.Core.Sources.SourceWorkDeferredException("capacity"), new AutoSourcarr.Core.Concurrency.WorkDeferredException(), new TimeoutException("local") })
+            {
+                host.Jar = original;
+                host.DuringCheck = _ => throw deferral;
+                var deferred = repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example")).GetAwaiter().GetResult();
+                Check.Equal("rolled_back", deferred["state"]!.GetValue<string>());
+                Check.Equal(true, deferred["content_check_deferred"]!.GetValue<bool>());
+                Check.True(deferred["content_check"]!["deferred"]!.GetValue<bool>(), deferral.GetType().Name);
+                Check.True(deferred["message"]!.GetValue<string>().Contains("says nothing about the repaired code", StringComparison.Ordinal), deferred["message"]!.GetValue<string>());
+                Check.True(host.Jar.AsSpan().SequenceEqual(original), "the unchecked jar never stays installed");
+            }
+            host.DuringCheck = null;
+            var repaired = repair.RunAsync(FakeHost.Package, new DomainRepairOptions(NewHost: "new-site.example")).GetAwaiter().GetResult();
+            Check.Equal("repaired", repaired["state"]!.GetValue<string>());
+            // The next health check passes on the repaired jar: it is not kept as "last working" (Revert must restore the original).
+            Check.True(repair.KeepLastWorkingAsync(FakeHost.Package).GetAwaiter().GetResult() is null, "the repaired jar is not kept");
+            var restored = repair.RollbackAsync(FakeHost.Package).GetAwaiter().GetResult();
+            Check.Equal("rolled_back", restored["state"]!.GetValue<string>());
+            Check.True(host.Jar.AsSpan().SequenceEqual(original), "Revert installs the pre-repair bytes");
+            // A damaged newest kept copy refuses; it never silently falls back to an older version.
+            var kept = Path.Combine(repair.LastWorkingDirectory(FakeHost.Package), DomainMigration.Sha(original) + ".jar");
+            var bytes = File.ReadAllBytes(kept); bytes[^1] ^= 0xff; File.WriteAllBytes(kept, bytes);
+            var before = host.Installs.Count;
+            Check.Throws<DomainRepairException>(() => repair.RollbackAsync(FakeHost.Package).GetAwaiter().GetResult());
+            Check.Equal(before, host.Installs.Count);
+        });
+
         suite.Add("domain repair: an observed cross-site redirect gives the new host; a same-site redirect is refused", () =>
         {
             using var temp = new Sandbox();

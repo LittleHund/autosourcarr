@@ -178,6 +178,6 @@ public static class CatalogueSharingVersionTests
     {
         public int Calls;
         public void ReconcilePending(CancellationToken cancellationToken) => cancellationToken.ThrowIfCancellationRequested();
-        public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken) => Calls++;
+        public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken, Action<AutoSourcarr.Core.Persistence.DatabaseSession, long, long>? merged = null) => Calls++;
     }
 }

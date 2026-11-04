@@ -389,7 +389,7 @@ public sealed partial class SettingsEditor
                 catch (Exception error) when (error is TimeZoneNotFoundException or InvalidTimeZoneException)
                 { throw new SettingsValidationException("Time zone must be an IANA name such as Europe/Amsterdam."); }
                 break;
-            case "AUTHELIA_USER_HEADER":
+            case "AUTHELIA_USER_HEADER" or "AUTH_GROUPS_HEADER":
                 if (!HeaderName().IsMatch(text))
                     throw new SettingsValidationException("Identity header must contain only letters, numbers and hyphens.");
                 break;
@@ -444,6 +444,12 @@ public sealed partial class SettingsEditor
         if ((updates.ContainsKey("AUTH_METHOD") || updates.ContainsKey("AUTH_TRUSTED_PROXIES"))
             && TrustedProxies.Problems(Value("AUTH_TRUSTED_PROXIES"), Value("AUTH_METHOD") == "external") is { Count: > 0 } problems)
             throw new SettingsValidationException(problems[0]);
+        // A custom user header means another sign-in proxy: its groups header must be named too (the default Remote-Groups
+        // may pass through that proxy untouched, so a user could name their own groups).
+        if ((updates.ContainsKey("AUTHELIA_USER_HEADER") || updates.ContainsKey("AUTH_GROUPS_HEADER"))
+            && Value("AUTHELIA_USER_HEADER").Trim() is { Length: > 0 } user && !string.Equals(user, "Remote-User", StringComparison.OrdinalIgnoreCase)
+            && Value("AUTH_GROUPS_HEADER").Trim().Length == 0)
+            throw new SettingsValidationException("A custom identity header needs its groups header too (AUTH_GROUPS_HEADER): name the header your sign-in proxy sends the groups in.");
     }
 
     private static double Number(string value) =>

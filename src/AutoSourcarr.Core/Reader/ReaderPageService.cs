@@ -89,6 +89,9 @@ public sealed class ReaderPageService(ReaderRepository repository, IReaderPageSo
                 try { index = await currentSource.ChapterIndexAsync(ReaderValue.Integer(info, "source_manga_id"), ReaderValue.Integer(info, "source_chapter_id"), linked.Token).ConfigureAwait(false); }
                 catch (SourceWorkDeferredException) { index = -1; }
                 catch (OperationCanceledException) { throw; }
+                // Only a definite answer is stored: a local timeout or deferral keeps the mapping unresolved (hard rule 3),
+                // -2 ("use the page URL") would stick while the source order is unchanged.
+                catch (Exception error) when (SourceResultTracker.IsLocal(error)) { index = -1; }
                 catch (Exception) { index = -2; }
                 operation?.ThrowIfRetired();
                 if (index != -1) await io.RunAsync(() => { operation?.ThrowIfRetired(); repository.SetChapterIndex(candidateId, index); return 0; }, operation?.CancellationToken ?? linked.Token).ConfigureAwait(false);
@@ -210,6 +213,7 @@ public sealed class ReaderPageService(ReaderRepository repository, IReaderPageSo
                 try { chapterIndex = await currentSource.ChapterIndexAsync(ReaderValue.Integer(candidate, "source_manga_id"), ReaderValue.Integer(candidate, "source_chapter_id"), token).ConfigureAwait(false); }
                 catch (SourceWorkDeferredException) { /* Local deferral retains the unresolved mapping. */ }
                 catch (OperationCanceledException) { throw; }
+                catch (Exception error) when (SourceResultTracker.IsLocal(error)) { /* A local timeout retains the unresolved mapping too. */ }
                 catch (Exception) { chapterIndex = -2; }
             }
             operation?.ThrowIfRetired();

@@ -179,13 +179,14 @@ public sealed partial class DuplicateMatching
         var stamp = Stamp();
         if (decision == "clear")
         {
-            var previous = Write(c =>
+            // The cleared review and its decision row commit together (hard rule 1).
+            Write(c =>
             {
                 var old = c.Scalar("SELECT decision FROM duplicate_reviews WHERE left_entry_id=$p0 AND right_entry_id=$p1", P(left, right)) as string ?? "";
                 c.Execute("DELETE FROM duplicate_reviews WHERE left_entry_id=$p0 AND right_entry_id=$p1", P(left, right));
-                return old;
+                _decisions.Record(new DecisionEvent("review.duplicate.clear", actor, [left, right], [], why, new JsonObject { ["decision"] = old }, new JsonObject { ["decision"] = "" }));
+                return 0;
             });
-            _decisions.Record(new DecisionEvent("review.duplicate.clear", actor, [left, right], [], why, new JsonObject { ["decision"] = previous }, new JsonObject { ["decision"] = "" }));
             Invalidate();
             return new JsonObject { ["decision"] = "clear", ["left_entry_id"] = left, ["right_entry_id"] = right };
         }
@@ -239,9 +240,9 @@ public sealed partial class DuplicateMatching
             {
                 var hint = c.Query("SELECT separate_entry_id_hint FROM manual_separate_records WHERE target_entry_id=$p0 AND source_id=$p1 AND source_manga_id=$p2", P(target, sourceId, sourceMangaId)).FirstOrDefault()?.Integer("separate_entry_id_hint") ?? 0;
                 c.Execute("DELETE FROM manual_separate_records WHERE target_entry_id=$p0 AND source_id=$p1 AND source_manga_id=$p2", P(target, sourceId, sourceMangaId));
+                _decisions.Record(new DecisionEvent("separate.allow", actor, [target], [Key(new(sourceId, sourceMangaId))], "Allow source record match"));
                 return hint;
             });
-            _decisions.Record(new DecisionEvent("separate.allow", actor, [target], [Key(new(sourceId, sourceMangaId))], "Allow source record match"));
             if (other != 0 && Read(c => Exists(c, DuplicateEvidence.Canonical(c, other)))) ReviewLocked(target, other, "clear", actor, "Allow source record match");
             Invalidate();
             return new JsonObject { ["entry_id"] = target, ["source_id"] = sourceId, ["source_manga_id"] = sourceMangaId, ["allowed"] = true };

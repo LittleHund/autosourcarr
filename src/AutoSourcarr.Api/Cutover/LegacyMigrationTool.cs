@@ -30,7 +30,8 @@ internal static class LegacyMigrationTool
     public const string IncompleteMarker = "MIGRATION-INCOMPLETE.txt";
     private static readonly System.Text.Json.JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    public static async Task<int> RunAsync(string[] args, TextWriter output)
+    /// <param name="passphrase">Tests only: the backup passphrase instead of the console prompt.</param>
+    public static async Task<int> RunAsync(string[] args, TextWriter output, Func<string>? passphrase = null)
     {
         ArgumentNullException.ThrowIfNull(args); ArgumentNullException.ThrowIfNull(output);
         string? compose = null, service = null; var positional = new List<string>();
@@ -47,7 +48,7 @@ internal static class LegacyMigrationTool
         }
         try
         {
-            var outcome = await MigrateAsync(positional[0], positional[1], () => ReadPassphrase(output), output, options: new MigrationOptions(compose, service)).ConfigureAwait(false);
+            var outcome = await MigrateAsync(positional[0], positional[1], passphrase ?? (() => ReadPassphrase(output)), output, options: new MigrationOptions(compose, service)).ConfigureAwait(false);
             await output.WriteLineAsync().ConfigureAwait(false);
             await output.WriteLineAsync(outcome.Report.Verdict).ConfigureAwait(false);
             await output.WriteLineAsync("Report:          " + outcome.ReportPath).ConfigureAwait(false);
@@ -64,19 +65,18 @@ internal static class LegacyMigrationTool
         catch (Exception error) when (error is MigrationRefusedException or BackupRefusedException)
         {
             await output.WriteLineAsync("Refused: " + error.Message).ConfigureAwait(false);
+            if (Directory.Exists(positional[1]) && File.Exists(Path.Combine(positional[1], IncompleteMarker)))
+                await output.WriteLineAsync("The output folder now holds " + IncompleteMarker + ": do not deploy it, and use a new, empty folder for the next run.").ConfigureAwait(false);
             return 2;
         }
-        catch (Exception error) when (Expected(error))
+        catch (Exception error)
         {
+            // Any other failure, expected or not, is exit 3 with a clear line (never a stack trace and a crash code).
             await output.WriteLineAsync("MIGRATION FAILED (" + error.GetType().Name + "): " + Describe(error)
-                + " The input was not changed; the output is incomplete (" + IncompleteMarker + "). DO NOT DEPLOY it.").ConfigureAwait(false);
+                + " The input was not changed; the output is incomplete (" + IncompleteMarker + ", full error in migration-error.log). DO NOT DEPLOY it.").ConfigureAwait(false);
             return 3;
         }
     }
-
-    private static bool Expected(Exception error) => error is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
-        or InvalidDataException or System.Text.Json.JsonException or AggregateException or FormatException or ConfigurationException
-        or Microsoft.Data.Sqlite.SqliteException or System.Security.Cryptography.CryptographicException or NotSupportedException;
 
     private static string Describe(Exception error) => error is AggregateException aggregate
         ? string.Join(" / ", aggregate.Flatten().InnerExceptions.Select(inner => inner.GetType().Name + ": " + inner.Message)) : error.Message;
@@ -123,24 +123,38 @@ internal static class LegacyMigrationTool
         }
         else if (!LegacyBackupReader.IsLegacyBackup(input))
             throw new MigrationRefusedException("This file is not a 0.4.5 instance backup (it must start with ASCBK2). Download it from 0.4.5 System → Backups.");
-        var layout = isFile ? null : FolderLayout(input, options);
+        var compose = ChooseComposeService(options);
+        var layout = isFile ? null : FolderLayout(input, options, compose);
 
         Directory.CreateDirectory(output);
+        // The marker is written FIRST and removed only after both reports are in place, so a run that is killed (Ctrl+C,
+        // power loss) never leaves an output that looks usable.
+        var marker = Path.Combine(output, IncompleteMarker);
+        File.WriteAllText(marker, "The migration is running or stopped before it finished.\nDo not deploy anything from this folder. Your 0.4.x input was only read. "
+            + "If no run is active, run the tool again into a new, empty folder.\n");
         try
         {
-            return await MigrateCoreAsync(input, output, isFile, layout, passphrase, log, afterMigration, afterStartup, cancellationToken).ConfigureAwait(false);
+            var outcome = await MigrateCoreAsync(input, output, isFile, layout, compose, passphrase, log, afterMigration, afterStartup, cancellationToken).ConfigureAwait(false);
+            foreach (var folder in new[] { outcome.DataDirectory, outcome.ConfigDirectory }) File.Delete(Path.Combine(folder, IncompleteMarker));
+            File.Delete(marker);
+            return outcome;
         }
-        catch (Exception error) when (error is not (MigrationRefusedException or BackupRefusedException) || Directory.EnumerateFileSystemEntries(output).Any())
+        catch (Exception error)
         {
-            // Never leave an output that looks usable: the report is not written, the marker says why.
+            // The report is not left behind; the marker says why.
             try
             {
-                foreach (var name in new[] { "parity-report.md", "parity-report.json" }) File.Delete(Path.Combine(output, name));
-                File.WriteAllText(Path.Combine(output, IncompleteMarker), "The migration stopped before it finished (" + error.GetType().Name + "): " + Describe(error)
-                    + "\nDo not deploy anything from this folder. Your 0.4.x input was only read. Fix the cause and run the tool again into a new, empty folder.\n");
+                foreach (var name in new[] { "parity-report.md", "parity-report.json", "parity-report.md.tmp", "parity-report.json.tmp" }) File.Delete(Path.Combine(output, name));
+                File.WriteAllText(marker, "The migration stopped before it finished (" + error.GetType().Name + "): " + Describe(error)
+                    + "\nDo not deploy anything from this folder. Your 0.4.x input was only read. Fix the cause and run the tool again into a new, empty folder.\n"
+                    + (error is MigrationRefusedException or BackupRefusedException ? "" : "The full error is in migration-error.log.\n"));
+                // The full error (with its stack trace) for a real bug; the console line stays short.
+                if (error is not (MigrationRefusedException or BackupRefusedException)) File.WriteAllText(Path.Combine(output, "migration-error.log"), error.ToString() + "\n");
             }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
+            catch (Exception markerError) when (markerError is IOException or UnauthorizedAccessException)
+            {
+                await log.WriteLineAsync("Could not update " + marker + " (" + markerError.Message + "). Do not deploy anything from " + output + ".").ConfigureAwait(false);
+            }
             throw;
         }
     }
@@ -148,36 +162,56 @@ internal static class LegacyMigrationTool
     /// <summary>Where DATA_DIR and DATABASE_DIR pointed in 0.4.x, where the databases are in the copy, and where that came from.</summary>
     private sealed record Layout(string ContainerData, string ContainerDb, string DatabaseFolder, string Source);
 
-    private static Layout FolderLayout(string input, MigrationOptions options)
+    /// <summary>The Compose service this snapshot belongs to, its plain environment and where the choice came from.</summary>
+    private sealed record ComposeChoice(string File, string Service, IReadOnlyDictionary<string, string> Environment, string Why);
+
+    /// <summary>
+    /// Picks the Compose service whose environment is compared (and, for a folder input, whose DATA_DIR/DATABASE_DIR apply):
+    /// the one named by --service, the only service, or the one service whose env_file is autosourcarr.env (the 0.4.5 files
+    /// hold autosourcarr + suwayomi). Anything else is refused rather than guessed, and so is a chosen service with values
+    /// this tool cannot know (from the host, interpolated, anchors); the other services do not matter.
+    /// </summary>
+    private static ComposeChoice? ChooseComposeService(MigrationOptions options)
     {
-        var env = ReadEnv(Path.Combine(input, "config", EnvConversion.MainEnv));
+        if (options.ComposeFile is not { } file) return null;
+        var services = ComposeEnvironment.Read(file);
+        ComposeService chosen; string why;
+        if (options.Service is { } name)
+        {
+            chosen = services.TryGetValue(name, out var named) ? named : throw new MigrationRefusedException("The Compose file has no service " + name + ".");
+            why = "--service " + name;
+        }
+        else if (services.Count == 1) { chosen = services.Values.Single(); why = "the only service"; }
+        else if (services.Values.Where(item => item.EnvFiles.Any(env => Path.GetFileName(env.Replace('\\', '/')) == EnvConversion.MainEnv)).ToList() is [var single])
+        { chosen = single; why = "the service whose env_file is " + EnvConversion.MainEnv; }
+        else if (services.Count == 0) throw new MigrationRefusedException("The Compose file has no services: block.");
+        else throw new MigrationRefusedException("The Compose file has several services (" + string.Join(", ", services.Keys.Order(StringComparer.Ordinal))
+            + ") and it is not clear which one is AutoSourcarr. Pass --service <name> for the instance this snapshot belongs to.");
+        if (chosen.Unknown.Count > 0)
+            throw new MigrationRefusedException("The Compose service " + chosen.Name + " cannot be compared: " + string.Join("; ", chosen.Unknown) + ".");
+        return new(file, chosen.Name, chosen.Environment, why);
+    }
+
+    private static Layout FolderLayout(string input, MigrationOptions options, ComposeChoice? compose)
+    {
+        var envPath = Path.Combine(input, "config", EnvConversion.MainEnv);
+        if (!File.Exists(envPath)) throw new MigrationRefusedException("The snapshot has no config/" + EnvConversion.MainEnv + ": the 0.4.x settings cannot be compared. Copy the whole 0.4.x config folder.");
+        var env = ReadEnv(envPath);
         string? data = env.GetValueOrDefault("DATA_DIR"), db = env.GetValueOrDefault("DATABASE_DIR");
         var sources = new List<string>();
         if (!string.IsNullOrWhiteSpace(data)) sources.Add("DATA_DIR from config/autosourcarr.env");
         if (!string.IsNullOrWhiteSpace(db)) sources.Add("DATABASE_DIR from config/autosourcarr.env");
-        if (options.ComposeFile is { } compose)
+        if (compose is not null)
         {
-            var services = ComposeEnvironment.Read(compose);
-            Dictionary<string, string>? chosen;
-            if (options.Service is { } name)
-            {
-                if (!services.TryGetValue(name, out chosen)) throw new MigrationRefusedException("The Compose file has no service " + name + ".");
-            }
-            else
-            {
-                var relevant = services.Where(pair => pair.Value.ContainsKey("DATA_DIR") || pair.Value.ContainsKey("DATABASE_DIR")).ToList();
-                var distinct = relevant.Select(pair => (pair.Value.GetValueOrDefault("DATA_DIR"), pair.Value.GetValueOrDefault("DATABASE_DIR"))).Distinct().Count();
-                if (distinct > 1) throw new MigrationRefusedException("The Compose file sets DATA_DIR/DATABASE_DIR differently for " + string.Join(", ", relevant.Select(pair => pair.Key))
-                    + ". Pass --service <name> for the instance this snapshot belongs to.");
-                chosen = relevant.Select(pair => pair.Value).FirstOrDefault();
-            }
-            if (chosen?.GetValueOrDefault("DATA_DIR") is { Length: > 0 } composeData) { data = composeData; sources.Add("DATA_DIR from " + Path.GetFileName(compose) + " (overrides the env file)"); }
-            if (chosen?.GetValueOrDefault("DATABASE_DIR") is { Length: > 0 } composeDb) { db = composeDb; sources.Add("DATABASE_DIR from " + Path.GetFileName(compose) + " (overrides the env file)"); }
+            var name = Path.GetFileName(compose.File) + " service " + compose.Service;
+            if (compose.Environment.GetValueOrDefault("DATA_DIR") is { Length: > 0 } composeData) { data = composeData; sources.Add("DATA_DIR from " + name + " (overrides the env file)"); }
+            if (compose.Environment.GetValueOrDefault("DATABASE_DIR") is { Length: > 0 } composeDb) { db = composeDb; sources.Add("DATABASE_DIR from " + name + " (overrides the env file)"); }
+            sources.Add("Compose environment of " + name + " compared (chosen as " + compose.Why + ")");
         }
         var containerData = string.IsNullOrWhiteSpace(data) ? "/data" : data.TrimEnd('/');
         var containerDb = string.IsNullOrWhiteSpace(db) ? containerData : db.TrimEnd('/');
-        if (sources.Count == 0) sources.Add("DATA_DIR and DATABASE_DIR not set in the env file (default /data; Compose environment: not read — pass --compose to include it)");
-        else if (options.ComposeFile is null) sources.Add("Compose environment: not read (pass --compose <file> if it sets DATA_DIR or DATABASE_DIR)");
+        if (compose is null) sources.Add("Compose environment: not read (pass --compose <file> [--service <name>] if it sets environment values)");
+        if (string.IsNullOrWhiteSpace(data) && string.IsNullOrWhiteSpace(db)) sources.Add("DATA_DIR and DATABASE_DIR not set (default /data)");
         var relative = Relative(containerData, containerDb);
         var databaseFolder = Path.Combine(input, "database");
         var inDatabase = File.Exists(Path.Combine(databaseFolder, "catalog.sqlite"));
@@ -196,7 +230,7 @@ internal static class LegacyMigrationTool
         return new(containerData, containerDb, folder, string.Join("; ", sources));
     }
 
-    private static async Task<MigrationOutcome> MigrateCoreAsync(string input, string output, bool isFile, Layout? layout, Func<string> passphrase, TextWriter log,
+    private static async Task<MigrationOutcome> MigrateCoreAsync(string input, string output, bool isFile, Layout? layout, ComposeChoice? compose, Func<string> passphrase, TextWriter log,
         Action<string, string>? afterMigration, Action<JsonObject>? afterStartup, CancellationToken cancellationToken)
     {
         var original = Path.Combine(output, "original-0.4");
@@ -209,9 +243,14 @@ internal static class LegacyMigrationTool
             await log.WriteLineAsync("Reading the 0.4.5 backup (this takes a few seconds for the key derivation)...").ConfigureAwait(false);
             var manifest = LegacyBackupReader.Extract(input, passphrase(), original);
             fromVersion = manifest.Version.Length > 0 ? manifest.Version : fromVersion;
-            containerData = manifest.Paths.GetValueOrDefault("data") is { Length: > 0 } d ? d.TrimEnd('/') : "/data";
-            containerDb = manifest.Paths.GetValueOrDefault("db") is { Length: > 0 } b ? b.TrimEnd('/') : containerData;
-            pathSource = "DATA_DIR and DATABASE_DIR from the backup manifest (the paths 0.4.5 actually used)";
+            // The manifest names the folders 0.4.5 actually used; guessing /data could pair the deploy with an empty database.
+            containerData = manifest.Paths.GetValueOrDefault("data") is { Length: > 0 } d ? d.TrimEnd('/')
+                : throw new MigrationRefusedException("The backup manifest does not say where DATA_DIR was (paths.data); this backup cannot be migrated safely.");
+            containerDb = manifest.Paths.GetValueOrDefault("db") is { Length: > 0 } b ? b.TrimEnd('/')
+                : throw new MigrationRefusedException("The backup manifest does not say where DATABASE_DIR was (paths.db); this backup cannot be migrated safely.");
+            pathSource = "DATA_DIR and DATABASE_DIR from the backup manifest (the paths 0.4.5 actually used); "
+                + (compose is null ? "Compose environment: not read (pass --compose <file> [--service <name>] if it sets environment values)"
+                    : "Compose environment of " + Path.GetFileName(compose.File) + " service " + compose.Service + " compared (chosen as " + compose.Why + ")");
             originalDb = Path.Combine(original, "db");
             Directory.CreateDirectory(Path.Combine(original, "config")); Directory.CreateDirectory(Path.Combine(original, "data"));
             if (Directory.Exists(Path.Combine(original, "engine")))
@@ -229,18 +268,29 @@ internal static class LegacyMigrationTool
         }
         foreach (var name in new[] { "catalog.sqlite", "chapter-origins.sqlite" })
             if (!File.Exists(Path.Combine(originalDb, name))) throw new MigrationRefusedException("The 0.4.x " + name + " was not found in the input.");
+        if (!File.Exists(Path.Combine(original, "config", EnvConversion.MainEnv)))
+            throw new MigrationRefusedException("The input has no config/" + EnvConversion.MainEnv + ": the 0.4.x settings cannot be compared.");
 
         // 2. The folders to migrate.
         var relativeDb = Relative(containerData, containerDb);
         var outDb = relativeDb is null ? Path.Combine(output, "database") : Path.Combine(data, relativeDb);
         Copy(Path.Combine(original, "config"), config);
         Copy(Path.Combine(original, "data"), data);
+        // The folders you mount carry the marker too until the run finished, so a killed run is visible where it matters.
+        foreach (var folder in new[] { data, config }) File.WriteAllText(Path.Combine(folder, IncompleteMarker), "The migration that wrote this folder did not finish. Do not mount it.\n");
         Directory.CreateDirectory(outDb);
         foreach (var file in Directory.EnumerateFiles(originalDb).Where(path => FileParity.IsDatabaseFile(Path.GetFileName(path))))
         {
             var target = Path.Combine(outDb, Path.GetFileName(file));
             if (!File.Exists(target)) File.Copy(file, target);
+            else if (!SameBytes(file, target))
+                // A different database file already in the data folder: migrating it would compare one copy and deploy another.
+                throw new MigrationRefusedException("The snapshot holds two different copies of " + Path.GetFileName(file) + " (in the data folder and in DATABASE_DIR). Keep only the one 0.4.x used.");
         }
+        // A database sidecar (-wal/-shm/-journal) in the target folder that the 0.4.x databases do not have would pair the
+        // deployed database with stale pages.
+        foreach (var extra in Directory.EnumerateFiles(outDb).Where(path => FileParity.IsDatabaseFile(Path.GetFileName(path)) && !File.Exists(Path.Combine(originalDb, Path.GetFileName(path)))))
+            throw new MigrationRefusedException("The snapshot holds " + Path.GetFileName(extra) + " next to the database, but the 0.4.x databases have none: remove the stale file and run again.");
         if (relativeDb is null)
             warnings.Add("DATABASE_DIR (" + containerDb + ") is outside DATA_DIR (" + containerData + "): mount " + outDb + " at " + containerDb + ".");
 
@@ -276,17 +326,26 @@ internal static class LegacyMigrationTool
             started = await runtime.RunOfflineStartupAsync(cancellationToken).ConfigureAwait(false);
         afterStartup?.Invoke(started);
         run["startup"] = started;
-        var problems = (started["problems"] as JsonArray ?? []).Select(node => node?.ToString() ?? "").Where(text => text.Length > 0).ToList();
+        // A missing or mistyped problems list must never read as "no problems".
+        var problems = (started["problems"] as JsonArray ?? throw new InvalidOperationException("The offline startup returned no problems list; the migration cannot be judged."))
+            .Select(node => node?.ToString() ?? "").Where(text => text.Length > 0).ToList();
         warnings.AddRange((started["warnings"] as JsonArray ?? []).Select(node => node?.ToString() ?? "").Where(text => text.Length > 0));
         var notCovered = (started["not_covered"] as JsonArray ?? []).Select(node => node?.ToString() ?? "").ToList();
         // Fold the write-ahead logs into the migrated files, so copying the folder to the server cannot miss committed rows.
+        // A busy checkpoint or a write-ahead log that is not empty afterwards means the files are not complete on their own.
         foreach (var name in new[] { "catalog.sqlite", "chapter-origins.sqlite" })
         {
-            using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + Path.Combine(outDb, name) + ";Pooling=False");
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
-            command.ExecuteNonQuery();
+            using (var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + Path.Combine(outDb, name) + ";Pooling=False"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+                using var reader = command.ExecuteReader();
+                if (!reader.Read() || reader.GetInt64(0) != 0)
+                    problems.Add(name + ": the write-ahead log could not be checkpointed (busy); the copied file would miss committed rows");
+            }
+            var wal = new FileInfo(Path.Combine(outDb, name + "-wal"));
+            if (wal.Exists && wal.Length != 0) problems.Add(name + ": the write-ahead log is not empty after the checkpoint (" + wal.Length.ToString(CultureInfo.InvariantCulture) + " bytes)");
         }
         if (problems.Count > 0)
         {
@@ -310,6 +369,14 @@ internal static class LegacyMigrationTool
         {
             var kinds = DecisionParity.Kinds.ToList();
             kinds.AddRange(TableCoverage.CountedKinds(oldCatalog, oldOrigins, kinds).ToList());
+            var merges = MergeRecheck.Run(newCatalog);
+            var settingItems = SettingsParity.Compare(Path.Combine(original, "config"), config);
+            var notices = SettingsParity.Notices(Path.Combine(original, "config"), config);
+            // 0.5.0 could not start on this config.json: the output is not usable, whatever the rows say.
+            // Every "must change" notice means 0.5.0 would not start or nobody could sign in (e.g. external sign-in without a
+            // usable AUTH_TRUSTED_PROXIES): the output is not usable as it is.
+            problems.AddRange(notices.Where(line => line.Kind == "must_change").Select(line => line.Key + ": " + line.Message));
+            if (compose is not null) settingItems.AddRange(SettingsParity.CompareCompose(compose.Environment));
             report = new ParityReport
             {
                 Input = (isFile ? "backup file " : "folder ") + input, FromVersion = fromVersion, ToVersion = ApplicationRuntime.Version,
@@ -318,18 +385,23 @@ internal static class LegacyMigrationTool
                 Counts = [.. DecisionParity.Counts(oldCatalog, newCatalog, "catalog"), .. DecisionParity.Counts(oldOrigins, newOrigins, "origins")],
                 UnresolvedEntries = DecisionParity.UnresolvedEntries(oldCatalog, newCatalog),
                 OriginalEntries = new EntryIds(oldCatalog).EntryCount,
-                Settings = SettingsParity.Compare(Path.Combine(original, "config"), config),
-                Notices = SettingsParity.Notices(Path.Combine(original, "config"), config),
+                Settings = settingItems,
+                Notices = notices,
                 Files = FileParity.Compare([("config", Path.Combine(original, "config"), config), ("data", Path.Combine(original, "data"), data)]),
-                Merges = MergeRecheck.Run(newCatalog),
+                Merges = merges,
+                NewMerges = DecisionParity.NewMerges(oldCatalog, newCatalog, DecisionParity.DecisionEntries(oldCatalog, oldOrigins, kinds),
+                    merges),
+                EmptiedEntries = DecisionParity.EmptiedEntries(oldCatalog, newCatalog),
                 DroppedTables = [.. DecisionParity.DroppedTables(oldCatalog, newCatalog, "catalog"), .. DecisionParity.DroppedTables(oldOrigins, newOrigins, "origins")],
                 Coverage = TableCoverage.Describe(oldCatalog, oldOrigins, kinds),
                 Run = run, Warnings = warnings, MigrationProblems = problems, NotCovered = notCovered,
             };
         }
-        var reportPath = Path.Combine(output, "parity-report.md");
-        await File.WriteAllTextAsync(reportPath, report.ToMarkdown(), new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
-        await File.WriteAllTextAsync(Path.Combine(output, "parity-report.json"), report.ToJson().ToJsonString(Indented), new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+        // Written under temporary names and renamed last, so a half-written report never exists under its real name.
+        var reportPath = Path.Combine(output, "parity-report.md"); var jsonPath = Path.Combine(output, "parity-report.json");
+        await File.WriteAllTextAsync(reportPath + ".tmp", report.ToMarkdown(), new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+        await File.WriteAllTextAsync(jsonPath + ".tmp", report.ToJson().ToJsonString(Indented), new UTF8Encoding(false), cancellationToken).ConfigureAwait(false);
+        File.Move(jsonPath + ".tmp", jsonPath); File.Move(reportPath + ".tmp", reportPath);
         return new MigrationOutcome(report, data, config, relativeDb is null ? outDb : null, reportPath);
     }
 
@@ -368,19 +440,35 @@ internal static class LegacyMigrationTool
         return path.StartsWith(root + "/", StringComparison.Ordinal) ? path[(root.Length + 1)..].Replace('/', Path.DirectorySeparatorChar) : null;
     }
 
+    private static bool SameBytes(string left, string right)
+    {
+        using var a = File.OpenRead(left); using var b = File.OpenRead(right);
+        return a.Length == b.Length && System.Security.Cryptography.SHA256.HashData(a).AsSpan().SequenceEqual(System.Security.Cryptography.SHA256.HashData(b));
+    }
+
     private static Dictionary<string, string> ReadEnv(string path)
     {
         if (!File.Exists(path)) return new Dictionary<string, string>(StringComparer.Ordinal);
         return DotEnv.Parse(File.ReadAllText(path)).Where(pair => pair.Value is not null).ToDictionary(pair => pair.Key, pair => pair.Value!, StringComparer.Ordinal);
     }
 
-    /// <summary>Copies a folder with its timestamps (links are not followed; the source is only read).</summary>
+    /// <summary>Every entry below <paramref name="root"/>: nothing is skipped, an unreadable folder throws.</summary>
+    internal static readonly EnumerationOptions AllEntries = new() { RecurseSubdirectories = true, IgnoreInaccessible = false, AttributesToSkip = 0 };
+
+    /// <summary>
+    /// Copies a folder with its timestamps (the source is only read). Links and junctions are refused rather than skipped:
+    /// a skipped entry would be missing on both sides of the comparison and never reported.
+    /// </summary>
     private static void Copy(string source, string target)
     {
         Directory.CreateDirectory(target);
-        foreach (var directory in Directory.EnumerateDirectories(source, "*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }))
+        foreach (var entry in Directory.EnumerateFileSystemEntries(source, "*", AllEntries))
+            // Only real links and junctions: OneDrive cloud files and deduplicated files are reparse points too, but real files.
+            if ((Directory.Exists(entry) ? (FileSystemInfo)new DirectoryInfo(entry) : new FileInfo(entry)).LinkTarget is not null)
+                throw new MigrationRefusedException("The input contains a link or junction (" + Path.GetRelativePath(source, entry) + "). Copy the real files into the snapshot instead.");
+        foreach (var directory in Directory.EnumerateDirectories(source, "*", AllEntries))
             Directory.CreateDirectory(Path.Combine(target, Path.GetRelativePath(source, directory)));
-        foreach (var file in Directory.EnumerateFiles(source, "*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }))
+        foreach (var file in Directory.EnumerateFiles(source, "*", AllEntries))
         {
             var destination = Path.Combine(target, Path.GetRelativePath(source, file));
             File.Copy(file, destination);

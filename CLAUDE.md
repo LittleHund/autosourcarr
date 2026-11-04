@@ -145,8 +145,9 @@ user is deferred to phase 13. A user's own main Suwayomi is optional (connection
 
 ## 4. Build, test, verify
 
-There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nuget/dotnet;
-**all C# compiling and testing happens in GitHub Actions**.
+This PC has the .NET 10 SDK and nuget access (owner decision 2026-11-01, §6): build and test locally first,
+then run one ci-probe per round. The Claude cloud container has no .NET SDK, so cloud sessions use CI only.
+After each C# edit, read the csharp-ls diagnostics (§7) before starting a build.
 
 - **`ci-probe` workflow** (`.github/workflows/probe.yml`, always succeeds, results committed under `probe/`):
   `git checkout ci-probe && git pull --no-rebase origin ci-probe && git merge -X theirs conversion && git push && git checkout conversion`.
@@ -198,7 +199,8 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
    the 2026-10-31/11-01 conversion run used parallel sub-agents per area after the user asked to go
    through the phases automatically — whether that is approved going forward is **unverified**: ask.
 4. Quality checks before reporting done: green probe (build + all tests), local check-project +
-   ci-pytest, an independent audit by a fresh agent over `git diff <prev-phase>..HEAD`, fix its findings
+   ci-pytest, an independent audit over `git diff <prev-phase>..HEAD` with the pr-review-toolkit agents
+   (code-reviewer, silent-failure-hunter, pr-test-analyzer, type-design-analyzer; §7), fix its findings
    (or record them as limitations), then green `conversion` CI.
 5. Phase end (update the checkpoint):
    - push `conversion` once; confirm its CI run is green (record the run id);
@@ -240,23 +242,18 @@ There is no .NET SDK in the Claude cloud container and the PC VM cannot reach nu
 | 2026-10-29 | Requirements proposals PROP-1..4 (release split, defer CON-4/SRC-9/MAT-21, drop UI-3 theme research, hand-maintained backup schema): `requirements.md` §18 records them as accepted on 2026-10-29. | resolved |
 | 2026-10-25 | C# runtime version constant still `0.4.3-migration`; the compatibility list describes 0.5.0. | resolved (phase 14: 0.5.0, version split in §4) |
 
-## 7. User skills used on this project
+## 7. Claude tooling on this PC (checked 2026-11-04)
 
-From `AGENTS.md` in the PC workspace (Codex desktop skill pack, 22 skills installed 2026-10-09).
-Descriptions are taken from how AGENTS.md assigns them; their internal contents are **unverified** here.
-
-| Skill | Used for |
+| Tool | Use it for |
 | --- | --- |
-| AutoSourcarr Developer | Project-specific development: coordinating changes, backend (FastAPI/SQLite, scheduling, imports). |
-| Codex Coordinator | Scope, write ownership, integration and packaging (Coordinator role). |
-| Engineering Guardrails (Code Work / Code Verification) | Coding rules for backend/UI work and verification passes. |
-| Release Verifier | Independent release review: requirements, fresh tests, migrations, compatibility, limitations. |
-| Self-hosting Engineer | Deployment advice: TrueNAS Compose, mounts, Suwayomi, Authelia, logs. |
-| CodebaseDesign | UI engineering on the existing vanilla JS UI. |
-| Atlas Scout | Backend/performance investigation, when its runtime is available (unverified whether ever available). |
-| Fallow | JavaScript tooling for the UI, when installed (unverified whether installed). |
-| desktop-preference-learner | Records durable user preferences; invoked only explicitly (from user memory, not AGENTS.md). |
+| `lean-local-coding` skill | Working rules: step by step, approval gates, cheapest code lookup first, verify before done. |
+| Superpowers | Plans, TDD, systematic debugging, verification before completion. |
+| Language servers | Diagnostics after every edit; fix new ones before building. csharp-ls: `src/`, `tests/`. pyright: `autosourcarr/app`. typescript-language-server: the UI JavaScript. kotlin-lsp: `source-host/`, `extension/`. clangd: `native/`. |
+| Serena | Symbol lookup (find a class or method, references) before reading whole files; `service.py` is ≈19.6k lines. |
+| rtk | Compresses shell output. If a result is unusable, rerun that command as `rtk bypass <cmd>`. |
+| hookify | Blocks recursive force deletes, force push, `git reset --hard` and DROP DATABASE. When blocked: stop, show the command, ask. |
+| pr-review-toolkit | The independent audit in §5 step 4: run its agents on the phase diff; post nothing to GitHub. |
+| gh | GitHub from the shell, for example `gh run view <id>` or `gh run watch` for CI results. |
+| remember | Per-project notes in `.remember/now.md`: durable decisions and gotchas only. |
 
-The Claude cloud sessions of 2026-10-31/11-01 did not use these Codex skills; they used Claude's
-own tools (Claude Docs for the plan/requirements, the Claude Project for checkpoint/port-map, the
-PC device bridge for ZIPs, sync and the knowledge DB).
+The Codex skill pack that `AGENTS.md` refers to is not used by Claude; `AGENTS.md` is for Codex only.

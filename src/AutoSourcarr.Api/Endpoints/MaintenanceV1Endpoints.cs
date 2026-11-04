@@ -150,6 +150,10 @@ internal static class MaintenanceV1Endpoints
                             await jobs.StopBackgroundAsync(full ? "Full reset" : "Database reset", keep: job.Id).ConfigureAwait(false);
                             try
                             {
+                                // Hard rule 1: draining can take long and decisions can change meanwhile; the preview the
+                                // person confirmed must still be current when the reset starts.
+                                if ((maintenance.Manual.PreviewReset(ManualResetScope.All)["preview_token"]?.GetValue<string>() ?? "") != token)
+                                    throw new InvalidOperationException((full ? "Full reset" : "Database reset") + " not started: the saved decisions changed after the preview; nothing was reset. Open the preview again.");
                                 var result = await catalogue.ResetAsync(full, actor, message => job.Report(message: message), CancellationToken.None).ConfigureAwait(false);
                                 job.Result((full ? "Full reset done" : "Database reset done") + ": " + result.ToJsonString());
                             }

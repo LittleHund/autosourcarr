@@ -30,8 +30,10 @@
    (`http://suwayomi:30058` inside the Compose network) if you use one.
 5. Reverse proxy: see [Authelia](docs/reverse-proxy/authelia.md) and
    [Nginx Proxy Manager](docs/reverse-proxy/nginx-proxy-manager.md). Keep the `^/api/reader/v1([/?].*)?$` bypass,
-   add the GET/HEAD-only `/api/reader/repo/` bypass, and with Authelia sign-in set `AUTH_TRUSTED_PROXIES` to the
-   proxy container's address or Docker network (for example `172.18.0.0/16`; Settings or `config.json`).
+   add the GET/HEAD-only `/api/reader/repo/` bypass. To keep Authelia as the only sign-in, set `AUTH_METHOD=external`
+   **and** `AUTH_TRUSTED_PROXIES` to the proxy container's address or Docker network (for example `172.18.0.0/16`;
+   Settings, `config.json` or the Compose `environment:`). Without `AUTH_METHOD=external` 0.5.0 uses its own forms
+   sign-in (an owner account is created at the first visit).
 6. Readers: **System → Reader setup** shows per server slot a QR code/link for the repository
    (`https://<your address>/api/reader/repo/index.min.json`) and one with the slot's address and device key.
    Reinstall the AutoSourcarr extension from that repository.

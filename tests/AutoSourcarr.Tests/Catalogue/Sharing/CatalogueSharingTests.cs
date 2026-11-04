@@ -343,14 +343,14 @@ public static class CatalogueSharingTests
         public int Calls; public string LastTaskId = "";
         // Controlled callback fixture: its scenarios have no pending structural journal.
         public void ReconcilePending(CancellationToken cancellationToken) => cancellationToken.ThrowIfCancellationRequested();
-        public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken) { Calls++; LastTaskId = taskId; }
+        public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken, Action<AutoSourcarr.Core.Persistence.DatabaseSession, long, long>? merged = null) { Calls++; LastTaskId = taskId; }
     }
     private sealed class BlockingStructure : ICatalogueReviewedStructure, IDisposable
     {
         public ManualResetEventSlim Entered { get; } = new(); public ManualResetEventSlim Release { get; } = new();
         // Controlled physical-ownership fixture: its scenario has no prior pending journal.
         public void ReconcilePending(CancellationToken cancellationToken) => cancellationToken.ThrowIfCancellationRequested();
-        public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken) { Entered.Set(); if (!Release.Wait(TimeSpan.FromSeconds(10))) throw new TimeoutException("Fixture reviewed callback was not released"); cancellationToken.ThrowIfCancellationRequested(); }
+        public void ApplyReviewed(string decisionUid, string decisionDigest, string revision, JsonObject decision, IReadOnlyList<CatalogueNativeRecord> records, IReadOnlyList<long> targetIds, string taskId, CancellationToken cancellationToken, Action<AutoSourcarr.Core.Persistence.DatabaseSession, long, long>? merged = null) { Entered.Set(); if (!Release.Wait(TimeSpan.FromSeconds(10))) throw new TimeoutException("Fixture reviewed callback was not released"); cancellationToken.ThrowIfCancellationRequested(); }
         public void Dispose() { Entered.Dispose(); Release.Dispose(); }
     }
     private sealed class NoRead : Stream

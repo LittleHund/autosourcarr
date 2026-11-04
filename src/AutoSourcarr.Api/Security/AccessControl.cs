@@ -133,6 +133,14 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
 
     public const string TrustedProxyItem = "AutoSourcarr.TrustedProxy";
 
+    /// <summary>The request looks like it came through a reverse proxy that is not trusted (a private, non-loopback peer
+    /// sent X-Forwarded-For): every client behind it shares its address. Only used to tell the admins to set
+    /// AUTH_TRUSTED_PROXIES; it never relaxes a check (the header is the client's to send).</summary>
+    public static bool SharedAddress(HttpContext context) =>
+        !(context.Items.TryGetValue(TrustedProxyItem, out var trusted) && trusted is true) && context.Request.Headers.ContainsKey("X-Forwarded-For")
+        && context.Connection.RemoteIpAddress is { } peer && !System.Net.IPAddress.IsLoopback(peer) && (peer.IsIPv6UniqueLocal
+            || (peer.IsIPv4MappedToIPv6 ? peer.MapToIPv4() : peer).GetAddressBytes() is [10, ..] or [172, >= 16 and <= 31, ..] or [192, 168, ..]);
+
     /// <summary>
     /// AUTH_TRUSTED_PROXIES (IPs or CIDR). Phase 13 (audit): only addresses explicitly listed there may send identity
     /// headers (Remote-User, Remote-Groups) or X-Forwarded-For/-Proto. An empty list trusts nobody (fail closed). Loopback
@@ -189,7 +197,11 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
         var owner = services.Accounts.Accounts().FirstOrDefault(account => account.Role == Role.Owner);
         if (owner is { Source: "external" } && string.Equals(owner.Name, name, StringComparison.OrdinalIgnoreCase))
             return new Caller(Role.Owner, name, "external", owner.Id);
-        var groups = request.Headers["Remote-Groups"].ToString().Split(',').Select(group => group.Trim()).Where(group => group.Length > 0)
+        // Groups come from AUTH_GROUPS_HEADER; Remote-Groups only with Authelia's own user header. A custom user header
+        // without a groups header gives no groups (another proxy may pass Remote-Groups through from the user).
+        var groupsHeader = settings.AuthGroupsHeader.Trim() is { Length: > 0 } named ? named
+            : string.Equals(header, "Remote-User", StringComparison.OrdinalIgnoreCase) ? "Remote-Groups" : "";
+        var groups = (groupsHeader.Length == 0 ? "" : request.Headers[groupsHeader].ToString()).Split(',').Select(group => group.Trim()).Where(group => group.Length > 0)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         static IEnumerable<string> List(string value) => value.Split(',').Select(item => item.Trim()).Where(item => item.Length > 0);
         if (List(settings.AuthAdminGroups).Any(groups.Contains)) return new Caller(Role.Admin, name, "external");
@@ -233,6 +245,10 @@ public sealed class AccessControlMiddleware(RequestDelegate next, AccessControlS
         if (wait is null)
         {
             services.Log.Record("login-slowed", name, address, "refused: too many failed sign-ins in 15 minutes");
+            // Behind an untrusted proxy every client has the proxy's address: one client's failures refuse the others.
+            if (SharedAddress(context))
+                services.Burst?.Invoke("Sign-ins come through a reverse proxy at " + address + " that is not in AUTH_TRUSTED_PROXIES, so every client shares its address and "
+                    + "failed sign-ins of one refuse the others. Set AUTH_TRUSTED_PROXIES to the proxy's address.");
             return null;
         }
         if (wait > TimeSpan.Zero)

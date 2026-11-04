@@ -175,6 +175,14 @@ public sealed class DomainRepair
     /// <summary>True while a repair or rollback of the package runs.</summary>
     public bool IsChanging(string packageName) => _changing.ContainsKey(packageName);
 
+    /// <summary>The sha256 of the jar the source host has installed for the package now (hard rule 6: a verdict holds only
+    /// for those bytes). Throws when the host cannot answer.</summary>
+    public async Task<string> InstalledShaAsync(string packageName, CancellationToken cancellationToken = default)
+    {
+        RequirePackage(packageName);
+        return DomainMigration.Sha(await _host.ReadJarAsync(packageName, cancellationToken).ConfigureAwait(false));
+    }
+
     /// <summary>The last saved report of a package, or null.</summary>
     public JsonObject? LastReport(string packageName)
     {
@@ -372,7 +380,13 @@ public sealed class DomainRepair
                     + check.Pages.ToString(CultureInfo.InvariantCulture) + " pages, first image " + check.ImageBytes.ToString(CultureInfo.InvariantCulture) + " bytes).");
             }
 
-            // (f) rollback
+            // (f) rollback: an unchecked jar never stays installed. A check that got no answer (local timeout or capacity)
+            // is reported as not checked, not as a repair that does not work (hard rule 3).
+            if (check.Deferred)
+            {
+                report["content_check_deferred"] = true;
+                return await Restore(jar, "The content check could not finish at " + check.Step + " (" + check.Error + "); this says nothing about the repaired code. Try the repair again later.").ConfigureAwait(false);
+            }
             return await Restore(jar, "The content check failed at " + check.Step + ": " + check.Error).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (installed && keptJar is not null)
@@ -396,7 +410,8 @@ public sealed class DomainRepair
         }
     }
 
-    /// <summary>Installs the most recently kept jar of a package again (the last working code before a repair).</summary>
+    /// <summary>Installs the most recently kept jar of a package again (the last working code before a repair). A damaged
+    /// newest copy refuses instead of falling back to an older version (hard rule 5).</summary>
     public async Task<JsonObject> RollbackAsync(string packageName, CancellationToken cancellationToken = default)
     {
         RequirePackage(packageName);
@@ -458,9 +473,18 @@ public sealed class DomainRepair
             if (_keptVersions.TryGetValue(packageName, out var known) && known == version) return null;
             var jar = await _host.ReadJarAsync(packageName, cancellationToken).ConfigureAwait(false);
             var sha = DomainMigration.Sha(jar);
+            // The jar of the last repair is not "last working" code before a repair: keeping it would make Revert reinstall
+            // the repaired jar instead of the pre-repair one (hard rule 5). Only the user's verdict confirms a repair.
+            if (LastReport(packageName) is { } last && SourceResponseContract.Text(last["state"]) == "repaired"
+                && string.Equals(SourceResponseContract.Text(last["installed_sha256"]), sha, StringComparison.OrdinalIgnoreCase))
+            {
+                _keptVersions[packageName] = version;
+                return null;
+            }
             var directory = LastWorkingDirectory(packageName);
             JsonObject? record = null;
-            if (File.Exists(Path.Combine(directory, sha + ".jar")))
+            // A kept copy is reused only when its bytes still match (a damaged copy is written again through Keep).
+            if (ReadBounded(Path.Combine(directory, sha + ".jar"), SuwayomiClient.MaximumExtensionJar) is { } existing && DomainMigration.Sha(existing) == sha)
                 record = Records(directory).Where(item => item.Sha == sha).Select(item => item.Record).FirstOrDefault();
             var kept = record is null;
             record ??= Keep(packageName, jar, extension, "passed-health-check");
@@ -521,7 +545,9 @@ public sealed class DomainRepair
         var directory = LastWorkingDirectory(packageName);
         var sha = DomainMigration.Sha(jar);
         var jarPath = Path.Combine(directory, sha + ".jar");
-        if (!File.Exists(jarPath)) ConfigFiles.WriteAtomic(jarPath, jar);
+        // An existing copy is trusted only when its bytes still match its name (a damaged copy is written again).
+        if (!File.Exists(jarPath) || ReadBounded(jarPath, SuwayomiClient.MaximumExtensionJar) is not { } existing || DomainMigration.Sha(existing) != sha)
+            ConfigFiles.WriteAtomic(jarPath, jar);
         var record = new JsonObject
         {
             ["package"] = packageName, ["sha256"] = sha, ["bytes"] = jar.Length, ["version_name"] = SourceResponseContract.Text(extension["versionName"]),
@@ -546,13 +572,17 @@ public sealed class DomainRepair
         }
     }
 
+    /// <summary>The newest kept jar; throws when that copy is damaged (its bytes do not match its digest) rather than
+    /// silently answering an older version.</summary>
     private (string Sha, JsonObject Record, byte[] Jar)? LatestKept(string packageName)
     {
         var directory = LastWorkingDirectory(packageName);
         foreach (var (sha, _, record) in Records(directory).OrderByDescending(item => item.KeptAt))
         {
             var jar = ReadBounded(Path.Combine(directory, sha + ".jar"), SuwayomiClient.MaximumExtensionJar);
-            if (jar is null || DomainMigration.Sha(jar) != sha) continue;
+            if (jar is null || DomainMigration.Sha(jar) != sha)
+                throw new DomainRepairException(409, "kept_damaged", "The newest kept working jar of " + packageName + " (" + sha[..12] + ") is missing or damaged; nothing was installed. "
+                    + "Install a working version by hand, or let a health check keep the current one again.");
             return (sha, record, jar);
         }
         return null;

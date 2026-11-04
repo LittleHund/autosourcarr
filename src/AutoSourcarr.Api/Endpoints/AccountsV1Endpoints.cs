@@ -136,9 +136,13 @@ internal static class AccountsV1Endpoints
             {
                 context.Response.Headers.CacheControl = "no-store";
                 if (services.Access is not { } access) return Unavailable();
+                // Rule 11: the automatic admin token is a secret; only the owner sees it (an admin or script key that copied
+                // it would keep admin rights after the owner removed their account or key). Others see that it is set.
+                var owner = AccessControlMiddleware.CallerOf(context).Role == Role.Owner;
                 return Results.Json(new JsonObject
                 {
-                    ["admin_token"] = access.Accounts.AutomaticAdminToken,
+                    ["admin_token"] = owner ? access.Accounts.AutomaticAdminToken : null,
+                    ["admin_token_set"] = access.Accounts.AutomaticAdminToken.Length > 0,
                     ["configured_admin_token"] = services.Settings().AdminToken.Trim().Length > 0,
                     ["reader_token_configured"] = services.Settings().AutosourcarrReaderApiToken.Trim().Length > 0,
                     ["keys"] = new JsonArray(access.Accounts.Keys().Select(KeyJson).ToArray())
