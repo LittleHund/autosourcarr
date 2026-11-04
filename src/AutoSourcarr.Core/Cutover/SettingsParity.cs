@@ -164,7 +164,7 @@ public static partial class SettingsParity
 }
 
 /// <summary>A file of the 0.4.x folders and whether the migrated folders still have it (names only, never content).</summary>
-public sealed record FileParityItem(string Path, string Status)
+public sealed record FileParityItem(string Path, string Status, bool Missing = false)
 {
     public JsonObject ToJson() => new() { ["path"] = Path, ["status"] = Status };
 }
@@ -234,7 +234,7 @@ public static partial class FileParity
                 if (!after.TryGetValue(relative, out var now))
                 {
                     result.Missing.Add(new(name, "missing after the migration"));
-                    if (keyFile) result.Keys.Add(new(name, "MISSING"));
+                    if (keyFile) result.Keys.Add(new(name, "MISSING", Missing: true));
                     else if (AllowedReason(name) is { } why) result.Allowed.Add(new(name, "missing: " + why));
                     else result.Lost.Add(new(name, "MISSING after the migration"));
                     continue;

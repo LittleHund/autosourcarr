@@ -79,6 +79,10 @@ internal sealed partial class ApplicationRuntime
                 var ran = node is JsonObject done && !(done["skipped"] is JsonValue value && value.TryGetValue<bool>(out var wasSkipped) && wasSkipped);
                 if (ran && node?.ToJsonString().Contains("unavailable", StringComparison.Ordinal) == true)
                     problems.Add(name + " ran, but a sub-step is unavailable in this build and its one-time marker is now stored (see the step result)");
+                // Counted failures are failures (a real start fails the job on them too, ApplicationRuntime.Startup).
+                foreach (var counter in new[] { "failed", "remaining" })
+                    if (node is JsonObject counted && counted[counter] is JsonValue number && number.TryGetValue<long>(out var count) && count > 0)
+                        problems.Add(name + ": " + count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + counter + " (see the step result)");
             }
             catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException)
             {
@@ -94,9 +98,16 @@ internal sealed partial class ApplicationRuntime
             // Not run offline on purpose: an automatic merge is a change the 0.4.x data never had. The first real start runs
             // the sweep as every 0.4.5 start did; it is listed under "not covered".
             result["startup_dedup"] = Settings.BackgroundDedupOnStartup ? "not run offline (runs at the first real start)" : "off (BACKGROUND_DEDUP_ON_STARTUP=false)";
+            // Interrupted chapter merges/splits still pending after the recovery: the migration did not finish them.
+            var pending = work.Structure.PendingEntryOriginCount();
+            if (pending > 0) problems.Add(pending.ToString(System.Globalization.CultureInfo.InvariantCulture) + " interrupted chapter merges/splits are still pending after the recovery");
         }, cancellationToken).ConfigureAwait(false);
         // Needs the main Suwayomi: skipped here by design, stores no version, so the first real start runs it.
-        result["subbed_orphan_aliases"] = await work.Library.RepairOrphanAliasesUpgradeAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+        try { result["subbed_orphan_aliases"] = await work.Library.RepairOrphanAliasesUpgradeAsync(cancellationToken: cancellationToken).ConfigureAwait(false); }
+        catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException)
+        {
+            problems.Add("subbed_orphan_aliases failed (" + failure.GetType().Name + "): " + Privacy.Text(failure.Message));
+        }
         return result;
     }
 }

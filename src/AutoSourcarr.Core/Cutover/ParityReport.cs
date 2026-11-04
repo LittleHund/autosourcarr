@@ -17,54 +17,60 @@ public sealed class ParityReport
     public required string ToVersion { get; init; }
     public string FromVersion { get; init; } = "0.4.x";
     public required string CreatedAt { get; init; }
-    public required List<ParityKindResult> Decisions { get; init; }
-    public required List<(string File, string Table, long Original, long Migrated)> Counts { get; init; }
-    public required List<long> UnresolvedEntries { get; init; }
+    // Every collection is copied on init, so the verdict cannot change after the report is built. The inputs that feed
+    // the verdict are required: a caller that forgets one does not compile, instead of getting a laxer verdict.
+    public required IReadOnlyList<ParityKindResult> Decisions { get; init => field = [.. value]; }
+    public required IReadOnlyList<(string File, string Table, long Original, long Migrated)> Counts { get; init => field = [.. value]; }
+    public required IReadOnlyList<long> UnresolvedEntries { get; init => field = [.. value]; }
     public required int OriginalEntries { get; init; }
-    public required List<SettingParityItem> Settings { get; init; }
-    public required List<UpdateNoticeLine> Notices { get; init; }
+    public required IReadOnlyList<SettingParityItem> Settings { get; init => field = [.. value]; }
+    public required IReadOnlyList<UpdateNoticeLine> Notices { get; init => field = [.. value]; }
     public required FileParityResult Files { get; init; }
     public required MergeRecheckResult Merges { get; init; }
-    public JsonObject Run { get; init; } = [];
-    public List<string> Warnings { get; init; } = [];
+    public JsonObject Run { get; init => field = (JsonObject)value.DeepClone(); } = [];
+    public IReadOnlyList<string> Warnings { get; init => field = [.. value]; } = [];
     /// <summary>Why the migration itself did not complete (safe mode, a failed update, a failed required step). Any → MIGRATION FAILED.</summary>
-    public List<string> MigrationProblems { get; init; } = [];
+    public required IReadOnlyList<string> MigrationProblems { get; init => field = [.. value]; }
     /// <summary>0.4.x tables the migrated files no longer have (none is retired on purpose).</summary>
-    public List<string> DroppedTables { get; init; } = [];
-    public List<TableCoverageItem> Coverage { get; init; } = [];
+    public required IReadOnlyList<string> DroppedTables { get; init => field = [.. value]; }
+    public IReadOnlyList<TableCoverageItem> Coverage { get; init => field = [.. value]; } = [];
     /// <summary>First-start work that needs the network and therefore is not covered by this verdict.</summary>
-    public List<string> NotCovered { get; init; } = [];
+    public IReadOnlyList<string> NotCovered { get; init => field = [.. value]; } = [];
     /// <summary>Entries the migration merged into another; those that touch a decision or fail the recheck fail the verdict.</summary>
-    public List<NewMerge> NewMerges { get; init; } = [];
+    public required IReadOnlyList<NewMerge> NewMerges { get; init => field = [.. value]; }
     /// <summary>0.4.x entries that had active source records and have none after the migration.</summary>
-    public List<long> EmptiedEntries { get; init; } = [];
+    public required IReadOnlyList<long> EmptiedEntries { get; init => field = [.. value]; }
 
     public int LostSubscriptions => Decisions.Where(result => result.Kind.Group == ParityGroup.Subscription).Sum(result => result.Lost);
     public int LostDecisions => Decisions.Where(result => result.Kind.Group != ParityGroup.Subscription).Sum(result => result.Lost);
     public int LostSettings => Settings.Count(item => item.Lost);
-    public int MissingKeyFiles => Files.Keys.Count(item => item.Status.StartsWith("MISSING", StringComparison.Ordinal));
+    public int MissingKeyFiles => Files.Keys.Count(item => item.Missing);
     public bool MigrationCompleted => MigrationProblems.Count == 0;
-    public bool Ok => MigrationCompleted && LostSubscriptions == 0 && LostDecisions == 0 && LostSettings == 0 && UnresolvedEntries.Count == 0
-        && DroppedTables.Count == 0 && MissingKeyFiles == 0 && Files.Lost.Count == 0 && EmptiedEntries.Count == 0 && !NewMerges.Any(merge => merge.Fails);
 
-    public string Verdict
-    {
-        get
-        {
-            if (!MigrationCompleted) return "MIGRATION FAILED: " + string.Join("; ", MigrationProblems) + " — do not deploy this output";
-            if (Ok) return "PARITY OK: 0 lost manual decisions, 0 lost subscriptions";
-            var reasons = Decisions.Where(result => result.Lost > 0).Select(result => result.Kind.Name + ": " + result.Lost.ToString(CultureInfo.InvariantCulture))
-                .Concat(Settings.Where(item => item.Lost).Select(item => "setting " + item.Key))
-                .Concat(UnresolvedEntries.Count > 0 ? [UnresolvedEntries.Count.ToString(CultureInfo.InvariantCulture) + " entries gone"] : [])
-                .Concat(DroppedTables.Select(table => "table " + table + " dropped"))
-                .Concat(Files.Keys.Where(item => item.Status.StartsWith("MISSING", StringComparison.Ordinal)).Select(item => "key file " + item.Path + " missing"))
-                .Concat(Files.Lost.Select(item => "file " + item.Path + ": " + item.Status))
-                .Concat(EmptiedEntries.Count > 0 ? [EmptiedEntries.Count.ToString(CultureInfo.InvariantCulture) + " entries lost all their source records"] : [])
-                .Concat(NewMerges.Where(merge => merge.Fails).Select(merge => string.Create(CultureInfo.InvariantCulture, $"entry {merge.Entry} merged into {merge.Into} by 0.5.0 ({merge.Why})")));
-            return string.Create(CultureInfo.InvariantCulture, $"PARITY FAILED: {LostDecisions} lost manual decisions, {LostSubscriptions} lost subscriptions, {LostSettings} lost settings")
-                + " (" + string.Join("; ", reasons) + ") — do not deploy this output";
-        }
-    }
+    /// <summary>
+    /// Every loss that fails the verdict, one line each. This is the single list both <see cref="Ok"/> and <see cref="Verdict"/>
+    /// read, so a new loss category added here reaches both. Automatic merges that already existed in 0.4.x and fail the
+    /// recheck (<see cref="MergeRecheckResult.Failing"/>) are information only: the migration did not make them.
+    /// </summary>
+    public IReadOnlyList<string> LossReasons => field ??=
+    [
+        .. Decisions.Where(result => result.Lost > 0).Select(result => result.Kind.Name + ": " + result.Lost.ToString(CultureInfo.InvariantCulture)),
+        .. Settings.Where(item => item.Lost).Select(item => "setting " + item.Key),
+        .. UnresolvedEntries.Count > 0 ? new[] { UnresolvedEntries.Count.ToString(CultureInfo.InvariantCulture) + " entries gone" } : Array.Empty<string>(),
+        .. DroppedTables.Select(table => "table " + table + " dropped"),
+        .. Files.Keys.Where(item => item.Missing).Select(item => "key file " + item.Path + " missing"),
+        .. Files.Lost.Select(item => "file " + item.Path + ": " + item.Status),
+        .. EmptiedEntries.Count > 0 ? new[] { EmptiedEntries.Count.ToString(CultureInfo.InvariantCulture) + " entries lost all their source records" } : Array.Empty<string>(),
+        .. NewMerges.Where(merge => merge.Fails).Select(merge => string.Create(CultureInfo.InvariantCulture, $"entry {merge.Entry} merged into {merge.Into} by 0.5.0 ({merge.Why})")),
+    ];
+
+    public bool Ok => MigrationCompleted && LossReasons.Count == 0;
+
+    public string Verdict => field ??= !MigrationCompleted
+        ? "MIGRATION FAILED: " + string.Join("; ", MigrationProblems) + " — do not deploy this output"
+        : Ok ? "PARITY OK: 0 lost manual decisions, 0 lost subscriptions"
+        : string.Create(CultureInfo.InvariantCulture, $"PARITY FAILED: {LostDecisions} lost manual decisions, {LostSubscriptions} lost subscriptions, {LostSettings} lost settings")
+            + " (" + string.Join("; ", LossReasons) + ") — do not deploy this output";
 
     public JsonObject ToJson() => new()
     {
