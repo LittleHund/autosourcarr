@@ -291,6 +291,10 @@ done
 bash -n scripts/check-v1-matching-paths.sh
 # Phase 8: the static UI calls the matching routes under /api/v1 only (fails listing any /api/admin MatchingEndpoints call).
 bash scripts/check-v1-matching-paths.sh
+# Phase 14: the cutover wrappers pass the tool's exit code through and say DO NOT DEPLOY on every failure (stub dotnet).
+bash -n scripts/migrate-from-0.4.sh
+bash -n scripts/test-migrate-wrappers.sh
+bash scripts/test-migrate-wrappers.sh
 
 step 7 'Extension compatibility + JAR/APK packaging guards + validators'
 grep -q 'src:all:autosourcarr:assembleRelease' extension/build-in-container.sh

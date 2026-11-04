@@ -36,6 +36,17 @@ access_control:
 Never bypass `/api/v1/`, `/api/admin/`, `/`, `/api/reader/` as a whole or the whole
 hostname. The reader API accepts only GET and HEAD and answers 401 without a valid key.
 
+## Sign-in settings in AutoSourcarr 0.5.0
+
+To keep Authelia as the only sign-in, set both in AutoSourcarr (Settings, `config.json` or the Compose
+`environment:`):
+
+- `AUTH_METHOD=external`: AutoSourcarr takes the signed-in user from Authelia's `Remote-User` header.
+  Without it, 0.5.0 uses its own forms sign-in (an owner account is created at the first visit).
+- `AUTH_TRUSTED_PROXIES`: the address or Docker network of the proxy that adds those headers (for example
+  `172.18.0.0/16`). Identity headers from any other address are ignored, and loopback is never trusted. With
+  an empty list, external sign-in refuses every request and says so on the login page.
+
 ## Checking it
 
 ```sh

@@ -18,6 +18,10 @@ dll="$repo/src/AutoSourcarr.Api/bin/Release/net10.0/AutoSourcarr.Api.dll"
 source=$1
 destination=$2
 extra=("${@:3}")
+# --service only makes sense with --compose (the tool refuses it too; say so before building).
+if [[ " ${extra[*]-} " == *" --service "* && " ${extra[*]-} " != *" --compose "* ]]; then echo "--service needs --compose <file>." >&2; exit 2; fi
+# AUTOSOURCARR_DOTNET lets the wrapper test replace dotnet with a stub; normally it is the dotnet on PATH.
+dotnet=${AUTOSOURCARR_DOTNET:-dotnet}
 
 if [[ ! -e "$source" ]]; then echo "The source does not exist: $source" >&2; exit 2; fi
 source=$(cd "$(dirname "$source")" && pwd)/$(basename "$source")
@@ -43,15 +47,20 @@ if [[ -d "$source" ]]; then
   fi
 fi
 
-if ! command -v dotnet >/dev/null 2>&1; then echo "The .NET 10 SDK (dotnet) is needed: https://dotnet.microsoft.com/download" >&2; exit 2; fi
-if [[ ! -f "$dll" ]] || [[ -n "$(find "$repo/src" \( -name bin -o -name obj \) -prune -o -type f \( -name '*.cs' -o -name '*.csproj' -o -name '*.json' -o -name '*.sql' \) -newer "$dll" -print -quit)" ]]; then
+if ! command -v "$dotnet" >/dev/null 2>&1; then echo "The .NET 10 SDK (dotnet) is needed: https://dotnet.microsoft.com/download" >&2; exit 2; fi
+# AUTOSOURCARR_FORCE_BUILD=1 (the wrapper test) always builds.
+if [[ -n "${AUTOSOURCARR_FORCE_BUILD:-}" || ! -f "$dll" ]] || [[ -n "$(find "$repo/src" \( -name bin -o -name obj \) -prune -o -type f \( -name '*.cs' -o -name '*.csproj' -o -name '*.json' -o -name '*.sql' \) -newer "$dll" -print -quit)" ]]; then
   echo "Building AutoSourcarr (Release)..."
-  dotnet restore --locked-mode "$project"
-  dotnet build -c Release --no-restore "$project"
+  # A failed build is exit 3 (not 1, which means PARITY FAILED) and never looks like a migration result.
+  if ! "$dotnet" restore --locked-mode "$project" || ! "$dotnet" build -c Release --no-restore "$project"; then
+    echo "The build failed. DO NOT DEPLOY anything; nothing was migrated and your 0.4.x data is unchanged." >&2
+    exit 3
+  fi
 fi
 
 set +e
-dotnet "$dll" --migrate-0.4 "$source" "$destination" "${extra[@]}"
+# ${extra[@]+...} keeps bash 3.2 (macOS) from treating an empty array as unbound under set -u.
+"$dotnet" "$dll" --migrate-0.4 "$source" "$destination" ${extra[@]+"${extra[@]}"}
 code=$?
 set -e
 report="$destination/parity-report.md"
