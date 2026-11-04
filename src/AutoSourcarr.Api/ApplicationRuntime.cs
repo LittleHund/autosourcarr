@@ -496,11 +496,16 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                         }
                         catch (Exception error) when (error is ArgumentException or ConfigurationException or IOException)
                         {
-                            // A damaged connection only skips the optional hash check; the upload preview goes on.
+                            // A damaged connection only skips the optional hash check; the upload preview goes on and says so.
                             owner.Logs.Record("Connections", "The MalwareBazaar hash check is skipped: " + error.Message);
                             return null;
                         }
-                    }
+                    },
+                    HashLookupProblem = () =>
+                    {
+                        try { return owner._connections?.Unusable("malwarebazaar") is { Count: > 0 } problems ? "the MalwareBazaar connection cannot be used (" + problems[0] + ")" : null; }
+                        catch (Exception error) when (error is ConfigurationException or IOException or UnauthorizedAccessException) { return "the MalwareBazaar connection cannot be read (" + error.Message + ")"; }
+                    },
                 },
                 SourceRuntime = new SourceRuntimeServices
                 {
@@ -740,13 +745,21 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         AutoSourcarr.Core.Connections.ConnectionConfig? main = null;
         try { main = _connections?.MainSuwayomi(); }
         catch (Exception error) when (error is ConfigurationException or IOException or UnauthorizedAccessException) { _ = error; }
-        var feed = _suwayomiFeed?.Mode.ToString().ToLowerInvariant() ?? "off";
+        var feed = _suwayomiFeed is { Failing: true } ? "failing" : _suwayomiFeed?.Mode.ToString().ToLowerInvariant() ?? "off";
+        var feedError = _suwayomiFeed is { Failing: true } current ? current.PollError : null;
         if (main is null || _connections is not { } store)
+        {
+            // A Suwayomi connection that is set but cannot be read is not "no main Suwayomi".
+            IReadOnlyList<string> unusable;
+            try { unusable = _connections?.Unusable("suwayomi") ?? []; }
+            catch (Exception error) when (error is ConfigurationException or IOException or UnauthorizedAccessException) { unusable = [error.Message]; }
             return new JsonObject
             {
-                ["ok"] = null, ["checked"] = false, ["configured"] = !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl), ["url"] = settings.MainSuwayomiUrl,
-                ["feed"] = feed, ["warning"] = "No main Suwayomi is set (Settings: MAIN_SUWAYOMI_URL, or a Suwayomi connection).",
+                ["ok"] = unusable.Count == 0 ? null : false, ["checked"] = false, ["configured"] = !string.IsNullOrWhiteSpace(settings.MainSuwayomiUrl) || unusable.Count != 0, ["url"] = settings.MainSuwayomiUrl,
+                ["feed"] = feed, ["feed_error"] = feedError, ["warning"] = unusable.Count == 0 ? "No main Suwayomi is set (Settings: MAIN_SUWAYOMI_URL, or a Suwayomi connection)."
+                    : "The main Suwayomi connection cannot be used: " + unusable[0] + ". Enter its secrets again in Connections.",
             };
+        }
         var last = store.LastTest(main.Id);
         if ((last is null || DateTimeOffset.UtcNow - last.At > TimeSpan.FromMinutes(5)) && Interlocked.CompareExchange(ref _suwayomiTesting, 1, 0) == 0)
         {
@@ -761,7 +774,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         return new JsonObject
         {
             ["ok"] = last?.Ok, ["checked"] = last is not null, ["configured"] = true, ["url"] = main.Value("url"),
-            ["connection_id"] = main.Id, ["feed"] = feed,
+            ["connection_id"] = main.Id, ["feed"] = feed, ["feed_error"] = feedError,
             ["tested_at"] = last?.At.UtcDateTime.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
             ["message"] = last is null ? null : Privacy.Text(last.Message),
             ["warning"] = last is null ? "Not tested yet; a background test has started." : last.Ok ? null : Privacy.Text(last.Message),

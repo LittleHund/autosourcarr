@@ -30,6 +30,59 @@ public static class AccessControlTests
         suite.Add("access: every route of the app refuses anonymous, guest, reader and script-guest callers where the policy says so; admins reach every admin route", () => RouteMatrix().GetAwaiter().GetResult());
         suite.Add("access: forms sign-in, first-boot owner, owner-only routes, external groups and basic sign-in", () => SignIn().GetAwaiter().GetResult());
         suite.Add("access: the reset routes refuse cross-site posts even with the admin token", () => CrossSiteResets().GetAwaiter().GetResult());
+        suite.Add("access: only the owner changes the sign-in settings or sees the automatic admin token (re-audit C1, C3)", () => OwnerSettings().GetAwaiter().GetResult());
+        suite.Add("accounts: a damaged accounts.json never reopens owner setup; a missing config.key is not recreated over saved secrets", Damage);
+    }
+
+    private static async Task OwnerSettings()
+    {
+        using var temp = new Sandbox();
+        await using var app = await Start(temp.Path, Settings(temp.Path));
+        app.Runtime.Access!.Accounts.CreateOwner("owner", "owner-password");
+        using var anonymous = app.Client(("Sec-Fetch-Site", "same-origin"));
+        var login = await anonymous.PostAsync("/api/v1/auth/login", Json(new() { ["username"] = "owner", ["password"] = "owner-password" }));
+        Check.Equal(HttpStatusCode.OK, login.StatusCode);
+        using var owner = app.Client(("Cookie", login.Headers.GetValues("Set-Cookie").First().Split(';')[0]), ("Sec-Fetch-Site", "same-origin"));
+        using var admin = app.Client(("X-Admin-Token", "configured-admin-token"), ("Sec-Fetch-Site", "same-origin"));
+        var revision = (await admin.GetFromJsonAsync<JsonObject>("/api/v1/settings"))!["revision"]!.GetValue<string>();
+        var config = Path.Combine(temp.Path, "config", "config.json");
+        var before = File.Exists(config) ? File.ReadAllText(config) : null;
+        foreach (var (key, value) in new (string, string)[] { ("AUTH_METHOD", "external"), ("AUTH_TRUSTED_PROXIES", "10.0.0.5"), ("AUTHELIA_USER_HEADER", "X-Evil"), ("AUTH_OWNER_EXTERNAL_USER", "mallory"), ("ADMIN_TOKEN", "my-own-token") })
+        {
+            var answer = await admin.PutAsync("/api/v1/settings", Json(new() { ["revision"] = revision, ["values"] = new JsonObject { [key] = value } }));
+            Check.True(answer.StatusCode == HttpStatusCode.Forbidden, key + ": " + answer.StatusCode);
+        }
+        Check.Equal(before, File.Exists(config) ? File.ReadAllText(config) : null);
+        // A non-security setting stays an admin's to change.
+        Check.Equal(HttpStatusCode.OK, (await admin.PutAsync("/api/v1/settings", Json(new() { ["revision"] = revision, ["values"] = new JsonObject { ["TZ"] = "Europe/Amsterdam" } }))).StatusCode);
+        // A custom user header needs its groups header (another proxy may pass Remote-Groups through).
+        revision = (await owner.GetFromJsonAsync<JsonObject>("/api/v1/settings"))!["revision"]!.GetValue<string>();
+        Check.Equal(HttpStatusCode.BadRequest, (await owner.PutAsync("/api/v1/settings", Json(new() { ["revision"] = revision, ["values"] = new JsonObject { ["AUTHELIA_USER_HEADER"] = "X-Forwarded-User" } }))).StatusCode);
+        Check.Equal(HttpStatusCode.OK, (await owner.PutAsync("/api/v1/settings", Json(new() { ["revision"] = revision, ["values"] = new JsonObject { ["AUTHELIA_USER_HEADER"] = "X-Forwarded-User", ["AUTH_GROUPS_HEADER"] = "X-Forwarded-Groups" } }))).StatusCode);
+        // The automatic admin token: shown to the owner, only "set" to admins.
+        var adminKeys = await admin.GetFromJsonAsync<JsonObject>("/api/v1/keys");
+        Check.True(adminKeys!["admin_token"] is null && adminKeys["admin_token_set"]!.GetValue<bool>(), adminKeys.ToJsonString());
+        var ownerKeys = await owner.GetFromJsonAsync<JsonObject>("/api/v1/keys");
+        Check.True(ownerKeys!["admin_token"]!.GetValue<string>().StartsWith("asa_", StringComparison.Ordinal), "the owner sees the token");
+    }
+
+    private static void Damage()
+    {
+        using var temp = new Sandbox();
+        var store = new AccountStore(temp.Path);
+        store.CreateOwner("owner", "owner-password");
+        var path = Directory.EnumerateFiles(temp.Path, "accounts.json", SearchOption.AllDirectories).Single();
+        foreach (var damaged in new[] { "", "{\"version\":1,\"users\":{},\"keys\":[]}", "{\"version\":1,\"users\":[],\"keys\":\"x\"}" })
+        {
+            File.WriteAllText(path, damaged);
+            Check.Throws<InvalidDataException>(() => new AccountStore(temp.Path));
+            Check.Equal(damaged, File.ReadAllText(path));
+        }
+        // config.key missing while config.json holds encrypted values: no new key is written over them.
+        var config = Path.Combine(temp.Path, "config-root"); Directory.CreateDirectory(config);
+        File.WriteAllText(Path.Combine(config, "config.json"), "{\"format\":1,\"connections\":[{\"id\":\"c1\",\"secrets\":{\"password\":\"enc:v1:AAAA\"}}]}");
+        Check.Throws<ConfigurationException>(() => AutoSourcarr.Core.Settings.SettingsSecrets.Open(config, create: true));
+        Check.True(!File.Exists(Path.Combine(config, "config.key")), "no new config.key");
     }
 
     private static void Accounts()

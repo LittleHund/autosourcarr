@@ -152,8 +152,9 @@ public sealed class MetadataIdentityResolver : IDuplicateHydration, IImportIdent
             var answers = await Task.WhenAll(batch.Select(client => SearchAsync(client, query, force, cancellationToken))).ConfigureAwait(false);
             foreach (var (provider, rows, error) in answers)
             {
+                // A timeout or 429 on a better query stays reported (hard rule 3): a later, weaker query that finds nothing
+                // does not make the provider "answered, no match". Only an accepted match clears it.
                 if (error is not null) { errors[provider] = error; continue; }
-                errors.Remove(provider);
                 var scored = rows.Select(row => (Candidate: row, Result: CandidateScore(native, row, bootstrap, settings.MetadataIdentityMinScore, settings.MetadataIdentityDescriptionThreshold)))
                     .Where(item => item.Result.Score > 0).ToArray();
                 if (scored.Length == 0) continue;
@@ -168,7 +169,7 @@ public sealed class MetadataIdentityResolver : IDuplicateHydration, IImportIdent
                 }
                 else best = scored.MaxBy(item => item.Result.Score);
                 accepted[provider] = (best.Candidate, best.Result.Score, best.Result.Reason);
-                unresolved.Remove(provider);
+                unresolved.Remove(provider); errors.Remove(provider);
             }
         }
         if (accepted.Count != 0)

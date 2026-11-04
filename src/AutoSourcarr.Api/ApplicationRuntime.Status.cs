@@ -127,6 +127,13 @@ internal sealed partial class ApplicationRuntime
         try { current = providers.Current(); }
         catch (Exception error) when (error is Core.Settings.ConfigurationException or IOException or UnauthorizedAccessException or ArgumentException)
         { return Service("Metadata providers", "degraded", "The metadata provider connections could not be read."); }
+        // An enabled connection whose secrets cannot be read is "degraded", not "off" or "ready" (the matcher runs without it).
+        var unusable = new[] { "anilist", "mangaupdates", "mangadex" }.SelectMany(type =>
+        {
+            try { return _connections?.Unusable(type) ?? []; }
+            catch (Exception error) when (error is Core.Settings.ConfigurationException or IOException or UnauthorizedAccessException) { return (IReadOnlyList<string>)[error.Message]; }
+        }).ToArray();
+        if (unusable.Length != 0) return Service("Metadata providers", "degraded", "A metadata provider connection cannot be used: " + unusable[0] + ". Enter its secrets again in Connections.");
         if (current.Count == 0) return Service("Metadata providers", "off", "No metadata provider is enabled (Settings: METADATA_IDENTITY_PROVIDERS, or Connections).");
         return Service("Metadata providers", "ready", string.Join(", ", current.Select(client => client.Provider).Distinct(StringComparer.Ordinal)) + ".");
     }

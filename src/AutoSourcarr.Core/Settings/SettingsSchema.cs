@@ -42,6 +42,14 @@ public static class SettingsSchema
     public static IReadOnlyDictionary<string, SettingSchemaEntry> ByKey { get; } =
         Entries.ToDictionary(entry => entry.Key, StringComparer.Ordinal);
 
+    /// <summary>The settings that decide who signs in and who is the owner: only the owner may change them through the
+    /// API (an admin could otherwise make itself the owner or lock the owner out).</summary>
+    public static IReadOnlySet<string> OwnerOnly { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "ADMIN_TOKEN", "AUTH_METHOD", "AUTH_TRUSTED_PROXIES", "AUTH_ADMIN_GROUPS", "AUTH_GUEST_GROUPS", "AUTH_OWNER_EXTERNAL_USER",
+        "AUTHELIA_USER_HEADER", "AUTH_GROUPS_HEADER",
+    };
+
     /// <summary>Wizard-only fields that are not AutoSourcarr settings (EXTENSION_STORES lives in the source_host section).</summary>
     public static IReadOnlyList<string> WizardOnlyKeys { get; } =
         SetupFields.ByKey.Keys.Where(key => !Entries.Any(entry => entry.Key == key)).Order(StringComparer.Ordinal).ToArray();

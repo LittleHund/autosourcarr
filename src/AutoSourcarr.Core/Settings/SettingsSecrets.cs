@@ -34,6 +34,10 @@ public sealed partial class SettingsSecrets
         }
         if (!create)
             throw new ConfigurationException("config.key is missing; secrets in config.json cannot be read. Restore config.key from the same backup as config.json, or enter the secrets again.");
+        // A new key while config.json still holds values encrypted with the old one (in any section, connections too) would
+        // split the secrets between two keys for good: refuse until config.key is restored or those values are removed.
+        if (ConfigFiles.ReadBounded(Path.Combine(root, ConfigStore.FileName)) is { } config && Encoding.UTF8.GetString(config).Contains(Prefix, StringComparison.Ordinal))
+            throw new ConfigurationException("config.key is missing, but config.json holds encrypted secrets. Restore config.key from the same backup as config.json (or remove the enc:v1: values from config.json by hand to enter them again); a new key is not created, because the saved secrets would then be lost for good.");
         var fresh = RandomNumberGenerator.GetBytes(32);
         ConfigFiles.WriteAtomic(path, Encoding.ASCII.GetBytes(Convert.ToBase64String(fresh) + "\n"));
         return new(fresh);

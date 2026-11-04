@@ -360,6 +360,8 @@ public static class ApiV1Endpoints
             {
                 var body = await Read(context, json.SettingsSaveRequest).ConfigureAwait(false);
                 if (body?.Values is null || body.Revision is null) return Problem(400, "Send the revision and the changed values.");
+                if (OwnerSettingChanged(context, services.Editor, body.Values) is { } ownerKey)
+                    return Problem(403, ownerKey + " decides who signs in and who is the owner: only the owner can change it. Nothing was saved.");
                 return Guarded(() =>
                 {
                     var result = services.Editor.Save(body.Values, body.Revision);
@@ -453,6 +455,8 @@ public static class ApiV1Endpoints
                     var changes = body.Changes ?? new Dictionary<string, JsonElement>();
                     if (changes.Keys.Any(key => !SetupFields.ByKey.ContainsKey(key)))
                         throw new SettingsValidationException("Setup contains an unsupported setting.");
+                    if (OwnerSettingChanged(context, services.Editor, changes) is { } ownerKey)
+                        return Problem(403, ownerKey + " decides who signs in and who is the owner: only the owner can change it. Nothing was saved.");
                     var result = services.Editor.Save(changes, body.Revision, body.Transaction);
                     // SET-3: the 0.4.x cleanup_after_setup; the app's own old files move to the trash (never blocks setup).
                     if (services.Backups?.Cleanup is { } cleanup)
@@ -800,5 +804,28 @@ public static class ApiV1Endpoints
             return null;
         try { return await JsonSerializer.DeserializeAsync(context.Request.Body, type, context.RequestAborted).ConfigureAwait(false); }
         catch (JsonException) { return null; }
+    }
+
+    /// <summary>
+    /// The sign-in settings decide who is trusted and who becomes the owner (AUTH_*, AUTHELIA_USER_HEADER, AUTH_GROUPS_HEADER,
+    /// ADMIN_TOKEN): an admin, a script key or an admin through external groups changing them could make itself the owner
+    /// or lock the owner out. Answers the first such key a non-owner changes (a value equal to the current one is no
+    /// change), else null.
+    /// </summary>
+    private static string? OwnerSettingChanged(HttpContext context, SettingsEditor editor, IReadOnlyDictionary<string, JsonElement> changes)
+    {
+        if (AccessControlMiddleware.CallerOf(context).Role == AutoSourcarr.Core.Accounts.Role.Owner) return null;
+        var effective = editor.Effective();
+        foreach (var (key, value) in changes)
+        {
+            if (!SettingsSchema.OwnerOnly.Contains(key)) continue;
+            if (key == "ADMIN_TOKEN" || !SettingsSchema.ByKey.TryGetValue(key, out var field)) return key;
+            string? normalized;
+            try { normalized = SettingsEditor.Normalize(field, value); }
+            catch (Exception error) when (error is SettingsValidationException or FormatException or InvalidOperationException) { return key; }
+            var current = effective.TryGetValue(key, out var now) ? now : null;
+            if (!string.Equals(normalized ?? "", current ?? "", StringComparison.Ordinal)) return key;
+        }
+        return null;
     }
 }

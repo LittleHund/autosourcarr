@@ -122,12 +122,47 @@ public sealed class ConnectionStore
                 var document = _config.ReadDocument();
                 if (document?.Connections is { Count: > 0 } saved)
                 {
-                    var secrets = OpenSecrets(document!, create: false);
-                    Register(saved.Select(connection => Decrypt(connection, secrets)).ToArray());
+                    // One damaged connection must not stop the others' redaction (rule 11): each is decrypted on its own.
+                    SettingsSecrets? secrets = null;
+                    try { secrets = OpenSecrets(document!, create: false); }
+                    catch (ConfigurationException error) { Warn("config", "Saved connection secrets cannot be read: " + error.Message); }
+                    var readable = new List<ConnectionConfig>();
+                    foreach (var connection in saved)
+                    {
+                        if (secrets is null && connection.Secrets.Count > 0) continue;
+                        try { readable.Add(Decrypt(connection, secrets)); }
+                        catch (ConfigurationException error) { Warn(connection.Id, "The connection \"" + connection.Label + "\" (" + connection.Id + ") has secrets that cannot be read: " + error.Message); }
+                    }
+                    Register(readable.ToArray());
                 }
             }
         }
-        catch (ConfigurationException) { /* List and Test report the damage; startup does not fail on it */ }
+        catch (ConfigurationException error) { Warn("config", "config.json could not be read for the saved connections: " + error.Message); /* List and Test report the damage; startup does not fail on it */ }
+    }
+
+    /// <summary>Saved connections of a type that are enabled but skipped because their secrets cannot be read (damaged
+    /// ciphertext, another config.key) or config.json cannot be read: status pages report "degraded", not "off".</summary>
+    public IReadOnlyList<string> Unusable(string type)
+    {
+        ArgumentNullException.ThrowIfNull(type);
+        lock (_gate)
+        {
+            ConfigDocument? document;
+            try { document = _config.ReadDocument(); }
+            catch (ConfigurationException error) { return ["config.json cannot be read: " + error.Message]; }
+            if (document?.Connections is not { } saved) return [];
+            SettingsSecrets? secrets = null; string? keyError = null;
+            try { secrets = OpenSecrets(document, create: false); }
+            catch (ConfigurationException error) { keyError = error.Message; }
+            var result = new List<string>();
+            foreach (var connection in saved.Where(connection => connection.Enabled && connection.Type == type))
+            {
+                if (keyError is not null && connection.Secrets.Count > 0) { result.Add(connection.Label + ": " + keyError); continue; }
+                try { _ = Decrypt(connection, secrets); }
+                catch (ConfigurationException error) { result.Add(connection.Label + ": " + error.Message); }
+            }
+            return result;
+        }
     }
 
     public ConnectionTypes Types { get; }

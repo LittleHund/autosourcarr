@@ -358,12 +358,18 @@ public sealed class AccountStore
     private JsonObject Load()
     {
         var bytes = _documents.Locked(FileName, document => document.Read(4 * 1024 * 1024));
+        // Only a missing file is a first start. A damaged one (empty after a crash or a full disk, or a wrong shape) never
+        // reopens owner setup: the first visitor could claim the owner, and saving would overwrite every account and key.
         JsonObject data;
-        if (bytes is null || bytes.Length == 0) data = new JsonObject();
+        if (bytes is null) data = new JsonObject();
+        else if (bytes.Length == 0) throw new InvalidDataException("accounts.json is empty (damaged). Restore it from a backup; nothing was changed.");
         else data = JsonNode.Parse(bytes) as JsonObject ?? throw new InvalidDataException("accounts.json is not a JSON object.");
         data["version"] ??= 1;
-        if (data["users"] is not JsonArray) data["users"] = new JsonArray();
-        if (data["keys"] is not JsonArray) data["keys"] = new JsonArray();
+        foreach (var list in new[] { "users", "keys" })
+        {
+            if (data[list] is null) data[list] = new JsonArray();
+            else if (data[list] is not JsonArray) throw new InvalidDataException("accounts.json: \"" + list + "\" is not a list (damaged). Restore it from a backup; nothing was changed.");
+        }
         return data;
     }
 
