@@ -52,6 +52,9 @@ public static class CutoverTests
         suite.Add("phase 14 cutover: counted failures in a startup step (interrupted chapter work not finished) are MIGRATION FAILED", () => Run(CountedStepFailures).GetAwaiter().GetResult());
         suite.Add("phase 14 cutover: unclassified tables are compared row by row and listed as not classified", () => Run(UnclassifiedTables).GetAwaiter().GetResult());
         suite.Add("phase 14 cutover: a 0.4.5 backup with DATABASE_DIR outside DATA_DIR goes to <out>/database", () => Run(BackupDatabaseOutsideData).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: the Compose service is chosen without guessing; unknown values matter only in the chosen service", () => Run(ComposeChoice).GetAwaiter().GetResult());
+        suite.Add("phase 14 cutover: the parity report is frozen once built", ReportFrozen);
+        suite.Add("phase 14 cutover: a stale database sidecar and a real link in the input are refused", () => Run(StaleSidecarsAndLinks).GetAwaiter().GetResult());
     }
 
     private static async Task Run(Func<Task> test) => await test().ConfigureAwait(false);
@@ -205,7 +208,8 @@ public static class CutoverTests
     private static readonly Dictionary<string, string[]> ValueDamage = new(StringComparer.Ordinal)
     {
         ["Subbed (main-library subscriptions)"] = ["UPDATE settings SET value=replace(value,'[1,2,4]','[1,2,999]') WHERE key='subbed_display_snapshot_v1'"],
-        ["Manual preferred titles"] = ["UPDATE entries SET preferred_title=preferred_title||'-x' WHERE manual_preferred_title=1"],
+        ["Manual preferred titles"] = ["UPDATE entries SET preferred_title=preferred_title||'-x' WHERE manual_preferred_title=1",
+            "UPDATE entries SET manual_preferred_title=0 WHERE manual_preferred_title=1"],
         ["Legacy source-keyed title overrides"] = ["UPDATE manual_title_scopes SET title=title||'-x'"],
         ["Manual and locked source records (matches)"] = [.. new[] { "entry_id=entry_id+1000", "source_manga_url=source_manga_url||'-x'", "source_title=source_title||'-x'", "confidence=confidence+1",
             "match_type=match_type||'-x'", "locked=locked+1000", "active=active+1000" }.Select(set => "UPDATE source_variants SET " + set + " WHERE locked=1")],
@@ -231,6 +235,11 @@ public static class CutoverTests
     };
 
     /// <summary>A generic value change of one column: numbers move by 1000, text gets a suffix, NULL becomes text.</summary>
+    /// <summary>True when the statement changes the column (UPDATE ... SET column=..., or a DELETE that removes it); a WHERE mention does not count.</summary>
+    private static bool ChangesColumn(string statement, string column) =>
+        Regex.IsMatch(statement, @"SET\s+(?:[^=]+=[^,]+,\s*)*""?" + Regex.Escape(column) + @"""?\s*=", RegexOptions.IgnoreCase)
+        || statement.Contains("DELETE FROM", StringComparison.OrdinalIgnoreCase) && Regex.IsMatch(statement, @"\b" + Regex.Escape(column) + @"\b");
+
     /// <summary>The column a joined kind's alias reads (cc_ = chapter_candidates, chapter_ = virtual_chapters, *_candidate = the candidate id).</summary>
     private static readonly Dictionary<string, string> JoinedColumns = new(StringComparer.Ordinal)
     {
@@ -335,7 +344,7 @@ public static class CutoverTests
                     {
                         // Joined kinds name a column of another table with a short alias prefix (cc_source_id = chapter_candidates.source_id).
                         var plain = JoinedColumns.GetValueOrDefault(column, column);
-                        if (!specific.Any(statement => Regex.IsMatch(statement, @"\b(" + Regex.Escape(column) + "|" + Regex.Escape(plain) + @")\b")))
+                        if (!specific.Any(statement => ChangesColumn(statement, column) || ChangesColumn(statement, plain)))
                             untested.Add(kind.Name + ": " + column);
                     }
             }
@@ -444,11 +453,18 @@ public static class CutoverTests
         using var newCatalog = new LegacyDatabase(Path.Combine(copy, "catalog.sqlite"));
         using var newOrigins = new LegacyDatabase(Path.Combine(copy, "chapter-origins.sqlite"));
         var results = DecisionParity.Compare((oldCatalog, oldOrigins), (newCatalog, newOrigins), kinds);
-        var merges = DecisionParity.NewMerges(oldCatalog, newCatalog, DecisionParity.DecisionEntries(oldCatalog, oldOrigins, kinds), new HashSet<long>());
+        var merges = DecisionParity.NewMerges(oldCatalog, newCatalog, DecisionParity.DecisionEntries(oldCatalog, oldOrigins, kinds), MergeRecheck.Run(newCatalog));
         var unresolved = DecisionParity.UnresolvedEntries(oldCatalog, newCatalog);
         var emptied = DecisionParity.EmptiedEntries(oldCatalog, newCatalog);
         var dropped = DecisionParity.DroppedTables(oldCatalog, newCatalog, "catalog").Concat(DecisionParity.DroppedTables(oldOrigins, newOrigins, "origins")).ToList();
-        return new(results, unresolved, merges, emptied, results.All(item => item.Lost == 0) && unresolved.Count == 0 && emptied.Count == 0 && dropped.Count == 0 && !merges.Any(merge => merge.Fails));
+        // The verdict is the real ParityReport's (no settings or files in this harness), never a formula of its own.
+        var report = new ParityReport
+        {
+            Input = "harness", ToVersion = "0.5.0", CreatedAt = "now", Decisions = results, Counts = [], UnresolvedEntries = unresolved, OriginalEntries = 0,
+            Settings = [], Notices = [], Files = new FileParityResult(), Merges = new MergeRecheckResult(), MigrationProblems = [], DroppedTables = dropped,
+            NewMerges = merges, EmptiedEntries = emptied,
+        };
+        return new(results, unresolved, merges, emptied, report.Ok);
     }
 
     /// <summary>The state files of a 0.4.x instance the migration must carry over byte for byte (synthetic contents).</summary>
@@ -565,7 +581,8 @@ public static class CutoverTests
                          var path = Path.Combine(config, ConfigStore.FileName);
                          var document = JsonNode.Parse(File.ReadAllText(path))!.AsObject();
                          var values = document["settings"]!["values"]!.AsObject();
-                         var key = values.First().Key;
+                         const string key = "TZ";
+                         Check.True(values.ContainsKey(key), "the fixture config.json has TZ");
                          values[key] = "changed-by-the-test";
                          File.WriteAllText(path, document.ToJsonString());
                      }, line => line.StartsWith("setting ", StringComparison.Ordinal)),
@@ -595,10 +612,11 @@ public static class CutoverTests
         }
         var ok = await Exit([input, Path.Combine(temp.Path, "ok")]);
         Check.True(ok.Code == 0 && ok.Text.Contains("PARITY OK", StringComparison.Ordinal) && ok.Text.Contains("Mount at /data", StringComparison.Ordinal), ok.Text);
-        Check.True(!File.Exists(Path.Combine(temp.Path, "ok", LegacyMigrationTool.IncompleteMarker)), "a finished run removes its marker");
+        foreach (var folder in new[] { "", "data", "config" })
+            Check.True(!File.Exists(Path.Combine(temp.Path, "ok", folder, LegacyMigrationTool.IncompleteMarker)), "a finished run removes its marker (" + folder + ")");
         var full = Path.Combine(temp.Path, "full"); Directory.CreateDirectory(full); File.WriteAllText(Path.Combine(full, "x"), "x");
         var notEmpty = await Exit([input, full]);
-        Check.True(notEmpty.Code == 2 && notEmpty.Text.StartsWith("Refused:", StringComparison.Ordinal), notEmpty.Text);
+        Check.True(notEmpty.Code == 2 && notEmpty.Text.Contains("Refused:", StringComparison.Ordinal), notEmpty.Text);
         var notBackup = Path.Combine(temp.Path, "not-a-backup.bin"); File.WriteAllText(notBackup, "hello");
         Check.Equal(2, (await Exit([notBackup, Path.Combine(temp.Path, "nb")])).Code);
         Check.Equal(2, (await Exit(["--service", "x", input, Path.Combine(temp.Path, "svc")])).Code);
@@ -606,12 +624,13 @@ public static class CutoverTests
         var wrong = await Exit([backup, Path.Combine(temp.Path, "wrong")], () => "wrong passphrase 0451");
         Check.True(wrong.Code == 2 && wrong.Text.Contains("Refused:", StringComparison.Ordinal), wrong.Text);
         Check.Equal(0, (await Exit([backup, Path.Combine(temp.Path, "right")], () => "right passphrase 0451")).Code);
-        // An unexpected exception type in a startup step: exit 3, a clear line, the marker, no report.
+        // A startup step that throws: a migration problem (exit 1, MIGRATION FAILED), with a report and no marker left.
         ApplicationRuntime.OfflineStepOverride = name => name == "title_consensus" ? throw new KeyNotFoundException("synthetic") : null;
         try
         {
             var crash = await Exit([input, Path.Combine(temp.Path, "crash")]);
             Check.True(crash.Code == 1 && crash.Text.Contains("MIGRATION FAILED", StringComparison.Ordinal) && crash.Text.Contains("title_consensus failed", StringComparison.Ordinal), crash.Text);
+            Check.True(File.Exists(Path.Combine(temp.Path, "crash", "parity-report.md")) && !File.Exists(Path.Combine(temp.Path, "crash", LegacyMigrationTool.IncompleteMarker)), "a finished run with problems has a report and no marker");
         }
         finally { ApplicationRuntime.OfflineStepOverride = null; }
         var corrupt = Path.Combine(temp.Path, "corrupt");
@@ -620,23 +639,42 @@ public static class CutoverTests
         var three = await Exit([corrupt, Path.Combine(temp.Path, "three")]);
         Check.True(three.Code == 3 && three.Text.Contains("MIGRATION FAILED (", StringComparison.Ordinal), three.Text);
         Check.True(File.Exists(Path.Combine(temp.Path, "three", LegacyMigrationTool.IncompleteMarker)) && !File.Exists(Path.Combine(temp.Path, "three", "parity-report.md")), "marker, no report");
+        Check.True(File.Exists(Path.Combine(temp.Path, "three", "migration-error.log")), "the full error is kept in migration-error.log");
     }
 
-    /// <summary>C1: counted failures in a startup step (an interrupted chapter merge that could not be finished) are MIGRATION FAILED.</summary>
+    /// <summary>C1: counted failures in a startup step are MIGRATION FAILED in every form they can take.</summary>
     private static async Task CountedStepFailures()
     {
         using var temp = new Sandbox();
         var input = Path.Combine(temp.Path, "in");
         MakeInstance(input, null, null, Env(secrets: false));
-        ApplicationRuntime.OfflineStepOverride = name => name == "origin_recovery" ? new JsonObject { ["checked"] = 2, ["completed"] = 0, ["failed"] = 2, ["remaining"] = 2 } : null;
+        var index = 0;
+        async Task Expect(Func<string, JsonNode?> replace, string text)
+        {
+            ApplicationRuntime.OfflineStepOverride = replace;
+            try
+            {
+                var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-" + (index++).ToString(CultureInfo.InvariantCulture)), () => "", TextWriter.Null)).Report;
+                Check.True(report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && report.Verdict.Contains(text, StringComparison.Ordinal), text + ": " + report.Verdict);
+            }
+            finally { ApplicationRuntime.OfflineStepOverride = null; }
+        }
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["checked"] = 2, ["completed"] = 0, ["failed"] = 2, ["remaining"] = 0 } : null, "origin_recovery: 2 failed");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = 0, ["remaining"] = 3 } : null, "origin_recovery: 3 remaining");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = "2" } : null, "origin_recovery: 2 failed");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = 2.0 } : null, "origin_recovery: 2 failed");
+        await Expect(name => name == "origin_recovery" ? new JsonObject { ["failed"] = "some" } : null, "the failed count cannot be read");
+        await Expect(name => name == "startup_catalog_maintenance" ? new JsonObject { ["splits"] = new JsonObject { ["failed"] = 1 } } : null, "startup_catalog_maintenance.splits: 1 failed");
+        await Expect(name => name == "merge_safety_repair" ? new JsonObject { ["skipped"] = true, ["error"] = "synthetic" } : null, "merge_safety_repair did not run");
+        await Expect(name => name == "subbed_orphan_aliases" ? throw new InvalidOperationException("synthetic") : null, "subbed_orphan_aliases failed (");
+        // Interrupted chapter work still pending after the recovery (the recovery is replaced, so the planted row stays).
+        var pending = Path.Combine(temp.Path, "pending");
+        MakeInstance(pending, "INSERT INTO pending_entry_merges(duplicate_entry_id,target_entry_id,created_at,last_error) VALUES(2,3,'2026-01-01','');", null, Env(secrets: false));
+        ApplicationRuntime.OfflineStepOverride = name => name == "origin_recovery" ? new JsonObject { ["failed"] = 0, ["remaining"] = 0 } : null;
         try
         {
-            var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out"), () => "", TextWriter.Null)).Report;
-            Check.True(report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && report.Verdict.Contains("origin_recovery: 2 failed", StringComparison.Ordinal), report.Verdict);
-            // A step that reports it was skipped because of an error did not run either.
-            ApplicationRuntime.OfflineStepOverride = name => name == "merge_safety_repair" ? new JsonObject { ["skipped"] = true, ["error"] = "synthetic" } : null;
-            var skipped = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-skipped"), () => "", TextWriter.Null)).Report;
-            Check.True(skipped.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && skipped.Verdict.Contains("merge_safety_repair did not run", StringComparison.Ordinal), skipped.Verdict);
+            var report = (await LegacyMigrationTool.MigrateAsync(pending, Path.Combine(temp.Path, "out-pending"), () => "", TextWriter.Null)).Report;
+            Check.True(report.Verdict.StartsWith("MIGRATION FAILED", StringComparison.Ordinal) && report.Verdict.Contains("interrupted chapter merges/splits are still pending", StringComparison.Ordinal), report.Verdict);
         }
         finally { ApplicationRuntime.OfflineStepOverride = null; }
     }
@@ -652,13 +690,79 @@ public static class CutoverTests
         var clean = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "clean"), () => "", TextWriter.Null)).Report;
         Check.True(clean.Ok, clean.Verdict);
         foreach (var table in new[] { "owner_notes", "owner_flags" })
-            Check.True(clean.Coverage.Any(item => item.Table == table && item.ToJson().ToJsonString().Contains("not classified", StringComparison.Ordinal)), table + " is listed as not classified");
+            Check.True(clean.Coverage.Any(item => item.Table == table && item.Treatment == "compared: every column as stored"
+                && item.Detail.StartsWith("not classified (compared row by row", StringComparison.Ordinal)), table + " is listed as not classified and compared");
         foreach (var (table, sql) in new[] { ("owner_notes", "UPDATE owner_notes SET note='changed'"), ("owner_flags", "DELETE FROM owner_flags") })
         {
             var report = (await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "out-" + table), () => "", TextWriter.Null,
                 afterMigration: (database, _) => Execute(Path.Combine(database, "catalog.sqlite"), sql))).Report;
             Check.True(!report.Ok && report.Decisions.Any(result => result.Kind.Table == table && result.Lost > 0), table + ": " + report.Verdict);
         }
+    }
+
+    /// <summary>The Compose service: the 0.4.5 file (autosourcarr + suwayomi) needs no --service; unknown values matter only in the chosen service.</summary>
+    private static async Task ComposeChoice()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false));
+        string Compose(string name, string text) { var path = Path.Combine(temp.Path, name); File.WriteAllText(path, text); return path; }
+        // As shipped with 0.4.5: two services, one with env_file autosourcarr.env; the other has a host value and interpolation.
+        var shipped = Compose("shipped.yml", "services:\n  autosourcarr:\n    env_file:\n      - ./config/autosourcarr.env\n    environment:\n      TZ: Europe/Amsterdam\n      EMPTY: \"\"\n      PRICE: \"5$$\"\n"
+            + "  suwayomi:\n    environment:\n      - PUID\n      PASSWORD: ${PW}\n");
+        var outcome = await LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o1"), () => "", TextWriter.Null, options: new MigrationOptions(shipped));
+        Check.True(outcome.Report.Run["paths"]!["source"]!.GetValue<string>().Contains("env_file", StringComparison.Ordinal), "the service with env_file autosourcarr.env was chosen");
+        var read = ComposeEnvironment.Read(shipped);
+        Check.True(read["autosourcarr"].Environment["EMPTY"] == "" && read["autosourcarr"].Environment["PRICE"] == "5$" && read["autosourcarr"].Unknown.Count == 0, "quoted empty and $$ are read");
+        Check.True(read["suwayomi"].Unknown.Count == 2, "the other service's unknown values are recorded, not refused");
+        // The chosen service with values the tool cannot know is refused.
+        var unknown = Compose("unknown.yml", "services:\n  autosourcarr:\n    environment:\n      DATA_DIR: ${ROOT}/data\n      <<: *common\n");
+        await Refused(() => LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o2"), () => "", TextWriter.Null, options: new MigrationOptions(unknown)), "cannot be compared");
+        foreach (var value in new[] { "*anchor", "|", "[a]" })
+            Check.True(ComposeEnvironment.Read(Compose("y.yml", "services:\n  a:\n    environment:\n      K: " + value + "\n"))["a"].Unknown.Count == 1, value + " is unknown");
+        // Two services without env_file and no --service: refused, never guessed.
+        var two = Compose("two.yml", "services:\n  one:\n    environment:\n      TZ: x\n  two:\n    environment:\n      TZ: y\n");
+        await Refused(() => LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o3"), () => "", TextWriter.Null, options: new MigrationOptions(two)), "--service");
+    }
+
+    /// <summary>The report is frozen: changing the lists it was built from changes neither Ok nor Verdict.</summary>
+    private static void ReportFrozen()
+    {
+        var unresolved = new List<long>();
+        var report = new ParityReport
+        {
+            Input = "test", ToVersion = "0.5.0", CreatedAt = "now", Decisions = [], Counts = [], UnresolvedEntries = unresolved, OriginalEntries = 0,
+            Settings = [], Notices = [], Files = new FileParityResult(), Merges = new MergeRecheckResult(), MigrationProblems = [], DroppedTables = [], NewMerges = [], EmptiedEntries = [],
+        };
+        Check.True(report.Ok, report.Verdict);
+        unresolved.Add(7);
+        Check.True(report.Ok && report.UnresolvedEntries.Count == 0, "the report kept its own copy");
+    }
+
+    /// <summary>A stale database sidecar next to the database is refused; a real link in the input is refused (where links can be made).</summary>
+    private static async Task StaleSidecarsAndLinks()
+    {
+        using var temp = new Sandbox();
+        var input = Path.Combine(temp.Path, "in");
+        MakeInstance(input, null, null, Env(secrets: false));
+        var backup = Path.Combine(temp.Path, "b.ascbackup");
+        var zipped = Path.Combine(temp.Path, "zipped");
+        MakeInstance(zipped, null, null, Env(secrets: false));
+        File.WriteAllText(Path.Combine(zipped, "data", "catalog.sqlite-shm"), "stale");
+        File.SetLastWriteTimeUtc(Path.Combine(zipped, "data", "catalog.sqlite-shm"), DateTime.UtcNow.AddHours(-2));
+        File.WriteAllBytes(backup, Protect(Zip(zipped), "sidecar passphrase 0451"));
+        await RefusedBackup(() => LegacyMigrationTool.MigrateAsync(backup, Path.Combine(temp.Path, "o1"), () => "sidecar passphrase 0451", TextWriter.Null), "stale");
+        var link = Path.Combine(input, "data", "linked");
+        try { Directory.CreateSymbolicLink(link, Path.Combine(temp.Path, "elsewhere")); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return; } // no symlink right on this machine
+        await Refused(() => LegacyMigrationTool.MigrateAsync(input, Path.Combine(temp.Path, "o2"), () => "", TextWriter.Null), "link or junction");
+    }
+
+    private static async Task RefusedBackup(Func<Task> run, string text)
+    {
+        try { await run(); }
+        catch (Exception error) when (error is MigrationRefusedException or BackupRefusedException) { Check.True(error.Message.Contains(text, StringComparison.Ordinal), error.Message); return; }
+        throw new InvalidOperationException("The tool accepted an input it must refuse (" + text + ").");
     }
 
     /// <summary>A 0.4.5 backup whose database lived outside DATA_DIR goes to &lt;out&gt;/database with a mount note.</summary>
@@ -672,7 +776,11 @@ public static class CutoverTests
         var outcome = await LegacyMigrationTool.MigrateAsync(backup, Path.Combine(temp.Path, "out"), () => "outside passphrase 0451", TextWriter.Null);
         Check.True(outcome.Report.Ok, outcome.Report.Verdict);
         Check.True(outcome.DatabaseDirectory is { } database && File.Exists(Path.Combine(database, "catalog.sqlite")), "the databases go to <out>/database");
-        Check.True(outcome.Report.Warnings.Any(text => text.Contains("mount", StringComparison.Ordinal)), "the report says where to mount it");
+        Check.True(!File.Exists(Path.Combine(outcome.DataDirectory, "catalog.sqlite")), "the database is not also copied into data/");
+        Check.True(outcome.Report.Warnings.Any(text => text.Contains("is outside DATA_DIR", StringComparison.Ordinal) && text.Contains("/db", StringComparison.Ordinal)), "the report says where to mount it");
+        using var console = new StringWriter();
+        Check.Equal(0, await LegacyMigrationTool.RunAsync([backup, Path.Combine(temp.Path, "run")], console, () => "outside passphrase 0451"));
+        Check.True(console.ToString().Contains("Mount at DATABASE_DIR:", StringComparison.Ordinal), console.ToString());
     }
 
     private static async Task MigrationFailures()

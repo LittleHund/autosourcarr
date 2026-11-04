@@ -40,15 +40,20 @@ internal sealed partial class ApplicationRuntime
         return OpenAsync(startup, new Dictionary<string, string?>(StringComparer.Ordinal), hosted: false, cancellationToken, offline: true);
     }
 
+    private static readonly AsyncLocal<Func<string, JsonNode?>?> StepOverride = new();
+
+    /// <summary>
+    /// Tests only: replaces one offline step's result (return null to run the real step; throw to fail it). It applies to
+    /// the current async flow only, so a test cannot leak it into another migration.
+    /// </summary>
+    internal static Func<string, JsonNode?>? OfflineStepOverride { get => StepOverride.Value; set => StepOverride.Value = value; }
+
     /// <summary>
     /// Every network-free step of the 0.4.5 first start, in its real order: interrupted chapter changes, the merge safety
     /// repair, startup catalogue maintenance and main-title consensus (one-time; each stores its version as at a real
     /// start, so the first real start skips them). The startup duplicate sweep is NOT run (an automatic merge is a change).
     /// The result's <c>problems</c> lists what keeps the migration from counting as complete (any → MIGRATION FAILED).
     /// </summary>
-    /// <summary>Tests only: replaces one offline step's result (return null to run the real step; throw to fail it).</summary>
-    internal static Func<string, JsonNode?>? OfflineStepOverride { get; set; }
-
     internal async Task<JsonObject> RunOfflineStartupAsync(CancellationToken cancellationToken = default)
     {
         if (!_offline) throw new InvalidOperationException("Only the offline open runs the startup steps directly.");
@@ -68,30 +73,31 @@ internal sealed partial class ApplicationRuntime
         else if (_upgrade.Status is not ("updated" or "unchanged")) problems.Add("unexpected update status " + _upgrade.Status + " (the 0.4.x databases were not found or not migrated)");
         if (problems.Count > 0) return result;
         var work = _startup ?? throw new InvalidOperationException("The startup work is not composed.");
+        // The checks every step result gets: skipped with an error, an unavailable sub-step, counted failures.
+        void Inspect(string name, JsonNode? node, bool skipExpected = false)
+        {
+            result[name] = node;
+            if (!skipExpected && node is JsonObject step && step["skipped"] is JsonValue skipped && skipped.TryGetValue<bool>(out var flag) && flag && step["error"] is not null)
+                problems.Add(name + " did not run: " + Privacy.Text(step["error"]!.ToString()));
+            // A one-time step that ran with a sub-step "unavailable" in this build still stores its version marker, so the
+            // sub-step would never run: that is a migration problem (a step already at its 0.4.x marker is skipped and fine).
+            var ran = node is JsonObject done && !(done["skipped"] is JsonValue value && value.TryGetValue<bool>(out var wasSkipped) && wasSkipped);
+            if (ran && node?.ToJsonString().Contains("unavailable", StringComparison.Ordinal) == true)
+                problems.Add(name + " ran, but a sub-step is unavailable in this build and its one-time marker is now stored (see the step result)");
+            // Counted failures are failures (a real start fails the job on them too, ApplicationRuntime.Startup), at any depth
+            // of the step result. A counter that cannot be read as a number is a problem too, never "zero".
+            foreach (var (path, counter, raw) in Counters(node, name))
+            {
+                if (CountOf(raw) is not { } count) problems.Add(path + ": the " + counter + " count cannot be read (" + raw.ToJsonString() + ")");
+                else if (count > 0) problems.Add(path + ": " + count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + counter + " (see the step result)");
+            }
+        }
+        void Failed(string name, Exception failure) => problems.Add(name + " failed (" + failure.GetType().Name + "): " + Privacy.Text(failure.Message));
         void Step(string name, Func<JsonNode?> run)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                var node = OfflineStepOverride is { } replace && replace(name) is { } replaced ? replaced : run();
-                result[name] = node;
-                if (node is JsonObject step && step["skipped"] is JsonValue skipped && skipped.TryGetValue<bool>(out var flag) && flag && step["error"] is not null)
-                    problems.Add(name + " did not run: " + Privacy.Text(step["error"]!.ToString()));
-                // A one-time step that ran with a sub-step "unavailable" in this build still stores its version marker, so the
-                // sub-step would never run: that is a migration problem (a step already at its 0.4.x marker is skipped and fine).
-                var ran = node is JsonObject done && !(done["skipped"] is JsonValue value && value.TryGetValue<bool>(out var wasSkipped) && wasSkipped);
-                if (ran && node?.ToJsonString().Contains("unavailable", StringComparison.Ordinal) == true)
-                    problems.Add(name + " ran, but a sub-step is unavailable in this build and its one-time marker is now stored (see the step result)");
-                // Counted failures are failures (a real start fails the job on them too, ApplicationRuntime.Startup). The counts are
-                // stored as int, long or text depending on the step, so they are read from their JSON text.
-                foreach (var counter in new[] { "failed", "remaining" })
-                    if (node is JsonObject counted && counted[counter] is JsonValue number && long.TryParse(number.ToJsonString(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var count) && count > 0)
-                        problems.Add(name + ": " + count.ToString(System.Globalization.CultureInfo.InvariantCulture) + " " + counter + " (see the step result)");
-            }
-            catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException)
-            {
-                problems.Add(name + " failed (" + failure.GetType().Name + "): " + Privacy.Text(failure.Message));
-            }
+            try { Inspect(name, OfflineStepOverride?.Invoke(name) ?? run()); }
+            catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException) { Failed(name, failure); }
         }
         await Task.Run(() =>
         {
@@ -106,12 +112,44 @@ internal sealed partial class ApplicationRuntime
             var pending = work.Structure.PendingEntryOriginCount();
             if (pending > 0) problems.Add(pending.ToString(System.Globalization.CultureInfo.InvariantCulture) + " interrupted chapter merges/splits are still pending after the recovery");
         }, cancellationToken).ConfigureAwait(false);
-        // Needs the main Suwayomi: skipped here by design, stores no version, so the first real start runs it.
-        try { result["subbed_orphan_aliases"] = await work.Library.RepairOrphanAliasesUpgradeAsync(cancellationToken: cancellationToken).ConfigureAwait(false); }
-        catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException)
-        {
-            problems.Add("subbed_orphan_aliases failed (" + failure.GetType().Name + "): " + Privacy.Text(failure.Message));
-        }
+        // Needs the main Suwayomi: skipped here by design, stores no version, so the first real start runs it. It gets the same
+        // checks as the other steps.
+        // Skipped on purpose here (the main Suwayomi address is cleared for the offline run), so its "skipped" is expected.
+        try { Inspect("subbed_orphan_aliases", OfflineStepOverride?.Invoke("subbed_orphan_aliases") ?? await work.Library.RepairOrphanAliasesUpgradeAsync(cancellationToken: cancellationToken).ConfigureAwait(false), skipExpected: true); }
+        catch (Exception failure) when (failure is not OperationCanceledException and not OutOfMemoryException) { Failed("subbed_orphan_aliases", failure); }
         return result;
+    }
+
+    private static readonly string[] CounterNames = ["failed", "remaining"];
+
+    /// <summary>Every failed/remaining counter in a step result, at any depth, with its path.</summary>
+    private static IEnumerable<(string Path, string Counter, JsonNode Value)> Counters(JsonNode? node, string path)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                foreach (var (key, child) in obj)
+                {
+                    if (child is not null && CounterNames.Contains(key, StringComparer.Ordinal) && child is not (JsonObject or JsonArray)) yield return (path, key, child);
+                    else foreach (var inner in Counters(child, path + "." + key)) yield return inner;
+                }
+                break;
+            case JsonArray array:
+                for (var i = 0; i < array.Count; i++)
+                    foreach (var inner in Counters(array[i], path + "[" + i.ToString(System.Globalization.CultureInfo.InvariantCulture) + "]")) yield return inner;
+                break;
+        }
+    }
+
+    /// <summary>A count stored as int, long, double or text; null when it is not a whole number (or true/false: a flag counts as 1/0).</summary>
+    private static long? CountOf(JsonNode value)
+    {
+        if (value is not JsonValue number) return null;
+        if (number.TryGetValue<long>(out var whole)) return whole;
+        if (number.TryGetValue<int>(out var small)) return small;
+        if (number.TryGetValue<double>(out var real) && real == Math.Floor(real)) return (long)real;
+        if (number.TryGetValue<bool>(out var flag)) return flag ? 1 : 0;
+        if (number.TryGetValue<string>(out var text) && long.TryParse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed)) return parsed;
+        return null;
     }
 }

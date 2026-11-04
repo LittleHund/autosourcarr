@@ -25,6 +25,8 @@ public sealed class MergeRecheckResult
     public List<MergeRecheckItem> Failing { get; } = [];
     /// <summary>Merges whose stored snapshot cannot be read: not rechecked, and listed (a new merge among them fails the verdict).</summary>
     public List<MergeRecheckItem> Unreadable { get; } = [];
+    /// <summary>Merges that fail the recheck or cannot be rechecked: a merge the migration made among them fails the verdict.</summary>
+    public IEnumerable<MergeRecheckItem> Suspect => Failing.Concat(Unreadable);
 
     public JsonObject ToJson() => new()
     {
@@ -80,6 +82,7 @@ public static class MergeRecheck
             if (!events.TryGetValue(duplicate, out var merge))
             {
                 result.NotRechecked++;
+                result.Unreadable.Add(new(duplicate, canonical, ids.Title(canonical), "no stored merge snapshot"));
                 continue;
             }
             var left = Records(merge["duplicate_snapshot_json"], fingerprints);
@@ -90,7 +93,12 @@ public static class MergeRecheck
                 result.Unreadable.Add(new(duplicate, canonical, ids.Title(canonical), "the stored merge snapshot cannot be read"));
                 continue;
             }
-            if (left.Count == 0 || right.Count == 0) { result.NotRechecked++; continue; }
+            if (left.Count == 0 || right.Count == 0)
+            {
+                result.NotRechecked++;
+                result.Unreadable.Add(new(duplicate, canonical, ids.Title(canonical), "the stored merge snapshot holds no records"));
+                continue;
+            }
             if (left.Any(a => right.Any(b => CatalogueMaintenance.RecordsDirectlyCompatible(a, b)))) result.Hold++;
             else
             {

@@ -450,11 +450,13 @@ public static class DecisionParity
     /// <summary>
     /// Merges the migration made: every 0.4.x entry that resolves to another entry after the migration than before. Such
     /// a merge fails the verdict when it involves an entry with a subscription or manual decision, or when its stored
-    /// merge snapshot does not hold under the current rules (<paramref name="failingRecheck"/>); otherwise it is listed.
+    /// merge snapshot does not hold under the current rules or cannot be rechecked (<paramref name="recheck"/>); otherwise it is listed.
     /// </summary>
-    public static List<NewMerge> NewMerges(LegacyDatabase original, LegacyDatabase migrated, IReadOnlySet<long> decisionEntries, IReadOnlySet<long> failingRecheck)
+    public static List<NewMerge> NewMerges(LegacyDatabase original, LegacyDatabase migrated, IReadOnlySet<long> decisionEntries, MergeRecheckResult recheck)
     {
-        ArgumentNullException.ThrowIfNull(original); ArgumentNullException.ThrowIfNull(migrated);
+        ArgumentNullException.ThrowIfNull(original); ArgumentNullException.ThrowIfNull(migrated); ArgumentNullException.ThrowIfNull(recheck);
+        var failingRecheck = recheck.Failing.Select(item => item.Duplicate).ToHashSet();
+        var unreadable = recheck.Unreadable.GroupBy(item => item.Duplicate).ToDictionary(group => group.Key, group => group.First().Reason);
         var before = new EntryIds(original); var after = new EntryIds(migrated);
         var reasons = migrated.HasTable("entry_aliases")
             ? migrated.Query("SELECT old_entry_id,reason FROM entry_aliases").Where(row => EntryIds.Id(row["old_entry_id"]) is not null)
@@ -467,8 +469,10 @@ public static class DecisionParity
             if (into == id) continue;
             var involved = decisionEntries.Contains(id) || decisionEntries.Contains(into);
             var failing = failingRecheck.Contains(id);
-            var why = involved ? "it involves an entry with a subscription or manual decision" : failing ? "its merge does not hold under the current rules" : "informational";
-            merges.Add(new NewMerge(id, into, before.Title(id), reasons.GetValueOrDefault(id, ""), involved || failing, why));
+            var cannotRecheck = unreadable.TryGetValue(id, out var unreadableWhy);
+            var why = involved ? "it involves an entry with a subscription or manual decision" : failing ? "its merge does not hold under the current rules"
+                : cannotRecheck ? "it cannot be rechecked: " + unreadableWhy : "informational";
+            merges.Add(new NewMerge(id, into, before.Title(id), reasons.GetValueOrDefault(id, ""), involved || failing || cannotRecheck, why));
         }
         return merges;
     }

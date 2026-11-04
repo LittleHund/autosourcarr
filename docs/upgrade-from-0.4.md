@@ -36,9 +36,15 @@ Start 0.4.x again afterwards if you like; the snapshot is what counts. The tool 
 database journal written in the last 10 minutes, a database another program holds open, or `/data`/`/config` inside
 a container), so always run it on the copy.
 
-If `DATA_DIR` or `DATABASE_DIR` were set in your Compose `environment:` rather than in `autosourcarr.env`, pass the
-0.4.x Compose file with `-Compose <file>` (PowerShell) / `--compose <file>` (and `-Service`/`--service <name>` when it
-holds both instances). The report says where the paths came from. The tool refuses to guess: `DATABASE_DIR` outside
+Pass your 0.4.x Compose file with `-Compose <file>` (PowerShell) / `--compose <file>` so its `environment:` values are
+compared too (and `DATA_DIR`/`DATABASE_DIR`, if set there, apply). The tool uses the service named by `-Service`/`--service
+<name>`, the only service, or the one service whose `env_file` is `autosourcarr.env` (the 0.4.5 files: autosourcarr +
+suwayomi need no `--service`). With two AutoSourcarr instances, pass `--service`. It refuses that service if a value
+comes from the host shell (`- KEY`), uses interpolation (`${...}`), anchors, merge keys or block/flow styles; other
+services do not matter. The report says where the paths came from and which service was compared.
+
+Keep the snapshot and the output folder outside OneDrive (and other cloud-sync folders): synced placeholders can make
+files unreadable mid-run. The tool refuses to guess: `DATABASE_DIR` outside
 `DATA_DIR` needs the `database\` folder, and databases in both `data\` and `database\` are refused as ambiguous.
 
 ## 2. Run the migration
@@ -82,7 +88,9 @@ Suwayomi), metadata repair, the additional-record scan, feed refresh and crawlin
 identity repair, resuming interrupted imports and reset-hint replays, and the tag index rebuild.
 
 Exit code 0 = PARITY OK, 1 = PARITY FAILED or MIGRATION FAILED (see the report), 2 = refused input, 3 = the run
-stopped half-way (`<output>/MIGRATION-INCOMPLETE.txt` says why; no report is written). The input is never changed.
+stopped half-way (`<output>/MIGRATION-INCOMPLETE.txt` says why, `migration-error.log` holds the full error; no report is
+written). While a run is going, and after one that stopped, `MIGRATION-INCOMPLETE.txt` is also in the output's `data/`
+and `config/` folders: never mount a folder that has it. The input is never changed.
 
 ## 3. Read the report
 
@@ -151,8 +159,9 @@ folders: the 0.5.0 database migrations are forward-only, and 0.4.5 never reads `
 - The subscriptions themselves live in your main Suwayomi library; the tool compares AutoSourcarr's saved view of
   them (`subbed_display_snapshot_v1`) and the monitored works, not the Suwayomi database.
 - Reader progress is not stored by 0.4.x (Mihon keeps it), so there is nothing to compare.
-- Compose `environment:` values other than DATA_DIR/DATABASE_DIR are not read; compare them yourself with
-  `docker-compose.0.5.0.yml`. The Compose reader handles plain `environment:` blocks (no anchors or interpolation).
+- With `--compose`, the chosen service's plain `environment:` values are compared (a value 0.5.0 refuses fails the
+  verdict); `env_file:` entries other than `autosourcarr.env` are not read. Without `--compose`, compare them yourself
+  with `docker-compose.0.5.0.yml`.
 - The live-instance check is best effort; a folder mounted from the server cannot be checked fully.
 - The automatic old-file cleanup of a version update does not run during the offline migration; start it from the
   cleanup in System after the first start if you like.

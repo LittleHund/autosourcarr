@@ -355,10 +355,15 @@ jobs:
           else
             echo "No UI file changed since ${{ steps.meta.outputs.previous }}: browser checks skipped."
           fi
-          # The release section must carry its real date, not the YYYY-MM-DD placeholder (CI allows it before a release).
+          # A real release (a tag push, or a run with publish ticked) needs the dated CHANGELOG section; a rehearsal run only warns.
           version=$(tr -d '\r\n' < VERSION)
-          grep -qE "^## ${version//./\\.} - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md \
-            || { echo "::error::CHANGELOG.md has no dated '## ${version} - YYYY-MM-DD' section (the date is still a placeholder)."; fail=1; }
+          if ! grep -qE "^## ${version//./[.]} - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md; then
+            if [ "${{ github.event_name }}" = push ] || [ "${{ inputs.publish }}" = true ]; then
+              echo "::error::CHANGELOG.md has no dated '## ${version} - YYYY-MM-DD' section (the date is still a placeholder)."; fail=1
+            else
+              echo "::warning::CHANGELOG.md still has the YYYY-MM-DD placeholder; set the date before the release run."
+            fi
+          fi
           exit $fail
 
   publish:

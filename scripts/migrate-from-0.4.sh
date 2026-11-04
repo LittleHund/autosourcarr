@@ -51,7 +51,7 @@ if ! command -v "$dotnet" >/dev/null 2>&1; then echo "The .NET 10 SDK (dotnet) i
 # AUTOSOURCARR_FORCE_BUILD=1 (the wrapper test) always builds.
 if [[ -n "${AUTOSOURCARR_FORCE_BUILD:-}" || ! -f "$dll" ]] || [[ -n "$(find "$repo/src" \( -name bin -o -name obj \) -prune -o -type f \( -name '*.cs' -o -name '*.csproj' -o -name '*.json' -o -name '*.sql' \) -newer "$dll" -print -quit)" ]]; then
   echo "Building AutoSourcarr (Release)..."
-  # A failed build is exit 3 (not 1, which means PARITY FAILED) and never looks like a migration result.
+  # A failed build is exit 3 (not 1, which means PARITY FAILED or MIGRATION FAILED) and never looks like a migration result.
   if ! "$dotnet" restore --locked-mode "$project" || ! "$dotnet" build -c Release --no-restore "$project"; then
     echo "The build failed. DO NOT DEPLOY anything; nothing was migrated and your 0.4.x data is unchanged." >&2
     exit 3

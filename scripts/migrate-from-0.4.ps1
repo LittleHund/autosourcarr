@@ -17,7 +17,7 @@
 param(
     [Parameter(Mandatory = $true, Position = 0)][string]$Source,
     [Parameter(Mandatory = $true, Position = 1)][string]$Destination,
-    # Optional: the 0.4.x Compose file, when its environment: sets DATA_DIR or DATABASE_DIR (and the service for two instances).
+    # Optional: the 0.4.x Compose file, so its environment: values are compared (-Service for two AutoSourcarr instances).
     [string]$Compose,
     [string]$Service
 )
@@ -52,7 +52,8 @@ if (Test-Path -LiteralPath $Source -PathType Container) {
 # AUTOSOURCARR_DOTNET lets the wrapper test replace dotnet with a stub; normally it is the dotnet on PATH.
 $dotnet = if ($env:AUTOSOURCARR_DOTNET) { $env:AUTOSOURCARR_DOTNET } else { 'dotnet' }
 if (-not (Get-Command $dotnet -ErrorAction SilentlyContinue)) { Fail 'The .NET 10 SDK (dotnet) is needed: https://dotnet.microsoft.com/download' 2 }
-$stale = -not (Test-Path -LiteralPath $dll)
+# AUTOSOURCARR_FORCE_BUILD=1 (the wrapper test) always builds.
+$stale = [bool]$env:AUTOSOURCARR_FORCE_BUILD -or -not (Test-Path -LiteralPath $dll)
 if (-not $stale) {
     $built = (Get-Item -LiteralPath $dll).LastWriteTimeUtc
     $stale = [bool](Get-ChildItem -LiteralPath (Join-Path $repo 'src') -Recurse -File -Include '*.cs', '*.csproj', '*.json', '*.sql' |

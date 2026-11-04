@@ -164,9 +164,10 @@ public static partial class SettingsParity
 }
 
 /// <summary>A file of the 0.4.x folders and whether the migrated folders still have it (names only, never content).</summary>
-public sealed record FileParityItem(string Path, string Status, bool Missing = false)
+/// <param name="KeyMissing">True only for a key file or keystore that is gone after the migration (fails the verdict).</param>
+public sealed record FileParityItem(string Path, string Status, bool KeyMissing)
 {
-    public JsonObject ToJson() => new() { ["path"] = Path, ["status"] = Status };
+    public JsonObject ToJson() => new() { ["path"] = Path, ["status"] = Status, ["key_missing"] = KeyMissing };
 }
 
 public sealed class FileParityResult
@@ -233,25 +234,25 @@ public static partial class FileParity
                 var keyFile = KeyFile().IsMatch(relative);
                 if (!after.TryGetValue(relative, out var now))
                 {
-                    result.Missing.Add(new(name, "missing after the migration"));
-                    if (keyFile) result.Keys.Add(new(name, "MISSING", Missing: true));
-                    else if (AllowedReason(name) is { } why) result.Allowed.Add(new(name, "missing: " + why));
-                    else result.Lost.Add(new(name, "MISSING after the migration"));
+                    result.Missing.Add(new(name, "missing after the migration", KeyMissing: false));
+                    if (keyFile) result.Keys.Add(new(name, "MISSING", KeyMissing: true));
+                    else if (AllowedReason(name) is { } why) result.Allowed.Add(new(name, "missing: " + why, KeyMissing: false));
+                    else result.Lost.Add(new(name, "MISSING after the migration", KeyMissing: false));
                     continue;
                 }
                 if (Hash(path) == Hash(now)) result.Same++;
                 else
                 {
-                    result.Changed.Add(new(name, "content changed"));
-                    if (AllowedReason(name) is { } why) result.Allowed.Add(new(name, "changed: " + why));
-                    else result.Lost.Add(new(name, "CHANGED by the migration"));
+                    result.Changed.Add(new(name, "content changed", KeyMissing: false));
+                    if (AllowedReason(name) is { } why) result.Allowed.Add(new(name, "changed: " + why, KeyMissing: false));
+                    else result.Lost.Add(new(name, "CHANGED by the migration", KeyMissing: false));
                 }
-                if (keyFile) result.Keys.Add(new(name, "present"));
+                if (keyFile) result.Keys.Add(new(name, "present", KeyMissing: false));
             }
             foreach (var relative in after.Keys.Where(key => !before.ContainsKey(key)))
             {
                 result.Added++;
-                if (KeyFile().IsMatch(relative)) result.Keys.Add(new(label + "/" + relative, "new in 0.5.0"));
+                if (KeyFile().IsMatch(relative)) result.Keys.Add(new(label + "/" + relative, "new in 0.5.0", KeyMissing: false));
             }
         }
         return result;
