@@ -1,8 +1,8 @@
 {
   "ok": true,
   "version": "0.5.0",
-  "captured_at": "2026-11-04T22:36:24.3666896+00:00",
-  "instance_id": "058b070eb60f",
+  "captured_at": "2026-11-06T16:42:06.0003990+00:00",
+  "instance_id": "f9f61ac97d35",
   "source_host": {
     "ok": true,
     "checked": true,
@@ -128,9 +128,9 @@
       "database_dir": "/data",
       "database_bytes": 1163832,
       "data_dir": "/data",
-      "data_bytes": 10007309
+      "data_bytes": 10007239
     },
-    "captured_at": "2026-11-04T22:36:24.3620772+00:00",
+    "captured_at": "2026-11-06T16:42:05.9964417+00:00",
     "cache_age_seconds": 0
   },
   "errors": {
