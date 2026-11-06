@@ -11,15 +11,15 @@ namespace AutoSourcarr.Core.Translation;
 
 /// <summary>
 /// translation.py TranslationClient: a LibreTranslate-compatible client (POST {base}/translate {q, source, target,
-/// format, api_key}; GET {base}/languages for health). TRANSLATION_MODE off disables it; builtin (or auto with integrated
-/// app services and a TRANSLATION_API_URL) uses the bundled service on 127.0.0.1:5000 without a key; otherwise
-/// TRANSLATION_API_URL with TRANSLATION_API_KEY. Results are cached durably in translation_cache and in a 4096-entry hot
+/// format, api_key}; GET {base}/languages for health). TRANSLATION_MODE off disables it. 0.5.1: the address is the first
+/// enabled translator connection (Connections), else TRANSLATION_API_URL with TRANSLATION_API_KEY. 0.5.x bundles no
+/// translator (0.4.x ran one on 127.0.0.1:5000; built-in translation returns in 0.6.0), so "builtin" and loopback
+/// addresses count as not configured and <see cref="OffReason"/> says why. Results are cached durably in translation_cache and in a 4096-entry hot
 /// set. MAT-20: a translation is a search hint only — it is never stored as a title, alias or match evidence and never
 /// displayed as the title; callers add it to transient source-search queries. Every failure answers "" (no translation).
 /// </summary>
 public sealed class TranslationClient : IDisposable
 {
-    public const string BuiltinUrl = "http://127.0.0.1:5000";
     private readonly SqliteDatabase _database;
     private readonly Func<AutoSourcarrSettings> _settings;
     private readonly HttpClient _http;
@@ -39,21 +39,38 @@ public sealed class TranslationClient : IDisposable
         _slots = new SemaphoreSlim(slots, slots);
     }
 
-    /// <summary>Whether the bundled service is used (no API key is sent to it).</summary>
-    public bool Builtin
+    /// <summary>0.5.1: the enabled translator connections (Connections menu), first one wins; null reads none.</summary>
+    public Func<IReadOnlyList<Connections.ConnectionConfig>>? Connections { get; init; }
+
+    private (string Url, string ApiKey) Target()
     {
-        get
-        {
-            var settings = _settings();
-            return settings.TranslationMode == "builtin"
-                || settings.TranslationMode == "auto" && settings.AppServicesMode == "integrated" && settings.TranslationApiUrl.Trim().Length > 0;
-        }
+        var settings = _settings();
+        if (settings.TranslationMode is "off" or "builtin") return ("", "");
+        foreach (var connection in Connections?.Invoke() ?? [])
+            if (connection.Enabled && Core.Connections.Types.TranslationConnectionType.BaseUrl(connection.Value(Core.Connections.Types.TranslationConnectionType.UrlField)) is { } url)
+                return (url, connection.Value(Core.Connections.Types.TranslationConnectionType.ApiKeyField));
+        return Core.Connections.Types.TranslationConnectionType.BaseUrl(settings.TranslationApiUrl) is { } configured ? (configured, settings.TranslationApiKey) : ("", "");
     }
 
     /// <summary>The service address in use; empty when translation is off or not configured.</summary>
-    public string BaseUrl => _settings().TranslationMode == "off" ? "" : Builtin ? BuiltinUrl : _settings().TranslationApiUrl.Trim().TrimEnd('/');
+    public string BaseUrl => Target().Url;
 
     public bool Enabled => BaseUrl.Length > 0;
+
+    /// <summary>Why translation is off, for the status page; null while a translator is configured.</summary>
+    public string? OffReason
+    {
+        get
+        {
+            if (Enabled) return null;
+            var settings = _settings();
+            if (settings.TranslationMode == "off") return "Title translation is turned off (TRANSLATION_MODE=off).";
+            if (settings.TranslationMode == "builtin" || Uri.TryCreate(settings.TranslationApiUrl.Trim(), UriKind.Absolute, out var url)
+                && Core.Connections.Types.TranslationConnectionType.IsLoopback(url))
+                return "AutoSourcarr 0.5 has no built-in translator (it returns in 0.6.0; the 0.4.x one ran at 127.0.0.1:5000). Add a LibreTranslate connection under Connections to translate titles.";
+            return "No translator is configured: add a LibreTranslate connection under Connections.";
+        }
+    }
 
     /// <summary>The cached translation of <paramref name="text"/> into <paramref name="target"/>, or "" (no network).</summary>
     public string Cached(string text, string target)
@@ -78,8 +95,9 @@ public sealed class TranslationClient : IDisposable
         var cached = Cached(text, target);
         if (cached.Length > 0 || !Enabled) return cached;
         var settings = _settings();
+        var (baseUrl, apiKey) = Target();
         var payload = new JsonObject { ["q"] = text, ["source"] = string.IsNullOrWhiteSpace(source) ? "auto" : source, ["target"] = target, ["format"] = "text" };
-        if (settings.TranslationApiKey.Length > 0 && !Builtin) payload["api_key"] = settings.TranslationApiKey;
+        if (apiKey.Length > 0) payload["api_key"] = apiKey;
         try
         {
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -89,7 +107,7 @@ public sealed class TranslationClient : IDisposable
             try
             {
                 using var content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
-                using var response = await _http.PostAsync(BaseUrl + "/translate", content, deadline.Token).ConfigureAwait(false);
+                using var response = await _http.PostAsync(baseUrl + "/translate", content, deadline.Token).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode) return "";
                 var body = JsonNode.Parse(await response.Content.ReadAsStringAsync(deadline.Token).ConfigureAwait(false)) as JsonObject;
                 translated = (body?["translatedText"] is JsonValue value && value.TryGetValue<string>(out var answer) ? answer : "").Trim();

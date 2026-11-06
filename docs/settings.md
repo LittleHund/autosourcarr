@@ -201,6 +201,7 @@ Precedence, lowest first: built-in default, `config.json`, Compose environment v
 | `SOURCE_FAILURE_THRESHOLD` | integer | `3` | Failures in a row after which a source pauses. |  |  |
 | `SOURCE_MIN_INTERVAL_MS` | integer | `250` | Least time between two requests the source host sends to the same website, in milliseconds. Keeps traffic paced so sites do not rate-limit or block you; 0 turns pacing off. Applies after the source host restarts. |  |  |
 | `SOURCE_REQUEST_TIMEOUT` | number | `45` | Maximum upstream request time. Raising this cannot repair an unavailable website. |  | performance |
+| `SOURCE_WEBVIEW_ENABLED` | boolean | `true` | Run the built-in WebView (Chromium) in the source host for Cloudflare checks and source login pages. Turn it off if it crashes on your machine; AutoSourcarr also turns it off by itself after it stops the source host twice, until the next restart. Without it, add an external solver under Connections. Applies after the source host restarts. |  |  |
 | `SQLITE_BUSY_TIMEOUT_MS` | integer | `3000` | How long a database write waits for a lock before failing, in milliseconds. |  |  |
 | `SQLITE_CACHE_MB` | integer | `64` | Memory SQLite may use as page cache, in MB. |  |  |
 

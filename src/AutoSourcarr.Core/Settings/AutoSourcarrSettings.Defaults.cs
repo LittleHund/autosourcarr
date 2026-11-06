@@ -441,6 +441,10 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("source_min_interval_ms")]
     public int SourceMinIntervalMs { get; init; } = 250;
 
+    /// <summary>0.5.1: run the built-in WebView (Chromium) in the source host; off after repeated crashes as well.</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("source_webview_enabled")]
+    public bool SourceWebViewEnabled { get; init; } = true;
+
     [System.Text.Json.Serialization.JsonPropertyName("background_idle_seconds")]
     public double BackgroundIdleSeconds { get; init; } = 2.0;
 
@@ -630,6 +634,7 @@ public sealed partial record AutoSourcarrSettings
         new("SOURCE_FAILURE_THRESHOLD", nameof(SourceFailureThreshold), SettingKind.Integer, false, []),
         new("SOURCE_COOLDOWN_SECONDS", nameof(SourceCooldownSeconds), SettingKind.Number, false, []),
         new("SOURCE_MIN_INTERVAL_MS", nameof(SourceMinIntervalMs), SettingKind.Integer, false, []),
+        new("SOURCE_WEBVIEW_ENABLED", nameof(SourceWebViewEnabled), SettingKind.Boolean, false, []),
         new("BACKGROUND_IDLE_SECONDS", nameof(BackgroundIdleSeconds), SettingKind.Number, false, []),
         new("SQLITE_CACHE_MB", nameof(SqliteCacheMb), SettingKind.Integer, false, []),
         new("SQLITE_BUSY_TIMEOUT_MS", nameof(SqliteBusyTimeoutMs), SettingKind.Integer, false, []),

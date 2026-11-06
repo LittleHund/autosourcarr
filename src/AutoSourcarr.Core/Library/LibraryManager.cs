@@ -121,6 +121,37 @@ public sealed class LibraryManager : IAsyncDisposable
         finally { _admin.Release(); }
     }
 
+    /// <summary>
+    /// 0.5.1 (IMP-3 keep subscriptions, ARC-1 own library): 0.4.x showed the main Suwayomi subscriptions as its library;
+    /// 0.5.0 lists only its own library, which a migrated instance starts without. On a library that was never used, the
+    /// subscribed works become library members once, with monitoring off (Suwayomi keeps downloading them; nothing is
+    /// queued here). Subscriptions themselves are not changed. Returns how many works were added (0 when already used).
+    /// </summary>
+    public async Task<int> SeedFromSubscriptionsAsync(IReadOnlyList<long> entryIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entryIds);
+        if (entryIds.Count == 0 || _store.AnySeries()) return 0;
+        await _admin.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_store.AnySeries()) return 0;
+            var added = new List<long>();
+            foreach (var raw in entryIds)
+            {
+                if (raw <= 0) continue;
+                var id = _catalogue.CanonicalEntryId(raw);
+                if (added.Contains(id) || _catalogue.Series(id) is not { } series) continue;
+                _store.SetMembership(id, true, series.Title);
+                added.Add(id);
+            }
+            if (added.Count > 0)
+                _decisions.Record(new DecisionEvent("library.seed", DecisionActor.Upgrade("0.5.1 library from subscriptions"), added, [],
+                    FormattableString.Invariant($"Added the {added.Count} works subscribed in the main Suwayomi library to the library (monitoring off; Suwayomi keeps downloading them)")));
+            return added.Count;
+        }
+        finally { _admin.Release(); }
+    }
+
     /// <summary>PUT /library/{id}/monitoring.</summary>
     public async Task<JsonObject> SetMonitoringAsync(long entryId, bool monitored, long revision, DecisionActor actor, CancellationToken cancellationToken = default)
     {

@@ -27,6 +27,8 @@ public static class ApplicationRuntimeTests
         suite.Add("application host: pre-admission cancellation and controlled integrated mode create no storage", () => Admission().GetAwaiter().GetResult());
         suite.Add("application host: saved timezone replaces stale inherited process and source launch values", TimeZone);
         suite.Add("application host: the source host environment keeps the solver split and drops loader/injection keys (replaces the native launch guard)", SourceHostEnvironmentGuard);
+        suite.Add("application host: SOURCE_WEBVIEW_ENABLED=false turns the source host WebView off; it never turns a source-host.env off back on", SourceHostWebViewSetting);
+        suite.Add("source host: two signal deaths soon after a start with the WebView on turn the WebView off (0.5.1 crash fallback)", SourceHostWebViewCrashFallback);
         suite.Add("application host: a restart the app asks for stops normally and exits with the restart code (no native launcher)", () => RestartExit().GetAwaiter().GetResult());
         if (OperatingSystem.IsWindows())
             suite.Add("application host: actual executable refuses Windows before private configuration", ExecutableGuard);
@@ -112,6 +114,32 @@ public static class ApplicationRuntimeTests
             Check.True(ApplicationRuntime.LoaderKey(key), key + " loads code or changes the allocator (audit 9)");
         Check.True(ApplicationRuntime.LoaderKey("1BAD") && ApplicationRuntime.LoaderKey("BAD-KEY") && ApplicationRuntime.LoaderKey(new string('X', 129)) && !ApplicationRuntime.LoaderKey("SOURCE_MIN_INTERVAL_MS"));
     }
+    private static void SourceHostWebViewSetting()
+    {
+        using var temp = new Sandbox(); var privacy = new SupportPrivacy();
+        var launch = new AutoSourcarr.Core.Sources.Runtime.SourceEngineEnvironment(temp.Path, Path.Combine(temp.Path, "profile"), privacy);
+        var parent = new Dictionary<string, string?> { ["PATH"] = "/usr/bin:/bin" };
+        var on = ApplicationRuntime.SourceHostEnvironment(new AutoSourcarrSettings(), launch, parent);
+        Check.True(!on.ContainsKey("WEBVIEW_ENABLED"), "the default leaves the WebView to the host (on)");
+        var off = ApplicationRuntime.SourceHostEnvironment(new AutoSourcarrSettings { SourceWebViewEnabled = false }, launch, parent);
+        Check.Equal("false", off["WEBVIEW_ENABLED"]);
+        File.WriteAllText(Path.Combine(temp.Path, "source-host.env"), "WEBVIEW_ENABLED=false\n");
+        var file = ApplicationRuntime.SourceHostEnvironment(new AutoSourcarrSettings { SourceWebViewEnabled = true }, launch, parent);
+        Check.Equal("false", file["WEBVIEW_ENABLED"]);
+    }
+    private static void SourceHostWebViewCrashFallback()
+    {
+        var soon = TimeSpan.FromSeconds(8);
+        var first = SourceHostProcess.WebViewCrash(133, soon, webViewOn: true, crashes: 0);
+        Check.Equal(1, first.Crashes); Check.True(first.TurnOff is null, "one crash is not enough");
+        var second = SourceHostProcess.WebViewCrash(133, soon, webViewOn: true, crashes: first.Crashes);
+        Check.Equal(2, second.Crashes);
+        Check.True(second.TurnOff is { } reason && reason.Contains("signal 5", StringComparison.Ordinal) && reason.Contains("SOURCE_WEBVIEW_ENABLED", StringComparison.Ordinal), "the second crash turns it off and says why");
+        Check.Equal(0, SourceHostProcess.WebViewCrash(1, soon, webViewOn: true, crashes: 1).Crashes); // a normal error exit resets the count
+        Check.Equal(0, SourceHostProcess.WebViewCrash(134, TimeSpan.FromMinutes(30), webViewOn: true, crashes: 1).Crashes); // long uptime is not a start crash
+        var withoutWebView = SourceHostProcess.WebViewCrash(139, soon, webViewOn: false, crashes: 1);
+        Check.Equal(1, withoutWebView.Crashes); Check.True(withoutWebView.TurnOff is null, "a host without the WebView never blames it");
+    }
     private static async Task RestartExit()
     {
         using var temp = new Sandbox(); var settings = Settings(temp.Path);
@@ -130,7 +158,7 @@ public static class ApplicationRuntimeTests
         {
             using var http = new RunningHttp(runtime, temp.Path); using var client = http.Host.GetTestClient();
             var live = await client.GetFromJsonAsync<JsonObject>("/api/v1/live");
-            Check.True(live!["ok"]!.GetValue<bool>()); Check.Equal("0.5.0", live["version"]!.GetValue<string>());
+            Check.True(live!["ok"]!.GetValue<bool>()); Check.Equal("0.5.1", live["version"]!.GetValue<string>());
             // Accounts (phase 5): the page needs a sign-in; the login page and static files are public.
             using (var page = await client.GetAsync("/"))
             {

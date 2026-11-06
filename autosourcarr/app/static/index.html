@@ -4,15 +4,15 @@
 <head>
 <meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>AutoSourcarr</title>
-<link href="/static/ui.css?v=0.5.0" rel="stylesheet"/>
-<link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico?v=0.5.0"/>
-<link rel="icon" type="image/png" sizes="32x32" href="/static/icons/app-icon-32.png?v=0.5.0"/>
-<link rel="apple-touch-icon" sizes="192x192" href="/static/icons/app-icon-192.png?v=0.5.0"/></head>
+<link href="/static/ui.css?v=0.5.1" rel="stylesheet"/>
+<link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico?v=0.5.1"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/static/icons/app-icon-32.png?v=0.5.1"/>
+<link rel="apple-touch-icon" sizes="192x192" href="/static/icons/app-icon-192.png?v=0.5.1"/></head>
 <body>
 <svg class="riSymbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="ri-book" viewBox="0 0 24 24"><path d="M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H3V4h1Zm9 3a3 3 0 0 1 3-3h5v15h-5a4 4 0 0 0-3 2"/></symbol><symbol id="ri-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="ri-import" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 15v5h16v-5"/></symbol><symbol id="ri-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></symbol><symbol id="ri-copy" viewBox="0 0 24 24"><path d="M8 8h12v12H8zM4 16V4h12"/></symbol><symbol id="ri-split" viewBox="0 0 24 24"><path d="M5 3v4a5 5 0 0 0 5 5h4a5 5 0 0 1 5 5v4M5 21v-4a5 5 0 0 1 5-5M15 17l4 4 4-4M1 17l4 4 4-4"/></symbol><symbol id="ri-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6M4 3h16v18H4z"/></symbol><symbol id="ri-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol><symbol id="ri-tool" viewBox="0 0 24 24"><path d="m14 6 4 4M5 20l-1-1a2 2 0 0 1 0-3l9-9a6 6 0 0 1 7-4l-4 4 3 3 4-4a6 6 0 0 1-7 7l-8 8a2 2 0 0 1-3-1Z"/></symbol><symbol id="ri-wanted" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M19 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></symbol><symbol id="ri-source" viewBox="0 0 24 24"><path d="M4 4h16v6H4zM4 14h16v6H4zM7 7h.01M7 17h.01M11 7h6M11 17h6"/></symbol><symbol id="ri-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3ZM12 9v4M12 17h.01"/></symbol><symbol id="ri-stats" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></symbol><symbol id="ri-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 3 2 3 1 3 3 1 3 3 3-3 3-1 1-3 2-3-2-3-3-1-1-3Zm6 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></symbol><symbol id="ri-system" viewBox="0 0 24 24"><path d="M4 4h16v12H4zM8 21h8M12 16v5"/></symbol><symbol id="ri-search" viewBox="0 0 24 24"><path d="m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/></symbol><symbol id="ri-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol><symbol id="ri-sun" viewBox="0 0 24 24"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"/></symbol><symbol id="ri-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5L4 10M5 12a7 7 0 0 0 12 5l3-3"/></symbol><symbol id="ri-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol><symbol id="ri-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol></svg>
 <a class="riSkip" href="#mainContent">Skip to content</a>
 <header class="appHeader riHeader">
-  <div class="riBrand"><button id="riMenuToggle" data-testid="nav-menu-toggle" class="riIconButton" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="riSidebar"><svg class="riIcon" aria-hidden="true"><use href="#ri-menu"/></svg></button><a href="#/series" class="riBrandLink"><img class="riAppIcon" src="/static/icons/app-icon-64.png?v=0.5.0" width="32" height="32" alt=""/><h1>AutoSourcarr</h1></a></div>
+  <div class="riBrand"><button id="riMenuToggle" data-testid="nav-menu-toggle" class="riIconButton" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="riSidebar"><svg class="riIcon" aria-hidden="true"><use href="#ri-menu"/></svg></button><a href="#/series" class="riBrandLink"><img class="riAppIcon" src="/static/icons/app-icon-64.png?v=0.5.1" width="32" height="32" alt=""/><h1>AutoSourcarr</h1></a></div>
   <button type="button" id="riSearchOpen" class="riGlobalSearch"><svg class="riIcon" aria-hidden="true"><use href="#ri-search"/></svg><span>Search your library</span><kbd>/</kbd></button>
   <div class="riHeaderRight"><span id="riPreviewBadge" hidden>Sample preview</span><button type="button" class="riIconButton" data-testid="color-mode-toggle" id="riThemeToggle" aria-label="Switch light or dark appearance" title="Switch light or dark appearance"><svg class="riIcon" aria-hidden="true"><use href="#ri-sun"/></svg></button><button aria-controls="errorPanel" aria-expanded="false" class="pill healthButton" id="health" title="Open errors and diagnostics" type="button">checking…</button></div>
 </header>
@@ -43,13 +43,14 @@
 <span class="riNavLabel">Instance</span>
 <button type="button" data-tab="statistics" data-route="/statistics" ><svg class="riIcon" aria-hidden="true"><use href="#ri-stats"/></svg><span>Statistics</span></button>
 <button type="button" data-tab="settings" data-route="/settings" class="settingsNavButton" aria-label="Settings"><svg class="riIcon" aria-hidden="true"><use href="#ri-settings"/></svg><span>Settings</span></button>
+<button type="button" class="riChildNav" data-route="/settings/connections"><svg class="riIcon" aria-hidden="true"><use href="#ri-source"/></svg><span>Connections</span></button>
 <button type="button" class="riChildNav" data-instance-tool="backups"><svg class="riIcon" aria-hidden="true"><use href="#ri-import"/></svg><span>Backup &amp; restore</span></button>
 <button type="button" class="riChildNav" data-instance-tool="sharing"><svg class="riIcon" aria-hidden="true"><use href="#ri-copy"/></svg><span>Database sharing</span></button>
 <button type="button" class="riChildNav" data-instance-tool="research"><svg class="riIcon" aria-hidden="true"><use href="#ri-list"/></svg><span>Freshness &amp; performance</span></button>
 <button type="button" data-tab="about" data-route="/system" ><svg class="riIcon" aria-hidden="true"><use href="#ri-system"/></svg><span>System</span></button>
 </div>
 </nav>
-<div class="riSidebarFoot"><span class="riInstanceDot"></span><div><strong>AutoSourcarr</strong><span>v0.4.5</span></div></div>
+<div class="riSidebarFoot"><span class="riInstanceDot"></span><div><strong>AutoSourcarr</strong><span id="riSidebarVersion"></span></div></div>
 </aside>
 
 <main id="mainContent" data-testid="main-content" tabindex="-1">
@@ -696,28 +697,28 @@ proxy_set_header Remote-Groups $groups;</code></pre><p class="muted">These are t
 </dialog>
 <dialog id="riInstanceDialog" class="riToolDialog" aria-labelledby="riInstanceTitle"><header><h2 id="riInstanceTitle">Instance tools</h2><button id="riInstanceClose" type="button">Close</button></header><div id="riInstanceBody"></div><footer><p id="riInstanceStatus" role="status"></p></footer></dialog>
 <div id="toast" role="status"></div>
-<script src="/static/confirmation-dialog.js?v=0.5.0"></script>
-<script src="/static/generated/api-client.js?v=0.5.0"></script><script src="/static/live-events.js?v=0.5.0"></script><script src="/static/theme.js?v=0.5.0"></script><script src="/static/workbench.js?v=0.5.0"></script><script src="/static/app.js?v=0.5.0"></script><script src="/static/mixed-entries.js?v=0.5.0"></script><script src="/static/repair-login.js?v=0.5.0"></script><script src="/static/source-repairs.js?v=0.5.0"></script><script src="/static/tag-review.js?v=0.5.0"></script><script src="/static/orphan-sources.js?v=0.5.0"></script><script src="/static/source-controls.js?v=0.5.0"></script>
-<script src="/static/internal-services.js?v=0.5.0"></script><script src="/static/navigation-state.js?v=0.5.0"></script>
-<script src="/static/matching-review.js?v=0.5.0"></script>
-<script src="/static/repair-isolation.js?v=0.5.0"></script>
-<script src="/static/repair-tasks.js?v=0.5.0"></script>
-<script src="/static/source-raws.js?v=0.5.0"></script>
-<script src="/static/repair-queue.js?v=0.5.0"></script>
-<script src="/static/source-health.js?v=0.5.0"></script>
-<script src="/static/setup.js?v=0.5.0"></script>
-<script src="/static/reimagined-core.js?v=0.5.0"></script>
-<script src="/static/library-controller.js?v=0.5.0"></script>
-<script src="/static/manage-tabs.js?v=0.5.0"></script>
-<script src="/static/identity-review.js?v=0.5.0"></script>
-<script src="/static/manage-entry.js?v=0.5.0"></script>
-<script src="/static/gallery-policy.js?v=0.5.0"></script>
-<script src="/static/catalog-sharing.js?v=0.5.0"></script>
-<script src="/static/instance-tools.js?v=0.5.0"></script>
-<script src="/static/reimagined-controls.js?v=0.5.0"></script>
-<script src="/static/reimagined.js?v=0.5.0"></script>
-<script src="/static/accounts.js?v=0.5.0"></script>
-<script src="/static/vendor/qrcode-generator-1.4.4.js?v=0.5.0"></script><script src="/static/reader-setup.js?v=0.5.0"></script>
-<script src="/static/connections.js?v=0.5.0"></script>
-<script src="/static/filter-summary.js?v=0.5.0"></script>
+<script src="/static/confirmation-dialog.js?v=0.5.1"></script>
+<script src="/static/generated/api-client.js?v=0.5.1"></script><script src="/static/live-events.js?v=0.5.1"></script><script src="/static/theme.js?v=0.5.1"></script><script src="/static/workbench.js?v=0.5.1"></script><script src="/static/app.js?v=0.5.1"></script><script src="/static/mixed-entries.js?v=0.5.1"></script><script src="/static/repair-login.js?v=0.5.1"></script><script src="/static/source-repairs.js?v=0.5.1"></script><script src="/static/tag-review.js?v=0.5.1"></script><script src="/static/orphan-sources.js?v=0.5.1"></script><script src="/static/source-controls.js?v=0.5.1"></script>
+<script src="/static/internal-services.js?v=0.5.1"></script><script src="/static/navigation-state.js?v=0.5.1"></script>
+<script src="/static/matching-review.js?v=0.5.1"></script>
+<script src="/static/repair-isolation.js?v=0.5.1"></script>
+<script src="/static/repair-tasks.js?v=0.5.1"></script>
+<script src="/static/source-raws.js?v=0.5.1"></script>
+<script src="/static/repair-queue.js?v=0.5.1"></script>
+<script src="/static/source-health.js?v=0.5.1"></script>
+<script src="/static/setup.js?v=0.5.1"></script>
+<script src="/static/reimagined-core.js?v=0.5.1"></script>
+<script src="/static/library-controller.js?v=0.5.1"></script>
+<script src="/static/manage-tabs.js?v=0.5.1"></script>
+<script src="/static/identity-review.js?v=0.5.1"></script>
+<script src="/static/manage-entry.js?v=0.5.1"></script>
+<script src="/static/gallery-policy.js?v=0.5.1"></script>
+<script src="/static/catalog-sharing.js?v=0.5.1"></script>
+<script src="/static/instance-tools.js?v=0.5.1"></script>
+<script src="/static/reimagined-controls.js?v=0.5.1"></script>
+<script src="/static/reimagined.js?v=0.5.1"></script>
+<script src="/static/accounts.js?v=0.5.1"></script>
+<script src="/static/vendor/qrcode-generator-1.4.4.js?v=0.5.1"></script><script src="/static/reader-setup.js?v=0.5.1"></script>
+<script src="/static/connections.js?v=0.5.1"></script>
+<script src="/static/filter-summary.js?v=0.5.1"></script>
 </body></html>

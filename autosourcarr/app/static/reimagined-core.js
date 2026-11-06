@@ -18,6 +18,7 @@
     '/sources/ai':{tab:'sources',section:'maintenance'},
     '/settings':{tab:'settings'}, '/settings/configuration':{tab:'settings',section:'configuration'},
     '/settings/appearance':{tab:'settings',section:'customization'},
+    '/settings/connections':{tab:'settings',section:'connections'},
     '/system':{tab:'about'}, '/statistics':{tab:'statistics'},
   };
   function parseRoute(hash) {

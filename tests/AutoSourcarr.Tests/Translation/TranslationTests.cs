@@ -62,7 +62,29 @@ public static class TranslationTests
             Check.Equal("", disabled.TranslateAsync("Unseen", "ja").GetAwaiter().GetResult());
             var builtin = settings with { TranslationMode = "builtin" };
             using var bundled = new TranslationClient(database, () => builtin, fake);
-            Check.Equal(TranslationClient.BuiltinUrl, bundled.BaseUrl);
+            Check.Equal("", bundled.BaseUrl); // 0.5.x bundles no translator
+            Check.True(bundled.OffReason!.Contains("0.6.0", StringComparison.Ordinal), "the status says built-in translation returns in 0.6.0");
+        });
+
+        suite.Add("translation: a LibreTranslate connection wins over the setting; the 0.4.x loopback address counts as not configured (0.5.1)", () =>
+        {
+            using var temp = new Sandbox();
+            using var database = new SqliteDatabase(new AutoSourcarrSettings { DataDir = temp.Path });
+            new SchemaMigrator(database).Initialize();
+            var migrated = new AutoSourcarrSettings { DataDir = temp.Path, TranslationMode = "auto", TranslationApiUrl = "http://127.0.0.1:5000", TranslationApiKey = "old" };
+            var fake = new FakeLibreTranslate(body => "[" + Target(body) + "] " + Q(body));
+            using (var leftover = new TranslationClient(database, () => migrated, fake))
+            {
+                Check.True(!leftover.Enabled, "the 0.4.x built-in address is not a translator in 0.5");
+                Check.True(leftover.OffReason!.Contains("127.0.0.1:5000", StringComparison.Ordinal), "the status names the old address");
+            }
+            var connection = new AutoSourcarr.Core.Connections.ConnectionConfig("t1", "libretranslate", "Translator", true,
+                new Dictionary<string, string> { ["url"] = "http://libretranslate:5000/", ["api_key"] = "connection-key" });
+            using var client = new TranslationClient(database, () => migrated with { TranslationApiUrl = "http://translate.test" }, fake) { Connections = () => [connection] };
+            Check.Equal("http://libretranslate:5000", client.BaseUrl);
+            Check.Equal("[ja] Witch Hat", client.TranslateAsync("Witch Hat", "ja").GetAwaiter().GetResult());
+            Check.Equal("connection-key", fake.Requests[^1]["api_key"]!.GetValue<string>());
+            Check.True(AutoSourcarr.Core.Connections.Types.TranslationConnectionType.BaseUrl("http://localhost:5000") is null, "loopback is refused for connections too");
         });
 
         suite.Add("translation: search names gain origin and literal translations, transient and deduplicated", () =>

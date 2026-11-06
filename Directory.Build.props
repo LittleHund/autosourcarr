@@ -11,7 +11,7 @@
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
-    <VersionPrefix>0.5.0</VersionPrefix>
+    <VersionPrefix>0.5.1</VersionPrefix>
     <RepositoryUrl>https://github.com/LittleHund/autosourcarr</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Company>AutoSourcarr</Company>

@@ -135,6 +135,9 @@ public sealed class LibraryStore
         return Series(c, entryId)!;
     });
 
+    /// <summary>Whether any work was ever added (a removed work keeps its row): false only on a library that was never used.</summary>
+    public bool AnySeries() => database.Read(DatabaseFile.Catalog, c => c.Scalar("SELECT 1 FROM library_series LIMIT 1") is not null);
+
     public IReadOnlyList<long> Members() => database.Read(DatabaseFile.Catalog, c =>
         c.Query("SELECT entry_id FROM library_series WHERE in_library=1 ORDER BY entry_id").Select(row => row.Integer("entry_id")).ToArray());
 

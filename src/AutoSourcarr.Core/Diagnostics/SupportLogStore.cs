@@ -53,6 +53,12 @@ public sealed class SupportLogStore : IAsyncDisposable
     public SupportPrivacy Privacy { get; }
     public RepairDiagnosticCache Repair { get; }
 
+    /// <summary>
+    /// 0.5.1: every recorded (already redacted) line is also written here, so <c>docker logs</c> and the TrueNAS log view
+    /// show what the app does. The image turns it on (AUTOSOURCARR_LOG_STDOUT=true); tests and tools leave it null.
+    /// </summary>
+    public TextWriter? Mirror { get; init; }
+
     public void Record(string source, string message)
     {
         string text;
@@ -61,6 +67,11 @@ public sealed class SupportLogStore : IAsyncDisposable
         var row = new JsonObject { ["id"] = Guid.NewGuid().ToString("N")[..12], ["time"] = DateTimeOffset.UtcNow.ToString("O"),
             ["app_version"] = _identity.Version, ["instance_id"] = _identity.InstanceId, ["source"] = UnicodeCaseFold.Truncate(Privacy.Text(source), 80), ["message"] = text };
         var encoded = row.ToJsonString(JsonOptions) + "\n";
+        if (Mirror is { } mirror)
+        {
+            try { mirror.WriteLine(row["time"] + " [" + row["source"] + "] " + text); }
+            catch (Exception error) when (error is IOException or ObjectDisposedException) { _ = error; } // a closed stdout never stops the app
+        }
         lock (_gate)
         {
             if (_pending.Count == _pendingLimit) { _pending.Dequeue(); _dropped++; }

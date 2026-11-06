@@ -76,7 +76,7 @@ public sealed class ReaderAuthorizationMiddleware(RequestDelegate next, Func<Aut
         // AUTH-4: a reader key made for one device (Keys page) works like the reader token and can be revoked alone.
         if (deviceKey(Supplied(context.Request))) { await ContinueAsync(context, path).ConfigureAwait(false); return; }
         if (current.AutosourcarrReaderApiToken.Trim().Length == 0)
-        { await ApiJson.ProblemAsync(context, 503, "AutoSourcarr reader API token is not configured").ConfigureAwait(false); return; }
+        { await ApiJson.ProblemAsync(context, 503, "No reader key matches: create a reader key for this phone under System, Keys in AutoSourcarr").ConfigureAwait(false); return; }
         if (!ApiAuthorization.ReaderAllowed(context.Request, current))
         {
             context.Response.Headers.WWWAuthenticate = "Bearer";

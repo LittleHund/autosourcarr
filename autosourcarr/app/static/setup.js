@@ -82,7 +82,7 @@
     if(!result){status.textContent=completed?'Saved reader settings have not been checked. Open Status for build readiness.':'Reader settings have not been checked for this draft.';return;}
     const ready=result.ready&&result.errors.length===0;
     status.textContent=ready?(readerResultSaved?'Saved reader settings pass the build check.':'Draft reader settings pass the build check. Finish saves the draft.')
-      :'Reader build needs attention. You can still finish setup.';
+      :'Reader access needs attention. You can still finish setup.';
     if(issues){
       for(const [items,warning] of [[result.errors,false],[result.warnings,true]])for(const item of items){
         const row=document.createElement('li');row.textContent=(warning?'Warning · ':'')+(item.key?item.key+': ':'')+item.message;issues.append(row);
