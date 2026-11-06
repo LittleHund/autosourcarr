@@ -85,6 +85,10 @@ public static class TranslationTests
             Check.Equal("[ja] Witch Hat", client.TranslateAsync("Witch Hat", "ja").GetAwaiter().GetResult());
             Check.Equal("connection-key", fake.Requests[^1]["api_key"]!.GetValue<string>());
             Check.True(AutoSourcarr.Core.Connections.Types.TranslationConnectionType.BaseUrl("http://localhost:5000") is null, "loopback is refused for connections too");
+            var broken = connection with { Label = "Old translator", Values = new Dictionary<string, string> { ["url"] = "http://127.0.0.1:5000" } };
+            using var refused = new TranslationClient(database, () => migrated with { TranslationApiUrl = "http://translate.test" }, fake) { Connections = () => [broken] };
+            Check.True(!refused.Enabled, "a broken connection never falls back to TRANSLATION_API_URL silently");
+            Check.True(refused.OffReason!.Contains("Old translator", StringComparison.Ordinal), "the status names the broken connection");
         });
 
         suite.Add("translation: search names gain origin and literal translations, transient and deduplicated", () =>

@@ -50,7 +50,12 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     {
         get
         {
-            lock (_gate) if (_webViewOff is { } reason) return reason;
+            lock (_gate)
+            {
+                if (_webViewOff is { } reason) return reason;
+                // A running host keeps what it was started with; a changed setting applies at its next start.
+                if (_process is { HasExited: false }) return _launchedWithWebView ? null : "setting";
+            }
             return WebViewRequested(_environment()) ? null : "setting";
         }
     }
@@ -72,7 +77,8 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     {
         if (!webViewOn) return (crashes, null);
         var signal = exitCode is > 128 and < 128 + 65 ? exitCode - 128 : 0;
-        if (signal == 0 || uptime > WebViewCrashWindow) return (0, null);
+        // SIGKILL (9) is the kernel's out-of-memory kill or a stop from outside, never Chromium's own crash.
+        if (signal is 0 or 9 || uptime > WebViewCrashWindow) return (0, null);
         crashes++;
         return crashes < WebViewCrashLimit ? (crashes, null)
             : (crashes, "The WebView (Chromium) stopped the source host " + crashes.ToString(CultureInfo.InvariantCulture) + " times (signal "
@@ -400,7 +406,8 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
                     delay = RestartDelays[0]; failures = 0;
                     _log(turnOff);
                     try { WebViewTurnedOff?.Invoke(turnOff); }
-                    catch (Exception error) when (error is InvalidOperationException or IOException) { _log("Could not record the WebView notice: " + error.Message); }
+                    // An outside callback must never stop the watch loop (the host would not be restarted).
+                    catch (Exception error) when (error is not OperationCanceledException) { _log("Could not record the WebView notice: " + error.GetType().Name + ": " + error.Message); }
                 }
                 _log(LastError + " Starting it again in " + delay.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s.");
             }

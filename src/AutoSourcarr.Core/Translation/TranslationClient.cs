@@ -46,9 +46,12 @@ public sealed class TranslationClient : IDisposable
     {
         var settings = _settings();
         if (settings.TranslationMode is "off" or "builtin") return ("", "");
-        foreach (var connection in Connections?.Invoke() ?? [])
-            if (connection.Enabled && Core.Connections.Types.TranslationConnectionType.BaseUrl(connection.Value(Core.Connections.Types.TranslationConnectionType.UrlField)) is { } url)
+        var connections = (Connections?.Invoke() ?? []).Where(connection => connection.Enabled).ToList();
+        foreach (var connection in connections)
+            if (Core.Connections.Types.TranslationConnectionType.BaseUrl(connection.Value(Core.Connections.Types.TranslationConnectionType.UrlField)) is { } url)
                 return (url, connection.Value(Core.Connections.Types.TranslationConnectionType.ApiKeyField));
+        // An enabled connection with an unusable address never falls back to TRANSLATION_API_URL silently: OffReason names it.
+        if (connections.Count > 0) return ("", "");
         return Core.Connections.Types.TranslationConnectionType.BaseUrl(settings.TranslationApiUrl) is { } configured ? (configured, settings.TranslationApiKey) : ("", "");
     }
 
@@ -65,6 +68,8 @@ public sealed class TranslationClient : IDisposable
             if (Enabled) return null;
             var settings = _settings();
             if (settings.TranslationMode == "off") return "Title translation is turned off (TRANSLATION_MODE=off).";
+            if (settings.TranslationMode != "builtin" && (Connections?.Invoke() ?? []).FirstOrDefault(connection => connection.Enabled) is { } broken)
+                return "The translator connection \"" + broken.Label + "\" has an address AutoSourcarr cannot use (it must be http(s), not this container's own 127.0.0.1 or localhost); fix it under Connections.";
             if (settings.TranslationMode == "builtin" || Uri.TryCreate(settings.TranslationApiUrl.Trim(), UriKind.Absolute, out var url)
                 && Core.Connections.Types.TranslationConnectionType.IsLoopback(url))
                 return "AutoSourcarr 0.5 has no built-in translator (it returns in 0.6.0; the 0.4.x one ran at 127.0.0.1:5000). Add a LibreTranslate connection under Connections to translate titles.";

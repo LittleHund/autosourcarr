@@ -202,7 +202,10 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private void SeedLibraryFromSubscriptions()
     {
         if (_libraryManager is not { } manager || _library is not { } library) return;
-        if (library.CachedSubbedPayload()["entry_ids"] is not JsonArray ids || ids.Count == 0) return;
+        // Only a live list from the main Suwayomi (ok=true), never the restored display snapshot, which may be old.
+        var payload = library.CachedSubbedPayload();
+        if (payload["ok"] is not JsonValue live || !live.TryGetValue<bool>(out var ok) || !ok) return;
+        if (payload["entry_ids"] is not JsonArray ids || ids.Count == 0) return;
         var entries = ids.Select(node => node is JsonValue value && value.TryGetValue<long>(out var id) ? id : 0).Where(id => id > 0).ToList();
         if (entries.Count == 0 || Interlocked.Exchange(ref _librarySeeding, 1) == 1) return;
         _ = Task.Run(async () =>
@@ -212,12 +215,18 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 var added = await manager.SeedFromSubscriptionsAsync(entries, _healthStop.Token).ConfigureAwait(false);
                 if (added > 0)
                 {
-                    Logs.Record("Library", added.ToString(System.Globalization.CultureInfo.InvariantCulture) + " works subscribed in the main Suwayomi were added to the library (monitoring off).");
+                    Logs.Record("Library", added.ToString(System.Globalization.CultureInfo.InvariantCulture) + " of " + entries.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                        + " works subscribed in the main Suwayomi were added to the library (monitoring off; the rest are no longer in the catalogue or are the same work).");
                     Events.Debounce("library", LiveWindow, "status");
                 }
             }
             catch (OperationCanceledException) { }
-            catch (Exception error) { Logs.Record("Library", "Adding the subscribed works to the library failed (" + error.GetType().Name + ": " + error.Message + ")."); }
+            catch (Exception error)
+            {
+                var message = "Adding the works subscribed in the main Suwayomi to the library failed (" + error.GetType().Name + ": " + error.Message + "); it is tried again at the next library refresh.";
+                Logs.Record("Library", message);
+                Errors.Record("Library", message, key: "library-seed");
+            }
             finally { Interlocked.Exchange(ref _librarySeeding, 0); }
         });
     }

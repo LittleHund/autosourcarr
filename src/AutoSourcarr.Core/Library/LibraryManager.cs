@@ -135,18 +135,19 @@ public sealed class LibraryManager : IAsyncDisposable
         try
         {
             if (_store.AnySeries()) return 0;
-            var added = new List<long>();
+            var works = new List<(long EntryId, string Title)>();
             foreach (var raw in entryIds)
             {
                 if (raw <= 0) continue;
                 var id = _catalogue.CanonicalEntryId(raw);
-                if (added.Contains(id) || _catalogue.Series(id) is not { } series) continue;
-                _store.SetMembership(id, true, series.Title);
-                added.Add(id);
+                if (works.Any(work => work.EntryId == id) || _catalogue.Series(id) is not { } series) continue;
+                works.Add((id, series.Title));
             }
+            if (works.Count == 0 || !_store.SeedMembers(works)) return 0;
+            var added = works.Select(work => work.EntryId).ToList();
             if (added.Count > 0)
                 _decisions.Record(new DecisionEvent("library.seed", DecisionActor.Upgrade("0.5.1 library from subscriptions"), added, [],
-                    FormattableString.Invariant($"Added the {added.Count} works subscribed in the main Suwayomi library to the library (monitoring off; Suwayomi keeps downloading them)")));
+                    FormattableString.Invariant($"Added the {added.Count} works subscribed in the main Suwayomi library to the library (monitoring off; Suwayomi keeps downloading them); {entryIds.Count - added.Count} listed ids were duplicates or are no longer in the catalogue")));
             return added.Count;
         }
         finally { _admin.Release(); }
