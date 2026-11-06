@@ -8,12 +8,12 @@ Gates (hard rule 15): merge to `main`, ghcr publish, any NAS change and the depl
 
 | Item | Owner | State |
 | --- | --- | --- |
-| Migrate a snapshot of the owner's 0.4.x data on the PC with ONE command | tool: Claude; run: owner | |
-| Compare counts, manual decisions and subscriptions with the Python app (parity report) | Claude | |
-| Release 0.5.0 with CHANGELOG | Claude (prepare), owner (go) | |
-| Deploy only after the owner's explicit go | owner | |
-| The Python app is retired (after the deploy is confirmed working) | owner go | |
-| Done when: zero lost manual decisions and subscriptions in the comparison | | |
+| Migrate a snapshot of the owner's 0.4.x data on the PC with ONE command | tool: Claude; run: owner | tool done (wrappers tested); owner run open |
+| Compare counts, manual decisions and subscriptions with the Python app (parity report) | Claude | done (parity-report.md/.json, strict verdict) |
+| Release 0.5.0 with CHANGELOG | Claude (prepare), owner (go) | prepared; CHANGELOG date set at release; owner go open |
+| Deploy only after the owner's explicit go | owner | open |
+| The Python app is retired (after the deploy is confirmed working) | owner go | open |
+| Done when: zero lost manual decisions and subscriptions in the comparison | | open: needs the owner's snapshot run |
 
 ## (b) Requirements
 
@@ -36,3 +36,7 @@ remove `tests/AutoSourcarr.Tests/Fixtures/matching/duplicate-pairs.user.json` (a
 Green probe incl. image · local checks · independent audit · push `conversion`, green CI · ZIP · knowledge records
 `phase14-records.json` · PC sync · checkpoint · report. Then the gates: owner runs the migration and reviews parity →
 owner go for merge to `main` + ghcr publish → owner deploys (or asks for help) → retire Python after confirmation.
+
+## State 2026-11-05
+
+(b) ARC-7 update notice, IMP-9 merge recheck in the parity report: done. (c) release prep: done. (d) probe c49ef8e green (1166/1166, image boot 3.0 s), local checks 1-9, independent audits (phase 14 twice + re-audit of phases 0-13), conversion CI 41929556047 green, ZIP, records, PC sync, checkpoint: done. Gates: open.

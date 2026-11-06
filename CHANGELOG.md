@@ -1,4 +1,4 @@
-## 0.5.0 - YYYY-MM-DD
+## 0.5.0 - 2026-11-05
 
 0.5.0 is AutoSourcarr rewritten in C#/.NET 10 (ARC-11): one image (`docker/Dockerfile`) that runs on its own, with the
 source host (extension sources and WebView), the repair runner, the reader extension repository and the Web UI

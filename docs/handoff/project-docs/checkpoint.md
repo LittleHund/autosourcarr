@@ -1,6 +1,6 @@
-# Checkpoint — 2026-11-03 (Phases 0–13 DONE; next Phase 14 Cutover — owner gate)
+# Checkpoint — 2026-11-05 (Phases 0–14 code DONE; cutover waits on the owner's snapshot run and gates)
 
-STATUS: 0.5.0 · Phase 13/14 done · next Phase 14 Cutover (needs the owner) · 95% done (165/173 plan-h) · remaining to cutover 8 plan-h (≈ 2 h) · 0.6.0 after that ~35 plan-h (≈ 5.5 h)
+STATUS: 0.5.0 · Phase 14 code done, re-audit of phases 0–13 done · next: owner runs the migration on a 0.4.5 snapshot, then gates (merge to main, ghcr publish, deploy, retire Python) · ≈ 99% of 0.5.0 plan-h (173) · Claude work left before the deploy ≈ 0.5–1 h (parity review together, release run) · 0.6.0 ~35 plan-h (≈ 6–10 h at the recent pace)
 
 RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code on the owner's PC) against 2.35: about 1.3 h went to fixing what a recheck of phases 0–9 found and six CI probe rounds (reader extension build script, signing, flaky tests). Pace phases 0–10: 24.4 h for 146 plan-h = 0.167 h per plan-h. Phases 11 and 13 grow with the recheck items moved to them (+0.6 h, +1.0 h).
 
@@ -15,9 +15,16 @@ RE-ESTIMATE #11 (1 Nov 21:30). Phase 10 took 4.0 h (17:33–21:30, Claude Code o
 | 11 Web UI finish | 6 | 3.75 actual (17:00–20:45, 4 area agents + audit + 3 probes) | done |
 | 12 Backup | 6 | 2.7 actual (2 Nov 20:40–23:20, two audits) | done |
 | 13 Pipeline | 7 | 3.6 actual (2 Nov 21:40 – 3 Nov, image + runtime agents, one audit) | done |
-| 14 Cutover | 8 | 2.0 (×1.5 real data, your command) | |
-| 0.5.0 total | 173 | 35.65 done + ≈ 2 remaining (cutover) | |
-| 0.6.0 (15–17) | 35 | ≈ 5.5 | |
+| 14 Cutover | 8 | ≈ 4.5 actual, estimated from commit times (3 Nov ≈ 2.5 h tool + release prep, 4 Nov ≈ 2 h review round 2) | code done; owner run open |
+| Re-audit of phases 0–13 (new toolkit) | — | ≈ 4.3 actual (4 Nov 19:55 – 5 Nov 00:10, estimated) | done |
+| 0.5.0 total | 173 | ≈ 44.5 done + ≈ 0.5–1 remaining (parity review, release run) | |
+| 0.6.0 (15–17) | 35 | ≈ 6–10 (re-estimated: recent phases ran 0.3–0.6 h per plan-h with audits) | |
+
+RE-ESTIMATE #14 (5 Nov 00:15). Phase 14 took about 4.5 h against 2 (two audit rounds of the cutover tool, a strict verdict model). The owner asked to re-check phases 0–13 with the new Claude setup (lean-local-coding, pr-review-toolkit, LSP/Serena): about 4.3 h, 58 findings fixed. Remaining before the deploy is owner work plus ≈ 0.5–1 h of Claude time.
+
+Phase 14 (code closed, cutover open): conversion 7247e82 → CI 41928261648 failed on one stale 0.4.x source-text test; fixed in the next commit, CI 41929556047 green (both jobs). Probe c49ef8e (run 41922424210) all green — 1166/1166 C# tests, source host 12/13 (required 10; real Cloudflare not passed from CI), reader extension build, Playwright, image build and boot 3.0 s, Playwright against the image. Tool: `AutoSourcarr.Api --migrate-0.4` + wrappers, parity report (exit 0/1/2/3). Audits: two rounds on the tool (all findings fixed) and the re-audit of phases 0–13 (58 + 7 follow-ups fixed; records FINDING-20261104-REAUDIT-PHASES-0-13). Owner decisions 4 Nov: sweep follows option C; AUTH_GROUPS_HEADER; repair overlay 0.4.5-only. ZIP autosourcarr-0.5.0-phase-14.zip (ee24798, sha256 65877975…6d7f); knowledge DB: zip indexed, phase14-records.json imported (7 records), check ok (integrity ok, search consistent); PC sync: conversion-export/phase14-sync.zip (124 files, sha256 c3778d64…b8dc) extracted, duplicate-pairs.user.json moved to _to_delete/phase14. Close-out CI 41931309146. Checklist docs/handoff/briefs/phase14-checklist.md. Not run: the owner's snapshot through the tool, Docker on the PC, release.yml, Mihon on a device.
+
+Next (owner): run `scripts/migrate-from-0.4.ps1 <0.4.5 snapshot> <output>` (see docs/upgrade-from-0.4.md), share the verdict line; then go/no-go for merge to `main`, ghcr publish (release environment + AUTOSOURCARR_EXT_* secrets), deploy (AUTH_METHOD=external + AUTH_TRUSTED_PROXIES, /api/reader/repo/ bypass), retire Python.
 
 RE-ESTIMATE #13 (3 Nov). Phase 12 took 2.7 h and phase 13 about 3.6 h, run in parallel. Remaining: phase 14 cutover ≈ 2 h (owner gate), 0.6.0 ≈ 5.5 h (owner gate).
 

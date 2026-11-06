@@ -36,7 +36,12 @@ def test_android_extension_uses_reader_prefix_and_api_key_for_all_requests():
     # Phase 10 (READ-1): the key is the server slot's own setting (slot 1 defaults to a baked legacy key) and is
     # added per request for that slot's server only.
     assert 'request.newBuilder().header("X-AutoSourcarr-API-Key", key)' in source
-    assert 'preferences.getString(PREF_READER_KEY, if (slot == 1) AUTOSOURCARR_READER_API_KEY else "")' in source
+    # Re-audit 2026-11-04: the key is a __PRIVATE_ preference (left out of Mihon backups), moved once from the old name,
+    # and never sent over plain http to a non-local host.
+    assert 'PREF_READER_KEY = "__PRIVATE_autosourcarr_reader_key"' in source
+    assert 'preferences.getString(LEGACY_PREF_READER_KEY, null)' in source
+    assert 'return (if (slot == 1) AUTOSOURCARR_READER_API_KEY else "").trim()' in source
+    assert 'if (!request.url.isHttps && !isLocalHost(request.url.host))' in source
     assert 'private fun endpoint(path: String)' in source
     assert 'override fun imageRequest(page: Page): Request = GET(requireNotNull(page.imageUrl), headers)' in source
     assert 'apiPrefix != "/api/v1"' in dto

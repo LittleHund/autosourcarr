@@ -50,11 +50,11 @@ are no longer used. Plan: `docs/handoff/conversion-plan.md` (copy of Claude Docs
 | 11 Web UI finish | done (2026-11-02) | probe f0a582d green (1212 tests, Playwright 156/0/24) |
 | 12 Backup | done (2026-11-02) | covered by the phase 13 probes |
 | 13 Pipeline/image | done (2026-11-03) | probe 5678e88 green (1138 tests, image boot 3.9 s, Playwright 156/0/24 against the image) |
-| 14 Cutover | open — owner gate | — |
+| 14 Cutover | code done (2026-11-05): tool, parity report, release prep, re-audit of phases 0–13; owner snapshot run and gates open | probe c49ef8e green, conversion CI 41929556047 green |
 | 15–17 (0.6.0) | open | — |
 
-Progress: 165 of 173 plan-hours (95 %); estimate ≈ 2 h to cutover, ≈ 5.5 h for 0.6.0
-(measured pace 0.167 h per plan-hour, phases 0–10). Paused before phase 11 at the owner's request.
+Progress (2026-11-05): 0.5.0 code complete (≈ 99 % of 173 plan-hours); before the deploy ≈ 0.5–1 h of Claude time
+(parity review, release run) plus the owner's gates; 0.6.0 ≈ 6–10 h. See `docs/handoff/project-docs/checkpoint.md`.
 
 **Phase 10 state:** four parts were written by sub-agents and saved in local WIP commit `3ed0b4e`
 (not pushed, never compiled): 10A chapters/serving/quality (`Core/Catalogue/{Chapters,Serving,Browse}`),
@@ -234,6 +234,7 @@ After each C# edit, read the csharp-ls diagnostics (§7) before starting a build
 | 2026-11-01 | Older guidance files (PC workspace-root `CLAUDE.md`, Project `claude/CLAUDE.md`) said "paused at stage 26"; both now point here. This file supersedes them. | resolved |
 | 2026-10-31 | Real Cloudflare managed challenge not passed from CI (GitHub network); WebView passes the local challenge. | open, needs user network |
 | 2026-10-31 | Source host runs as the same user as the app; separate low-rights user + runner binary in image → phase 13. | decided (phase 13): same user inside a Landlock sandbox; runner in the image |
+| 2026-11-04 | Owner decisions in the re-audit of phases 0–13: the duplicate sweep follows option C (a title alone never merges); new AUTH_GROUPS_HEADER (a custom user header needs it); sign-in settings are owner-only and kept on restore; docker-compose.repair.yml stays for the 0.4.5 rollback only (repair-worker.sh refuses 0.5.0), removed when Python retires. | decision |
 | 2026-11-03 | Deploy note: with Authelia/external sign-in set `AUTH_TRUSTED_PROXIES` to the proxy's address (identity headers are refused otherwise). | open (at 0.5.0 deploy) |
 | 2026-10-31 | Two-factor (AUTH-7), owner transfer/recovery (AUTH-9), AI providers + Postgres connections (CON-4, phase 16), SRC-9 AI benchmark. | deferred to 0.6.0 |
 | 2026-11-01 | Checkpoint item "(4) private duplicate test set in CI via encrypted fixture" is superseded: the user allowed committing it plainly (it must still be removed before cutover). | resolved |
