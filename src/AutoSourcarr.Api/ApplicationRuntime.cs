@@ -22,7 +22,7 @@ namespace AutoSourcarr.Api;
 /// Additional domain routes remain migration work; this is not default-runtime promotion.</summary>
 internal sealed partial class ApplicationRuntime : IAsyncDisposable
 {
-    internal const string Version = "0.5.0";
+    internal const string Version = "0.5.1";
     private readonly object _closeGate = new();
     private readonly object _catalogueWriteGate = new();
     private readonly OperationOwner _http = new();
@@ -184,10 +184,42 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         // reach the JVM (source-host.env is admin-edited, but a dynamic-loader or runtime hook there would run code in
         // the host outside the extension model). Malformed or oversized names are dropped too.
         foreach (var key in result.Keys.Where(LoaderKey).ToArray()) result.Remove(key);
+        // 0.5.1: the setting can only turn the WebView off; WEBVIEW_ENABLED=false in source-host.env stays off as well.
+        if (!settings.SourceWebViewEnabled) result["WEBVIEW_ENABLED"] = "false";
         result["SOURCE_MIN_INTERVAL_MS"] = Math.Clamp(settings.SourceMinIntervalMs, 0, 60_000).ToString(System.Globalization.CultureInfo.InvariantCulture);
         // CON-2: enabled FlareSolverr/Byparr connections are the fallback after the built-in WebView (cookies only).
         result["AUTOSOURCARR_SOLVERS"] = AutoSourcarr.Core.Connections.Types.SolverConnectionType.HostEnvironment(solvers ?? []);
         return result;
+    }
+
+    private int _librarySeeding;
+
+    /// <summary>
+    /// 0.5.1: a migrated instance's library starts empty while its works are subscribed in the main Suwayomi; once the
+    /// subscribed set is known, a never-used library takes them over (LibraryManager.SeedFromSubscriptionsAsync). In the
+    /// background; at most one run at a time.
+    /// </summary>
+    private void SeedLibraryFromSubscriptions()
+    {
+        if (_libraryManager is not { } manager || _library is not { } library) return;
+        if (library.CachedSubbedPayload()["entry_ids"] is not JsonArray ids || ids.Count == 0) return;
+        var entries = ids.Select(node => node is JsonValue value && value.TryGetValue<long>(out var id) ? id : 0).Where(id => id > 0).ToList();
+        if (entries.Count == 0 || Interlocked.Exchange(ref _librarySeeding, 1) == 1) return;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var added = await manager.SeedFromSubscriptionsAsync(entries, _healthStop.Token).ConfigureAwait(false);
+                if (added > 0)
+                {
+                    Logs.Record("Library", added.ToString(System.Globalization.CultureInfo.InvariantCulture) + " works subscribed in the main Suwayomi were added to the library (monitoring off).");
+                    Events.Debounce("library", LiveWindow, "status");
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception error) { Logs.Record("Library", "Adding the subscribed works to the library failed (" + error.GetType().Name + ": " + error.Message + ")."); }
+            finally { Interlocked.Exchange(ref _librarySeeding, 0); }
+        });
     }
 
     /// <summary>The external sign-in problem (no or unusable AUTH_TRUSTED_PROXIES), or null.</summary>
@@ -250,7 +282,12 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner._upgrade = AutoSourcarr.Core.Backup.UpgradeGuard.Run(owner._backups, owner.Database,
                     () => new SchemaMigrator(owner.Database).Initialize(), message => owner._upgradeLog.Add(message));
                 if (!owner._upgrade.SafeMode) owner._preferences = new(owner.Database);
-                owner._logs = new(owner._logIo, owner.Identity, owner.Privacy, data);
+                owner._logs = new(owner._logIo, owner.Identity, owner.Privacy, data)
+                {
+                    // 0.5.1: the image sets AUTOSOURCARR_LOG_STDOUT=true so docker logs shows the app's log; "false" in Compose turns it off.
+                    Mirror = string.Equals(System.Environment.GetEnvironmentVariable("AUTOSOURCARR_LOG_STDOUT")?.Trim(), "true", StringComparison.OrdinalIgnoreCase)
+                        ? Console.Out : null,
+                };
                 return 0;
             }, cancellationToken).ConfigureAwait(false);
             if (owner._upgrade?.SafeMode == true)
@@ -282,6 +319,9 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 {
                     // Phase 13 (SRC-5): Landlock sandbox launcher, optional low-rights user (AUTOSOURCARR_SOURCE_HOST_*).
                     Sandbox = SourceHostSandboxOptions.FromEnvironment(environment),
+                    // 0.5.1: a pinned notice while the app runs the host without the WebView after it crashed it.
+                    WebViewTurnedOff = reason => owner.Errors.Record("WebView", reason, key: "source-webview-crash", pinned: true, statusCode: 503,
+                        errorType: "SourceWebViewCrashed"),
                 };
                 owner._hostProcess = process;
                 owner._webView = new AutoSourcarr.Core.Sources.WebView.SourceWebViewBroker(() => process.Running
@@ -408,7 +448,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 owner._healthStop.Token));
             owner._library = new AutoSourcarr.Core.Sources.Library.SuwayomiLibrary(owner.Database, owner.Preferences, () => owner.Settings,
                 () => owner._main, owner.Io, error => owner.Logs.Record("Main library", error.Message));
-            owner._library.StatusRefreshed = () => owner.Events.Debounce("library", LiveWindow, "status");
+            owner._library.StatusRefreshed = () => { owner.Events.Debounce("library", LiveWindow, "status"); owner.SeedLibraryFromSubscriptions(); };
             var matching = OpenMatching(owner, owner._library);
             // Phase 9B: catalogue sharing and portable identities record on the same decision log as matching.
             var sharingGallery = new AutoSourcarr.Core.Catalogue.Gallery.GalleryEvidenceService(owner.Database, owner._catalogueWriteGate);
@@ -540,6 +580,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             try { await owner._library.RestoreDisplaySnapshotAsync(cancellationToken).ConfigureAwait(false); }
             catch (Exception error) when (error is not OperationCanceledException)
             { owner.Logs.Record("Main library", "Saved library snapshot could not be read (" + error.GetType().Name + ")."); }
+            owner.SeedLibraryFromSubscriptions();
             cancellationToken.ThrowIfCancellationRequested();
             owner._writer = owner.WriteLogsAsync();
             if (offline) return owner;

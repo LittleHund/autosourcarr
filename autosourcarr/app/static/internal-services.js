@@ -12,7 +12,7 @@
     if(!target)return ready;
     target.replaceChildren();
     const status=document.createElement('p');status.setAttribute('role','status');
-    status.textContent=!valid?'Reader build check unavailable. Refresh services to check the running settings.':ready?'Running reader settings pass the build check.':'Reader build needs attention. Review reader settings before building.';
+    status.textContent=!valid?'Reader access check unavailable. Refresh services to check the running settings.':ready?'Reader access is set up.':'Reader access needs attention.';
     target.append(status);
     if(valid){
       const issues=document.createElement('ul');

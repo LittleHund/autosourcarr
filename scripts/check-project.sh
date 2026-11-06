@@ -186,7 +186,7 @@ if command -v node >/dev/null 2>&1; then
     echo 'ERROR: giant duplicate-candidate query-string regression returned' >&2
     exit 1
   fi
-  # Static asset ?v= is the release version (root VERSION, 0.5.0): the 0.5.0 image serves this UI (step 7 checks all).
+  # Static asset ?v= is the release version (root VERSION, 0.5.x): the 0.5.x image serves this UI (step 7 checks all).
   release_version=$(tr -d '\r\n' < VERSION)
   grep -q "/static/mixed-entries.js?v=$release_version" autosourcarr/app/static/index.html
   grep -q "/static/app.js?v=$release_version" autosourcarr/app/static/index.html
@@ -323,7 +323,7 @@ import json, re
 def code(v):
     p=[int(x) for x in v.split('.')]; return p[0]*1000000+p[1]*1000+p[2]
 release=Path('VERSION').read_text().strip()
-assert release=='0.5.0' and code(release)==5000, f'release VERSION {release}'
+assert release=='0.5.1' and code(release)==5001, f'release VERSION {release}'
 props=Path('Directory.Build.props').read_text()
 assert f'<VersionPrefix>{release}</VersionPrefix>' in props and '<VersionSuffix>' not in props, 'Directory.Build.props version drifted'
 assert f'internal const string Version = "{release}";' in Path('src/AutoSourcarr.Api/ApplicationRuntime.cs').read_text(), 'ApplicationRuntime.Version drifted'
@@ -598,7 +598,8 @@ for version in 0.1.0 0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8 0.1.9 0.2.0
 grep -q 'Every future AutoSourcarr release must add a new version section here' CHANGELOG.md
 test "$(grep -c '^## 0.4.5 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.4.5 section' >&2; exit 1; }
 test "$(grep -c '^## 0.5.0 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.5.0 section' >&2; exit 1; }
-test "$(grep -m1 '^## ' CHANGELOG.md)" = "$(grep -m1 '^## 0.5.0 - ' CHANGELOG.md)" || { echo 'CHANGELOG must start with the 0.5.0 section' >&2; exit 1; }
+test "$(grep -c '^## 0.5.1 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.5.1 section' >&2; exit 1; }
+test "$(grep -m1 '^## ' CHANGELOG.md)" = "$(grep -m1 '^## 0.5.1 - ' CHANGELOG.md)" || { echo 'CHANGELOG must start with the 0.5.1 section' >&2; exit 1; }
 if grep -qE '^## (0\.5\.0 \(in progress\)|Unreleased)' CHANGELOG.md; then echo 'CHANGELOG still has an in-progress or Unreleased section' >&2; exit 1; fi
 echo 'single CHANGELOG policy + complete version history OK'
 

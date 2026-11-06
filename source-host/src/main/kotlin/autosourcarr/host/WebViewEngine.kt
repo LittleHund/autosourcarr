@@ -132,6 +132,9 @@ object WebViewEngine {
                                 windowless_rendering_enabled = true
                                 cache_path = (HostConfig.dataDir.toPath() / "cache" / "kcef").absolutePathString()
                                 log_severity = LogSeverity.LOGSEVERITY_WARNING
+                                // 0.5.1: Chromium's own log (fatal checks before a crash) in the data folder; the app reads its
+                                // end when the WebView stops the host, so a crash on one machine can be diagnosed.
+                                log_file = (HostConfig.dataDir.toPath() / "logs" / "chromium.log").also { it.parent.createDirectories() }.absolutePathString()
                             }
                         }
                     config.getLoader().loadLibrary("cef")

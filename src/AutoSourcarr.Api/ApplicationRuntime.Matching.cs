@@ -71,7 +71,11 @@ internal sealed partial class ApplicationRuntime
         var thumbnails = new ThumbnailFingerprints(database, () => owner.Settings, new SuwayomiThumbnailSource(owner.SourceRuntime.Client));
         var coverHints = new CoverHints(database, () => owner.Settings, (sourceId, mangaId) => catalogue.Hydration.Schedule(sourceId, mangaId, eager: true));
         // MAT-20: machine translations only widen searches (manual source search, additional-record discovery).
-        var translator = new Core.Translation.TranslationClient(database, () => owner.Settings);
+        // 0.5.1: a LibreTranslate connection (Connections menu) wins over TRANSLATION_API_URL.
+        var translator = new Core.Translation.TranslationClient(database, () => owner.Settings)
+        {
+            Connections = () => EnabledConnections(Core.Connections.Types.TranslationConnectionType.LibreTranslate.Type),
+        };
         owner._translator = translator;
         var translatedNames = new Core.Translation.TranslatedSearchNames(translator, () => owner.Settings);
 

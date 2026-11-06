@@ -698,6 +698,7 @@ function ensureSettingsPane(){
   return loadEnvSettings();
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+if($('#riSidebarVersion'))$('#riSidebarVersion').textContent=UI_BUILD_VERSION?'v'+UI_BUILD_VERSION:'';
 
 
 let attentionState={items:[]},attentionPromise=null,attentionLastLoad=0,attentionSignature='';
@@ -1694,6 +1695,7 @@ function renderStatus(h){
   const ready=sourceOk&&(!mainConfigured||mainOk);
   $('#statusHeadline').textContent=ready?'AutoSourcarr is ready':'AutoSourcarr needs attention';
   if($('#statusVersion'))$('#statusVersion').textContent='v'+String(h.version||'unknown');
+  if($('#riSidebarVersion')&&h.version)$('#riSidebarVersion').textContent='v'+String(h.version);
   $('#statusHeadlineSub').textContent=ready?`${entries} entries · ${matchedPct}% matched · ${cache.persistent_browse_feeds??0} saved browse feeds`:'Check the highlighted items below first.';
   $('#statusOverview').innerHTML=[
     connectionRow('AutoSourcarr',true,`v${h.version}`,'Backend and databases loaded'),

@@ -676,6 +676,11 @@
       "description": "Least time between two requests the source host sends to the same website, in milliseconds. Keeps traffic paced so sites do not rate-limit or block you; 0 turns pacing off. Applies after the source host restarts.",
       "compose": "allowed"
     },
+    "SOURCE_WEBVIEW_ENABLED": {
+      "group": "Performance & resilience",
+      "description": "Run the built-in WebView (Chromium) in the source host for Cloudflare checks and source login pages. Turn it off if it crashes on your machine; AutoSourcarr also turns it off by itself after it stops the source host twice, until the next restart. Without it, add an external solver under Connections. Applies after the source host restarts.",
+      "compose": "allowed"
+    },
     "BACKGROUND_IDLE_SECONDS": {
       "group": "Performance & resilience",
       "description": "Quiet time after your last action before background work resumes, in seconds.",

@@ -17,13 +17,15 @@ public static partial class ReaderConfigCheck
     public const string Public = "AUTOSOURCARR_PUBLIC_URL";
     public static IReadOnlyList<string> Keys { get; } = [Internal, Public, Token];
 
-    public static ReaderConfigResult Evaluate(IReadOnlyDictionary<string, string?> values, bool allowInsecure = false, bool allowDocker = false)
+    /// <param name="readerKeys">0.5.1: a live reader key exists (System, Keys); it replaces the shared reader token.</param>
+    public static ReaderConfigResult Evaluate(IReadOnlyDictionary<string, string?> values, bool allowInsecure = false, bool allowDocker = false,
+        bool readerKeys = false)
     {
         var errors = new List<ReaderConfigIssue>();
         var warnings = new List<ReaderConfigIssue>();
         var token = values.GetValueOrDefault(Token) ?? "";
-        if (token.Length == 0)
-            errors.Add(new(Token, 12, "Set a Reader API key before building reader extensions."));
+        if (token.Length == 0 && !readerKeys)
+            errors.Add(new(Token, 12, "No reader key yet: create one per phone under System, Keys (the prebuilt extension needs no build). Until then Mihon cannot read from this server."));
         else if (!TokenPattern().IsMatch(token))
             errors.Add(new(Token, 13, "Reader API key must contain 32–256 letters, digits, dots, underscores, tildes or hyphens."));
 

@@ -167,6 +167,23 @@ public static class LibraryDownloadsTests
             Check.Equal("queued", setup.Store.Queued(102)!.State);
         });
 
+        suite.Add("library: a never-used library takes over the subscribed works once, unmonitored and with nothing queued (0.5.1)", () =>
+        {
+            using var setup = new Setup();
+            var first = setup.Work("Tide Archive", [Chapter(801, 0, 1, "1")]);
+            var second = setup.Work("Salt Road", [Chapter(802, 0, 1, "1")]);
+            var added = setup.Manager.SeedFromSubscriptionsAsync([first, second, first, 999_999]).GetAwaiter().GetResult();
+            Check.Equal(2, added); // duplicates and unknown works are skipped
+            Check.Equal(2, setup.Store.Members().Count);
+            Check.True(setup.Manager.Controls(first)["monitored"]?.GetValue<bool>() != true, "seeded works are not monitored");
+            Check.Equal(0, setup.Store.Queue().Count);
+            Check.True(setup.Log.Kinds.Contains("library.seed"), "the seed is in the decision log");
+            // Once the library was used (also after removing works), the subscriptions never come back by themselves.
+            setup.Manager.SetMembershipAsync(second, false, false, setup.Manager.Controls(second)["revision"]!.GetValue<long>(), Person).GetAwaiter().GetResult();
+            Check.Equal(0, setup.Manager.SeedFromSubscriptionsAsync([first, second]).GetAwaiter().GetResult());
+            Check.True(!setup.Store.Members().Contains(second), "a removed work stays removed");
+        });
+
         suite.Add("library: a merge moves library membership, queued and downloaded chapters to the surviving work", () =>
         {
             using var setup = new Setup();

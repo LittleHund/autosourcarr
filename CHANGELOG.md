@@ -1,3 +1,26 @@
+## 0.5.1 - YYYY-MM-DD
+
+0.5.1 fixes what the first 0.5.0 deploy showed. Update by pulling the new image; no migration step is needed.
+
+- **Source host WebView crash:** on some machines the built-in WebView (Chromium) stopped the whole source host right
+  after its start (exit code 133), so no source could load. When that happens twice, the app now restarts the source
+  host without the WebView, pins a notice that says why and logs the end of Chromium's own log
+  (`/data/source-host/logs/chromium.log`). New setting `SOURCE_WEBVIEW_ENABLED` (default `true`) keeps it off. Without
+  the WebView, Cloudflare checks and source login pages need an external solver under Connections.
+- **WebView status** reports "disabled" or "unavailable" instead of "ready" when the WebView is off.
+- **Logs in `docker logs`:** the image now also writes the app's (redacted) log lines to standard output, so
+  `docker logs` and the TrueNAS log view show them. `AUTOSOURCARR_LOG_STDOUT=false` turns that off.
+- **Library after the migration:** a library that was never used takes over the works subscribed in the main
+  Suwayomi once, with monitoring off (Suwayomi keeps downloading them; nothing is queued twice). Works you remove
+  later stay removed.
+- **Translation:** LibreTranslate is now a connection type under Connections (address, optional key, Test). 0.5.x has
+  no built-in translator (it returns in 0.6.0): the 0.4.x address `http://127.0.0.1:5000` and `TRANSLATION_MODE=builtin`
+  count as "not configured", and the status says so.
+- **Reader access:** the status no longer talks about building reader extensions (the prebuilt extension needs none).
+  It asks for a reader key per phone (System, Keys) and counts existing reader keys as set up.
+- **Sidebar:** a Connections link under Settings, and the footer shows the running version instead of v0.4.5.
+- **CI:** GitHub Actions moved to their current major versions (Node 24), still pinned by commit.
+
 ## 0.5.0 - 2026-11-05
 
 0.5.0 is AutoSourcarr rewritten in C#/.NET 10 (ARC-11): one image (`docker/Dockerfile`) that runs on its own, with the

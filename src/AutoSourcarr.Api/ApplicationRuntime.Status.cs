@@ -74,6 +74,10 @@ internal sealed partial class ApplicationRuntime
     private JsonObject WebViewService()
     {
         if (_hostProcess is not { } host) return Service("WebView", "unavailable", "The built-in WebView runs in the source host (integrated mode only).");
+        if (host.WebViewOff is { } off)
+            return off == "setting"
+                ? Service("WebView", "disabled", "Turned off (SOURCE_WEBVIEW_ENABLED=false or WEBVIEW_ENABLED=false in source-host.env): sources that need a WebView use an external solver from Connections, if any.")
+                : Service("WebView", "unavailable", off);
         if (!host.Running) return Service("WebView", "idle", "Starts with the source host.");
         return host.Display is { } display
             ? Service("WebView", "ready", "WebView (Chromium) has a display (" + display + "); verification pages open in Sources → WebView.")
@@ -84,7 +88,7 @@ internal sealed partial class ApplicationRuntime
     {
         var solvers = EnabledSolvers();
         var count = solvers?.Count ?? 0;
-        var webview = _hostProcess is { } host && host.Display is not null;
+        var webview = _hostProcess is { } host && host.Display is not null && host.WebViewOff is null;
         var external = count == 0 ? "no external solver connection" : count.ToString(CultureInfo.InvariantCulture) + " external solver connection(s) as fallback";
         if (solvers is null) return Service("Challenge handling", "degraded", "The solver connections could not be read; " + (webview ? "the built-in WebView still solves challenges." : "no solver is available."));
         if (webview) return Service("Challenge handling", "ready", "Built-in WebView solves challenges first; " + external + ".");
@@ -110,7 +114,7 @@ internal sealed partial class ApplicationRuntime
         if (_translationHealth is not { } health) return Service("Title translation", "off", "Translation is not configured (TRANSLATION_MODE, TRANSLATION_API_URL).");
         var snapshot = health.Snapshot(_healthStop.Token);
         var configured = snapshot["configured"] is JsonValue value && value.TryGetValue<bool>(out var set) && set;
-        if (!configured) return Service("Title translation", "off", "Translation is off or not configured (TRANSLATION_MODE, TRANSLATION_API_URL).");
+        if (!configured) return Service("Title translation", "off", _translator?.OffReason ?? "Translation is off or not configured.");
         var ok = snapshot["ok"] is JsonValue okValue && okValue.TryGetValue<bool>(out var fine) ? fine : (bool?)null;
         return ok switch
         {

@@ -32,6 +32,54 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private bool _healthy;
     private bool _recycling;
     private SourceHostSandboxState _sandbox = SourceHostSandboxState.Unknown;
+    private bool _launchedWithWebView;
+    private int _webViewCrashes;
+    private string? _webViewOff;
+
+    /// <summary>
+    /// 0.5.1: called once with the reason when the app turns the WebView off by itself after it crashed the host (for a
+    /// pinned notice). The host then keeps running without it until the app restarts.
+    /// </summary>
+    public Action<string>? WebViewTurnedOff { get; init; }
+
+    /// <summary>
+    /// Why the host's WebView is off: "setting" (SOURCE_WEBVIEW_ENABLED=false or WEBVIEW_ENABLED=false in source-host.env),
+    /// the crash reason after the automatic fallback, or null while it is on.
+    /// </summary>
+    public string? WebViewOff
+    {
+        get
+        {
+            lock (_gate) if (_webViewOff is { } reason) return reason;
+            return WebViewRequested(_environment()) ? null : "setting";
+        }
+    }
+
+    /// <summary>Crashes by a signal within this time after a start count as WebView crashes.</summary>
+    internal static readonly TimeSpan WebViewCrashWindow = TimeSpan.FromMinutes(5);
+    internal const int WebViewCrashLimit = 2;
+
+    private static bool WebViewRequested(IReadOnlyDictionary<string, string> environment) =>
+        !string.Equals(environment.GetValueOrDefault("WEBVIEW_ENABLED")?.Trim(), "false", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 0.5.1 crash fallback. On some machines Chromium (JCEF, loaded into the host JVM) kills the whole host with a signal
+    /// right after the start (seen: exit 133 = SIGTRAP). A JVM fault in extension code is a Java exception, not a signal,
+    /// so a host that had the WebView on and died by a signal shortly after starting counts as a WebView crash. Returns
+    /// the new crash count and, once the limit is reached, the reason to turn the WebView off.
+    /// </summary>
+    internal static (int Crashes, string? TurnOff) WebViewCrash(int exitCode, TimeSpan uptime, bool webViewOn, int crashes)
+    {
+        if (!webViewOn) return (crashes, null);
+        var signal = exitCode is > 128 and < 128 + 65 ? exitCode - 128 : 0;
+        if (signal == 0 || uptime > WebViewCrashWindow) return (0, null);
+        crashes++;
+        return crashes < WebViewCrashLimit ? (crashes, null)
+            : (crashes, "The WebView (Chromium) stopped the source host " + crashes.ToString(CultureInfo.InvariantCulture) + " times (signal "
+                + signal.ToString(CultureInfo.InvariantCulture) + ", exit code " + exitCode.ToString(CultureInfo.InvariantCulture)
+                + "), so it runs without the WebView until AutoSourcarr restarts. Sources work; Cloudflare checks and login pages need an "
+                + "external solver (Connections) meanwhile. To keep it off set SOURCE_WEBVIEW_ENABLED=false.");
+    }
 
     /// <summary>
     /// Phase 13 (SRC-5): start the host through <c>native/source-host-sandbox</c> (Landlock, optional low-rights user).
@@ -208,7 +256,11 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         var start = new ProcessStartInfo(setsid ?? command[0]) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
         foreach (var argument in setsid is null ? command.Skip(1) : command) start.ArgumentList.Add(argument);
         start.Environment.Clear();
-        foreach (var (key, value) in _environment()) start.Environment[key] = value;
+        var environment = _environment();
+        foreach (var (key, value) in environment) start.Environment[key] = value;
+        bool webView;
+        lock (_gate) webView = _webViewOff is null && WebViewRequested(environment);
+        start.Environment["WEBVIEW_ENABLED"] = webView ? "true" : "false";
         if (sandbox is not null)
         {
             // Inside the sandbox only the data folder is writable: the JVM's and Chromium's home and temp files live there.
@@ -245,7 +297,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
                 process.Dispose();
                 throw new OperationCanceledException(_stop.Token);
             }
-            _process = process; _group = setsid is not null; _healthy = false;
+            _process = process; _group = setsid is not null; _healthy = false; _launchedWithWebView = webView;
         }
         _log("Source host started (process " + process.Id.ToString(CultureInfo.InvariantCulture) + ").");
         if (Limits is { } limits && OperatingSystem.IsLinux())
@@ -333,7 +385,23 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             {
                 delay = RestartDelays[Math.Min(failures, RestartDelays.Length - 1)];
                 failures++;
-                lock (_gate) { _restarts++; _lastError = "The source host exited with code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + "."; }
+                string? turnOff; bool hadWebView;
+                lock (_gate)
+                {
+                    hadWebView = _launchedWithWebView;
+                    _restarts++; _lastError = "The source host exited with code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + ".";
+                    (_webViewCrashes, turnOff) = WebViewCrash(process.ExitCode, DateTimeOffset.UtcNow - started, _launchedWithWebView, _webViewCrashes);
+                    if (turnOff is not null) _webViewOff = turnOff;
+                }
+                if (process.ExitCode > 128 && hadWebView) LogChromiumTail();
+                if (turnOff is not null)
+                {
+                    // The next start runs without the WebView: no reason to wait on the back-off ladder for it.
+                    delay = RestartDelays[0]; failures = 0;
+                    _log(turnOff);
+                    try { WebViewTurnedOff?.Invoke(turnOff); }
+                    catch (Exception error) when (error is InvalidOperationException or IOException) { _log("Could not record the WebView notice: " + error.Message); }
+                }
                 _log(LastError + " Starting it again in " + delay.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s.");
             }
             lock (_gate) if (ReferenceEquals(_process, process)) _process = null;
@@ -352,6 +420,19 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
                 _log(LastError);
             }
         }
+    }
+
+    /// <summary>0.5.1: after a signal death with the WebView on, the end of Chromium's own log (written by the host).</summary>
+    private void LogChromiumTail()
+    {
+        var file = Path.Combine(_dataDirectory, "logs", "chromium.log");
+        try
+        {
+            if (!File.Exists(file)) { _log("Chromium wrote no log before the source host stopped."); return; }
+            var lines = File.ReadLines(file).TakeLast(15).Where(line => line.Length > 0).ToList();
+            foreach (var line in lines) _log("Chromium log: " + (line.Length > 500 ? line[..500] : line));
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { _log("Chromium's log could not be read: " + error.Message); }
     }
 
     /// <summary>A restarted host that answers again clears the exit message from the status.</summary>

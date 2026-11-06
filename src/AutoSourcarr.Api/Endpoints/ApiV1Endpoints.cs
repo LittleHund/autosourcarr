@@ -295,7 +295,8 @@ public sealed class ApiV1Services
     }
 
     public ReaderConfigResult Reader(IReadOnlyDictionary<string, string?> values) => ReaderConfigCheck.Evaluate(values,
-        allowInsecure: Environment.GetValueOrDefault("AUTOSOURCARR_ALLOW_INSECURE_READER_API") == "1");
+        allowInsecure: Environment.GetValueOrDefault("AUTOSOURCARR_ALLOW_INSECURE_READER_API") == "1",
+        readerKeys: Access?.Accounts.Keys().Any(key => key.Kind == "reader" && !key.Revoked) == true);
 
     public ConfigView Config()
     {

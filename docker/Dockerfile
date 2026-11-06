@@ -158,7 +158,7 @@ COPY --from=reader-extension-build /out/ /
 
 # ---------------------------------------------------------------------------------------------------------------
 FROM ${DOTNET_RUNTIME} AS runtime
-ARG VERSION=0.5.0
+ARG VERSION=0.5.1
 ARG REVISION=unknown
 LABEL org.opencontainers.image.title="AutoSourcarr" \
       org.opencontainers.image.source="https://github.com/LittleHund/autosourcarr" \
@@ -253,6 +253,7 @@ ENV AUTOSOURCARR_SOURCE_HOST_JAR=/app/source-host/autosourcarr-source-host.jar \
     AUTOSOURCARR_REPAIR_RUNNER=/opt/autosourcarr-native/repair-runner \
     AUTOSOURCARR_SOURCE_HOST_SANDBOX=/opt/autosourcarr-native/source-host-sandbox \
     SOURCE_ENGINE_MODE=integrated \
+    AUTOSOURCARR_LOG_STDOUT=true \
     DOTNET_EnableDiagnostics=0 \
     DOTNET_NOLOGO=1 \
     DOTNET_CLI_TELEMETRY_OPTOUT=1 \

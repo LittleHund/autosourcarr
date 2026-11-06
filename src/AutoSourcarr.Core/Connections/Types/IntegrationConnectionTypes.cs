@@ -14,5 +14,6 @@ public static class IntegrationConnectionTypes
         new MangaUpdatesConnectionType(),
         new KomfConnectionType(),
         new MalwareBazaarConnectionType(),
+        TranslationConnectionType.LibreTranslate,
     ];
 }
