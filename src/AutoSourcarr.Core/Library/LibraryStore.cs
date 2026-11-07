@@ -113,9 +113,22 @@ public sealed class LibraryStore
         c.Query("SELECT * FROM library_series WHERE entry_id=$id", ("$id", entryId)).Select(SeriesRow).FirstOrDefault();
 
     /// <summary>Adds or removes the work; the first add gives it a series folder no other work uses (title, then "title [id]").</summary>
-    public LibrarySeries SetMembership(long entryId, bool inLibrary, string title) => database.Write(DatabaseFile.Catalog, c =>
+    public LibrarySeries SetMembership(long entryId, bool inLibrary, string title) => database.Write(DatabaseFile.Catalog, c => Place(c, entryId, inLibrary, title, Now()));
+
+    /// <summary>
+    /// 0.5.1: adds several works in one transaction, only while the library was never used (no row at all); false when it
+    /// was used meanwhile. All or nothing, so an interrupted seed never leaves a partial library behind.
+    /// </summary>
+    public bool SeedMembers(IReadOnlyList<(long EntryId, string Title)> works) => database.Write(DatabaseFile.Catalog, c =>
     {
+        if (c.Scalar("SELECT 1 FROM library_series LIMIT 1") is not null) return false;
         var now = Now();
+        foreach (var (entryId, title) in works) Place(c, entryId, true, title, now);
+        return true;
+    });
+
+    private static LibrarySeries Place(DatabaseSession c, long entryId, bool inLibrary, string title, string now)
+    {
         var existing = Series(c, entryId);
         if (existing is not null)
         {
@@ -133,7 +146,7 @@ public sealed class LibraryStore
         c.Execute("INSERT INTO library_series(entry_id,in_library,series_name,folder,folder_key,added_at,updated_at) VALUES($id,$in,$name,$folder,$key,$added,$now)",
             ("$id", entryId), ("$in", inLibrary ? 1 : 0), ("$name", name), ("$folder", folder), ("$key", FolderKey(folder)), ("$added", inLibrary ? now : ""), ("$now", now));
         return Series(c, entryId)!;
-    });
+    }
 
     /// <summary>Whether any work was ever added (a removed work keeps its row): false only on a library that was never used.</summary>
     public bool AnySeries() => database.Read(DatabaseFile.Catalog, c => c.Scalar("SELECT 1 FROM library_series LIMIT 1") is not null);

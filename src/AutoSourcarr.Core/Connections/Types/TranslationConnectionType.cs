@@ -62,23 +62,43 @@ public sealed class TranslationConnectionType : IConnectionType
                 : "Enter the translator's http or https base address, without a user name, a query or a fragment.");
         using var client = new HttpClient(http, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(15) };
         var details = new JsonObject { ["url"] = new Uri(baseUrl).GetLeftPart(UriPartial.Authority) };
-        HttpResponseMessage response;
-        try { response = await client.GetAsync(baseUrl + "/languages", HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false); }
-        catch (HttpRequestException) { return ConnectionTestResult.Fail("No answer from " + details["url"] + ". Check the address, port and Docker network.", details); }
-        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested) { return ConnectionTestResult.Fail("No answer from " + details["url"] + " within 15 s.", details); }
-        using (response)
+        using var list = new HttpRequestMessage(HttpMethod.Get, baseUrl + "/languages");
+        var (status, body, failure) = await SendAsync(client, list, cancellationToken).ConfigureAwait(false);
+        if (failure is not null) return ConnectionTestResult.Fail("No answer from " + details["url"] + " (" + failure + "). Check the address, port and Docker network.", details);
+        if (status is < 200 or > 299)
+            return ConnectionTestResult.Fail("The translator answered HTTP " + status.ToString(CultureInfo.InvariantCulture) + " for /languages.", details);
+        JsonNode? parsed;
+        try { parsed = body.Length > 1024 * 1024 ? null : JsonNode.Parse(body); }
+        catch (JsonException) { parsed = null; }
+        if (parsed is not JsonArray languages)
+            return ConnectionTestResult.Fail("The address answered, but not like LibreTranslate (no language list from /languages).", details);
+        details["languages"] = languages.Count;
+
+        // /languages needs no key: one tiny translation proves the key (if the server requires one) is accepted.
+        var payload = new JsonObject { ["q"] = "hello", ["source"] = "en", ["target"] = "ja", ["format"] = "text" };
+        if (connection.Value(ApiKeyField) is { Length: > 0 } key) payload["api_key"] = key;
+        using var request = new HttpRequestMessage(HttpMethod.Post, baseUrl + "/translate")
+        { Content = new StringContent(payload.ToJsonString(), System.Text.Encoding.UTF8, "application/json") };
+        (status, _, failure) = await SendAsync(client, request, cancellationToken).ConfigureAwait(false);
+        if (failure is not null) return ConnectionTestResult.Fail("The language list loaded, but a test translation got no answer (" + failure + ").", details);
+        if (status is 401 or 403)
+            return ConnectionTestResult.Fail("The translator refused the test translation (HTTP " + status.ToString(CultureInfo.InvariantCulture) + "): enter or correct its API key.", details);
+        if (status is < 200 or > 299)
+            return ConnectionTestResult.Fail("The translator answered HTTP " + status.ToString(CultureInfo.InvariantCulture) + " for a test translation (en to ja); check that it has the Japanese model.", details);
+        return ConnectionTestResult.Pass("LibreTranslate is ready (" + languages.Count.ToString(CultureInfo.InvariantCulture) + " languages; a test translation worked).", details);
+    }
+
+    /// <summary>One bounded request: status, body (at most 1 MiB read) or why there was no answer.</summary>
+    private static async Task<(int Status, string Body, string? Failure)> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        try
         {
-            var status = (int)response.StatusCode;
-            if (!response.IsSuccessStatusCode)
-                return ConnectionTestResult.Fail("The translator answered HTTP " + status.ToString(CultureInfo.InvariantCulture) + " for /languages.", details);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            JsonNode? parsed;
-            try { parsed = body.Length > 1024 * 1024 ? null : JsonNode.Parse(body); }
-            catch (JsonException) { parsed = null; }
-            if (parsed is not JsonArray languages)
-                return ConnectionTestResult.Fail("The address answered, but not like LibreTranslate (no language list from /languages).", details);
-            details["languages"] = languages.Count;
-            return ConnectionTestResult.Pass("LibreTranslate is ready (" + languages.Count.ToString(CultureInfo.InvariantCulture) + " languages).", details);
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            var body = response.IsSuccessStatusCode ? await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false) : "";
+            return ((int)response.StatusCode, body, null);
         }
+        catch (HttpRequestException error) { return (0, "", error.HttpRequestError.ToString()); }
+        catch (IOException error) { return (0, "", error.GetType().Name); }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested) { return (0, "", "no answer within 15 s"); }
     }
 }

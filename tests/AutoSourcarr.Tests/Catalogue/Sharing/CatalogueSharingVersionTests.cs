@@ -20,7 +20,7 @@ public static class CatalogueSharingVersionTests
         {
             var list = CompatibilityList.Current;
             Check.Equal(CatalogueFormat.FileVersion, list.ShareFormat); Check.Equal(CatalogueFormat.MinimumReaderVersion, list.ShareFormatMinReader);
-            Check.Equal("0.4.2", list.ShareReaderAppVersion(CatalogueFormat.LegacyVersion)); Check.Equal(list.AppVersion, list.ShareReaderAppVersion(CatalogueFormat.FileVersion));
+            Check.Equal("0.4.2", list.ShareReaderAppVersion(CatalogueFormat.LegacyVersion)); Check.Equal("0.5.0", list.ShareReaderAppVersion(CatalogueFormat.FileVersion)); // format 2 arrived in 0.5.0 and is unchanged since
             Check.Equal(SchemaMigrator.LatestMigration(DatabaseFile.Catalog), list.CatalogSchema); Check.Equal(SchemaMigrator.LatestMigration(DatabaseFile.Origins), list.OriginsSchema);
             Check.Equal("1.4", list.ExtensionApi); Check.True(list.ProfileReaderAppVersion(list.ProfileFormat) is not null);
             var json = list.ToJson(); Check.Equal(list.CatalogSchema, json["database_schema"]!["catalog"]!.GetValue<long>());

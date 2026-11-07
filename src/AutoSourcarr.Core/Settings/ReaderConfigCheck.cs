@@ -24,8 +24,10 @@ public static partial class ReaderConfigCheck
         var errors = new List<ReaderConfigIssue>();
         var warnings = new List<ReaderConfigIssue>();
         var token = values.GetValueOrDefault(Token) ?? "";
-        if (token.Length == 0 && !readerKeys)
-            errors.Add(new(Token, 12, "No reader key yet: create one per phone under System, Keys (the prebuilt extension needs no build). Until then Mihon cannot read from this server."));
+        if (token.Length == 0)
+        {
+            if (!readerKeys) errors.Add(new(Token, 12, "No reader key yet: create one per phone under System, Keys (the prebuilt extension needs no build). Until then Mihon cannot read from this server."));
+        }
         else if (!TokenPattern().IsMatch(token))
             errors.Add(new(Token, 13, "Reader API key must contain 32–256 letters, digits, dots, underscores, tildes or hyphens."));
 

@@ -137,6 +137,10 @@ public static class ApplicationRuntimeTests
         Check.True(second.TurnOff is { } reason && reason.Contains("signal 5", StringComparison.Ordinal) && reason.Contains("SOURCE_WEBVIEW_ENABLED", StringComparison.Ordinal), "the second crash turns it off and says why");
         Check.Equal(0, SourceHostProcess.WebViewCrash(1, soon, webViewOn: true, crashes: 1).Crashes); // a normal error exit resets the count
         Check.Equal(0, SourceHostProcess.WebViewCrash(134, TimeSpan.FromMinutes(30), webViewOn: true, crashes: 1).Crashes); // long uptime is not a start crash
+        Check.Equal(0, SourceHostProcess.WebViewCrash(137, soon, webViewOn: true, crashes: 1).Crashes); // SIGKILL (out of memory) is not Chromium
+        var noToken = new Dictionary<string, string?> { ["AUTOSOURCARR_PUBLIC_URL"] = "https://reader.example" };
+        Check.True(AutoSourcarr.Core.Settings.ReaderConfigCheck.Evaluate(noToken).Errors.Any(e => e.Code == 12), "no token and no reader key: error 12");
+        Check.True(AutoSourcarr.Core.Settings.ReaderConfigCheck.Evaluate(noToken, readerKeys: true).Errors.All(e => e.Code is not (12 or 13)), "a reader key replaces the token (no format error for the empty token)");
         var withoutWebView = SourceHostProcess.WebViewCrash(139, soon, webViewOn: false, crashes: 1);
         Check.Equal(1, withoutWebView.Crashes); Check.True(withoutWebView.TurnOff is null, "a host without the WebView never blames it");
     }
