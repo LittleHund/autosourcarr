@@ -1,4 +1,4 @@
-## 0.5.2 - YYYY-MM-DD
+## 0.5.2 - 2026-11-08
 
 0.5.2 makes the database reset safe for the new library and fixes what 0.5.1 showed on the NAS. Update by pulling the
 new image; no migration step is needed.
