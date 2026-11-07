@@ -5,7 +5,7 @@ plugins {
     alias(kei.plugins.extension)
 }
 
-val autosourcarrVersion = providers.environmentVariable("AUTOSOURCARR_VERSION").orElse("0.5.1").get()
+val autosourcarrVersion = providers.environmentVariable("AUTOSOURCARR_VERSION").orElse("0.5.2").get()
 val autosourcarrBaseUrl = providers.environmentVariable("AUTOSOURCARR_EXTENSION_BASE_URL").orElse("http://autosourcarr:8282").get().trimEnd('/')
 val versionParts = autosourcarrVersion.split(".").map { it.toIntOrNull() ?: 0 }
 val autosourcarrVersionCode = (

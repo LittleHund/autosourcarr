@@ -452,7 +452,7 @@ public sealed partial record AutoSourcarrSettings
     public int SqliteCacheMb { get; init; } = 64;
 
     [System.Text.Json.Serialization.JsonPropertyName("sqlite_busy_timeout_ms")]
-    public int SqliteBusyTimeoutMs { get; init; } = 3000;
+    public int SqliteBusyTimeoutMs { get; init; } = 15000;
 
     [System.Text.Json.Serialization.JsonPropertyName("source_languages")]
     public string SourceLanguages { get; init; } = "en,all";

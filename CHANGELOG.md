@@ -1,4 +1,19 @@
-## 0.5.1 - YYYY-MM-DD
+## 0.5.2 - YYYY-MM-DD
+
+0.5.2 makes the database reset safe for the new library and fixes what 0.5.1 showed on the NAS. Update by pulling the
+new image; no migration step is needed.
+
+- **Reset database keeps the library:** a normal reset rebuilds the entries; library membership and monitoring now
+  follow their works to the rebuilt entries (downloaded files stay). Works that do not come back are dropped and
+  counted in the reset summary. Before, the library kept pointing at deleted entries and the Manga page stayed empty.
+- **"database is locked":** a write now waits up to 15 seconds for another one (`SQLITE_BUSY_TIMEOUT_MS`, was 3000),
+  so long background jobs on a large catalogue no longer fail on it.
+- **Sources:** the buttons of an installed or available extension sit on their own row, so the name and details no
+  longer wrap letter by letter.
+- **WebView diagnosis:** Chromium also writes its own messages to the log (`--enable-logging=stderr`), so a crash at
+  start shows why. The source host reports its real version.
+
+## 0.5.1 - 2026-11-07
 
 0.5.1 fixes what the first 0.5.0 deploy showed. Update by pulling the new image; no migration step is needed.
 

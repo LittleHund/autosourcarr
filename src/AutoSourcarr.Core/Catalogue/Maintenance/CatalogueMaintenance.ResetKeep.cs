@@ -24,14 +24,16 @@ public sealed partial class CatalogueMaintenance
     public const string NormalResetSummary = "Database reset: entries, automatic matches and titles, merge/split history, automatic duplicate state and caches are cleared. "
         + "Kept: manual matches and groups (restored), deleted-record suppression, mixed-entry reviews, import history and configuration. "
         + "Different-works reviews, separate-entry rules, manual titles, title scopes and manual aliases are re-attached to the entry that holds their records after the restore; "
-        + "those whose work is not back are dropped and counted in the summary.";
+        + "so are library membership and monitoring (downloaded files stay); those whose work is not back are dropped and counted in the summary.";
 
     private static void CaptureKeptDecisions(DatabaseSession c)
     {
         var ids = new SortedSet<long>();
         foreach (var row in c.Query("SELECT left_entry_id,right_entry_id FROM duplicate_reviews WHERE decision='not_duplicate'")) { ids.Add(row.Integer("left_entry_id")); ids.Add(row.Integer("right_entry_id")); }
         foreach (var row in c.Query("SELECT target_entry_id,COALESCE(separate_entry_id_hint,0) hint FROM manual_separate_records")) { ids.Add(row.Integer("target_entry_id")); ids.Add(row.Integer("hint")); }
-        foreach (var sql in new[] { "SELECT entry_id FROM preferred_title_overrides", "SELECT entry_id FROM manual_title_scopes", "SELECT entry_id FROM titles WHERE title_type='manual'" })
+        // 0.5.2: library membership and monitoring stay through a reset too; they are re-keyed like the decisions.
+        foreach (var sql in new[] { "SELECT entry_id FROM preferred_title_overrides", "SELECT entry_id FROM manual_title_scopes", "SELECT entry_id FROM titles WHERE title_type='manual'",
+                     "SELECT entry_id FROM library_series", "SELECT entry_id FROM library_tracking" })
             foreach (var row in c.Query(sql)) ids.Add(row.Integer("entry_id"));
         var records = new JsonObject();
         foreach (var id in ids.Where(id => id > 0))
@@ -144,6 +146,42 @@ public sealed partial class CatalogueMaintenance
                     P(entry.Value, Text(alias["title"]), Text(alias["normalized"]), Text(alias["language"]), Text(alias["source_id"]), Integer(alias["source_manga_id"])));
                 aliasesKept++;
             }
+            // 0.5.2: library membership (library_series) and monitoring (library_tracking) follow their work; a work that is
+            // not back loses both (its downloaded files stay on disk). A target that already has a row keeps it (membership is OR-ed).
+            int libraryKept = 0, libraryDropped = 0;
+            foreach (var row in c.Query("SELECT entry_id,in_library FROM library_series ORDER BY entry_id"))
+            {
+                var old = row.Integer("entry_id"); var entry = Resolve(old);
+                if (entry is null)
+                {
+                    c.Execute("DELETE FROM library_series WHERE entry_id=$p0", P(old));
+                    c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(old));
+                    libraryDropped++; continue;
+                }
+                if (entry.Value != old)
+                {
+                    if (c.Scalar("SELECT 1 FROM library_series WHERE entry_id=$p0", P(entry.Value)) is null)
+                        c.Execute("UPDATE library_series SET entry_id=$p0,updated_at=$p1 WHERE entry_id=$p2", P(entry.Value, stamp, old));
+                    else
+                    {
+                        if (row.Integer("in_library") == 1) c.Execute("UPDATE library_series SET in_library=1,updated_at=$p0 WHERE entry_id=$p1", P(stamp, entry.Value));
+                        c.Execute("DELETE FROM library_series WHERE entry_id=$p0", P(old));
+                    }
+                    if (c.Scalar("SELECT 1 FROM library_tracking WHERE entry_id=$p0", P(entry.Value)) is null)
+                        c.Execute("UPDATE library_tracking SET entry_id=$p0 WHERE entry_id=$p1", P(entry.Value, old));
+                    else c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(old));
+                }
+                libraryKept++;
+            }
+            foreach (var old in c.Query("SELECT entry_id FROM library_tracking WHERE entry_id NOT IN (SELECT entry_id FROM library_series)").Select(row => row.Integer("entry_id")).ToList())
+            {
+                // Monitoring rows of works outside the library follow their work the same way.
+                if (EntryExists(c, old)) continue;
+                var entry = Resolve(old);
+                if (entry is null || c.Scalar("SELECT 1 FROM library_tracking WHERE entry_id=$p0", P(entry.Value)) is not null)
+                    c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(old));
+                else c.Execute("UPDATE library_tracking SET entry_id=$p0 WHERE entry_id=$p1", P(entry.Value, old));
+            }
             c.Execute("DELETE FROM settings WHERE key=$p0", P(CarrySetting));
             var summary = new JsonObject
             {
@@ -153,6 +191,7 @@ public sealed partial class CatalogueMaintenance
                 ["manual_titles"] = new JsonObject { ["kept"] = overridesKept, ["dropped"] = overridesDropped },
                 ["title_scopes"] = new JsonObject { ["kept"] = scopesKept, ["dropped"] = scopesDropped },
                 ["manual_aliases"] = new JsonObject { ["kept"] = aliasesKept, ["dropped"] = aliasesDropped },
+                ["library_works"] = new JsonObject { ["kept"] = libraryKept, ["dropped"] = libraryDropped },
                 ["note"] = "Dropped decisions named works that were not restored (no subscribed entry or manually bound record holds their records).",
             };
             Log("reset.database.rekey", DecisionActor.Automatic, resolved.Values.OfType<long>(), [], "Kept manual decisions re-attached after a database reset", after: (JsonObject)summary.DeepClone());

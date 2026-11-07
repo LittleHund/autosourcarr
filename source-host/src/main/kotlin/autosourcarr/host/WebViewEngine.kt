@@ -126,6 +126,9 @@ object WebViewEngine {
                                     "--off-screen-rendering-enabled",
                                     "--disable-dev-shm-usage",
                                     "--change-stack-guard-on-fork=disable",
+                                    // 0.5.2: Chromium's own messages (a fatal check before a crash) also on stderr, which the
+                                    // app records; its log file stayed empty on a machine where it crashed at start.
+                                    "--enable-logging=stderr",
                                 ),
                             )
                             cefSettings.apply {

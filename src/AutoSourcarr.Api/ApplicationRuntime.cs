@@ -22,7 +22,7 @@ namespace AutoSourcarr.Api;
 /// Additional domain routes remain migration work; this is not default-runtime promotion.</summary>
 internal sealed partial class ApplicationRuntime : IAsyncDisposable
 {
-    internal const string Version = "0.5.1";
+    internal const string Version = "0.5.2";
     private readonly object _closeGate = new();
     private readonly object _catalogueWriteGate = new();
     private readonly OperationOwner _http = new();
