@@ -1,8 +1,8 @@
 {
   "ok": true,
-  "version": "0.5.1",
-  "captured_at": "2026-11-07T00:34:49.3947698+00:00",
-  "instance_id": "35b7cb6d8a79",
+  "version": "0.5.2",
+  "captured_at": "2026-11-07T22:38:08.5587847+00:00",
+  "instance_id": "8a6bfdde3041",
   "source_host": {
     "ok": true,
     "checked": true,
@@ -18,7 +18,7 @@
     },
     "detail": {
       "ok": true,
-      "version": "0.5.0",
+      "version": "0.5.2",
       "compat_version": "v2.4.2366",
       "extensions": 0,
       "extension_load_errors": 0,
@@ -128,9 +128,9 @@
       "database_dir": "/data",
       "database_bytes": 1163832,
       "data_dir": "/data",
-      "data_bytes": 10006253
+      "data_bytes": 10003409
     },
-    "captured_at": "2026-11-07T00:34:49.3884863+00:00",
+    "captured_at": "2026-11-07T22:38:08.5546920+00:00",
     "cache_age_seconds": 0
   },
   "errors": {
