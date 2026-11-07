@@ -53,6 +53,23 @@ public sealed partial class CatalogueMaintenance
     }
 
     /// <summary>
+    /// Monitoring follows its work; when two old works land on one entry it stays on if either was monitored (never turned
+    /// off by row order). The observation is marked for a fresh check, as after a merge.
+    /// </summary>
+    private static void MoveTracking(DatabaseSession c, long old, long target)
+    {
+        const string Recheck = "json_set(CASE WHEN json_valid(observation_json) THEN observation_json ELSE '{}' END,'$.download_state','unknown','$.coverage_state','verification')";
+        if (c.Scalar("SELECT 1 FROM library_tracking WHERE entry_id=$p0", P(old)) is null) return;
+        if (c.Scalar("SELECT 1 FROM library_tracking WHERE entry_id=$p0", P(target)) is null)
+            c.Execute("UPDATE library_tracking SET entry_id=$p0,revision=revision+1,observation_json=" + Recheck + " WHERE entry_id=$p1", P(target, old));
+        else
+        {
+            c.Execute("UPDATE library_tracking SET monitored=MAX(monitored,(SELECT monitored FROM library_tracking WHERE entry_id=$p1)),revision=revision+1,observation_json=" + Recheck + " WHERE entry_id=$p0", P(target, old));
+            c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(old));
+        }
+    }
+
+    /// <summary>
     /// After a normal reset's restore: re-keys the kept id-based manual decisions to the entries that now hold their
     /// records (aliasing the old id to it, like the manual-match restore) and drops the ones whose work is not back.
     /// Answers kept/dropped counts per kind; a no-op without a pending reset.
@@ -160,16 +177,9 @@ public sealed partial class CatalogueMaintenance
                 }
                 if (entry.Value != old)
                 {
-                    if (c.Scalar("SELECT 1 FROM library_series WHERE entry_id=$p0", P(entry.Value)) is null)
-                        c.Execute("UPDATE library_series SET entry_id=$p0,updated_at=$p1 WHERE entry_id=$p2", P(entry.Value, stamp, old));
-                    else
-                    {
-                        if (row.Integer("in_library") == 1) c.Execute("UPDATE library_series SET in_library=1,updated_at=$p0 WHERE entry_id=$p1", P(stamp, entry.Value));
-                        c.Execute("DELETE FROM library_series WHERE entry_id=$p0", P(old));
-                    }
-                    if (c.Scalar("SELECT 1 FROM library_tracking WHERE entry_id=$p0", P(entry.Value)) is null)
-                        c.Execute("UPDATE library_tracking SET entry_id=$p0 WHERE entry_id=$p1", P(entry.Value, old));
-                    else c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(old));
+                    // Membership, queued and downloaded chapters and their history move like in a merge.
+                    Structure.CataloguePreferenceLineage.ReparentLibrary(c, entry.Value, old, stamp);
+                    MoveTracking(c, old, entry.Value);
                 }
                 libraryKept++;
             }
@@ -178,9 +188,8 @@ public sealed partial class CatalogueMaintenance
                 // Monitoring rows of works outside the library follow their work the same way.
                 if (EntryExists(c, old)) continue;
                 var entry = Resolve(old);
-                if (entry is null || c.Scalar("SELECT 1 FROM library_tracking WHERE entry_id=$p0", P(entry.Value)) is not null)
-                    c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(old));
-                else c.Execute("UPDATE library_tracking SET entry_id=$p0 WHERE entry_id=$p1", P(entry.Value, old));
+                if (entry is null) c.Execute("DELETE FROM library_tracking WHERE entry_id=$p0", P(old));
+                else MoveTracking(c, old, entry.Value);
             }
             c.Execute("DELETE FROM settings WHERE key=$p0", P(CarrySetting));
             var summary = new JsonObject

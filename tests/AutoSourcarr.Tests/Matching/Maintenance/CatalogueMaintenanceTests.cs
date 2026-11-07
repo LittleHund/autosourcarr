@@ -150,6 +150,7 @@ public static class CatalogueMaintenanceTests
                 c.Execute("INSERT INTO library_series(entry_id,in_library,series_name,folder,folder_key,added_at,updated_at) VALUES($a,1,'Alpha','Alpha','ALPHA','t','t'),($g,1,'Gone','Gone','GONE','t','t')",
                     ("$a", alpha), ("$g", gone));
                 c.Execute("INSERT INTO library_tracking(entry_id,monitored) VALUES($a,1),($g,1)", ("$a", alpha), ("$g", gone));
+                c.Execute("INSERT INTO library_downloads(chapter_id,entry_id,file,downloaded_at) VALUES(9001,$a,'Alpha/Ch.001.cbz','t')", ("$a", alpha));
                 return c.Execute("INSERT INTO deleted_source_records(source_id,source_manga_id,deleted_at) VALUES('d',40,'t')");
             });
             var log = new InMemoryDecisionLog();
@@ -179,6 +180,8 @@ public static class CatalogueMaintenanceTests
             Check.Equal(alpha2, database.Read(DatabaseFile.Catalog, c => (long)c.Scalar("SELECT entry_id FROM library_series WHERE in_library=1")!));
             Check.Equal(1L, ManualFixture.Count(database, "SELECT COUNT(*) FROM library_tracking WHERE monitored=1 AND entry_id=" + alpha2.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             Check.Equal(1L, ManualFixture.Count(database, "SELECT COUNT(*) FROM library_tracking"));
+            Check.Equal(1L, ManualFixture.Count(database, "SELECT COUNT(*) FROM library_downloads WHERE entry_id=" + alpha2.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            Check.Equal("unknown", database.Read(DatabaseFile.Catalog, c => c.Scalar("SELECT json_extract(observation_json,'$.download_state') FROM library_tracking") as string));
         });
     }
 }
