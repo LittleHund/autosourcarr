@@ -1,4 +1,4 @@
-## 0.5.1 - YYYY-MM-DD
+## 0.5.1 - 2026-11-07
 
 0.5.1 fixes what the first 0.5.0 deploy showed. Update by pulling the new image; no migration step is needed.
 
