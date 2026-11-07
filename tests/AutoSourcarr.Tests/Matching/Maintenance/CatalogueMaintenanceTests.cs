@@ -146,6 +146,10 @@ public static class CatalogueMaintenanceTests
                 c.Execute("INSERT INTO preferred_title_overrides(entry_id,title,updated_at) VALUES($a,'Alpha Prime','t')", ("$a", alpha));
                 c.Execute("INSERT INTO manual_separate_records(target_entry_id,source_id,source_manga_id,separate_entry_id_hint,created_at,updated_at) VALUES($a,'b',20,$b,'t','t'),($g,'a',10,NULL,'t','t')",
                     ("$a", alpha), ("$b", beta), ("$g", gone));
+                // 0.5.2: library membership and monitoring of Alpha (comes back) and Gone (does not).
+                c.Execute("INSERT INTO library_series(entry_id,in_library,series_name,folder,folder_key,added_at,updated_at) VALUES($a,1,'Alpha','Alpha','ALPHA','t','t'),($g,1,'Gone','Gone','GONE','t','t')",
+                    ("$a", alpha), ("$g", gone));
+                c.Execute("INSERT INTO library_tracking(entry_id,monitored) VALUES($a,1),($g,1)", ("$a", alpha), ("$g", gone));
                 return c.Execute("INSERT INTO deleted_source_records(source_id,source_manga_id,deleted_at) VALUES('d',40,'t')");
             });
             var log = new InMemoryDecisionLog();
@@ -171,6 +175,10 @@ public static class CatalogueMaintenanceTests
             Check.Equal("Alpha Prime", database.Read(DatabaseFile.Catalog, c => c.Scalar("SELECT preferred_title FROM entries WHERE manual_preferred_title=1") as string));
             Check.Equal(0L, ManualFixture.Count(database, "SELECT COUNT(*) FROM settings WHERE key='" + CatalogueMaintenance.CarrySetting + "'"));
             Check.True(maintenance.RekeyKeptDecisions()["pending"]!.GetValue<bool>() == false, "re-keying runs once per reset");
+            Check.Equal(1, rekeyed["library_works"]!["kept"]!.GetValue<int>()); Check.Equal(1, rekeyed["library_works"]!["dropped"]!.GetValue<int>());
+            Check.Equal(alpha2, database.Read(DatabaseFile.Catalog, c => (long)c.Scalar("SELECT entry_id FROM library_series WHERE in_library=1")!));
+            Check.Equal(1L, ManualFixture.Count(database, "SELECT COUNT(*) FROM library_tracking WHERE monitored=1 AND entry_id=" + alpha2.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            Check.Equal(1L, ManualFixture.Count(database, "SELECT COUNT(*) FROM library_tracking"));
         });
     }
 }
