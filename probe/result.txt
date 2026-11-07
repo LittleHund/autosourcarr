@@ -1,12 +1,12 @@
-sha=7b82ef585d1d5e3caf25209814e8596b0d3c6e3e
+sha=37a7a83aedbb148eb025bedc2f0eb4bf13a3a061
 restore=0
 build=0
-test=1
+test=0
 openapi=0
 client=0
 source_host_build=0
-source_host_check=1
-source_host_csharp=1
+source_host_check=0
+source_host_csharp=0
 repair_runner=exit=0
 kavita=0
 reader_extension_build=0
@@ -17,5 +17,5 @@ sandbox_check=0
 linux_runtime=0
 benchmark=0
 image_build=0
-boot_seconds=4.4
+boot_seconds=5.5
 image_playwright=0

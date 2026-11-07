@@ -1,4 +1,4 @@
   Determining projects to restore...
-  Restored /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj (in 3.91 sec).
-  Restored /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj (in 3.91 sec).
-  Restored /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj (in 3.91 sec).
+  Restored /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj (in 5.15 sec).
+  Restored /home/runner/work/autosourcarr/autosourcarr/src/AutoSourcarr.Core/AutoSourcarr.Core.csproj (in 5.15 sec).
+  Restored /home/runner/work/autosourcarr/autosourcarr/tests/AutoSourcarr.Tests/AutoSourcarr.Tests.csproj (in 5.15 sec).
