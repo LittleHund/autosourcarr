@@ -13,9 +13,9 @@ release. Update by pulling the new image; no migration step is needed.
   starts when it is done.
 - **WebView works on older kernels (TrueNAS 6.12):** the built-in WebView (Chromium) no longer crashes the source
   host with exit code 133. The source host sandbox now blocks signals to the app only on kernels with the Landlock
-  signal fix (Linux 6.15 or later); the file sandbox stays on everywhere. If the WebView still crashes twice, the app
-  retries it without signal blocking before it turns the WebView off. To choose yourself, set
-  `AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE` to `auto` (default), `on` or `off`. If you set
+  signal fix (Linux 6.15 or later); the file sandbox stays on everywhere. To choose yourself, set
+  `AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE` to `auto` (default), `on` or `off`; if the WebView still crashes with signal
+  blocking on, the notice says to set it to `off` (the app never weakens the sandbox by itself). If you set
   `SOURCE_WEBVIEW_ENABLED=false` because of the crash, you can remove it.
 - **WebView starts after a redeploy:** a recreated container no longer finds Chromium's profile "in use by another
   computer"; the lock left by the old container is removed before the source host starts.

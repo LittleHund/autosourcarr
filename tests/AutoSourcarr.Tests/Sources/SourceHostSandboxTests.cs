@@ -35,13 +35,12 @@ public static class SourceHostSandboxTests
             Check.True(SourceHostSandboxState.Parse("AUTOSOURCARR_RUNNER_V1 {}") is null && SourceHostSandboxState.Parse("AUTOSOURCARR_SOURCE_SANDBOX_V1 [") is null, "foreign or broken lines are ignored");
         });
 
-        suite.Add("source host sandbox: signal scoping follows the kernel erratum, the setting and the WebView crash fallback (0.5.3)", () =>
+        suite.Add("source host sandbox: signal scoping follows the kernel erratum, and the setting, never by itself after a crash (0.5.3)", () =>
         {
             const string Java = "/opt/source-host/bin/java", Jar = "/app/source-host/autosourcarr-source-host.jar";
             var auto = SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?>());
             Check.Equal("auto", auto.Signals);
             Check.True(!auto.Arguments("/data/source-host", Java, Jar).Contains("--signals"), "auto passes nothing: the launcher decides from the kernel");
-            Check.Equal("--signals off", string.Join(' ', auto.Arguments("/data/source-host", Java, Jar, signalsOff: true).Take(2)));
             var off = SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE"] = " OFF " });
             Check.Equal("--signals off", string.Join(' ', off.Arguments("/data/source-host", Java, Jar).Take(2)));
             Check.Equal("on", SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE"] = "on" }).Signals);
@@ -54,15 +53,10 @@ public static class SourceHostSandboxTests
             var old = SourceHostSandboxState.Parse("AUTOSOURCARR_SOURCE_SANDBOX_V1 {\"uid\":568,\"separated\":0,\"landlock\":6,\"scoped\":2,\"nnp\":1,\"reason\":\"\"}")!;
             Check.True(old.SignalsScoped && old.Signals == "", "an older launcher's proof still parses");
 
-            // The crash limit with signals scoped first retries without scoping; the next limit turns the WebView off.
-            var first = SourceHostProcess.SignalScopeFallback("turn off", signalsScoped: true, signalsOff: false, crashes: 2, exitCode: 133);
-            Check.True(first.SignalsOff && first.Crashes == 0 && first.TurnOff is null && first.Message!.Contains("signal scoping", StringComparison.Ordinal), first.ToString());
-            var second = SourceHostProcess.SignalScopeFallback("turn off", signalsScoped: false, signalsOff: true, crashes: 2, exitCode: 133);
-            Check.True(second.SignalsOff && second.TurnOff == "turn off" && second.Message is null, second.ToString());
-            var unscoped = SourceHostProcess.SignalScopeFallback("turn off", signalsScoped: false, signalsOff: false, crashes: 2, exitCode: 133);
-            Check.True(!unscoped.SignalsOff && unscoped.TurnOff == "turn off", "without scoping there is nothing to retry");
-            var below = SourceHostProcess.SignalScopeFallback(null, signalsScoped: true, signalsOff: false, crashes: 1, exitCode: 133);
-            Check.True(!below.SignalsOff && below.Crashes == 1 && below.Message is null, "below the limit nothing changes");
+            // The app never weakens the sandbox by itself (sandboxed code can crash the host on purpose): it only adds a hint.
+            Check.True(SourceHostProcess.WithSignalHint("Off.", signalsScoped: true)!.Contains("AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE=off", StringComparison.Ordinal), "hint when scoped");
+            Check.Equal("Off.", SourceHostProcess.WithSignalHint("Off.", signalsScoped: false));
+            Check.True(SourceHostProcess.WithSignalHint(null, signalsScoped: true) is null, "below the limit nothing changes");
         });
 
         suite.Add("source host: a stale Chromium profile lock from an earlier container is cleared before the host starts (0.5.3)", () =>
