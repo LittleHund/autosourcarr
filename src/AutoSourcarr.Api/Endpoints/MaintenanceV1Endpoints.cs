@@ -39,6 +39,7 @@ internal static class MaintenanceV1Endpoints
     /// (StopBackgroundAsync pauses the queue). 0.5.3: long-running instead of exclusive, so it starts at once instead of
     /// waiting for long background jobs (continuous discovery) that never finish on their own.
     /// </summary>
+    private static readonly SemaphoreSlim ResetGate = new(1, 1);
     public static readonly JobType DatabaseResetJob = new("database-reset", "Reset database", JobPriority.High,
         JobFlags.LongRunning, StallTimeout: TimeSpan.FromHours(2), Cancellable: false);
     public static readonly JobType FullResetJob = new("database-full-reset", "Full reset", JobPriority.High,
@@ -152,10 +153,19 @@ internal static class MaintenanceV1Endpoints
                         {
                             // 0.4.x stop_background_tasks: queued work is cancelled and running work drained first; the queue
                             // resumes afterwards (the reset's own rebuild jobs start then).
-                            job.Report(message: "Stopping background work");
-                            await jobs.StopBackgroundAsync(full ? "Full reset" : "Database reset", keep: job.Id).ConfigureAwait(false);
+                            // 0.5.3: one reset at a time (a normal and a full reset are different job types and would both
+                            // start), and the reset waits until running work really stopped: it no longer waits as an exclusive job.
+                            if (!ResetGate.Wait(0)) throw new InvalidOperationException("Another reset is already running; nothing was reset.");
                             try
                             {
+                            job.Report(message: "Stopping background work");
+                            var stopped = false;
+                            for (var attempt = 0; attempt < 20 && !stopped; attempt++)
+                                stopped = await jobs.StopBackgroundAsync(full ? "Full reset" : "Database reset", keep: job.Id).ConfigureAwait(false);
+                            try
+                            {
+                                if (!stopped)
+                                    throw new InvalidOperationException((full ? "Full reset" : "Database reset") + " not started: background work did not stop within 10 minutes; nothing was reset. Try again later.");
                                 // Hard rule 1: draining can take long and decisions can change meanwhile; the preview the
                                 // person confirmed must still be current when the reset starts.
                                 if ((maintenance.Manual.PreviewReset(ManualResetScope.All)["preview_token"]?.GetValue<string>() ?? "") != token)
@@ -164,6 +174,8 @@ internal static class MaintenanceV1Endpoints
                                 job.Result((full ? "Full reset done" : "Database reset done") + ": " + result.ToJsonString());
                             }
                             finally { jobs.ResumeBackground(); }
+                            }
+                            finally { ResetGate.Release(); }
                         }, origin: "manual", title: full ? "Full reset" : "Reset database");
                     }
                     catch (Exception error) when (error is ObjectDisposedException or ArgumentException)

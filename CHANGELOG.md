@@ -11,6 +11,14 @@ release. Update by pulling the new image; no migration step is needed.
   browser pop-ups) that lists what is **deleted** and what is **kept**, with the numbers of your catalogue.
 - **Rebuild library first:** after a reset, "Rebuild library" recreates your subscribed works; finding new entries
   starts when it is done.
+- **WebView works on older kernels (TrueNAS 6.12):** the built-in WebView (Chromium) no longer crashes the source
+  host with exit code 133. The source host sandbox now blocks signals to the app only on kernels with the Landlock
+  signal fix (Linux 6.15 or later); the file sandbox stays on everywhere. If the WebView still crashes twice, the app
+  retries it without signal blocking before it turns the WebView off. To choose yourself, set
+  `AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE` to `auto` (default), `on` or `off`. If you set
+  `SOURCE_WEBVIEW_ENABLED=false` because of the crash, you can remove it.
+- **WebView starts after a redeploy:** a recreated container no longer finds Chromium's profile "in use by another
+  computer"; the lock left by the old container is removed before the source host starts.
 - **Live search:** the library and match matrix search update while you type (no Enter needed).
 - **Clearer logs:** startup, shutdown, backup and restore failures name the error and where it happened (secrets and
   private paths stay redacted); what a restore or update does at start appears in `docker logs` immediately; repeated

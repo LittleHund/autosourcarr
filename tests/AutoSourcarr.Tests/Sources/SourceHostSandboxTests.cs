@@ -35,6 +35,56 @@ public static class SourceHostSandboxTests
             Check.True(SourceHostSandboxState.Parse("AUTOSOURCARR_RUNNER_V1 {}") is null && SourceHostSandboxState.Parse("AUTOSOURCARR_SOURCE_SANDBOX_V1 [") is null, "foreign or broken lines are ignored");
         });
 
+        suite.Add("source host sandbox: signal scoping follows the kernel erratum, the setting and the WebView crash fallback (0.5.3)", () =>
+        {
+            const string Java = "/opt/source-host/bin/java", Jar = "/app/source-host/autosourcarr-source-host.jar";
+            var auto = SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?>());
+            Check.Equal("auto", auto.Signals);
+            Check.True(!auto.Arguments("/data/source-host", Java, Jar).Contains("--signals"), "auto passes nothing: the launcher decides from the kernel");
+            Check.Equal("--signals off", string.Join(' ', auto.Arguments("/data/source-host", Java, Jar, signalsOff: true).Take(2)));
+            var off = SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE"] = " OFF " });
+            Check.Equal("--signals off", string.Join(' ', off.Arguments("/data/source-host", Java, Jar).Take(2)));
+            Check.Equal("on", SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE"] = "on" }).Signals);
+            Check.Equal("auto", SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE"] = "maybe" }).Signals);
+
+            var erratum = SourceHostSandboxState.Parse("AUTOSOURCARR_SOURCE_SANDBOX_V1 {\"uid\":568,\"separated\":0,\"landlock\":6,\"scoped\":0,\"nnp\":1,\"reason\":\"\",\"signals\":\"kernel-erratum\"}")!;
+            Check.True(erratum.Sandboxed && !erratum.SignalsScoped && erratum.Signals == "kernel-erratum", erratum.ToString());
+            Check.True(erratum.Message().Contains("fixed in Linux 6.15", StringComparison.Ordinal), erratum.Message());
+            Check.Equal("kernel-erratum", erratum.Json()["signals"]!.GetValue<string>());
+            var old = SourceHostSandboxState.Parse("AUTOSOURCARR_SOURCE_SANDBOX_V1 {\"uid\":568,\"separated\":0,\"landlock\":6,\"scoped\":2,\"nnp\":1,\"reason\":\"\"}")!;
+            Check.True(old.SignalsScoped && old.Signals == "", "an older launcher's proof still parses");
+
+            // The crash limit with signals scoped first retries without scoping; the next limit turns the WebView off.
+            var first = SourceHostProcess.SignalScopeFallback("turn off", signalsScoped: true, signalsOff: false, crashes: 2, exitCode: 133);
+            Check.True(first.SignalsOff && first.Crashes == 0 && first.TurnOff is null && first.Message!.Contains("signal scoping", StringComparison.Ordinal), first.ToString());
+            var second = SourceHostProcess.SignalScopeFallback("turn off", signalsScoped: false, signalsOff: true, crashes: 2, exitCode: 133);
+            Check.True(second.SignalsOff && second.TurnOff == "turn off" && second.Message is null, second.ToString());
+            var unscoped = SourceHostProcess.SignalScopeFallback("turn off", signalsScoped: false, signalsOff: false, crashes: 2, exitCode: 133);
+            Check.True(!unscoped.SignalsOff && unscoped.TurnOff == "turn off", "without scoping there is nothing to retry");
+            var below = SourceHostProcess.SignalScopeFallback(null, signalsScoped: true, signalsOff: false, crashes: 1, exitCode: 133);
+            Check.True(!below.SignalsOff && below.Crashes == 1 && below.Message is null, "below the limit nothing changes");
+        });
+
+        suite.Add("source host: a stale Chromium profile lock from an earlier container is cleared before the host starts (0.5.3)", () =>
+        {
+            using var sandbox = new Sandbox();
+            var profile = Path.Combine(sandbox.Path, "cache", "kcef");
+            Directory.CreateDirectory(profile);
+            File.WriteAllText(Path.Combine(profile, "Cookies"), "keep");
+            File.WriteAllText(Path.Combine(profile, "SingletonCookie"), "x");
+            try { File.CreateSymbolicLink(Path.Combine(profile, "SingletonLock"), "b4ab980bf49c-104"); } // dangling, as Chromium writes it
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException) { File.WriteAllText(Path.Combine(profile, "SingletonLock"), "x"); }
+            var lines = new List<string>();
+            SourceHostProcess.ClearChromiumLock(sandbox.Path, lines.Add);
+            Check.True(new FileInfo(Path.Combine(profile, "SingletonLock")).LinkTarget is null && !File.Exists(Path.Combine(profile, "SingletonLock")), "lock removed");
+            Check.True(!File.Exists(Path.Combine(profile, "SingletonCookie")) && File.Exists(Path.Combine(profile, "Cookies")), "only the lock files go");
+            Check.Equal(1, lines.Count(line => line.Contains("Cleared", StringComparison.Ordinal)));
+            lines.Clear();
+            SourceHostProcess.ClearChromiumLock(sandbox.Path, lines.Add);
+            SourceHostProcess.ClearChromiumLock(Path.Combine(sandbox.Path, "missing"), lines.Add);
+            Check.Equal(0, lines.Count);
+        });
+
         suite.Add("source host sandbox: a missing launcher (or another platform) starts the host directly and reports it unsandboxed", () =>
         {
             using var sandbox = new Sandbox();

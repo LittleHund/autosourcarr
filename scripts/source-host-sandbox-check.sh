@@ -27,7 +27,16 @@ if echo "$proof" | grep -q '"landlock":[1-9]'; then
         # Signal scoping (ABI 6): the sandboxed program cannot signal this shell.
         "$sandbox" --data "$work/data" -- /bin/sh -c "kill -0 $$ 2>/dev/null && echo signalled > '$work/data/signal'" 2>/dev/null
         [ ! -f "$work/data/signal" ] && pass "cannot signal processes outside the sandbox" || fail "signalled a process outside the sandbox"
-    else echo "INFO kernel below Landlock ABI 6: signal scoping not available"; fi
+    else echo "INFO kernel below Landlock ABI 6 or without the signal fix: signal scoping not used ($proof)"; fi
+    if echo "$proof" | grep -q '"landlock":\([6-9]\|[1-9][0-9]\)'; then
+        # 0.5.3: --signals off/on override the kernel erratum check; the proof says what was used.
+        off=$("$sandbox" --signals off --data "$work/data" -- /bin/true 2>&1 | head -1)
+        echo "$off" | grep -q '"scoped":0' && echo "$off" | grep -q '"signals":"off"' && pass "--signals off turns signal scoping off" || fail "--signals off: $off"
+        on=$("$sandbox" --signals on --data "$work/data" -- /bin/true 2>&1 | head -1)
+        echo "$on" | grep -q '"scoped":2' && echo "$on" | grep -q '"signals":"scoped"' && pass "--signals on forces signal scoping" || fail "--signals on: $on"
+        echo "$proof" | grep -q '"signals":"\(scoped\|kernel-erratum\)"' && pass "auto reports the kernel erratum state" || fail "auto signals state: $proof"
+    fi
+    "$sandbox" --signals maybe --data "$work/data" -- /bin/true 2>/dev/null; [ $? -eq 64 ] && pass "an unknown --signals value is refused (usage)" || fail "accepted --signals maybe"
 else
     echo "INFO kernel without Landlock: degraded to unsandboxed (expected behaviour, reported in health)"
 fi

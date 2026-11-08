@@ -199,6 +199,8 @@ internal static class BackupV1Endpoints
                 if (backups is null) return Unavailable();
                 if (!Allowed(context)) return Forbidden();
                 context.Response.Headers.CacheControl = "no-store";
+                // 0.5.3: a running backup holds the store; answer at once instead of waiting for it to finish.
+                if (backups.Store.Creating) return Problem(409, "A backup is being created; wait until it finishes or cancel it in Tasks, then preview the restore.");
                 if (!await PreviewGate.WaitAsync(0).ConfigureAwait(false)) return Problem(409, "Another backup preview is running; wait until it finishes.");
                 try
                 {
@@ -247,9 +249,13 @@ internal static class BackupV1Endpoints
                 // Hard rule 1: never automatic; the confirm flag and the token of the preview the admin saw.
                 if (!BodyFlag(body, "confirm") || stage.Length == 0 || token.Length == 0)
                     return Problem(400, "Confirm the restore: send {\"stage_id\": \"...\", \"preview_token\": \"...\", \"confirm\": true} from its preview.");
-                var armed = await Task.Run(() => backups.Store.Arm(stage, token)).ConfigureAwait(false);
-                backups.RestoreArmed?.Invoke(true);
+                // 0.5.3: stop (and cancel a running backup) first: a backup holds the store until it ends, so arming
+                // after it would wait for the whole backup. Nothing armed means the queue resumes.
                 if (services.Jobs is { } jobs) await jobs.StopBackgroundAsync("A restore is armed for the next start").ConfigureAwait(false);
+                JsonObject armed;
+                try { armed = await Task.Run(() => backups.Store.Arm(stage, token)).ConfigureAwait(false); }
+                catch { services.Jobs?.ResumeBackground(); throw; }
+                backups.RestoreArmed?.Invoke(true);
                 Publish("restore-armed");
                 return Answer(Restart(new JsonObject
                 {

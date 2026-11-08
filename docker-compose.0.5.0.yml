@@ -19,6 +19,8 @@
 # /opt/autosourcarr-native/source-host-sandbox, a Landlock sandbox that can write only /data/source-host and cannot
 # read /config, the app's other data or your library; it runs as the app's user 568. Status page and
 # /api/v1/health show it as "source_sandbox". Nothing to configure; do not set AUTOSOURCARR_SOURCE_HOST_UID/GID.
+# It blocks signals to the app only on kernels with the Landlock signal fix (Linux 6.15+; on older kernels such as
+# TrueNAS 25.04's 6.12 the WebView would crash). AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE: auto (default) | on | off.
 #
 # Optional uid 569 variant -- NOT recommended: it trades the container-wide no-new-privileges and cap_drop ALL for
 # a separate user for the extension JVM. Only if you accept that:
