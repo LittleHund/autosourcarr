@@ -37,6 +37,7 @@ AutoSourcarr.Tests.Jobs.LiveEventsHttpTests.Register(suite);
 AutoSourcarr.Tests.Sources.SourceHostIntegrationTests.Register(suite);
 AutoSourcarr.Tests.Sources.SourceBrowserPreferencesTests.Register(suite);
 AutoSourcarr.Tests.Sources.SourceHostSandboxTests.Register(suite);
+AutoSourcarr.Tests.Updates.ReleaseUpdatesTests.Register(suite);
 SourceEngineControllerTests.Register(suite);
 AutoSourcarr.Tests.Api.SourceRuntimeApiTests.Register(suite);
 AutoSourcarr.Tests.Api.AccessControlTests.Register(suite);

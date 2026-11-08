@@ -26,3 +26,15 @@
 #subbed>.scopeChips button{flex:0 0 auto}
 @media(max-width:767px){.riToolDialog{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.riToolDialog>header,.riToolDialog>footer,#riInstanceBody{padding:14px}.riFacts{grid-template-columns:1fr}.riBackupRow{align-items:flex-start;flex-direction:column}.riToolDialog>header h2{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.riToolDialog *{scroll-behavior:auto}}
+
+/* 0.5.4 update notice: orange badge on Settings, a banner above the page and the changes dialog. */
+.updateNavBadge,.appNav .updateNavBadge{background:#f59e0b;color:#1c1300}
+.updateBanner{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px;padding:10px 14px;border:1px solid #f59e0b;border-radius:8px;background:color-mix(in srgb,#f59e0b 14%,var(--panel));color:var(--text)}
+.updateBanner[hidden]{display:none}
+.updateBanner>span{flex:1 1 240px}
+#updateBody{padding:22px;overflow:auto;max-height:calc(100dvh - 190px)}
+#updateBody h3{margin:20px 0 6px}
+#updateBody h3:first-child{margin-top:0}
+#updateBody .updateSteps{padding:10px 14px;border-left:3px solid #f59e0b;background:var(--panel)}
+#updateStatus{flex:1;margin:0;color:var(--muted)}
+#riSidebarVersion.updateKnown{cursor:pointer;color:#f59e0b}

@@ -23,6 +23,9 @@ Precedence, lowest first: built-in default, `config.json`, Compose environment v
 | `SOURCE_ENGINE_MODE` | choice (integrated, external) | `integrated` | integrated runs sources inside this image; external uses a separate source host (rollback and development only). | Compose only |  |
 | `SOURCE_ENGINE_UID` | integer | `0` | User ID the source engine runs as. 0 picks the owner of the existing source folder (TrueNAS often uses 568). | Compose only |  |
 | `TZ` | text | `Europe/Amsterdam` | Used for readable times and scheduled work. Example: Europe/Amsterdam. | Compose | library |
+| `UPDATE_CHECK_ENABLED` | boolean | `true` | Look for a newer published AutoSourcarr version and show what changed. The check asks ghcr.io for the version list (and GitHub for the changes when a new version appears); nothing about your instance is sent. |  |  |
+| `UPDATE_CHECK_MINUTES` | integer | `5` | Minutes between two update checks (1 to 10080). A check is two small requests. |  |  |
+| `UPDATE_IMAGE_TAG` | choice (auto, latest, pinned) | `auto` | How your Compose file names the image, so the update notice says what to do: latest (restart to update), pinned (a fixed version such as 0.5.4: change the tag) or auto (shows both). |  |  |
 
 ## Security
 

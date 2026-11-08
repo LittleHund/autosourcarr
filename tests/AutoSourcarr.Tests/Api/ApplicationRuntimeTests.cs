@@ -162,7 +162,7 @@ public static class ApplicationRuntimeTests
         {
             using var http = new RunningHttp(runtime, temp.Path); using var client = http.Host.GetTestClient();
             var live = await client.GetFromJsonAsync<JsonObject>("/api/v1/live");
-            Check.True(live!["ok"]!.GetValue<bool>()); Check.Equal("0.5.3", live["version"]!.GetValue<string>());
+            Check.True(live!["ok"]!.GetValue<bool>()); Check.Equal("0.5.4", live["version"]!.GetValue<string>());
             // Accounts (phase 5): the page needs a sign-in; the login page and static files are public.
             using (var page = await client.GetAsync("/"))
             {

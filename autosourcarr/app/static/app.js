@@ -700,6 +700,61 @@ function ensureSettingsPane(){
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
 if($('#riSidebarVersion'))$('#riSidebarVersion').textContent=UI_BUILD_VERSION?'v'+UI_BUILD_VERSION:'';
 
+// 0.5.4 update notice: a newer published version shows an orange badge on Settings and a banner until dismissed; the
+// dialog lists what to do (by UPDATE_IMAGE_TAG) and the CHANGELOG of every version since this one.
+let releaseUpdate=null;
+function updateNotesHtml(text){
+  const inline=value=>esc(value).replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>');
+  const out=[];let list=false,para=[];
+  const flush=()=>{if(para.length){out.push('<p>'+inline(para.join(' '))+'</p>');para=[];}};
+  for(const raw of String(text||'').split('\n')){
+    const line=raw.trimEnd(),item=/^- (.*)$/.exec(line.trimStart()),indented=/^\s{2,}\S/.test(line);
+    if(item&&!indented){flush();if(!list){out.push('<ul>');list=true;}out.push('<li>'+inline(item[1]));continue;}
+    if(indented&&list){out.push(' '+inline(line.trim()));continue;}
+    if(list){out.push('</ul>');list=false;}
+    if(line.trim())para.push(line.trim());else flush();
+  }
+  flush();if(list)out.push('</ul>');return out.join('');
+}
+function renderReleaseUpdate(){
+  const u=releaseUpdate,show=!!(u&&u.available),fresh=show&&!u.dismissed;
+  const badge=$('#updateNavBadge'),banner=$('#updateBanner'),version=$('#riSidebarVersion');
+  if(badge)badge.hidden=!fresh;
+  if(banner){banner.hidden=!fresh;if(fresh)$('#updateBannerText').textContent=`AutoSourcarr ${u.latest} is available (you have ${u.current}).`;}
+  if(version){version.classList.toggle('updateKnown',show);version.title=show?`AutoSourcarr ${u.latest} is available. Click for what's new.`:'';}
+  const body=$('#updateBody');if(!body)return;
+  if(!u){body.innerHTML='<p class="muted">The update check has not run yet.</p>';return;}
+  $('#updateTitle').textContent=show?`AutoSourcarr ${u.latest} is available`:'AutoSourcarr is up to date';
+  const steps=show?`<div class="updateSteps"><p><strong>How to update</strong></p><ul>${(u.instructions||[]).map(line=>`<li>${esc(line)}</li>`).join('')}</ul><p class="muted">Set UPDATE_IMAGE_TAG to latest or pinned (Settings → Configuration) to see only the step for your setup.</p></div>`:`<p>You have ${esc(u.current)}, the newest published version.</p>`;
+  const notes=(u.notes||[]).map(note=>`<h3>${esc(note.version)}${note.date?' · '+esc(note.date):''}</h3>${updateNotesHtml(note.text)}`).join('');
+  const missing=show&&!(u.notes||[]).length?`<p class="muted">The list of changes is not available right now: <a href="${esc(u.changes_url)}" target="_blank" rel="noopener noreferrer">open the changelog on GitHub</a>.</p>`:'';
+  body.innerHTML=steps+notes+missing+(u.error?`<p class="muted">${esc(u.error)}</p>`:'');
+  $('#updateStatus').textContent=u.checked_at?'Last checked '+new Date(u.checked_at).toLocaleString():(u.enabled?'':'The update check is off (UPDATE_CHECK_ENABLED).');
+  $('#updateDismiss').hidden=!fresh;
+}
+async function loadReleaseUpdate(){
+  try{releaseUpdate=await apiV1({timeoutMs:10000,suppressClientError:true,noMutationRefresh:true,cache:'no-store'}).getReleaseUpdate();renderReleaseUpdate();}
+  catch(_){/* not an admin, or the app is starting: no notice */}
+}
+function openReleaseUpdate(){renderReleaseUpdate();const dialog=$('#updateDialog');if(dialog&&!dialog.open)dialog.showModal?.();}
+async function dismissReleaseUpdate(){
+  try{releaseUpdate=await apiV1({noMutationRefresh:true,timeoutMs:10000}).dismissReleaseUpdate();renderReleaseUpdate();$('#updateDialog')?.close?.();}
+  catch(e){toast('Unable to dismiss the update notice: '+e.message);}
+}
+if($('#updateBannerOpen'))$('#updateBannerOpen').onclick=openReleaseUpdate;
+if($('#updateBannerDismiss'))$('#updateBannerDismiss').onclick=dismissReleaseUpdate;
+if($('#updateDismiss'))$('#updateDismiss').onclick=dismissReleaseUpdate;
+if($('#updateClose'))$('#updateClose').onclick=()=>$('#updateDialog').close();
+if($('#riSidebarVersion'))$('#riSidebarVersion').onclick=()=>{if(releaseUpdate?.available)openReleaseUpdate();};
+if($('#updateCheckNow'))$('#updateCheckNow').onclick=async()=>{
+  const button=$('#updateCheckNow');button.disabled=true;$('#updateStatus').textContent='Checking…';
+  try{releaseUpdate=await apiV1({noMutationRefresh:true,timeoutMs:60000}).checkReleaseUpdate();renderReleaseUpdate();}
+  catch(e){$('#updateStatus').textContent='Check failed: '+e.message;}
+  finally{button.disabled=false;}
+};
+setTimeout(loadReleaseUpdate,1500);
+setInterval(loadReleaseUpdate,5*60*1000);
+
 
 let attentionState={items:[]},attentionPromise=null,attentionLastLoad=0,attentionSignature='';
 function renderAttention(){

@@ -93,6 +93,8 @@ services:
       # Behind Authelia, to keep Authelia as the only sign-in (otherwise 0.5.0 uses its own forms sign-in):
       # AUTH_METHOD: external
       # AUTH_TRUSTED_PROXIES: 172.18.0.0/16   # the reverse proxy's address or Docker network; never loopback
+      # Update notice (0.5.4): say how the image is named above, so the notice shows only your update step.
+      # UPDATE_IMAGE_TAG: pinned               # pinned = a version such as :0.5.4 (change the tag); latest = :latest (restart)
     # NEW datasets filled from the migration tool's output (docs/upgrade-from-0.4.md); the 0.4.x datasets
     # (autosourcarr-data, config) stay untouched as the rollback. Never mount the 0.4.x datasets here.
     volumes:

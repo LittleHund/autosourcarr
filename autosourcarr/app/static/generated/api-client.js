@@ -405,6 +405,13 @@
        */
       checkMixedEntries(body, options) { return call('POST', '/api/v1/mixed-entries/check', body, options); },
       /**
+       * 0.5.4: check for a newer version now.
+       * POST /api/v1/system/update/check
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      checkReleaseUpdate(options) { return call('POST', '/api/v1/system/update/check', undefined, options); },
+      /**
        * Check draft reader addresses and key without saving them.
        * POST /api/v1/setup/reader-preflight
        * @param {ReaderPreflightRequest} body
@@ -663,6 +670,13 @@
        * @returns {Promise<JsonObject>}
        */
       dismissBackupUpdateNotice(options) { return call('POST', '/api/v1/backups/update-notice/dismiss', undefined, options); },
+      /**
+       * 0.5.4: hide the update notice until a later version is published.
+       * POST /api/v1/system/update/dismiss
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      dismissReleaseUpdate(options) { return call('POST', '/api/v1/system/update/dismiss', undefined, options); },
       /**
        * Hide the update notice.
        * POST /api/v1/settings/update-notice/dismiss
@@ -1077,6 +1091,13 @@
        * @returns {Promise<JsonObject>}
        */
       getReaderExtensionSetup(options) { return call('GET', '/api/v1/reader-extension/setup', undefined, options); },
+      /**
+       * 0.5.4: whether a newer AutoSourcarr version is published, what changed since this version and how to update.
+       * GET /api/v1/system/update
+       * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`
+       * @returns {Promise<JsonObject>}
+       */
+      getReleaseUpdate(options) { return call('GET', '/api/v1/system/update', undefined, options); },
       /**
        * Where repairs run: always inside this instance (no external worker); which repair kinds are available.
        * GET /api/v1/source-maintenance/connection

@@ -1,7 +1,7 @@
 {
   "list": "autosourcarr-compatibility",
   "list_version": 1,
-  "app_version": "0.5.3",
+  "app_version": "0.5.4",
   "share_format": {
     "version": 2,
     "min_reader_version": 2,

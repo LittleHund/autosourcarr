@@ -11,7 +11,7 @@ import java.io.File
 object HostConfig {
     /** The Suwayomi build whose extension API (AppInfo version, lib 1.3 to 1.6) this host reproduces. */
     const val COMPAT_VERSION = "v2.4.2366"
-    const val HOST_VERSION = "0.5.3"
+    const val HOST_VERSION = "0.5.4"
 
     val dataDir: File = File(env("SOURCE_HOST_DATA", "./source-host-data")).absoluteFile
     val extensionsDir: File get() = File(dataDir, "extensions")
