@@ -526,7 +526,7 @@
        */
       createAccount(body, options) { return call('POST', '/api/v1/accounts', body, options); },
       /**
-       * Create a backup as a job (body {passphrase?}: 12 to 1024 characters protects it with chunked AES-GCM; never stored). Answers 202 with the task id.
+       * Create a backup as a job (body {passphrase?, share_export?}: a passphrase of 12 to 1024 characters protects it with chunked AES-GCM and is never stored; share_export also adds the portable catalogue, which is slow on large catalogues). Starts at once and can be cancelled. Answers 202 with the task id.
        * POST /api/v1/backups
        * @param {JsonObject} body
        * @param {{signal?: AbortSignal}} [options] per-call options, passed through to `request`

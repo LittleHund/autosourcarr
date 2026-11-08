@@ -116,6 +116,8 @@ public sealed partial class InstanceBackupStore
         _database = database; AppVersion = appVersion; _clock = clock ?? TimeProvider.System;
         Directory.CreateDirectory(Root);
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Root, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        // 0.5.3: a backup interrupted by a kill leaves its work folder; nothing runs yet at construction, so every one is stale.
+        foreach (var stale in Directory.EnumerateDirectories(Root, ".work-*")) TryDeleteDirectory(stale);
     }
 
     public string Root { get; }
@@ -181,8 +183,10 @@ public sealed partial class InstanceBackupStore
     /// The share export runs first (it records portable ids); then both databases are snapshotted in one drained lease.
     /// Everything streams through files in a work folder; a full disk answers 507 and leaves nothing behind.
     /// </summary>
+    /// <param name="cancellationToken">0.5.3: a manual backup can be cancelled (and is, when the app stops); it is checked
+    /// between export pages and before the databases are copied, so nothing half-written is kept.</param>
     public BackupSummary Create(string kind, string? reason = null, string? passphrase = null, Func<long, JsonObject>? sharePage = null,
-        TimeSpan? drain = null, Action<string>? report = null)
+        TimeSpan? drain = null, Action<string>? report = null, CancellationToken cancellationToken = default)
     {
         if (kind is not ("manual" or "automatic" or "pre-restore")) throw new ArgumentException("Unknown backup kind.", nameof(kind));
         if (passphrase is not null) BackupCrypto.CheckPassphrase(passphrase);
@@ -193,7 +197,7 @@ public sealed partial class InstanceBackupStore
             var id = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
             var work = Path.Combine(Root, ".work-" + id);
             Directory.CreateDirectory(work);
-            try { return CreateIn(work, id, kind, reason, passphrase, sharePage, drain, report); }
+            try { return CreateIn(work, id, kind, reason, passphrase, sharePage, drain, report, cancellationToken); }
             catch (IOException error) when (error is not FileNotFoundException and not DirectoryNotFoundException)
             { throw new BackupRefusedException("The backup could not be written (" + error.Message + "). Check the free space of the data folder.", 507, error); }
             finally { TryDeleteDirectory(work); }
@@ -201,7 +205,7 @@ public sealed partial class InstanceBackupStore
     }
 
     private BackupSummary CreateIn(string work, string id, string kind, string? reason, string? passphrase, Func<long, JsonObject>? sharePage,
-        TimeSpan? drain, Action<string>? report)
+        TimeSpan? drain, Action<string>? report, CancellationToken cancellationToken)
     {
         var contents = new List<(string Entry, string File)>();
         var notes = new List<string>();
@@ -212,8 +216,10 @@ public sealed partial class InstanceBackupStore
             long after = 0; var complete = false;
             while (share < MaxSharePages)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var page = sharePage(after);
                 share++;
+                report?.Invoke("Exporting the portable catalogue: page " + share.ToString(CultureInfo.InvariantCulture));
                 var name = "share-" + share.ToString("D4", CultureInfo.InvariantCulture) + ".json";
                 var file = Path.Combine(work, name);
                 // A page without its catalogue is not an empty catalogue: the export is incomplete and says so.
@@ -229,6 +235,7 @@ public sealed partial class InstanceBackupStore
         }
         else notes.Add("The portable catalogue share export is not included in this " + kind + " backup; the databases are.");
 
+        cancellationToken.ThrowIfCancellationRequested();
         report?.Invoke("Copying both databases");
         var facts = new Dictionary<string, DatabaseFacts>(StringComparer.Ordinal);
         _database.Quiescent(paths =>
@@ -880,7 +887,7 @@ public sealed partial class InstanceBackupStore
                         ? "The armed restore of the backup from " + created + " failed and could not be undone completely; the databases are kept as they are and AutoSourcarr starts in safe mode. Restore the backup taken before it, or ask for help."
                         : "The armed restore of the backup from " + created + " was not applied; the databases and settings are as they were.",
                 };
-                log?.Invoke(halfSwapped ? "The armed restore failed and its undo did not finish (" + error.GetType().Name + ")." : "The armed restore failed and was undone (" + error.GetType().Name + ").");
+                log?.Invoke((halfSwapped ? "The armed restore failed and its undo did not finish: " : "The armed restore failed and was undone: ") + Diagnostics.ErrorText.Of(error));
             }
             TryDelete(Path.Combine(Root, PendingFile));
             TryDeleteDirectory(target);

@@ -68,7 +68,8 @@ public sealed partial class CatalogueMaintenance
     public static readonly string[] FullResetOriginTables = [.. ResetOriginTables, "chapter_candidate_rejections"];
 
     /// <summary>The subscribed-entry rebuild after a reset: high priority, one at a time, long.</summary>
-    public static readonly JobType SubscribedRebuildJob = new("subbed-reset-rebuild", "Rebuild subscribed entries", JobPriority.High,
+    /// <summary>0.5.3: "Rebuild library" after a reset; finding new entries (continuous discovery) starts only after it.</summary>
+    public static readonly JobType SubscribedRebuildJob = new("subbed-reset-rebuild", "Rebuild library", JobPriority.High,
         JobFlags.LongRunning, StallTimeout: TimeSpan.FromMinutes(30));
 
     private readonly SqliteDatabase _database;
@@ -99,6 +100,26 @@ public sealed partial class CatalogueMaintenance
 
     private string Stamp() => DecisionStamp.Now(_clock);
     private T Read<T>(Func<DatabaseSession, T> operation) => _database.Read(DatabaseFile.Catalog, operation);
+
+    /// <summary>
+    /// 0.5.3: what a reset clears that is not a saved decision, for the confirmation: entries, source records you matched,
+    /// locked, imported or split (they are matched again automatically; only the saved manual matches are restored),
+    /// completed merges and provider identity links.
+    /// </summary>
+    public JsonObject ResetImpact() => Read(c =>
+    {
+        long Count(string sql) => Convert.ToInt64(c.Scalar(sql) ?? 0L, CultureInfo.InvariantCulture);
+        // Made by hand: locked, or matched/moved/imported/split by you ("known" rows are 0.4.x automatic matches).
+        const string Kept = "lower(match_type) IN ('manual','manual-moved','import','split-duplicate')";
+        return new JsonObject
+        {
+            ["entries"] = Count("SELECT COUNT(*) FROM entries"),
+            ["hand_made_records"] = Count("SELECT (SELECT COUNT(*) FROM source_matches WHERE locked=1 OR " + Kept + ")+(SELECT COUNT(*) FROM source_variants WHERE locked=1 OR " + Kept + ")"),
+            ["records"] = Count("SELECT (SELECT COUNT(*) FROM source_matches)+(SELECT COUNT(*) FROM source_variants)"),
+            ["merges"] = Count("SELECT COUNT(*) FROM entry_aliases"),
+            ["identity_links"] = Count("SELECT COUNT(*) FROM identity_links"),
+        };
+    });
     private T Write<T>(Func<DatabaseSession, T> operation) { lock (_gate) return _database.Write(DatabaseFile.Catalog, operation); }
     private void Log(string kind, DecisionActor actor, IEnumerable<long> entries, IEnumerable<string> records, string reason, JsonObject? before = null, JsonObject? after = null)
         => _log.Record(new DecisionEvent(kind, actor, entries.Where(id => id > 0).Distinct().ToArray(), records.Distinct(StringComparer.Ordinal).ToArray(), reason, before, after));
@@ -223,10 +244,11 @@ public sealed partial class CatalogueMaintenance
             result["kept_decisions"] = RekeyKeptDecisions();
             result["rebuild_hint_records"] = Integer(hints?["records"]);
         }
-        var rebuildQueued = seeds.Count > 0 && ScheduleSubscribedRebuild(seeds, actor);
+        var rebuildQueued = seeds.Count > 0 && ScheduleSubscribedRebuild(seeds, actor, discoveryAfter: true);
         result["subbed_rebrowse_queued"] = rebuildQueued;
         if (!full) result["catalog_hint_replay_queued"] = hints is not null && _hooks.ScheduleHintReplay is { } replay && replay(Text(hints["path"]));
-        result["continuous_catalog_queued"] = _hooks.ScheduleContinuousDiscovery?.Invoke() ?? false;
+        // 0.5.3: with a library rebuild queued, finding new entries waits for it (the rebuild job starts it when done).
+        result["continuous_catalog_queued"] = rebuildQueued ? JsonValue.Create("after-rebuild") : _hooks.ScheduleContinuousDiscovery?.Invoke() ?? false;
         // IMP-9: with no rebuild job the accepted imports are rechecked now; otherwise when the rebuild job finished.
         result["import_recheck"] = rebuildQueued ? JsonValue.Create("after-rebuild") : AfterRebuild(actor);
         return result;
@@ -243,7 +265,7 @@ public sealed partial class CatalogueMaintenance
 
     /// <summary>schedule_subbed_reset_rebrowse: queues the subscribed rebuild as a job (false when it cannot run here).</summary>
     /// <param name="resetActor">The reset that queued the rebuild: the after-reset hook runs with it once the rebuild finished.</param>
-    public bool ScheduleSubscribedRebuild(IReadOnlyList<JsonObject> seeds, DecisionActor? resetActor = null)
+    public bool ScheduleSubscribedRebuild(IReadOnlyList<JsonObject> seeds, DecisionActor? resetActor = null, bool discoveryAfter = false)
     {
         ArgumentNullException.ThrowIfNull(seeds);
         if (_library is not { } library || _hooks.RebuildSubscribedEntry is not { } rebuild || _jobs is not { } jobs) return false;
@@ -252,6 +274,7 @@ public sealed partial class CatalogueMaintenance
         {
             jobs.Enqueue(SubscribedRebuildJob, "", async job =>
             {
+                using var discovery = new DiscoveryAfter(discoveryAfter ? _hooks.ScheduleContinuousDiscovery : null);
                 var result = await library.RebrowseResetSeedsAsync(copy, rebuild, (done, total, message) => job.Report(done, total, message), job.CancellationToken).ConfigureAwait(false);
                 // IMP-9: the import recheck runs once the rebuild finished; its failure is part of this job's result.
                 var recheck = resetActor is not null ? AfterRebuild(resetActor) : null;
@@ -262,6 +285,16 @@ public sealed partial class CatalogueMaintenance
             return true;
         }
         catch (Exception error) when (error is ObjectDisposedException or ArgumentException) { return false; }
+    }
+
+    /// <summary>Starts continuous discovery when the library rebuild ends, also when it failed or was cancelled.</summary>
+    private sealed class DiscoveryAfter(Func<bool>? schedule) : IDisposable
+    {
+        public void Dispose()
+        {
+            try { schedule?.Invoke(); }
+            catch (Exception error) when (error is ObjectDisposedException or InvalidOperationException) { _ = error; } // the queue is stopping
+        }
     }
 
     // ---- entry maintenance (delete_entry, clear_source_variant, promote_variant_to_primary, clear_match)

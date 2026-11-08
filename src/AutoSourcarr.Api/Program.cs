@@ -80,7 +80,7 @@ internal static class Program
         {
             // Before the shared privacy registry exists, raw messages/stacks and
             // configuration paths must not enter console logs.
-            Console.Error.WriteLine("AutoSourcarr startup or shutdown failed (" + error.GetType().Name + ").");
+            Console.Error.WriteLine("AutoSourcarr startup or shutdown failed (" + AutoSourcarr.Core.Diagnostics.ErrorText.Types(error) + "); the app log (System, Diagnostics, or docker logs) has the details.");
             return 78;
         }
     }

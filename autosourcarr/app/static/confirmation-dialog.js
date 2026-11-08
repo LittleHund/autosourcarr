@@ -1,7 +1,7 @@
 /* Typed destructive confirmations keep the phrase outside the scrollable preview. */
 (()=>{
   let active=false;
-  function request({title,rows=[],details=[],phrase,acceptLabel='Confirm'}){
+  function request({title,rows=[],sections=[],details=[],phrase,acceptLabel='Confirm'}){
     if(active)throw new Error('Another confirmation is already open');
     if(typeof phrase!=='string'||!phrase||phrase.length>128)throw new Error('A confirmation phrase is required');
     const dialog=document.createElement('dialog');
@@ -14,7 +14,9 @@
     const header=element('header',undefined,'confirmationHeader'),heading=element('h2',title||'Confirm action');
     heading.id='confirmationTitle';header.append(heading);
     const preview=element('div',undefined,'confirmationPreview');
-    const counts=element('ul');for(const row of rows)counts.append(element('li',row));preview.append(counts);
+    const counts=element('ul');for(const row of rows)counts.append(element('li',row));if(rows.length)preview.append(counts);
+    // 0.5.3: labelled lists (for example "Deleted" and "Kept") instead of one long paragraph.
+    for(const section of sections){if(!section||!Array.isArray(section.items)||!section.items.length)continue;preview.append(element('h3',section.heading||''));const list=element('ul');for(const item of section.items)list.append(element('li',item));preview.append(list);}
     for(const detail of details)if(detail)preview.append(element('p',detail));
     const footer=element('div',undefined,'confirmationFooter');
     footer.append(element('p','Type this phrase exactly to continue:'));

@@ -42,8 +42,13 @@ public sealed class BackupV1Services
 /// </summary>
 internal static class BackupV1Endpoints
 {
+    /// <summary>
+    /// 0.5.3: starts at once (long-running: it takes no worker slot and does not wait for running jobs to finish, which
+    /// long background jobs never do); the database copy itself drains database work (Quiescent). Cancellable: Cancel in
+    /// Tasks, and stopping the app, end it without keeping a partial backup.
+    /// </summary>
     public static readonly JobType CreateJob = new("instance-backup", "Create backup", JobPriority.High,
-        JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(1), Cancellable: false);
+        JobFlags.LongRunning, StallTimeout: TimeSpan.FromHours(1), Cancellable: true);
     public static readonly JobType RetryJob = new("instance-update-retry", "Retry the update", JobPriority.High,
         JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(1), Cancellable: false);
 
@@ -136,11 +141,15 @@ internal static class BackupV1Endpoints
                 // Never stored or logged: it lives in this job's closure until the file is written.
                 var passphrase = body["passphrase"] is JsonValue value && value.TryGetValue<string>(out var text) && text.Length > 0 ? text : null;
                 if (passphrase is not null) BackupCrypto.CheckPassphrase(passphrase);
+                var includeShare = BodyFlag(body, "share_export");
                 var store = backups.Store; var share = backups.SharePage;
                 var handle = jobs.Enqueue(CreateJob, "", async job =>
                 {
                     await Task.Yield();
-                    var summary = store.Create("manual", "Created from the Web UI", passphrase, share, report: message => job.Report(message: message));
+                    // 0.5.3: the portable catalogue export is optional (share_export: true); the databases already hold
+                    // everything, and the export is slow on a large catalogue.
+                    var summary = store.Create("manual", "Created from the Web UI", passphrase, includeShare ? share : null,
+                        report: message => job.Report(message: message), cancellationToken: job.CancellationToken);
                     job.Result("Backup created: " + summary.Files.ToString(CultureInfo.InvariantCulture) + " files, "
                         + (summary.Bytes / 1048576.0).ToString("0.0", CultureInfo.InvariantCulture) + " MiB" + (summary.Protected ? ", password protected" : ""));
                     Publish("created", new JsonObject { ["id"] = summary.Id });
@@ -149,7 +158,7 @@ internal static class BackupV1Endpoints
             })))
             .Accepts<JsonObject>("application/json")
             .WithName("createBackup")
-            .WithSummary("Create a backup as a job (body {passphrase?}: 12 to 1024 characters protects it with chunked AES-GCM; never stored). Answers 202 with the task id.")
+            .WithSummary("Create a backup as a job (body {passphrase?, share_export?}: a passphrase of 12 to 1024 characters protects it with chunked AES-GCM and is never stored; share_export also adds the portable catalogue, which is slow on large catalogues). Starts at once and can be cancelled. Answers 202 with the task id.")
             .Produces<JsonObject>(StatusCodes.Status202Accepted)
             .Produces<ProblemResponse>(StatusCodes.Status400BadRequest)
             .Produces<ProblemResponse>(StatusCodes.Status403Forbidden);

@@ -397,7 +397,7 @@
       },
       "post": {
         "operationId": "createBackup",
-        "summary": "Create a backup as a job (body {passphrase?}: 12 to 1024 characters protects it with chunked AES-GCM; never stored). Answers 202 with the task id.",
+        "summary": "Create a backup as a job (body {passphrase?, share_export?}: a passphrase of 12 to 1024 characters protects it with chunked AES-GCM and is never stored; share_export also adds the portable catalogue, which is slow on large catalogues). Starts at once and can be cancelled. Answers 202 with the task id.",
         "requestBody": {
           "required": true,
           "content": {

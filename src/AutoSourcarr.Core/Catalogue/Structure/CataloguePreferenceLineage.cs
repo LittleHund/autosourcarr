@@ -47,7 +47,7 @@ internal static class CataloguePreferenceLineage
     /// entry. When both were in the library the surviving entry keeps its own series folder; the absorbed folder's
     /// files stay where they are and are still known by their download rows.
     /// </summary>
-    private static void ReparentLibrary(DatabaseSession c, long target, long duplicate, string stamp)
+    internal static void ReparentLibrary(DatabaseSession c, long target, long duplicate, string stamp)
     {
         var absorbed = c.Query("SELECT in_library FROM library_series WHERE entry_id=$p0", P(duplicate)).FirstOrDefault();
         if (absorbed is not null)
