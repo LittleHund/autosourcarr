@@ -1,4 +1,4 @@
-## 0.5.3 - YYYY-MM-DD
+## 0.5.3 - 2026-11-08
 
 0.5.3 makes backup, restore and reset fast, cancellable and clear, tested on a copy of a real 0.4.5 catalogue before
 release. Update by pulling the new image; no migration step is needed.
