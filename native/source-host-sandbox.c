@@ -18,13 +18,13 @@
 /*
  * Source host sandbox (phase 13, SRC-5): starts the source host JVM (and its JCEF WebView) under Landlock.
  *
- *   source-host-sandbox [--uid U --gid G] --data DIR [--rw PATH]... [--ro PATH]... -- PROGRAM [ARGS...]
+ *   source-host-sandbox [--uid U --gid G] [--signals auto|on|off] --data DIR [--rw PATH]... [--ro PATH]... -- PROGRAM [ARGS...]
  *
  * Needs no capability and no host permission. Unlike repair-runner it never refuses: normal source browsing must work,
  * so a kernel without Landlock degrades to "unsandboxed" and says so in its first stderr line, which the app parses
  * and reports in health:
  *
- *   AUTOSOURCARR_SOURCE_SANDBOX_V1 {"uid":N,"separated":0|1,"landlock":ABI,"scoped":0|2,"nnp":1,"reason":"..."}
+ *   AUTOSOURCARR_SOURCE_SANDBOX_V1 {"uid":N,"separated":0|1,"landlock":ABI,"scoped":0|2,"nnp":1,"reason":"...","signals":"..."}
  *
  * Filesystem: read+execute /usr /lib /lib64 /bin /sbin /opt, read-only /etc /proc /sys and the --ro paths,
  * read-write the data folder, the --rw paths and a few devices (/dev/null, /dev/zero, /dev/random, /dev/urandom,
@@ -32,6 +32,10 @@
  * the app keeps none there. Everything else (the app's /config, /data, /app, the user's library) is unreachable.
  * Signals: Landlock ABI 6 signal scoping, so code in the JVM cannot signal the app. Abstract unix sockets are NOT
  * scoped: Xlib reaches the app's Xvfb through one. Network: not restricted here (sources browse the web directly).
+ * 0.5.3: signal scoping is used only when the kernel reports Landlock erratum 2 as fixed (Linux 6.15, or a stable kernel
+ * with the backport). Without that fix Chromium (JCEF) dies with SIGTRAP inside the sandbox (seen on TrueNAS 6.12).
+ * "--signals on" forces it, "--signals off" turns it off; "signals" in the proof says what was used and why:
+ * "scoped", "off" (asked), "kernel-erratum" (auto, the fix is missing) or "unavailable" (ABI below 6).
  *
  * Separate user (optional): with --uid/--gid the sandbox tries to become that user. That needs CAP_SETUID/CAP_SETGID
  * (and CAP_KILL for the supervisor) as file capabilities on this binary, which only work in a container without
@@ -60,13 +64,16 @@ struct ll_path { uint64_t access; int32_t parent_fd; } __attribute__((packed));
 #define LL_IOCTL_DEV (1ULL << 15)
 #define LL_FILE_RIGHTS (LL_EXEC | LL_WRITE | LL_READ | LL_TRUNCATE | LL_IOCTL_DEV)
 #define LL_SCOPE_SIGNAL (1ULL << 1)
+#define LL_CREATE_VERSION (1U << 0)
+#define LL_CREATE_ERRATA (1U << 1)
+#define LL_ERRATUM_SIGNAL_SCOPE (1 << 1) /* erratum 2 (ABI 6): signal scoping between threads of one process */
 
 static uint64_t handled;
 static pid_t host = -1;
 
 static void usage(void)
 {
-    fprintf(stderr, "usage: source-host-sandbox [--uid U --gid G] --data DIR [--rw PATH]... [--ro PATH]... -- PROGRAM [ARGS...]\n");
+    fprintf(stderr, "usage: source-host-sandbox [--uid U --gid G] [--signals auto|on|off] --data DIR [--rw PATH]... [--ro PATH]... -- PROGRAM [ARGS...]\n");
     _exit(64);
 }
 
@@ -159,6 +166,7 @@ int main(int argc, char **argv)
     size_t rw_count = 0, ro_count = 0;
     unsigned uid = 0, gid = 0;
     int want_identity = 0, index = 1;
+    const char *signals = "auto";
     for (; index < argc; ++index) {
         if (strcmp(argv[index], "--") == 0) { ++index; break; }
         if (index + 1 >= argc) usage();
@@ -166,6 +174,10 @@ int main(int argc, char **argv)
         if (strcmp(argv[index], "--data") == 0) data = value;
         else if (strcmp(argv[index], "--rw") == 0 && rw_count < MAX_PATHS) rw[rw_count++] = value;
         else if (strcmp(argv[index], "--ro") == 0 && ro_count < MAX_PATHS) ro[ro_count++] = value;
+        else if (strcmp(argv[index], "--signals") == 0) {
+            if (strcmp(value, "auto") != 0 && strcmp(value, "on") != 0 && strcmp(value, "off") != 0) usage();
+            signals = value;
+        }
         else if (strcmp(argv[index], "--uid") == 0) { if (parse_id(value, &uid) != 0) usage(); want_identity = 1; }
         else if (strcmp(argv[index], "--gid") == 0) { if (parse_id(value, &gid) != 0) usage(); want_identity = 1; }
         else usage();
@@ -255,11 +267,19 @@ int main(int argc, char **argv)
 
 sandbox:
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0) { fprintf(stderr, "source-host-sandbox: no_new_privs failed\n"); _exit(71); }
-    int abi = (int)syscall(LL_CREATE, NULL, 0, 1);
+    int abi = (int)syscall(LL_CREATE, NULL, 0, LL_CREATE_VERSION);
     uint64_t scoped = 0;
+    const char *signal_state = "unavailable";
     if (abi >= 1) {
         handled = fs_rights(abi);
-        scoped = abi >= 6 ? LL_SCOPE_SIGNAL : 0;
+        if (abi >= 6) {
+            /* Kernels before the errata interface (6.15) fail this call: the fix is then missing too. */
+            long errata = syscall(LL_CREATE, NULL, 0, LL_CREATE_ERRATA);
+            int fixed = errata > 0 && (errata & LL_ERRATUM_SIGNAL_SCOPE) != 0;
+            if (strcmp(signals, "off") == 0) signal_state = "off";
+            else if (strcmp(signals, "on") == 0 || fixed) { scoped = LL_SCOPE_SIGNAL; signal_state = "scoped"; }
+            else signal_state = "kernel-erratum";
+        }
         struct ll_ruleset policy = { .fs = handled, .net = 0, .scoped = scoped };
         size_t size = abi >= 6 ? sizeof policy : abi >= 4 ? 2 * sizeof(uint64_t) : sizeof(uint64_t);
         int ruleset = (int)syscall(LL_CREATE, &policy, size, 0);
@@ -277,13 +297,13 @@ sandbox:
         if (ruleset >= 0) close(ruleset);
         if (failed) {
             /* A rule that cannot be added must not leave a half-built domain: run unsandboxed and say why. */
-            fprintf(stderr, PROOF " {\"uid\":%u,\"separated\":%d,\"landlock\":0,\"scoped\":0,\"nnp\":1,\"reason\":\"landlock-rules-failed\"}\n",
+            fprintf(stderr, PROOF " {\"uid\":%u,\"separated\":%d,\"landlock\":0,\"scoped\":0,\"nnp\":1,\"reason\":\"landlock-rules-failed\",\"signals\":\"unavailable\"}\n",
                 (unsigned)geteuid(), separated);
             goto run;
         }
     } else reason = reason[0] ? reason : "landlock-unavailable";
-    fprintf(stderr, PROOF " {\"uid\":%u,\"separated\":%d,\"landlock\":%d,\"scoped\":%d,\"nnp\":1,\"reason\":\"%s\"}\n",
-        (unsigned)geteuid(), separated, abi >= 1 ? abi : 0, (int)scoped, reason);
+    fprintf(stderr, PROOF " {\"uid\":%u,\"separated\":%d,\"landlock\":%d,\"scoped\":%d,\"nnp\":1,\"reason\":\"%s\",\"signals\":\"%s\"}\n",
+        (unsigned)geteuid(), separated, abi >= 1 ? abi : 0, (int)scoped, reason, abi >= 1 ? signal_state : "unavailable");
 run:
     fflush(stderr);
     execv(argv[index], &argv[index]);

@@ -35,6 +35,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private bool _launchedWithWebView;
     private int _webViewCrashes;
     private string? _webViewOff;
+    private bool _signalsOff;
 
     /// <summary>
     /// 0.5.1: called once with the reason when the app turns the WebView off by itself after it crashed the host (for a
@@ -85,6 +86,19 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
                 + signal.ToString(CultureInfo.InvariantCulture) + ", exit code " + exitCode.ToString(CultureInfo.InvariantCulture)
                 + "), so it runs without the WebView until AutoSourcarr restarts. Sources work; Cloudflare checks and login pages need an "
                 + "external solver (Connections) meanwhile. To keep it off set SOURCE_WEBVIEW_ENABLED=false.");
+    }
+
+    /// <summary>
+    /// 0.5.3: Landlock signal scoping crashes Chromium on kernels without the fix (erratum 2) that the launcher cannot
+    /// detect. When the crash limit is reached while signals were scoped, the next starts run without signal scoping (the
+    /// file sandbox stays on) and the WebView gets another try; only a crash limit after that turns the WebView off.
+    /// </summary>
+    internal static (bool SignalsOff, int Crashes, string? TurnOff, string? Message) SignalScopeFallback(string? turnOff, bool signalsScoped, bool signalsOff, int crashes, int exitCode)
+    {
+        if (turnOff is null || !signalsScoped || signalsOff) return (signalsOff, crashes, turnOff, null);
+        return (true, 0, null, "The WebView (Chromium) stopped the source host " + crashes.ToString(CultureInfo.InvariantCulture)
+            + " times (exit code " + exitCode.ToString(CultureInfo.InvariantCulture) + ") inside the sandbox; starting it again without "
+            + "Landlock signal scoping (the file sandbox stays on) until AutoSourcarr restarts.");
     }
 
     /// <summary>
@@ -252,12 +266,41 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         _log("Started Xvfb on display " + _displayName + " for the source host WebView.");
     }
 
+    /// <summary>
+    /// 0.5.3: Chromium's profile lock (<c>cache/kcef/Singleton*</c>) names the host and process that held it. A recreated
+    /// container has a new hostname, so a lock left by the old one makes Chromium refuse the profile ("in use by another
+    /// computer", exit 21) and the WebView never starts. Only this app runs a host on this data folder and no host runs
+    /// while one is launched, so a lock found here is always stale.
+    /// </summary>
+    internal static void ClearChromiumLock(string dataDirectory, Action<string> log)
+    {
+        var profile = Path.Combine(dataDirectory, "cache", "kcef");
+        var cleared = 0;
+        foreach (var name in new[] { "SingletonLock", "SingletonSocket", "SingletonCookie" })
+        {
+            var path = Path.Combine(profile, name);
+            try
+            {
+                // They are symbolic links (often dangling), so File.Exists cannot see them.
+                if (new FileInfo(path).LinkTarget is null && !File.Exists(path)) continue;
+                File.Delete(path);
+                cleared++;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+            {
+                log("Could not clear the WebView profile lock " + name + ": " + error.GetType().Name + ": " + error.Message);
+            }
+        }
+        if (cleared > 0) log("Cleared a stale WebView (Chromium) profile lock left by an earlier start.");
+    }
+
     private void Launch()
     {
+        ClearChromiumLock(_dataDirectory, _log);
         var setsid = OperatingSystem.IsLinux() ? new[] { "/usr/bin/setsid", "/bin/setsid" }.FirstOrDefault(File.Exists) : null;
         var (sandbox, unsandboxed) = SandboxLauncher();
         var command = new List<string>();
-        if (sandbox is not null) { command.Add(sandbox); command.AddRange(Sandbox!.Arguments(_dataDirectory, _java, _jar)); }
+        if (sandbox is not null) { command.Add(sandbox); bool signalsOff; lock (_gate) signalsOff = _signalsOff; command.AddRange(Sandbox!.Arguments(_dataDirectory, _java, _jar, signalsOff)); }
         command.AddRange([_java, "-jar", _jar]);
         var start = new ProcessStartInfo(setsid ?? command[0]) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
         foreach (var argument in setsid is null ? command.Skip(1) : command) start.ArgumentList.Add(argument);
@@ -391,15 +434,17 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             {
                 delay = RestartDelays[Math.Min(failures, RestartDelays.Length - 1)];
                 failures++;
-                string? turnOff; bool hadWebView;
+                string? turnOff; string? signalsTurnedOff = null; bool hadWebView;
                 lock (_gate)
                 {
                     hadWebView = _launchedWithWebView;
                     _restarts++; _lastError = "The source host exited with code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + ".";
                     (_webViewCrashes, turnOff) = WebViewCrash(process.ExitCode, DateTimeOffset.UtcNow - started, _launchedWithWebView, _webViewCrashes);
+                    (_signalsOff, _webViewCrashes, turnOff, signalsTurnedOff) = SignalScopeFallback(turnOff, _sandbox.SignalsScoped, _signalsOff, _webViewCrashes, process.ExitCode);
                     if (turnOff is not null) _webViewOff = turnOff;
                 }
                 if (process.ExitCode > 128 && hadWebView) LogChromiumTail();
+                if (signalsTurnedOff is not null) { delay = RestartDelays[0]; failures = 0; _log(signalsTurnedOff); }
                 if (turnOff is not null)
                 {
                     // The next start runs without the WebView: no reason to wait on the back-off ladder for it.
