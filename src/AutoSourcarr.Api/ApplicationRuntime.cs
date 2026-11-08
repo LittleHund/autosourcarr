@@ -22,7 +22,7 @@ namespace AutoSourcarr.Api;
 /// Additional domain routes remain migration work; this is not default-runtime promotion.</summary>
 internal sealed partial class ApplicationRuntime : IAsyncDisposable
 {
-    internal const string Version = "0.5.3";
+    internal const string Version = "0.5.4";
     private readonly object _closeGate = new();
     private readonly object _catalogueWriteGate = new();
     private readonly OperationOwner _http = new();
@@ -47,6 +47,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
     private AutoSourcarr.Core.Sources.Configuration.SourceConfigurationStore? _sourceConfiguration;
     private AutoSourcarr.Core.Sources.Controls.SourcePreferenceService? _sourcePreferences;
     private Task? _healthMonitor;
+    private AutoSourcarr.Core.Updates.ReleaseUpdates? _updates;
     private AutoSourcarr.Core.Repair.Migration.AutoRepairWatcher? _autoRepair;
     private Task? _autoRepairLoop;
     private AutoSourcarr.Core.Sources.Library.SuwayomiLibrary? _library;
@@ -465,6 +466,15 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             }
             if (!offline) owner._healthMonitor = Task.Run(() => owner._health.RunMonitorAsync(error => owner.Errors.Record("Source health", error.Message, "source-health-monitor"),
                 owner._healthStop.Token));
+            // 0.5.4: the update notice (newer image on ghcr.io and its CHANGELOG), checked every UPDATE_CHECK_MINUTES.
+            owner._updates = new AutoSourcarr.Core.Updates.ReleaseUpdates(Version, Path.Combine(owner._dataDirectory!, "update-check.json"));
+            owner._updates.NewVersion = latest => owner.Logs.Record("Update", "AutoSourcarr " + latest + " is available (this is " + Version + "); see Settings → System.");
+            if (!offline)
+            {
+                var updates = owner._updates;
+                _ = Task.Run(() => updates.RunAsync(() => (owner.Settings.UpdateCheckEnabled, owner.Settings.UpdateCheckMinutes),
+                    error => owner.Logs.Record("Update", "The update check failed: " + error.Message), owner._healthStop.Token));
+            }
             owner._library = new AutoSourcarr.Core.Sources.Library.SuwayomiLibrary(owner.Database, owner.Preferences, () => owner.Settings,
                 () => owner._main, owner.Io, error => owner.Logs.Record("Main library", error.Message));
             owner._library.StatusRefreshed = () => { owner.Events.Debounce("library", LiveWindow, "status"); owner.SeedLibraryFromSubscriptions(); };
@@ -488,6 +498,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             {
                 CheckDatabaseTarget = path => DatabaseRelocation.CheckTarget(owner.Database, path),
                 Tasks = owner.Tasks, Jobs = owner.Jobs, Events = owner.Events, Errors = owner.Errors, Access = owner._access,
+                Updates = owner._updates,
                 SourceInventory = new SourceInventoryServices
                 {
                     Orphans = orphans, Maintenance = maintenance, AutoRepair = owner._autoRepair,
@@ -1102,7 +1113,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             foreach (var root in _movedRoots)
                 try { root.Dispose(); } catch (Exception error) { errors.Add(error); }
         try { _roots?.Dispose(); } catch (Exception error) { errors.Add(error); }
-        _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose(); _healthStop.Dispose(); _feedGate.Dispose();
+        _admin.Dispose(); _watchStop.Dispose(); _logStop.Dispose(); _healthStop.Dispose(); _feedGate.Dispose(); _updates?.Dispose();
         if (errors.Count > 0) throw new AggregateException("Application shutdown retained cleanup failures.", errors);
     }
 

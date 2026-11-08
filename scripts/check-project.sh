@@ -323,7 +323,7 @@ import json, re
 def code(v):
     p=[int(x) for x in v.split('.')]; return p[0]*1000000+p[1]*1000+p[2]
 release=Path('VERSION').read_text().strip()
-assert release=='0.5.3' and code(release)==5003, f'release VERSION {release}'
+assert release=='0.5.4' and code(release)==5004, f'release VERSION {release}'
 props=Path('Directory.Build.props').read_text()
 assert f'<VersionPrefix>{release}</VersionPrefix>' in props and '<VersionSuffix>' not in props, 'Directory.Build.props version drifted'
 assert f'internal const string Version = "{release}";' in Path('src/AutoSourcarr.Api/ApplicationRuntime.cs').read_text(), 'ApplicationRuntime.Version drifted'
@@ -599,8 +599,8 @@ for version in 0.1.0 0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8 0.1.9 0.2.0
 grep -q 'Every future AutoSourcarr release must add a new version section here' CHANGELOG.md
 test "$(grep -c '^## 0.4.5 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.4.5 section' >&2; exit 1; }
 test "$(grep -c '^## 0.5.0 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.5.0 section' >&2; exit 1; }
-test "$(grep -c '^## 0.5.3 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.5.3 section' >&2; exit 1; }
-test "$(grep -m1 '^## ' CHANGELOG.md)" = "$(grep -m1 '^## 0.5.3 - ' CHANGELOG.md)" || { echo 'CHANGELOG must start with the 0.5.3 section' >&2; exit 1; }
+test "$(grep -c '^## 0.5.4 - ' CHANGELOG.md)" -eq 1 || { echo 'CHANGELOG must contain exactly one 0.5.4 section' >&2; exit 1; }
+test "$(grep -m1 '^## ' CHANGELOG.md)" = "$(grep -m1 '^## 0.5.4 - ' CHANGELOG.md)" || { echo 'CHANGELOG must start with the 0.5.4 section' >&2; exit 1; }
 if grep -qE '^## (0\.5\.0 \(in progress\)|Unreleased)' CHANGELOG.md; then echo 'CHANGELOG still has an in-progress or Unreleased section' >&2; exit 1; fi
 echo 'single CHANGELOG policy + complete version history OK'
 

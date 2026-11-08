@@ -681,6 +681,21 @@
       "description": "Run the built-in WebView (Chromium) in the source host for Cloudflare checks and source login pages. Turn it off if it crashes on your machine; AutoSourcarr also turns it off by itself after it stops the source host twice, until the next restart. Without it, add an external solver under Connections. Applies after the source host restarts.",
       "compose": "allowed"
     },
+    "UPDATE_CHECK_ENABLED": {
+      "group": "Runtime",
+      "description": "Look for a newer published AutoSourcarr version and show what changed. The check asks ghcr.io for the version list (and GitHub for the changes when a new version appears); nothing about your instance is sent.",
+      "compose": "allowed"
+    },
+    "UPDATE_CHECK_MINUTES": {
+      "group": "Runtime",
+      "description": "Minutes between two update checks (1 to 10080). A check is two small requests.",
+      "compose": "allowed"
+    },
+    "UPDATE_IMAGE_TAG": {
+      "group": "Runtime",
+      "description": "How your Compose file names the image, so the update notice says what to do: latest (restart to update), pinned (a fixed version such as 0.5.4: change the tag) or auto (shows both).",
+      "compose": "allowed"
+    },
     "BACKGROUND_IDLE_SECONDS": {
       "group": "Performance & resilience",
       "description": "Quiet time after your last action before background work resumes, in seconds.",

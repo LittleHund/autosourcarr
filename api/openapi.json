@@ -11376,6 +11376,69 @@
         }
       }
     },
+    "/api/v1/system/update": {
+      "get": {
+        "operationId": "getReleaseUpdate",
+        "summary": "0.5.4: whether a newer AutoSourcarr version is published, what changed since this version and how to update.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/system/update/check": {
+      "post": {
+        "operationId": "checkReleaseUpdate",
+        "summary": "0.5.4: check for a newer version now.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
+    "/api/v1/system/update/dismiss": {
+      "post": {
+        "operationId": "dismissReleaseUpdate",
+        "summary": "0.5.4: hide the update notice until a later version is published.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid admin token"
+          }
+        }
+      }
+    },
     "/api/v1/tag-synonyms": {
       "get": {
         "operationId": "getTagSynonyms",

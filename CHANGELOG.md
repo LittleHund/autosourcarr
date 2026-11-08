@@ -1,3 +1,15 @@
+## 0.5.4 - YYYY-MM-DD
+
+0.5.4 tells you when a new version is out. Update by changing the image tag to `0.5.4` (or pulling `latest`); no
+migration step is needed.
+
+- **Update notice:** AutoSourcarr checks every 5 minutes whether a newer version is published. When one is, Settings
+  gets an orange badge and a banner appears; "What's new" lists the changes of every version since yours and what to
+  do: restart (when your Compose file uses `latest`) or change the image tag (when it names a version). Dismiss hides
+  it until the next version. The check asks ghcr.io for the version list and, only when a new version appears,
+  GitHub for the changes; nothing about your instance is sent. Settings: `UPDATE_CHECK_ENABLED` (on),
+  `UPDATE_CHECK_MINUTES` (5) and `UPDATE_IMAGE_TAG` (`auto`, `latest` or `pinned`: which steps the notice shows).
+
 ## 0.5.3 - 2026-11-08
 
 0.5.3 makes backup, restore and reset fast, cancellable and clear, tested on a copy of a real 0.4.5 catalogue before

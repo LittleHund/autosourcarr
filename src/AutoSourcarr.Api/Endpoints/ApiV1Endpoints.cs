@@ -157,6 +157,8 @@ public sealed class ApiV1Services
     public SourceInventoryServices? SourceInventory { get; init; }
     /// <summary>Domain-migration repair and rollback (phase 6e); null answers 503.</summary>
     public SourceRepairServices? SourceRepair { get; init; }
+    /// <summary>0.5.4: the update notice (newer published version and its changes); null answers 503.</summary>
+    public AutoSourcarr.Core.Updates.ReleaseUpdates? Updates { get; init; }
     /// <summary>The /source-maintenance repair routes: raw-code storage, runner check, feedback folder (phase 6); null answers 503 where needed.</summary>
     public RepairV1Services? Repair { get; init; }
     /// <summary>The main-library (Subbed) route (phase 6); null answers 503.</summary>
@@ -409,6 +411,43 @@ public static class ApiV1Endpoints
             .WithName("dismissUpdateNotice")
             .WithSummary("Hide the update notice.")
             .Produces<UpdateNoticeResponse>(StatusCodes.Status200OK);
+
+        group.MapGet("/system/update", (Func<HttpContext, IResult>)(context =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                if (services.Updates is not { } updates) return Results.Json(new JsonObject { ["detail"] = "The update check is not running." }, statusCode: 503);
+                var settings = services.Settings();
+                return Results.Json(updates.Json(settings.UpdateCheckEnabled, settings.UpdateImageTag));
+            }))
+            .WithName("getReleaseUpdate")
+            .WithSummary("0.5.4: whether a newer AutoSourcarr version is published, what changed since this version and how to update.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        group.MapPost("/system/update/check", (Func<HttpContext, Task<IResult>>)(async context =>
+            {
+                if (services.Updates is not { } updates) return Results.Json(new JsonObject { ["detail"] = "The update check is not running." }, statusCode: 503);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+                timeout.CancelAfter(TimeSpan.FromSeconds(45));
+                try { await updates.CheckAsync(timeout.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (!context.RequestAborted.IsCancellationRequested) { }
+                var settings = services.Settings();
+                return Results.Json(updates.Json(settings.UpdateCheckEnabled, settings.UpdateImageTag));
+            }))
+            .WithName("checkReleaseUpdate")
+            .WithSummary("0.5.4: check for a newer version now.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
+
+        group.MapPost("/system/update/dismiss", (Func<HttpContext, IResult>)(_ =>
+            {
+                if (services.Updates is not { } updates) return Results.Json(new JsonObject { ["detail"] = "The update check is not running." }, statusCode: 503);
+                var settings = services.Settings();
+                var state = updates.Json(settings.UpdateCheckEnabled, settings.UpdateImageTag);
+                if (state["latest"]?.GetValue<string>() is { Length: > 0 } latest) updates.Dismiss(latest);
+                return Results.Json(updates.Json(settings.UpdateCheckEnabled, settings.UpdateImageTag));
+            }))
+            .WithName("dismissReleaseUpdate")
+            .WithSummary("0.5.4: hide the update notice until a later version is published.")
+            .Produces<JsonObject>(StatusCodes.Status200OK);
 
         group.MapGet("/setup", (Func<HttpContext, IResult>)(context =>
             {

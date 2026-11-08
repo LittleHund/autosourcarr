@@ -445,6 +445,18 @@ public sealed partial record AutoSourcarrSettings
     [System.Text.Json.Serialization.JsonPropertyName("source_webview_enabled")]
     public bool SourceWebViewEnabled { get; init; } = true;
 
+    /// <summary>0.5.4: look for a newer published AutoSourcarr image and show its changes.</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("update_check_enabled")]
+    public bool UpdateCheckEnabled { get; init; } = true;
+
+    /// <summary>0.5.4: minutes between two update checks.</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("update_check_minutes")]
+    public int UpdateCheckMinutes { get; init; } = 5;
+
+    /// <summary>0.5.4: how the Compose file names the image: auto (unknown), latest or pinned (a fixed version).</summary>
+    [System.Text.Json.Serialization.JsonPropertyName("update_image_tag")]
+    public string UpdateImageTag { get; init; } = "auto";
+
     [System.Text.Json.Serialization.JsonPropertyName("background_idle_seconds")]
     public double BackgroundIdleSeconds { get; init; } = 2.0;
 
@@ -635,6 +647,9 @@ public sealed partial record AutoSourcarrSettings
         new("SOURCE_COOLDOWN_SECONDS", nameof(SourceCooldownSeconds), SettingKind.Number, false, []),
         new("SOURCE_MIN_INTERVAL_MS", nameof(SourceMinIntervalMs), SettingKind.Integer, false, []),
         new("SOURCE_WEBVIEW_ENABLED", nameof(SourceWebViewEnabled), SettingKind.Boolean, false, []),
+        new("UPDATE_CHECK_ENABLED", nameof(UpdateCheckEnabled), SettingKind.Boolean, false, []),
+        new("UPDATE_CHECK_MINUTES", nameof(UpdateCheckMinutes), SettingKind.Integer, false, []),
+        new("UPDATE_IMAGE_TAG", nameof(UpdateImageTag), SettingKind.Text, false, ["auto", "latest", "pinned"]),
         new("BACKGROUND_IDLE_SECONDS", nameof(BackgroundIdleSeconds), SettingKind.Number, false, []),
         new("SQLITE_CACHE_MB", nameof(SqliteCacheMb), SettingKind.Integer, false, []),
         new("SQLITE_BUSY_TIMEOUT_MS", nameof(SqliteBusyTimeoutMs), SettingKind.Integer, false, []),
