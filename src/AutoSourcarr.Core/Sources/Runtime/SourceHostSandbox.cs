@@ -36,12 +36,10 @@ public sealed record SourceHostSandboxOptions(string LauncherPath, uint? UserId 
     }
 
     /// <summary>The launcher's arguments before "--" and the host command.</summary>
-    /// <param name="signalsOff">The app turned signal scoping off after the WebView crashed the host under it.</param>
-    public IReadOnlyList<string> Arguments(string dataDirectory, string java, string jar, bool signalsOff = false)
+    public IReadOnlyList<string> Arguments(string dataDirectory, string java, string jar)
     {
         var arguments = new List<string>();
-        var signals = signalsOff ? "off" : Signals;
-        if (signals != "auto") arguments.AddRange(["--signals", signals]);
+        if (Signals != "auto") arguments.AddRange(["--signals", Signals]);
         if (UserId is { } uid && GroupId is { } gid)
         {
             arguments.AddRange(["--uid", uid.ToString(CultureInfo.InvariantCulture), "--gid", gid.ToString(CultureInfo.InvariantCulture)]);
@@ -104,7 +102,7 @@ public sealed record SourceHostSandboxState(string State, int LandlockAbi, bool 
                 + (SignalsScoped ? ", and it cannot signal the app" : Signals switch
                 {
                     "kernel-erratum" => "; signal scoping is off because this kernel's Landlock has a signal bug that crashes the WebView (fixed in Linux 6.15)",
-                    "off" => "; signal scoping is off (AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE=off, or the WebView crashed the host with it on)",
+                    "off" => "; signal scoping is off (AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE=off)",
                     _ => "; signal scoping needs Landlock ABI 6",
                 })
                 + ". Not covered: the network is open (sources browse the web, and the host can reach the app's HTTP port, which is why identity headers are never trusted from this container), /dev/shm is shared; it runs " + user + ".",

@@ -35,7 +35,6 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     private bool _launchedWithWebView;
     private int _webViewCrashes;
     private string? _webViewOff;
-    private bool _signalsOff;
 
     /// <summary>
     /// 0.5.1: called once with the reason when the app turns the WebView off by itself after it crashed the host (for a
@@ -89,17 +88,14 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
     }
 
     /// <summary>
-    /// 0.5.3: Landlock signal scoping crashes Chromium on kernels without the fix (erratum 2) that the launcher cannot
-    /// detect. When the crash limit is reached while signals were scoped, the next starts run without signal scoping (the
-    /// file sandbox stays on) and the WebView gets another try; only a crash limit after that turns the WebView off.
+    /// 0.5.3: the WebView turn-off reason, with a hint when the host ran with Landlock signal scoping: on a kernel without
+    /// the signal fix that does not report it either, scoping is what crashes Chromium. The app never turns scoping off by
+    /// itself (code inside the sandbox can crash the host on purpose); the operator decides with the setting.
     /// </summary>
-    internal static (bool SignalsOff, int Crashes, string? TurnOff, string? Message) SignalScopeFallback(string? turnOff, bool signalsScoped, bool signalsOff, int crashes, int exitCode)
-    {
-        if (turnOff is null || !signalsScoped || signalsOff) return (signalsOff, crashes, turnOff, null);
-        return (true, 0, null, "The WebView (Chromium) stopped the source host " + crashes.ToString(CultureInfo.InvariantCulture)
-            + " times (exit code " + exitCode.ToString(CultureInfo.InvariantCulture) + ") inside the sandbox; starting it again without "
-            + "Landlock signal scoping (the file sandbox stays on) until AutoSourcarr restarts.");
-    }
+    internal static string? WithSignalHint(string? turnOff, bool signalsScoped) =>
+        turnOff is null || !signalsScoped ? turnOff
+            : turnOff + " The host ran with Landlock signal scoping; on a Linux kernel older than 6.15 that can cause this crash: "
+                + "set AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE=off and restart AutoSourcarr to keep the WebView (the file sandbox stays on).";
 
     /// <summary>
     /// Phase 13 (SRC-5): start the host through <c>native/source-host-sandbox</c> (Landlock, optional low-rights user).
@@ -300,7 +296,7 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         var setsid = OperatingSystem.IsLinux() ? new[] { "/usr/bin/setsid", "/bin/setsid" }.FirstOrDefault(File.Exists) : null;
         var (sandbox, unsandboxed) = SandboxLauncher();
         var command = new List<string>();
-        if (sandbox is not null) { command.Add(sandbox); bool signalsOff; lock (_gate) signalsOff = _signalsOff; command.AddRange(Sandbox!.Arguments(_dataDirectory, _java, _jar, signalsOff)); }
+        if (sandbox is not null) { command.Add(sandbox); command.AddRange(Sandbox!.Arguments(_dataDirectory, _java, _jar)); }
         command.AddRange([_java, "-jar", _jar]);
         var start = new ProcessStartInfo(setsid ?? command[0]) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
         foreach (var argument in setsid is null ? command.Skip(1) : command) start.ArgumentList.Add(argument);
@@ -434,17 +430,16 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
             {
                 delay = RestartDelays[Math.Min(failures, RestartDelays.Length - 1)];
                 failures++;
-                string? turnOff; string? signalsTurnedOff = null; bool hadWebView;
+                string? turnOff; bool hadWebView;
                 lock (_gate)
                 {
                     hadWebView = _launchedWithWebView;
                     _restarts++; _lastError = "The source host exited with code " + process.ExitCode.ToString(CultureInfo.InvariantCulture) + ".";
                     (_webViewCrashes, turnOff) = WebViewCrash(process.ExitCode, DateTimeOffset.UtcNow - started, _launchedWithWebView, _webViewCrashes);
-                    (_signalsOff, _webViewCrashes, turnOff, signalsTurnedOff) = SignalScopeFallback(turnOff, _sandbox.SignalsScoped, _signalsOff, _webViewCrashes, process.ExitCode);
+                    turnOff = WithSignalHint(turnOff, _sandbox.SignalsScoped);
                     if (turnOff is not null) _webViewOff = turnOff;
                 }
                 if (process.ExitCode > 128 && hadWebView) LogChromiumTail();
-                if (signalsTurnedOff is not null) { delay = RestartDelays[0]; failures = 0; _log(signalsTurnedOff); }
                 if (turnOff is not null)
                 {
                     // The next start runs without the WebView: no reason to wait on the back-off ladder for it.
