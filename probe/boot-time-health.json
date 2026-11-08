@@ -1,8 +1,8 @@
 {
   "ok": true,
   "version": "0.5.3",
-  "captured_at": "2026-11-08T14:56:06.2935118+00:00",
-  "instance_id": "e939e7f56efa",
+  "captured_at": "2026-11-08T20:46:44.6652991+00:00",
+  "instance_id": "864fdd09a68b",
   "source_host": {
     "ok": true,
     "checked": true,
@@ -35,6 +35,7 @@
     "separate_user": false,
     "uid": 568,
     "reason": "",
+    "signals": "scoped",
     "message": "The source host and its WebView run in the Landlock sandbox (ABI 8): it can write only its own data folder and cannot read the app's configuration, databases or library files, and it cannot signal the app. Not covered: the network is open (sources browse the web, and the host can reach the app's HTTP port, which is why identity headers are never trusted from this container), /dev/shm is shared; it runs as the app's user."
   },
   "sign_in": {
@@ -126,11 +127,11 @@
     },
     "storage": {
       "database_dir": "/data",
-      "database_bytes": 1163832,
+      "database_bytes": 1176192,
       "data_dir": "/data",
-      "data_bytes": 10003478
+      "data_bytes": 10015840
     },
-    "captured_at": "2026-11-08T14:56:06.2881563+00:00",
+    "captured_at": "2026-11-08T20:46:44.6594342+00:00",
     "cache_age_seconds": 0
   },
   "errors": {

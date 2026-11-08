@@ -1,14 +1,18 @@
 PASS compiles with -O2 -Wall -Werror
-proof: AUTOSOURCARR_SOURCE_SANDBOX_V1 {"uid":1001,"separated":0,"landlock":8,"scoped":2,"nnp":1,"reason":""}
+proof: AUTOSOURCARR_SOURCE_SANDBOX_V1 {"uid":1001,"separated":0,"landlock":8,"scoped":2,"nnp":1,"reason":"","signals":"scoped"}
 PASS first stderr line is the proof
 PASS the data folder is writable
 PASS a write outside the data folder is refused
 PASS a file outside the allowed paths is unreadable
 PASS cannot signal processes outside the sandbox
+PASS --signals off turns signal scoping off
+PASS --signals on forces signal scoping
+PASS auto reports the kernel erratum state
+PASS an unknown --signals value is refused (usage)
 PASS a separate user without capabilities degrades to the app's user
 PASS relative paths are refused (usage)
-PASS refused data path /tmp/tmp.4ftBbAc1c2/data/..
-PASS refused data path /tmp/tmp.4ftBbAc1c2/data/../config
-PASS refused data path /tmp/tmp.4ftBbAc1c2//data
-PASS refused data path /tmp/tmp.4ftBbAc1c2/./data
+PASS refused data path /tmp/tmp.Vfj6L3Vwou/data/..
+PASS refused data path /tmp/tmp.Vfj6L3Vwou/data/../config
+PASS refused data path /tmp/tmp.Vfj6L3Vwou//data
+PASS refused data path /tmp/tmp.Vfj6L3Vwou/./data
 source-host-sandbox check: 0 failure(s)

@@ -1,7 +1,7 @@
 auth method forms: owner created
 setup finished
 source_sandbox=sandboxed
-source_sandbox_detail={"state":"sandboxed","landlock_abi":8,"signals_scoped":true,"separate_user":false,"uid":568,"reason":"","message":"The source host and its WebView run in the Landlock sandbox (ABI 8): it can write only its own data folder and cannot read the app's configuration, databases or library files, and it cannot signal the app. Not covered: the network is open (sources browse the web, and the host can reach the app's HTTP port, which is why identity headers are never trusted from this container), /dev/shm is shared; it runs as the app's user."}
+source_sandbox_detail={"state":"sandboxed","landlock_abi":8,"signals_scoped":true,"separate_user":false,"uid":568,"reason":"","signals":"scoped","message":"The source host and its WebView run in the Landlock sandbox (ABI 8): it can write only its own data folder and cannot read the app's configuration, databases or library files, and it cannot signal the app. Not covered: the network is open (sources browse the web, and the host can reach the app's HTTP port, which is why identity headers are never trusted from this container), /dev/shm is shared; it runs as the app's user."}
 repair_isolation=available (ready)
 repair_isolation_detail={"available":true,"state":"available","reason":"ready","message":"Repair code runs in the Landlock repair runner (ABI 8) with the egress proxy as its only network path.","runner":"/opt/autosourcarr-native/repair-runner","landlock_abi":8}
 webview=ready
