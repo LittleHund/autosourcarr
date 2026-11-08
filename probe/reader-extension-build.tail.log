@@ -1,12 +1,12 @@
 ::warning::UNSIGNED-FOR-RELEASE: AUTOSOURCARR_EXT_KEYSTORE_B64 is not set; the reader extension is signed with a throwaway debug key.
 ProGuard, version 7.10.0
-Validated Tachiyomi/Mihon extension APK: /home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build/outputs/apk/release/tachiyomi-all.autosourcarr-v1.4.5003.apk
+Validated Tachiyomi/Mihon extension APK: /home/runner/work/autosourcarr/autosourcarr/.build/keiyoushi/src/all/autosourcarr/build/outputs/apk/release/tachiyomi-all.autosourcarr-v1.4.5004.apk
 OK: JVM extension JAR structure checks passed
-File: tachiyomi-all.autosourcarr-v1.4.5003.jar
-Size: 102917 bytes
+File: tachiyomi-all.autosourcarr-v1.4.5004.jar
+Size: 102916 bytes
 JVM classes: 33
-SHA-256: c400eb9e2a6f99479e3612fcdc24ab305418efc5a97d515c9d2c426409663037
-index: eu.kanade.tachiyomi.extension.all.autosourcarr 1.4.5003 (code 109003), 5 server slots
+SHA-256: bb5ce5e32129af39ac2bf4e5e132ec2283b73786e44de8e74a4edca4ef9e8c29
+index: eu.kanade.tachiyomi.extension.all.autosourcarr 1.4.5004 (code 109004), 5 server slots
 Reader extension repository: .build/reader-extension
-  APK: apk/tachiyomi-all.autosourcarr-v1.4.5003.apk  JAR: jar/tachiyomi-all.autosourcarr-v1.4.5003.jar  signing SHA-256: c335349bad2253e161532ba89890e281bf250f8aad445f5d67edc3bb4b958aa9
+  APK: apk/tachiyomi-all.autosourcarr-v1.4.5004.apk  JAR: jar/tachiyomi-all.autosourcarr-v1.4.5004.jar  signing SHA-256: f8c679fe409c417adc3c3366f93b69a789c8a52fc4996092346bf254a0103b39
 UNSIGNED-FOR-RELEASE: signed with a throwaway debug key. Add the AUTOSOURCARR_EXT_* secrets before releasing.
