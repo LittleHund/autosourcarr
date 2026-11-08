@@ -2849,7 +2849,7 @@ for(const kind of ['matrix','subbed']){
   ['MinMatches','EntryMatches','TitleState','Status','PublicationStatus','Sort'].forEach(s=>{const el=$('#'+kind+s);if(el)el.onchange=()=>renderMatrix(kind);});
   const sourceSelect=$('#'+kind+'Source');if(sourceSelect)sourceSelect.onchange=()=>loadMatrixView(kind).catch(error=>toast(error.message));
   $('#'+kind+'Search').addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(liveSearchTimers[kind]);(kind==='matrix'?loadMatrix:loadSubbed)().catch(error=>toast(error.message));}});
-  // 0.5.3: results follow the typing (debounced; a newer search aborts the older request), Enter still searches at once.
+  // 0.5.3: results follow the typing (debounced; an older answer is dropped when the box changed), Enter still searches at once.
   $('#'+kind+'Search').addEventListener('input',()=>{clearTimeout(liveSearchTimers[kind]);liveSearchTimers[kind]=setTimeout(()=>(kind==='matrix'?loadMatrix:loadSubbed)().catch(error=>{if(error?.name!=='AbortError')toast(error.message);}),300);});
 }
 

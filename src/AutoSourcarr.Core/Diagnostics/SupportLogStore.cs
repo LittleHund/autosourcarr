@@ -59,7 +59,10 @@ public sealed class SupportLogStore : IAsyncDisposable
     /// </summary>
     public TextWriter? Mirror { get; init; }
 
-    public void Record(string source, string message)
+    public void Record(string source, string message) => Record(source, message, mirror: true);
+
+    /// <param name="mirror">False for lines already written to stdout before this log existed (update/restore at start).</param>
+    public void Record(string source, string message, bool mirror)
     {
         string text;
         try { text = Utf8Prefix(Privacy.Text(message), 4096); }
@@ -67,9 +70,9 @@ public sealed class SupportLogStore : IAsyncDisposable
         var row = new JsonObject { ["id"] = Guid.NewGuid().ToString("N")[..12], ["time"] = DateTimeOffset.UtcNow.ToString("O"),
             ["app_version"] = _identity.Version, ["instance_id"] = _identity.InstanceId, ["source"] = UnicodeCaseFold.Truncate(Privacy.Text(source), 80), ["message"] = text };
         var encoded = row.ToJsonString(JsonOptions) + "\n";
-        if (Mirror is { } mirror)
+        if (mirror && Mirror is { } output)
         {
-            try { mirror.WriteLine(row["time"] + " [" + row["source"] + "] " + text); }
+            try { output.WriteLine(row["time"] + " [" + row["source"] + "] " + text); }
             catch (Exception error) when (error is IOException or ObjectDisposedException) { _ = error; } // a closed stdout never stops the app
         }
         lock (_gate)

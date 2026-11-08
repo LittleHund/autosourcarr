@@ -83,7 +83,8 @@ internal sealed partial class ApplicationRuntime
     /// <summary>SET-9: each automatic backup, rollback, safe-mode start and restore at start appears in Tasks and the event stream.</summary>
     private void RecordUpgrade()
     {
-        foreach (var line in _upgradeLog) Logs.Record("Update", line);
+        // 0.5.3: already on stdout (written at once during the start); not again.
+        foreach (var line in _upgradeLog) Logs.Record("Update", line, mirror: !StdoutLogging());
         if (_restoreResult is { } restore)
         {
             var task = Tasks.Create("Restore at start", origin: "manual", kind: "instance-restore");

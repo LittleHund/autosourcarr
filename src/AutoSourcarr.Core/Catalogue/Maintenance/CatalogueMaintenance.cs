@@ -274,7 +274,8 @@ public sealed partial class CatalogueMaintenance
         {
             jobs.Enqueue(SubscribedRebuildJob, "", async job =>
             {
-                using var discovery = new DiscoveryAfter(discoveryAfter ? _hooks.ScheduleContinuousDiscovery : null);
+                // Not when the rebuild was cancelled (a later reset stops it and queues its own rebuild).
+                using var discovery = new DiscoveryAfter(discoveryAfter ? () => !job.CancellationToken.IsCancellationRequested && (_hooks.ScheduleContinuousDiscovery?.Invoke() ?? false) : null);
                 var result = await library.RebrowseResetSeedsAsync(copy, rebuild, (done, total, message) => job.Report(done, total, message), job.CancellationToken).ConfigureAwait(false);
                 // IMP-9: the import recheck runs once the rebuild finished; its failure is part of this job's result.
                 var recheck = resetActor is not null ? AfterRebuild(resetActor) : null;

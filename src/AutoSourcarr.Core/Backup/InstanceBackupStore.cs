@@ -197,12 +197,18 @@ public sealed partial class InstanceBackupStore
             var id = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
             var work = Path.Combine(Root, ".work-" + id);
             Directory.CreateDirectory(work);
+            Volatile.Write(ref _creating, 1);
             try { return CreateIn(work, id, kind, reason, passphrase, sharePage, drain, report, cancellationToken); }
             catch (IOException error) when (error is not FileNotFoundException and not DirectoryNotFoundException)
             { throw new BackupRefusedException("The backup could not be written (" + error.Message + "). Check the free space of the data folder.", 507, error); }
-            finally { TryDeleteDirectory(work); }
+            finally { TryDeleteDirectory(work); Volatile.Write(ref _creating, 0); }
         }
     }
+
+    private int _creating;
+
+    /// <summary>0.5.3: a backup is being written; the store is busy until it ends (cancel it in Tasks to free it).</summary>
+    public bool Creating => Volatile.Read(ref _creating) == 1;
 
     private BackupSummary CreateIn(string work, string id, string kind, string? reason, string? passphrase, Func<long, JsonObject>? sharePage,
         TimeSpan? drain, Action<string>? report, CancellationToken cancellationToken)
