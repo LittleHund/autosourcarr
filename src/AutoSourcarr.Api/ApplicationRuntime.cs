@@ -22,7 +22,7 @@ namespace AutoSourcarr.Api;
 /// Additional domain routes remain migration work; this is not default-runtime promotion.</summary>
 internal sealed partial class ApplicationRuntime : IAsyncDisposable
 {
-    internal const string Version = "0.5.2";
+    internal const string Version = "0.5.3";
     private readonly object _closeGate = new();
     private readonly object _catalogueWriteGate = new();
     private readonly OperationOwner _http = new();
@@ -192,6 +192,10 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         return result;
     }
 
+    /// <summary>AUTOSOURCARR_LOG_STDOUT=true (the image sets it): log lines also go to stdout (docker logs).</summary>
+    private static bool StdoutLogging() =>
+        string.Equals(System.Environment.GetEnvironmentVariable("AUTOSOURCARR_LOG_STDOUT")?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+
     private int _librarySeeding;
 
     /// <summary>
@@ -287,15 +291,21 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
                 // migration swaps the databases back and the app starts in its minimal safe mode (no retry loop).
                 owner._backups = new AutoSourcarr.Core.Backup.InstanceBackupStore(data, startup.ConfigurationRoot, owner.Database, Version);
                 owner._backups.Scrub = owner.Privacy.Text;
-                owner._restoreResult = owner._backups.ApplyAtStart(message => owner._upgradeLog.Add(message));
+                // 0.5.3: these lines are also written to stdout at once; the support log only records them after the
+                // start finished, so a start that failed afterwards lost what the restore or update did.
+                void Upgrade(string message)
+                {
+                    owner._upgradeLog.Add(message);
+                    if (StdoutLogging()) Console.Out.WriteLine(DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture) + " [Update] " + owner.Privacy.Text(message));
+                }
+                owner._restoreResult = owner._backups.ApplyAtStart(Upgrade);
                 owner._upgrade = AutoSourcarr.Core.Backup.UpgradeGuard.Run(owner._backups, owner.Database,
-                    () => new SchemaMigrator(owner.Database).Initialize(), message => owner._upgradeLog.Add(message));
+                    () => new SchemaMigrator(owner.Database).Initialize(), Upgrade);
                 if (!owner._upgrade.SafeMode) owner._preferences = new(owner.Database);
                 owner._logs = new(owner._logIo, owner.Identity, owner.Privacy, data)
                 {
                     // 0.5.1: the image sets AUTOSOURCARR_LOG_STDOUT=true so docker logs shows the app's log; "false" in Compose turns it off.
-                    Mirror = string.Equals(System.Environment.GetEnvironmentVariable("AUTOSOURCARR_LOG_STDOUT")?.Trim(), "true", StringComparison.OrdinalIgnoreCase)
-                        ? Console.Out : null,
+                    Mirror = StdoutLogging() ? Console.Out : null,
                 };
                 return 0;
             }, cancellationToken).ConfigureAwait(false);
@@ -603,7 +613,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
         }
         catch (Exception primary)
         {
-            owner._logs?.Record("Startup", "Application composition failed (" + primary.GetType().Name + ").");
+            owner._logs?.Record("Startup", "Application composition failed: " + AutoSourcarr.Core.Diagnostics.ErrorText.Of(primary));
             try { await owner.DisposeAsync().ConfigureAwait(false); }
             catch (Exception cleanup) { throw new AggregateException("Application startup and owned cleanup failed.", primary, cleanup); }
             throw;
@@ -1030,7 +1040,7 @@ internal sealed partial class ApplicationRuntime : IAsyncDisposable
             catch (Exception error)
             {
                 errors.Add(error);
-                _logs?.Record("Shutdown", stage + " failed (" + error.GetType().Name + ").");
+                _logs?.Record("Shutdown", stage + " failed: " + AutoSourcarr.Core.Diagnostics.ErrorText.Of(error));
             }
         }
         await Attempt("HTTP drain", BeginHttpStopAsync).ConfigureAwait(false);

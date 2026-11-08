@@ -34,11 +34,15 @@ public sealed class MaintenanceV1Services
 /// </summary>
 internal static class MaintenanceV1Endpoints
 {
-    /// <summary>Exclusive and not cancellable: nothing else writes while the catalogue is cleared and rebuilt.</summary>
+    /// <summary>
+    /// Not cancellable; nothing else writes while the catalogue is cleared: the job stops background work itself
+    /// (StopBackgroundAsync pauses the queue). 0.5.3: long-running instead of exclusive, so it starts at once instead of
+    /// waiting for long background jobs (continuous discovery) that never finish on their own.
+    /// </summary>
     public static readonly JobType DatabaseResetJob = new("database-reset", "Reset database", JobPriority.High,
-        JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(2), Cancellable: false);
+        JobFlags.LongRunning, StallTimeout: TimeSpan.FromHours(2), Cancellable: false);
     public static readonly JobType FullResetJob = new("database-full-reset", "Full reset", JobPriority.High,
-        JobFlags.Exclusive | JobFlags.NeedsDisk, StallTimeout: TimeSpan.FromHours(2), Cancellable: false);
+        JobFlags.LongRunning, StallTimeout: TimeSpan.FromHours(2), Cancellable: false);
 
     /// <summary>Resets need an owner or admin account (not a script key); without accounts the admin token was already checked.</summary>
     internal static bool OwnerOrAdmin(HttpContext context) => !context.Items.ContainsKey(AccessControlMiddleware.CallerItem)
@@ -115,6 +119,8 @@ internal static class MaintenanceV1Endpoints
                         var preview = maintenance.Manual.PreviewReset(ManualResetScope.All);
                         preview["scope"] = full ? "full-reset" : "reset-database";
                         preview["manual_decisions"] = full ? "forgotten" : "restored; those whose work does not come back are dropped and counted";
+                        // 0.5.3: what the reset clears besides decisions, so the confirmation can say it in numbers.
+                        preview["clears"] = maintenance.Maintenance.ResetImpact();
                         return Answer(preview);
                     });
                 }))

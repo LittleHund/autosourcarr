@@ -158,7 +158,7 @@ COPY --from=reader-extension-build /out/ /
 
 # ---------------------------------------------------------------------------------------------------------------
 FROM ${DOTNET_RUNTIME} AS runtime
-ARG VERSION=0.5.2
+ARG VERSION=0.5.3
 ARG REVISION=unknown
 LABEL org.opencontainers.image.title="AutoSourcarr" \
       org.opencontainers.image.source="https://github.com/LittleHund/autosourcarr" \

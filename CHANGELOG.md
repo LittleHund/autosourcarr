@@ -1,3 +1,21 @@
+## 0.5.3 - YYYY-MM-DD
+
+0.5.3 makes backup, restore and reset fast, cancellable and clear, tested on a copy of a real 0.4.5 catalogue before
+release. Update by pulling the new image; no migration step is needed.
+
+- **Backups start at once and are fast:** a backup no longer waits for long background jobs to finish, and the
+  portable catalogue export is optional (a checkbox; the databases already hold everything). On a 4.6 GB catalogue a
+  backup took 25 seconds instead of minutes. A running backup can be cancelled in Tasks, stopping the app ends it
+  cleanly, and work folders left by an interrupted backup are removed at the next start.
+- **Resets start at once** instead of waiting behind background jobs, and are confirmed in an in-app dialog (no
+  browser pop-ups) that lists what is **deleted** and what is **kept**, with the numbers of your catalogue.
+- **Rebuild library first:** after a reset, "Rebuild library" recreates your subscribed works; finding new entries
+  starts when it is done.
+- **Live search:** the library and match matrix search update while you type (no Enter needed).
+- **Clearer logs:** startup, shutdown, backup and restore failures name the error and where it happened (secrets and
+  private paths stay redacted); what a restore or update does at start appears in `docker logs` immediately; repeated
+  "hydration failed" lines for works whose source extension is not installed are summarised once a minute.
+
 ## 0.5.2 - 2026-11-08
 
 0.5.2 makes the database reset safe for the new library and fixes what 0.5.1 showed on the NAS. Update by pulling the

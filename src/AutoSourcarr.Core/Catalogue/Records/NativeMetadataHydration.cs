@@ -86,6 +86,29 @@ internal sealed class NativeMetadataHydration : IAsyncDisposable
         }
         _ = RunAsync(job); return true;
     }
+    private readonly object _failureGate = new();
+    private DateTimeOffset _failureLogged = DateTimeOffset.MinValue;
+    private int _failuresSince;
+
+    /// <summary>
+    /// 0.5.3: at most one line a minute; a work whose source extension is not installed fails every time, and one line
+    /// per work flooded the log (and docker logs). The line counts the failures since the last one and names the last error.
+    /// </summary>
+    private void LogFailure(Exception error)
+    {
+        int count;
+        lock (_failureGate)
+        {
+            _failuresSince++;
+            var now = DateTimeOffset.UtcNow;
+            if (now - _failureLogged < TimeSpan.FromMinutes(1)) return;
+            count = _failuresSince; _failuresSince = 0; _failureLogged = now;
+        }
+        _logs.Record("Metadata", "Native source detail hydration failed " + count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + (count == 1 ? " time" : " times") + " since the last report (works whose source extension is not installed fail until it is). Last: "
+            + Diagnostics.ErrorText.Of(error));
+    }
+
     private async Task RunAsync(Job job)
     {
         await Task.Yield(); NativeHydrationResult result;
@@ -101,7 +124,7 @@ internal sealed class NativeMetadataHydration : IAsyncDisposable
         catch (Exception error)
         {
             var types = FaultTypes(error);
-            try { _logs.Record("Metadata", "Native source detail hydration failed (" + types + ")."); }
+            try { LogFailure(error); }
             catch (Exception logging) { types += ";log=" + logging.GetType().Name; }
             result = new("failed", FailureTypes: types);
         }

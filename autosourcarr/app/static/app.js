@@ -2844,10 +2844,13 @@ if($('#searchAllSubbed'))$('#searchAllSubbed').onclick=async()=>{
   catch(e){toast('Unable to search all Subbed entries: '+e.message);}
   finally{b.disabled=false;}
 };
+const liveSearchTimers={};
 for(const kind of ['matrix','subbed']){
   ['MinMatches','EntryMatches','TitleState','Status','PublicationStatus','Sort'].forEach(s=>{const el=$('#'+kind+s);if(el)el.onchange=()=>renderMatrix(kind);});
   const sourceSelect=$('#'+kind+'Source');if(sourceSelect)sourceSelect.onchange=()=>loadMatrixView(kind).catch(error=>toast(error.message));
-  $('#'+kind+'Search').addEventListener('keydown',e=>{if(e.key==='Enter')(kind==='matrix'?loadMatrix:loadSubbed)().catch(error=>toast(error.message));});
+  $('#'+kind+'Search').addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(liveSearchTimers[kind]);(kind==='matrix'?loadMatrix:loadSubbed)().catch(error=>toast(error.message));}});
+  // 0.5.3: results follow the typing (debounced; a newer search aborts the older request), Enter still searches at once.
+  $('#'+kind+'Search').addEventListener('input',()=>{clearTimeout(liveSearchTimers[kind]);liveSearchTimers[kind]=setTimeout(()=>(kind==='matrix'?loadMatrix:loadSubbed)().catch(error=>{if(error?.name!=='AbortError')toast(error.message);}),300);});
 }
 
 function entryDetailSection(key,title,content,{open=true}={}){
@@ -3794,15 +3797,36 @@ $('#closeUnmatchDuplicates').onclick=closeUnmatchDuplicates;
 $('#reloadUnmatchDuplicates').onclick=()=>loadUnmatchDuplicates().catch(e=>toast(e.message));
 $('#unmatchDuplicateSearch').addEventListener('input',renderUnmatchDuplicates);
 $('#resetCovers').onclick=async()=>{if(!confirm('Reset every cached cover? Covers will be downloaded again from matched sources as they are viewed.'))return;const b=$('#resetCovers');b.disabled=true;try{const r=await api('/api/v1/maintenance/reset-covers',{method:'POST'});renewCoverEpoch();browseState.renderNonce++;await Promise.allSettled([loadBrowse(browseState.page,false),refreshBothMatrices()]);toast(`Cover cache reset · ${r.removed_files||0} cached file(s) removed`);}catch(e){toast('Cover reset failed: '+e.message);}finally{b.disabled=false;}};
-$('#resetDatabase').onclick=async()=>{const first=confirm('Reset the AutoSourcarr database? This deletes rebuildable catalog matches, duplicate decisions, browse/translation caches, cached covers and chapter-origin data. Your env settings, main-Suwayomi library items, persistent manual matches, and manual entry groups are kept. Before deletion AutoSourcarr records the old source IDs only as UNTRUSTED rebuild hints. Subbed entries are restored first and those exact source records are re-fetched and re-checked with the current matcher; nothing is rebound merely because it matched before. The remaining previous catalog is then replayed by exact source ID under the current rules, avoiding most expensive source-wide searches, while low-priority source browsing continues afterward. The reset is aborted if the main-Suwayomi subscription snapshot cannot be read.');if(!first)return;const typed=prompt('Type RESET DATABASE to continue');if(typed!=='RESET DATABASE'){toast('Database reset cancelled');return;}const b=$('#resetDatabase');b.disabled=true;try{const r=await (async()=>{const p=await api('/api/v1/maintenance/reset-database',{cache:'no-store',noMutationRefresh:true});return api('/api/v1/maintenance/reset-database',{method:'POST',body:JSON.stringify({confirm:true,preview_token:p.preview_token})});})();duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([health(),loadTasks()]);toast(r.merged?'A database reset is already queued or running; follow it in Tasks.':'Database reset queued · it runs alone, then subscribed entries and persistent manual matches are restored · follow it in Tasks');}catch(e){toast('Database reset failed: '+e.message);}finally{b.disabled=false;}};
-if($('#fullReset'))$('#fullReset').onclick=async()=>{
-  const first=confirm('Full reset AutoSourcarr data? This clears the catalog, matches, duplicate decisions, manual matches/groups, manual titles/separate-entry decisions, import history/decisions, chapter rejections, caches and chapter-origin history. Configuration is kept: persistent env/API/signing settings, UI preferences, source groups/priorities/language/search settings, database location, and your main-Suwayomi library are not reset. Subbed entries are recreated from the main library and searched again from scratch.');if(!first)return;
-  const typed=prompt('Type FULL RESET to continue');if(typed!=='FULL RESET'){toast('Full reset cancelled');return;}
-  const b=$('#fullReset');b.disabled=true;
-  try{const r=await (async()=>{const p=await api('/api/v1/maintenance/full-reset',{cache:'no-store',noMutationRefresh:true});if(!confirm(`The full reset forgets ${Number(p.total_records)||0} saved manual decision(s) (matches, groups, titles, separate rules, reviews, rejected chapters and imports). Continue?`))throw new Error('cancelled before anything was reset');return api('/api/v1/maintenance/full-reset',{method:'POST',timeoutMs:30000,body:JSON.stringify({confirm:true,preview_token:p.preview_token})});})();duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([health(),loadTasks()]);toast(r.merged?'A full reset is already queued or running; follow it in Tasks.':'Full reset queued · configuration is kept and subscribed entries are recreated · follow it in Tasks');}
-  catch(e){toast('Full reset failed: '+e.message);}
-  finally{b.disabled=false;}
-};
+// 0.5.3: both resets confirm in an in-app dialog with "Deleted" / "Kept" lists (no browser popups).
+const RESET_TEXT={
+  normal:{title:'Reset database',phrase:'RESET DATABASE',route:'/api/v1/maintenance/reset-database',
+    deleted:['All entries, automatic matches and their titles','Source records you matched, locked, imported or split (only the saved manual matches below are restored; the rest is matched again automatically)','Completed merges and provider identity links (rebuilt by matching)','Merge and split history and the automatic duplicate state','Chapter origins (rebuilt), queued downloads and the caches (covers, browse results, translations, metadata lookups)'],
+    kept:['Manual matches and groups (restored)','Different-works reviews, separate-entry rules, manual titles, title scopes and manual aliases (re-attached to the rebuilt works)','Library membership, monitoring and downloaded chapters (re-attached; the files stay)','Deleted-record suppression, mixed-entry reviews and import history','Settings, connections, accounts and your main Suwayomi subscriptions'],
+    after:'Afterwards "Rebuild library" recreates your subscribed works first; finding new entries starts when it is done. Kept decisions whose work does not come back are dropped and counted in the result (Tasks).'},
+  full:{title:'Full reset',phrase:'FULL RESET',route:'/api/v1/maintenance/full-reset',
+    deleted:['The whole catalogue: entries, matches, titles, merge and split history','Every saved decision: manual matches and groups, manual titles, separate-entry rules, reviews, rejected chapters and import decisions','Library membership and download records, chapter origins and all caches'],
+    kept:['Settings, connections, accounts, UI preferences and the database location','Source groups, priorities, languages and search settings','Your main Suwayomi subscriptions (recreated and searched again from scratch)'],
+    after:'Afterwards "Rebuild library" recreates your subscribed works; finding new entries starts when it is done.'}};
+async function runCatalogueReset(kind){
+  const text=RESET_TEXT[kind],button=$(kind==='full'?'#fullReset':'#resetDatabase');
+  if(!window.AutoSourcarrConfirm){toast('The confirmation dialog is not loaded; refresh the page.');return;}
+  button.disabled=true;
+  try{
+    const preview=await api(text.route,{cache:'no-store',noMutationRefresh:true});
+    const saved=Number(preview.total_records)||0;
+    const clears=preview.clears||{},n=value=>Number(value||0).toLocaleString();
+    const rows=[kind==='full'?`${saved.toLocaleString()} saved manual decision(s) will be forgotten.`:`${saved.toLocaleString()} saved manual decision(s) are kept.`,
+      `${n(clears.entries)} entries with ${n(clears.records)} source records (${n(clears.hand_made_records)} of them matched, imported or split by hand), ${n(clears.merges)} completed merges and ${n(clears.identity_links)} provider identity links are cleared and matched again automatically.`];
+    const typed=await window.AutoSourcarrConfirm.request({title:text.title,rows,sections:[{heading:'Deleted',items:text.deleted},{heading:'Kept',items:text.kept}],details:[text.after,'Take a backup first (Settings, Backup & restore) if you may want to go back.'],phrase:text.phrase,acceptLabel:text.title});
+    if(typed!==text.phrase){toast(text.title+' cancelled');return;}
+    const r=await api(text.route,{method:'POST',timeoutMs:30000,body:JSON.stringify({confirm:true,preview_token:preview.preview_token})});
+    duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([health(),loadTasks()]);
+    toast(r.merged?`A ${text.title.toLowerCase()} is already running; follow it in Tasks.`:`${text.title} started · follow it in Tasks`);
+  }catch(e){toast(text.title+' failed: '+e.message);}
+  finally{button.disabled=false;}
+}
+$('#resetDatabase').onclick=()=>runCatalogueReset('normal');
+if($('#fullReset'))$('#fullReset').onclick=()=>runCatalogueReset('full');
 
 
 if($('#moveDatabaseStorage'))$('#moveDatabaseStorage').onclick=()=>moveDatabaseStorage();
