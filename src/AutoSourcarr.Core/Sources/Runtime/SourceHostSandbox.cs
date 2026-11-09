@@ -12,11 +12,16 @@ namespace AutoSourcarr.Core.Sources.Runtime;
 /// <see cref="ReadWrite"/>/<see cref="ReadOnly"/> are extra paths (AUTOSOURCARR_SOURCE_HOST_RW / _RO, colon-separated).
 /// <see cref="Signals"/> (0.5.3) is AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE: "auto" (default: only when the kernel has the
 /// Landlock signal fix, erratum 2), "on" or "off".
+/// <see cref="TempDirectory"/> (0.5.4) is AUTOSOURCARR_SOURCE_HOST_TMP: the host's and Chromium's temp folder, writable in the
+/// sandbox. It stays on the container's own file system: Chromium keeps executable memory files there (/dev/shm is
+/// noexec in Docker) and crashed with SIGTRAP when they lay on a TrueNAS ZFS dataset with NFSv4 ACLs.
 /// </summary>
 public sealed record SourceHostSandboxOptions(string LauncherPath, uint? UserId = null, uint? GroupId = null,
-    IReadOnlyList<string>? ReadWrite = null, IReadOnlyList<string>? ReadOnly = null, string Signals = "auto")
+    IReadOnlyList<string>? ReadWrite = null, IReadOnlyList<string>? ReadOnly = null, string Signals = "auto",
+    string TempDirectory = SourceHostSandboxOptions.DefaultTemp)
 {
     public const string DefaultLauncher = "/opt/autosourcarr-native/source-host-sandbox";
+    public const string DefaultTemp = "/tmp/autosourcarr-source-host";
 
     public static SourceHostSandboxOptions FromEnvironment(IReadOnlyDictionary<string, string?> environment)
     {
@@ -31,8 +36,9 @@ public sealed record SourceHostSandboxOptions(string LauncherPath, uint? UserId 
             "off" or "false" => "off",
             _ => "auto",
         };
+        var temp = Paths(environment.GetValueOrDefault("AUTOSOURCARR_SOURCE_HOST_TMP")).FirstOrDefault(path => path.Length > 1) ?? DefaultTemp;
         return new(launcher, Id(environment.GetValueOrDefault("AUTOSOURCARR_SOURCE_HOST_UID")), Id(environment.GetValueOrDefault("AUTOSOURCARR_SOURCE_HOST_GID")),
-            Paths(environment.GetValueOrDefault("AUTOSOURCARR_SOURCE_HOST_RW")), Paths(environment.GetValueOrDefault("AUTOSOURCARR_SOURCE_HOST_RO")), signals);
+            Paths(environment.GetValueOrDefault("AUTOSOURCARR_SOURCE_HOST_RW")), Paths(environment.GetValueOrDefault("AUTOSOURCARR_SOURCE_HOST_RO")), signals, temp.TrimEnd('/'));
     }
 
     /// <summary>The launcher's arguments before "--" and the host command.</summary>
@@ -46,6 +52,7 @@ public sealed record SourceHostSandboxOptions(string LauncherPath, uint? UserId 
         }
         arguments.AddRange(["--data", dataDirectory]);
         foreach (var path in ReadWrite ?? []) arguments.AddRange(["--rw", path]);
+        arguments.AddRange(["--rw", TempDirectory]);
         // The JVM and the jar may live outside /usr and /opt (development): read-only, with execute.
         foreach (var path in new[] { Parent(Parent(java)), Parent(jar) }.Concat(ReadOnly ?? []).Where(path => path.Length > 1).Distinct(StringComparer.Ordinal))
             arguments.AddRange(["--ro", path]);

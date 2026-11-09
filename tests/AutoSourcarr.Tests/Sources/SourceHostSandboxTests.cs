@@ -19,7 +19,9 @@ public static class SourceHostSandboxTests
             Check.Equal(569u, options.UserId!.Value);
             Check.Equal(1, options.ReadWrite!.Count);
             var arguments = string.Join(' ', options.Arguments("/data/source-host", "/opt/source-host/bin/java", "/app/source-host/autosourcarr-source-host.jar"));
-            Check.Equal("--uid 569 --gid 569 --data /data/source-host --rw /data/source-cache --ro /opt/source-host --ro /app/source-host --ro /opt/source-host/kcef --", arguments);
+            Check.Equal("--uid 569 --gid 569 --data /data/source-host --rw /data/source-cache --rw /tmp/autosourcarr-source-host --ro /opt/source-host --ro /app/source-host --ro /opt/source-host/kcef --", arguments);
+            Check.Equal("/run/ash", SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_TMP"] = "/run/ash/" }).TempDirectory);
+            Check.Equal(SourceHostSandboxOptions.DefaultTemp, SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_TMP"] = "relative" }).TempDirectory);
             Check.True(SourceHostSandboxOptions.FromEnvironment(new Dictionary<string, string?> { ["AUTOSOURCARR_SOURCE_HOST_UID"] = "0" }).UserId is null, "uid 0 is never a source host user");
         });
 
@@ -77,6 +79,21 @@ public static class SourceHostSandboxTests
             SourceHostProcess.ClearChromiumLock(sandbox.Path, lines.Add);
             SourceHostProcess.ClearChromiumLock(Path.Combine(sandbox.Path, "missing"), lines.Add);
             Check.Equal(0, lines.Count);
+        });
+
+        suite.Add("source host: Chromium's temp folder is a private folder off the data folder, with a logged fallback (0.5.4)", () =>
+        {
+            using var sandbox = new Sandbox();
+            var lines = new List<string>();
+            var preferred = Path.Combine(sandbox.Path, "own-tmp");
+            Check.Equal(preferred, SourceHostProcess.PrivateTemp(preferred, Path.Combine(sandbox.Path, "data", "tmp"), lines.Add));
+            Check.True(Directory.Exists(preferred) && lines.Count == 0, string.Join('\n', lines));
+            if (!OperatingSystem.IsWindows()) Check.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute, File.GetUnixFileMode(preferred));
+            var blocked = Path.Combine(sandbox.Path, "a-file");
+            File.WriteAllText(blocked, "not a folder");
+            var fallback = Path.Combine(sandbox.Path, "data", "tmp");
+            Check.Equal(fallback, SourceHostProcess.PrivateTemp(blocked, fallback, lines.Add));
+            Check.True(Directory.Exists(fallback) && lines.Single().Contains("AUTOSOURCARR_SOURCE_HOST_TMP", StringComparison.Ordinal), string.Join('\n', lines));
         });
 
         suite.Add("source host sandbox: a missing launcher (or another platform) starts the host directly and reports it unsandboxed", () =>
