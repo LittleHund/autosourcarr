@@ -308,9 +308,11 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         start.Environment["WEBVIEW_ENABLED"] = webView ? "true" : "false";
         if (sandbox is not null)
         {
-            // Inside the sandbox only the data folder is writable: the JVM's and Chromium's home and temp files live there.
-            var home = Path.Combine(_dataDirectory, "home"); var temp = Path.Combine(_dataDirectory, "tmp");
-            CreateFolder(home); CreateFolder(temp);
+            // Inside the sandbox only the data folder and the temp folder are writable. Home stays in the data folder; temp
+            // files stay on the container's own file system (0.5.4: Chromium crashed with them on a ZFS dataset).
+            var home = Path.Combine(_dataDirectory, "home");
+            CreateFolder(home);
+            var temp = PrivateTemp(Sandbox!.TempDirectory, Path.Combine(_dataDirectory, "tmp"), _log);
             start.Environment["HOME"] = home; start.Environment["TMPDIR"] = temp;
             start.Environment["XDG_CACHE_HOME"] = Path.Combine(home, ".cache"); start.Environment["XDG_CONFIG_HOME"] = Path.Combine(home, ".config");
         }
@@ -364,6 +366,42 @@ public sealed partial class SourceHostProcess : IAsyncDisposable
         try { if (!File.Exists(options.LauncherPath)) return (null, Without("sandbox-missing")); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException) { return (null, Without("sandbox-missing")); }
         return (options.LauncherPath, null);
+    }
+
+    /// <summary>
+    /// 0.5.4: the host's temp folder: <paramref name="preferred"/> (on the container's own file system) as a private folder
+    /// of this user, else <paramref name="fallback"/> in the data folder (logged). A link or a folder of another user is
+    /// never used.
+    /// </summary>
+    internal static string PrivateTemp(string preferred, string fallback, Action<string> log)
+    {
+        try
+        {
+            var info = new DirectoryInfo(preferred);
+            if (!info.Exists)
+            {
+                if (OperatingSystem.IsWindows()) Directory.CreateDirectory(preferred);
+                else Directory.CreateDirectory(preferred, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                info.Refresh();
+            }
+            if (info.LinkTarget is not null) throw new IOException("it is a link");
+            if (!OperatingSystem.IsWindows())
+            {
+                // Only this user may use it (a folder made by someone else could hold planted files).
+                var probe = Path.Combine(preferred, ".owner-" + Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+                File.WriteAllText(probe, "");
+                File.Delete(probe);
+                File.SetUnixFileMode(preferred, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
+            return preferred;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            log("The source host temp folder " + preferred + " cannot be used (" + error.Message + "); using " + fallback + " instead. If the WebView then crashes, "
+                + "set AUTOSOURCARR_SOURCE_HOST_TMP to a writable folder on the container's own file system.");
+            CreateFolder(fallback);
+            return fallback;
+        }
     }
 
     /// <summary>Creates a host folder; a failure becomes the start error (reported, restart ladder) instead of an unhandled fault.</summary>

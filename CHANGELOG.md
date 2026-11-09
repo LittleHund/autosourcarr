@@ -9,6 +9,12 @@ migration step is needed.
   it until the next version. The check asks ghcr.io for the version list and, only when a new version appears,
   GitHub for the changes; nothing about your instance is sent. Settings: `UPDATE_CHECK_ENABLED` (on),
   `UPDATE_CHECK_MINUTES` (5) and `UPDATE_IMAGE_TAG` (`auto`, `latest` or `pinned`: which steps the notice shows).
+- **WebView on TrueNAS, the real fix:** the built-in WebView (Chromium) crashed with exit code 133 because its
+  temporary files lay in the data folder, and Chromium cannot use them on a ZFS dataset with NFSv4 ACLs (TrueNAS).
+  They now live in a private folder on the container's own file system (`/tmp/autosourcarr-source-host`, still inside
+  the sandbox; change it with `AUTOSOURCARR_SOURCE_HOST_TMP`). Signal blocking was not the cause; 0.5.3's kernel check
+  stays. If you added `SOURCE_WEBVIEW_ENABLED: "false"`, `AUTOSOURCARR_SOURCE_HOST_SIGNAL_SCOPE: "off"` or a `tmpfs:`
+  entry for `/data/source-host/tmp` because of the crash, you can remove them.
 
 ## 0.5.3 - 2026-11-08
 
