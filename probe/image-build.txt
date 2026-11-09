@@ -1,59 +1,58 @@
 result=0
-seconds=110
-size_bytes=1493383061
+seconds=94
+size_bytes=1493378454
 AOT cache: 32M
 jlink: java.base,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.prefs,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.internal.vm.ci,jdk.javadoc,jdk.jfr,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs
 /app/reader-extension:
 total 36
-drwxr-xr-x 1 root root 4096 Nov  8 23:15 apk
--rw-r--r-- 1 root root  175 Nov  8 23:15 build.json
-drwxr-xr-x 1 root root 4096 Nov  8 23:15 icon
--rw-r--r-- 1 root root  805 Nov  8 23:15 index.min.json
-drwxr-xr-x 1 root root 4096 Nov  8 23:15 jar
--rw-r--r-- 1 root root  257 Nov  8 23:15 repo.json
+drwxr-xr-x 1 root root 4096 Nov  9 00:46 apk
+-rw-r--r-- 1 root root  175 Nov  9 00:46 build.json
+drwxr-xr-x 1 root root 4096 Nov  9 00:46 icon
+-rw-r--r-- 1 root root  805 Nov  9 00:46 index.min.json
+drwxr-xr-x 1 root root 4096 Nov  9 00:46 jar
+-rw-r--r-- 1 root root  257 Nov  9 00:46 repo.json
 
 /opt/autosourcarr-native:
 total 2668
--rwxr-xr-x 1 root root  797000 Nov  8 23:21 repair-launcher
--rwxr-xr-x 1 root root 1169768 Nov  8 23:21 repair-runner
--rwxr-xr-x 1 root root  760136 Nov  8 23:21 source-host-sandbox
+-rwxr-xr-x 1 root root  797000 Nov  9 00:51 repair-launcher
+-rwxr-xr-x 1 root root 1169768 Nov  9 00:51 repair-runner
+-rwxr-xr-x 1 root root  760136 Nov  9 00:51 source-host-sandbox
 uid=568(autosourcarr) gid=568(autosourcarr) groups=568(autosourcarr)
 --- build log (errors and last lines)
-#42 [jre 3/3] RUN set -eu;     found=$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps /tmp/host.jar 2>/dev/null || true);     extra="java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs";     java --list-modules | sed 's/@.*//' > /tmp/available.txt;     modules=$(printf '%s,%s' "$found" "$extra" | tr ',' '\n' | sed '/^$/d' | sort -u | grep -Fx -f /tmp/available.txt | paste -sd, -);     echo "jlink modules: $modules";     jlink --add-modules "$modules" --strip-debug --no-man-pages --no-header-files --compress=zip-6           --generate-cds-archive --output /opt/source-jre;     /opt/source-jre/bin/java -version;     printf '%s\n' "$modules" > /opt/source-jre/autosourcarr-modules.txt
-#42 [jre 3/3] RUN set -eu;     found=$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps /tmp/host.jar 2>/dev/null || true);     extra="java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs";     java --list-modules | sed 's/@.*//' > /tmp/available.txt;     modules=$(printf '%s,%s' "$found" "$extra" | tr ',' '\n' | sed '/^$/d' | sort -u | grep -Fx -f /tmp/available.txt | paste -sd, -);     echo "jlink modules: $modules";     jlink --add-modules "$modules" --strip-debug --no-man-pages --no-header-files --compress=zip-6           --generate-cds-archive --output /opt/source-jre;     /opt/source-jre/bin/java -version;     printf '%s\n' "$modules" > /opt/source-jre/autosourcarr-modules.txt
-#42 [jre 3/3] RUN set -eu;     found=$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps /tmp/host.jar 2>/dev/null || true);     extra="java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs";     java --list-modules | sed 's/@.*//' > /tmp/available.txt;     modules=$(printf '%s,%s' "$found" "$extra" | tr ',' '\n' | sed '/^$/d' | sort -u | grep -Fx -f /tmp/available.txt | paste -sd, -);     echo "jlink modules: $modules";     jlink --add-modules "$modules" --strip-debug --no-man-pages --no-header-files --compress=zip-6           --generate-cds-archive --output /opt/source-jre;     /opt/source-jre/bin/java -version;     printf '%s\n' "$modules" > /opt/source-jre/autosourcarr-modules.txt
-#42 34.81 jlink modules: java.base,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.prefs,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.internal.vm.ci,jdk.javadoc,jdk.jfr,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs
-#42 [jre 3/3] RUN set -eu;     found=$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps /tmp/host.jar 2>/dev/null || true);     extra="java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs";     java --list-modules | sed 's/@.*//' > /tmp/available.txt;     modules=$(printf '%s,%s' "$found" "$extra" | tr ',' '\n' | sed '/^$/d' | sort -u | grep -Fx -f /tmp/available.txt | paste -sd, -);     echo "jlink modules: $modules";     jlink --add-modules "$modules" --strip-debug --no-man-pages --no-header-files --compress=zip-6           --generate-cds-archive --output /opt/source-jre;     /opt/source-jre/bin/java -version;     printf '%s\n' "$modules" > /opt/source-jre/autosourcarr-modules.txt
+#41 [jre 3/3] RUN set -eu;     found=$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps /tmp/host.jar 2>/dev/null || true);     extra="java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs";     java --list-modules | sed 's/@.*//' > /tmp/available.txt;     modules=$(printf '%s,%s' "$found" "$extra" | tr ',' '\n' | sed '/^$/d' | sort -u | grep -Fx -f /tmp/available.txt | paste -sd, -);     echo "jlink modules: $modules";     jlink --add-modules "$modules" --strip-debug --no-man-pages --no-header-files --compress=zip-6           --generate-cds-archive --output /opt/source-jre;     /opt/source-jre/bin/java -version;     printf '%s\n' "$modules" > /opt/source-jre/autosourcarr-modules.txt
+#41 [jre 3/3] RUN set -eu;     found=$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps /tmp/host.jar 2>/dev/null || true);     extra="java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs";     java --list-modules | sed 's/@.*//' > /tmp/available.txt;     modules=$(printf '%s,%s' "$found" "$extra" | tr ',' '\n' | sed '/^$/d' | sort -u | grep -Fx -f /tmp/available.txt | paste -sd, -);     echo "jlink modules: $modules";     jlink --add-modules "$modules" --strip-debug --no-man-pages --no-header-files --compress=zip-6           --generate-cds-archive --output /opt/source-jre;     /opt/source-jre/bin/java -version;     printf '%s\n' "$modules" > /opt/source-jre/autosourcarr-modules.txt
+#41 17.56 jlink modules: java.base,java.desktop,java.instrument,java.logging,java.management,java.naming,java.net.http,java.prefs,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.internal.vm.ci,jdk.javadoc,jdk.jfr,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs
+#41 [jre 3/3] RUN set -eu;     found=$(jdeps --ignore-missing-deps --multi-release 25 --print-module-deps /tmp/host.jar 2>/dev/null || true);     extra="java.base,java.desktop,java.logging,java.management,java.naming,java.net.http,java.scripting,java.security.jgss,java.sql,java.xml,java.xml.crypto,jdk.charsets,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.localedata,jdk.management,jdk.net,jdk.unsupported,jdk.zipfs";     java --list-modules | sed 's/@.*//' > /tmp/available.txt;     modules=$(printf '%s,%s' "$found" "$extra" | tr ',' '\n' | sed '/^$/d' | sort -u | grep -Fx -f /tmp/available.txt | paste -sd, -);     echo "jlink modules: $modules";     jlink --add-modules "$modules" --strip-debug --no-man-pages --no-header-files --compress=zip-6           --generate-cds-archive --output /opt/source-jre;     /opt/source-jre/bin/java -version;     printf '%s\n' "$modules" > /opt/source-jre/autosourcarr-modules.txt
 #59 [runtime 16/17] RUN set -eu;     train=$(mktemp -d); chown 569:569 "$train"; mkdir -p /opt/source-host/aot; chown 569:569 /opt/source-host/aot;     setpriv --reuid=569 --regid=569 --clear-groups --inh-caps=-all       env -i PATH=/usr/bin:/bin HOME=/home/asc-source SOURCE_HOST_DATA="$train" SOURCE_HOST_PORT=4599           SOURCE_HOST_BIND=127.0.0.1 SOURCE_HOST_TOKEN=aot-training WEBVIEW_ENABLED=false       /opt/source-jre/bin/java -XX:-UsePerfData -XX:AOTCacheOutput=/opt/source-host/aot/source-host.aot           -jar /app/source-host/autosourcarr-source-host.jar > /tmp/aot-training.log 2>&1 &     pid=$!; ok=0;     for i in $(seq 1 90); do       if curl -fsS -m 5 -H 'X-Source-Host-Token: aot-training' http://127.0.0.1:4599/v1/health > /dev/null 2>&1; then ok=1; break; fi;       kill -0 "$pid" 2>/dev/null || break; sleep 2;     done;     if [ "$ok" = 1 ]; then       for path in /v1/health /v1/sources /v1/extensions; do curl -s -m 10 -o /dev/null -H 'X-Source-Host-Token: aot-training' "http://127.0.0.1:4599$path" || true; done;     fi;     kill -TERM "$pid" 2>/dev/null || true; wait "$pid" || true;     if [ "$ok" = 1 ] && [ -s /opt/source-host/aot/source-host.aot ]; then       echo "AOT cache: $(du -h /opt/source-host/aot/source-host.aot | cut -f1)" | tee /opt/source-host/aot/status.txt;     else       rm -f /opt/source-host/aot/source-host.aot; tail -n 40 /tmp/aot-training.log;       echo "AOT cache: none (training run did not reach the health check)" | tee /opt/source-host/aot/status.txt;     fi;     chown -R root:root /opt/source-host/aot; chmod -R a+rX,go-w /opt/source-host/aot;     rm -rf "$train" /tmp/aot-training.log /tmp/hsperfdata_* /tmp/*.aot* 2>/dev/null || true
-#59 4.660 AOT cache: 32M
+#59 3.940 AOT cache: 32M
+#47 [runtime  4/17] COPY --from=jre /opt/source-jre /opt/source-jre
+#47 DONE 0.8s
+
+#45 [app 8/8] RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked     dotnet publish src/AutoSourcarr.Api/AutoSourcarr.Api.csproj -c Release -r linux-x64 --self-contained false        -p:PublishReadyToRun=true --no-restore -o /out     && rm -f /out/*.pdb     && test -s /out/AutoSourcarr.Api.dll
+#45 32.11   AutoSourcarr.Api -> /src/src/AutoSourcarr.Api/bin/Release/net10.0/linux-x64/AutoSourcarr.Api.dll
+#45 ...
 
 #48 [runtime  5/17] COPY --from=jcef /opt/source-host/kcef /opt/source-host/kcef
-#48 DONE 1.4s
-
-#44 [app 8/8] RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked     dotnet publish src/AutoSourcarr.Api/AutoSourcarr.Api.csproj -c Release -r linux-x64 --self-contained false        -p:PublishReadyToRun=true --no-restore -o /out     && rm -f /out/*.pdb     && test -s /out/AutoSourcarr.Api.dll
-#44 ...
+#48 DONE 3.8s
 
 #49 [runtime  6/17] COPY --from=native /out/repair-runner /out/repair-launcher /out/source-host-sandbox /opt/autosourcarr-native/
-#49 DONE 0.0s
-
-#44 [app 8/8] RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked     dotnet publish src/AutoSourcarr.Api/AutoSourcarr.Api.csproj -c Release -r linux-x64 --self-contained false        -p:PublishReadyToRun=true --no-restore -o /out     && rm -f /out/*.pdb     && test -s /out/AutoSourcarr.Api.dll
-#44 45.85   AutoSourcarr.Core -> /src/src/AutoSourcarr.Core/bin/Release/net10.0/linux-x64/AutoSourcarr.Core.dll
-#44 ...
+#49 DONE 0.1s
 
 #50 [runtime  7/17] COPY --from=source-host /autosourcarr-source-host.jar /app/source-host/autosourcarr-source-host.jar
-#50 DONE 0.4s
+#50 DONE 0.8s
+
+#45 [app 8/8] RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked     dotnet publish src/AutoSourcarr.Api/AutoSourcarr.Api.csproj -c Release -r linux-x64 --self-contained false        -p:PublishReadyToRun=true --no-restore -o /out     && rm -f /out/*.pdb     && test -s /out/AutoSourcarr.Api.dll
+#45 ...
 
 #51 [runtime  8/17] COPY docker/source-host-java.sh /opt/source-host/bin/java
 #51 DONE 0.0s
 
-#44 [app 8/8] RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked     dotnet publish src/AutoSourcarr.Api/AutoSourcarr.Api.csproj -c Release -r linux-x64 --self-contained false        -p:PublishReadyToRun=true --no-restore -o /out     && rm -f /out/*.pdb     && test -s /out/AutoSourcarr.Api.dll
-#44 54.99 CSC : warning AD0001: Analyzer 'Microsoft.AspNetCore.Analyzers.RouteHandlers.RouteHandlerAnalyzer' threw an exception of type 'System.NullReferenceException' with message 'Object reference not set to an instance of an object.'. [/src/src/AutoSourcarr.Api/AutoSourcarr.Api.csproj]
-#44 55.22   AutoSourcarr.Api -> /src/src/AutoSourcarr.Api/bin/Release/net10.0/linux-x64/AutoSourcarr.Api.dll
-#44 67.80   AutoSourcarr.Api -> /out/
-#44 DONE 67.9s
+#45 [app 8/8] RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked     dotnet publish src/AutoSourcarr.Api/AutoSourcarr.Api.csproj -c Release -r linux-x64 --self-contained false        -p:PublishReadyToRun=true --no-restore -o /out     && rm -f /out/*.pdb     && test -s /out/AutoSourcarr.Api.dll
+#45 42.81   AutoSourcarr.Api -> /out/
+#45 DONE 42.9s
 
 #52 [runtime  9/17] COPY --from=app /out/ /app/
-#52 DONE 0.1s
+#52 DONE 0.4s
 
 #53 [runtime 10/17] COPY autosourcarr/app/static /app/static
 #53 DONE 0.0s
@@ -71,18 +70,18 @@ uid=568(autosourcarr) gid=568(autosourcarr) groups=568(autosourcarr)
 #57 DONE 0.0s
 
 #58 [runtime 15/17] RUN set -eu;     cp /app/static/dist/index.html /app/static/index.html;     chown -R root:root /app /opt/source-jre /opt/source-host /opt/autosourcarr-native;     chmod -R go-w /app /opt/source-jre /opt/source-host;     chmod 0755 /opt/source-host/bin/java /opt/autosourcarr-native /opt/autosourcarr-native/repair-runner /opt/autosourcarr-native/repair-launcher           /opt/autosourcarr-native/source-host-sandbox;     test -s /app/reader-extension/index.min.json;     grep -q '/static/dist/' /app/static/index.html;     sed -i 's/\r$//' /opt/source-host/bin/java
-#58 DONE 2.2s
+#58 DONE 5.2s
 
 #59 [runtime 16/17] RUN set -eu;     train=$(mktemp -d); chown 569:569 "$train"; mkdir -p /opt/source-host/aot; chown 569:569 /opt/source-host/aot;     setpriv --reuid=569 --regid=569 --clear-groups --inh-caps=-all       env -i PATH=/usr/bin:/bin HOME=/home/asc-source SOURCE_HOST_DATA="$train" SOURCE_HOST_PORT=4599           SOURCE_HOST_BIND=127.0.0.1 SOURCE_HOST_TOKEN=aot-training WEBVIEW_ENABLED=false       /opt/source-jre/bin/java -XX:-UsePerfData -XX:AOTCacheOutput=/opt/source-host/aot/source-host.aot           -jar /app/source-host/autosourcarr-source-host.jar > /tmp/aot-training.log 2>&1 &     pid=$!; ok=0;     for i in $(seq 1 90); do       if curl -fsS -m 5 -H 'X-Source-Host-Token: aot-training' http://127.0.0.1:4599/v1/health > /dev/null 2>&1; then ok=1; break; fi;       kill -0 "$pid" 2>/dev/null || break; sleep 2;     done;     if [ "$ok" = 1 ]; then       for path in /v1/health /v1/sources /v1/extensions; do curl -s -m 10 -o /dev/null -H 'X-Source-Host-Token: aot-training' "http://127.0.0.1:4599$path" || true; done;     fi;     kill -TERM "$pid" 2>/dev/null || true; wait "$pid" || true;     if [ "$ok" = 1 ] && [ -s /opt/source-host/aot/source-host.aot ]; then       echo "AOT cache: $(du -h /opt/source-host/aot/source-host.aot | cut -f1)" | tee /opt/source-host/aot/status.txt;     else       rm -f /opt/source-host/aot/source-host.aot; tail -n 40 /tmp/aot-training.log;       echo "AOT cache: none (training run did not reach the health check)" | tee /opt/source-host/aot/status.txt;     fi;     chown -R root:root /opt/source-host/aot; chmod -R a+rX,go-w /opt/source-host/aot;     rm -rf "$train" /tmp/aot-training.log /tmp/hsperfdata_* /tmp/*.aot* 2>/dev/null || true
-#59 4.660 AOT cache: 32M
-#59 DONE 4.7s
+#59 3.940 AOT cache: 32M
+#59 DONE 4.1s
 
 #60 [runtime 17/17] WORKDIR /app
 #60 DONE 0.0s
 
 #61 exporting to image
 #61 exporting layers
-#61 exporting layers 6.7s done
-#61 writing image sha256:882f3e5353e9f60859ac3cb9bc6602b3c7c9a07fc0f3e4e24aca4c4bbaadb91d done
+#61 exporting layers 5.9s done
+#61 writing image sha256:2dfb096c744e01bd2eaa5c2b44a10da1bbc4981a9b6f332b073f63844df56b14 done
 #61 naming to docker.io/library/autosourcarr:probe done
-#61 DONE 6.7s
+#61 DONE 5.9s
