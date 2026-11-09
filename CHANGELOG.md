@@ -1,4 +1,4 @@
-## 0.5.4 - YYYY-MM-DD
+## 0.5.4 - 2026-11-09
 
 0.5.4 tells you when a new version is out. Update by changing the image tag to `0.5.4` (or pulling `latest`); no
 migration step is needed.
