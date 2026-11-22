@@ -231,7 +231,8 @@ internal sealed partial class ApplicationRuntime
         {
             SourcePaused = owner.SourceResults.Paused, SourceResult = owner.SourceResults.Record, RememberCover = coverHints.Remember,
             Yield = () => owner.Jobs.Active(ahead) > 0,
-            Backlog = () => owner.Jobs.Active(enrichment),
+            // 0.5.5: the extra-record scans of crawled pages share one job; its waiting list counts as backlog (in pages).
+            Backlog = () => owner.Jobs.Active(enrichment) + owner.CrawlScanBacklog(),
             NewlyCatalogued = ids => owner.ScheduleCrawlEnrichment(discovery, ids),
         };
         owner._startup = new StartupWork(maintenance, titles, structure, duplicates, discovery, library, hintIngest, crawler);

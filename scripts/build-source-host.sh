@@ -12,7 +12,8 @@ work=${SOURCE_HOST_WORK:-$root/.build/suwayomi}
 # Suwayomi-Server v2.4.2366 (MPL-2.0); AndroidCompat and the vendored loader code come from this commit.
 commit=40bc5da57820324ed0ae724cbbc020cc4673b594
 if [ ! -d "$work/.git" ]; then
-  rm -rf "$work"; mkdir -p "$work"
+  # The folder may be a mount (a Docker build cache): empty it instead of removing it.
+  mkdir -p "$work"; find "$work" -mindepth 1 -delete
   git -C "$work" init -q
   git -C "$work" remote add origin https://github.com/Suwayomi/Suwayomi-Server
 fi

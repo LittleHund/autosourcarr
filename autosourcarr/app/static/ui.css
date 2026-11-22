@@ -1154,6 +1154,17 @@ html[data-ui=reimagined] #subbed:has(.riFilterSummary) [data-clear-library-filte
 #updateBody .updateSteps{padding:10px 14px;border-left:3px solid #f59e0b;background:var(--panel)}
 #updateStatus{flex:1;margin:0;color:var(--muted)}
 #riSidebarVersion.updateKnown{cursor:pointer;color:#f59e0b}
+/* 0.5.5: a task stopped by the user, a reset or a shutdown is cancelled, not failed. */
+.taskState.cancelled{color:var(--muted);border-color:var(--line);border-style:dashed;background:var(--panel2)}
+/* 0.5.5: backup/restore progress window (closable only when the work ended). */
+.riProgressDialog{width:min(480px,calc(100vw - 32px));border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);padding:20px}
+.riProgressDialog::backdrop{background:rgba(0,0,0,.55)}
+.riProgressDialog h2{margin:0 0 10px;font-size:18px}
+.riProgressDialog .riProgressText{margin:0 0 12px;overflow-wrap:anywhere}
+.riProgressDialog .taskProgress{margin-top:6px}
+.riProgressDialog .riProgressNumbers{font-size:12px;margin:8px 0 0;min-height:1em}
+.riProgressDialog .riToolActions{margin-top:14px;justify-content:flex-end}
+.riProgressDialog.failed .riProgressText{color:var(--bad)}
 
 
 /* responsive.css */

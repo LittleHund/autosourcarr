@@ -25,6 +25,86 @@
     const button=document.createElement('button');button.type='button';button.textContent=label;
     if(options.danger)button.className='dangerAction';button.onclick=()=>write(button,fn,options.after);return button;
   }
+  // 0.5.5: a backup or restore shows a progress window that stays open until the work is done.
+  function progressDialog(title){
+    const box=document.createElement('dialog'),opener=document.activeElement;box.className='riProgressDialog';box.setAttribute('aria-labelledby','riProgressTitle');
+    box.innerHTML='<h2 id="riProgressTitle"></h2><p class="riProgressText" aria-live="polite"></p><div class="taskProgress indeterminate"><div class="taskProgressBar"></div></div><p class="riProgressNumbers muted"></p><div class="riToolActions"></div>';
+    box.querySelector('h2').textContent=title;
+    let closable=false;
+    box.addEventListener('cancel',event=>{if(!closable)event.preventDefault();});
+    // Removed directly as well as on the close event: the window never lingers in the page if that event is late.
+    const dispose=()=>{if(!box.isConnected)return;box.remove();if(opener?.isConnected&&!opener.disabled)opener.focus?.({preventScroll:true});else byId('riInstanceClose')?.focus?.({preventScroll:true});};
+    box.addEventListener('close',dispose);
+    document.body.append(box);box.showModal();
+    const bar=box.querySelector('.taskProgress'),fill=box.querySelector('.taskProgressBar'),text=box.querySelector('.riProgressText'),numbers=box.querySelector('.riProgressNumbers'),actions=box.querySelector('.riToolActions');
+    return {
+      update(message,current=0,total=0){
+        text.textContent=message||'';
+        if(total>0){const pct=Math.max(0,Math.min(100,Math.round(current/total*100)));bar.classList.remove('indeterminate');fill.style.width=pct+'%';numbers.textContent=`${Number(current).toLocaleString()} / ${Number(total).toLocaleString()} · ${pct}%`;}
+        else{bar.classList.add('indeterminate');fill.style.width='';numbers.textContent='';}
+      },
+      button(label,fn,danger){const b=document.createElement('button');b.type='button';b.textContent=label;if(danger)b.className='dangerAction';b.onclick=async()=>{b.disabled=true;try{await fn();}catch(error){if(!closable){text.textContent=error.message;b.disabled=false;}}};actions.append(b);return b;},
+      // ok: true = done, false = failed, null = outcome unknown (shown without the failure colour).
+      finish(message,ok){
+        if(closable)return;
+        closable=true;bar.hidden=true;numbers.textContent='';text.textContent=message;box.classList.toggle('failed',ok===false);actions.replaceChildren();
+        const b=document.createElement('button');b.type='button';b.textContent='Close';b.onclick=()=>{box.close();dispose();};actions.append(b);b.focus();
+      },
+    };
+  }
+  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  /** Follows one task in the task list until it ends; the window can only be closed afterwards. */
+  async function followTask(taskId,title,noun){
+    const view=progressDialog(title);view.update('Starting…');
+    view.button('Cancel '+noun,()=>v1().cancelTask(taskId),true);
+    let missing=0,unanswered=0;
+    for(;;){
+      await pause(1000);
+      let tasks=null;
+      try{tasks=await v1().getTasks({suppressClientError:true,timeoutMs:10000,noMutationRefresh:true});unanswered=0;}
+      catch(error){
+        // Never wait forever (signed out, app stopped): after about a minute the window can be closed.
+        if(++unanswered>=30){view.finish('AutoSourcarr stopped answering ('+error.message+'). The '+noun+' may still be running; check Tasks.',null);return null;}
+        view.update('Waiting for AutoSourcarr to answer…');continue;
+      }
+      const task=(tasks.items||[]).find(item=>item.id===taskId);
+      if(!task){if(++missing>=5){view.finish('The '+noun+' is no longer in the task list, so its result is unknown; check the list of saved backups.',null);return null;}continue;}
+      missing=0;
+      if(task.state==='running'){view.update(task.activity==='queued'?'Waiting for other work to finish…':(task.message||'Working…'),Number(task.current||0),Number(task.total||0));continue;}
+      if(task.state==='completed')view.finish(title+' finished. '+(task.message||''),true);
+      else view.finish(task.cancel_requested?title+' cancelled.':title+' failed: '+(task.error||task.message||'unknown error'),false);
+      return task;
+    }
+  }
+  /** A restore restarts AutoSourcarr: wait until a new process answers (another instance id), then show the result. */
+  async function followRestart(message,before){
+    const view=progressDialog('Restore');view.update(message||'Restarting AutoSourcarr to apply the backup…');
+    const deadline=Date.now()+30*60*1000;let down=false;
+    while(Date.now()<deadline){
+      await pause(2000);
+      const health=await readHealth();
+      if(!health){down=true;view.update('Restoring the backup… AutoSourcarr is restarting; this can take a few minutes on a large catalogue.');continue;}
+      // A new process: it was unreachable in between, or it reports another instance id than before the restore.
+      const restarted=down||(!!before&&!!health.instance_id&&health.instance_id!==before);
+      if(!restarted){view.update('Waiting for the restart… (the old process is still finishing)');continue;}
+      if(health.status==='safe-mode'){view.finish(health.message||'AutoSourcarr started in safe mode; open Backup & restore.',false);return;}
+      // The restore result is the proof; a restart alone is not reported as a successful restore.
+      let list=null;
+      try{list=await v1().listBackups({suppressClientError:true,timeoutMs:10000});}
+      catch(error){view.finish('AutoSourcarr restarted, but the restore result could not be read ('+error.message+'). Sign in again if asked and open Backup & restore.',null);return;}
+      if(list.restore_pending){view.update('AutoSourcarr is back; waiting for the restore to be applied…');continue;}
+      if(list.restore)view.finish(list.restore.message||(list.restore.status==='restored'?'The backup was restored.':'The restore was not applied.'),list.restore.status==='restored');
+      else view.finish('AutoSourcarr restarted, but it recorded no restore result. Check Backup & restore.',null);
+      return;
+    }
+    view.finish('AutoSourcarr did not come back within 30 minutes. Check the container log (docker logs).',false);
+  }
+  /** Health as plain JSON whatever the HTTP status (safe mode answers too); null while the app cannot be reached. */
+  async function readHealth(){
+    try{const response=await fetch('/api/v1/health',{cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(5000)});return await response.json();}
+    catch(_){return null;}
+  }
+  async function instanceId(){return (await readHealth())?.instance_id||'';}
   const line=(label,value)=>`<div class="riFact"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
   async function manage(id){
     if(!show('Library & serving profile'))return;
@@ -139,13 +219,15 @@
     byId('riBackupCreate').append(action('Create backup',()=>{
       const passphrase=byId('riBackupPassword').value;byId('riBackupPassword').value='';
       const request=byId('riBackupShare').checked?{share_export:true}:{};if(passphrase)request.passphrase=passphrase;
-      return v1().createBackup(request,{timeoutMs:30000});
-    },{after:result=>{status('Backup started in Tasks ('+result.task_id+'); cancel it there if needed. Refresh this list when it is done.');return refreshBackups();}}));
+      return v1().createBackup(request,{timeoutMs:30000}).then(async result=>{await followTask(result.task_id,'Backup','backup');return result;});
+    },{after:()=>refreshBackups()}));
     byId('riRestoreActions').append(action('Check backup & preview restore',async()=>{
       const file=byId('riRestoreFile').files[0],password=byId('riRestorePassword').value;byId('riRestorePassword').value='';
       if(!file)throw Error('Select a backup file first');
       const upload=multipart(file,password);
-      return api('/api/v1/backups/restore/preview',{method:'POST',body:upload.body,headers:{'Content-Type':upload.type},timeoutMs:3600000});
+      const view=progressDialog('Checking the backup');view.update('Uploading and checking '+file.name+'…');
+      try{const result=await api('/api/v1/backups/restore/preview',{method:'POST',body:upload.body,headers:{'Content-Type':upload.type},timeoutMs:3600000});view.finish('The backup was checked. Review the preview before restoring.',true);return result;}
+      catch(error){view.finish('The backup could not be checked: '+error.message,false);throw error;}
     },{after:renderRestorePreview}));
     await refreshBackups();
   }
@@ -157,13 +239,15 @@
     byId('riRestorePreview').innerHTML=`<div class="notice"><strong>Backup checked</strong><p>From ${esc(when(result.backup?.created_at))} · AutoSourcarr ${esc(result.backup?.app_version)} · format ${Number(result.backup?.format_version)}</p><p>${esc(result.version_check?.message)}</p>${result.decisions_warning?'<p><strong>'+esc(result.decisions_warning)+'</strong></p>':''}${result.chapter_provenance_warning?'<p><strong>'+esc(result.chapter_provenance_warning)+'</strong></p>':''}<div class="riTableScroll"><table><thead><tr><th>Database</th><th>Table</th><th>Now</th><th>Backup</th></tr></thead><tbody>${rows}</tbody></table></div>${settings.included?`<p>${Number(settings.changed.length)} setting values change.</p>`:'<p>The backup has no settings; current settings stay.</p>'}${list('Secrets kept from this instance',settings.secrets_kept_from_this_instance)}${list('Secrets to enter again after the restore',settings.secrets_to_enter_again)}<p class="muted">${esc(result.effect)}</p><label>Type RESTORE THIS INSTANCE<input id="riRestoreConfirmation" autocomplete="off"/></label><div id="riRestoreApply"></div></div>`;
     byId('riRestoreApply').append(action('Restore at the next start',()=>{
       if(byId('riRestoreConfirmation').value!=='RESTORE THIS INSTANCE')throw Error('Type RESTORE THIS INSTANCE to confirm.');
-      return v1().applyBackupRestore({stage_id:staged.stage_id,preview_token:staged.preview_token,confirm:true});
-    },{danger:true,after:result=>{status(result.message);return refreshBackups();}}));
+      return instanceId().then(before=>v1().applyBackupRestore({stage_id:staged.stage_id,preview_token:staged.preview_token,confirm:true}).then(result=>({...result,before})));
+    },{danger:true,after:async result=>{status(result.message);if(result.restarting)await followRestart(result.message,result.before);return refreshBackups().catch(error=>status('The backup list could not be refreshed: '+error.message));}}));
   }
   function previewSaved(item,label){
     return action(label||(item.protected?'Restore (needs passphrase)':'Restore'),()=>{
       const passphrase=item.protected?byId('riRestorePassword').value:'';if(item.protected)byId('riRestorePassword').value='';
-      return v1().previewBackupRestore(passphrase?{backup_id:item.id,passphrase}:{backup_id:item.id},{timeoutMs:600000});
+      const view=progressDialog('Checking the backup');view.update('Checking the backup from '+when(item.created_at)+'…');
+      return Promise.resolve().then(()=>v1().previewBackupRestore(passphrase?{backup_id:item.id,passphrase}:{backup_id:item.id},{timeoutMs:600000}))
+        .then(result=>{view.finish('The backup was checked. Review the preview before restoring.',true);return result;},error=>{view.finish('The backup could not be checked: '+error.message,false);throw error;});
     },{after:renderRestorePreview});
   }
   function noticeBox(title,lines){

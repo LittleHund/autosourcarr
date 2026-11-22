@@ -302,6 +302,50 @@ public static class JobQueueTests
             Check.Equal(JobOutcome.Cancelled, never.Completion.GetAwaiter().GetResult());
             Check.Equal("failed", fixture.Tasks.Find(never.Id)!.State);
         });
+
+        suite.Add("jobs: work stopped by a reset is listed as cancelled with the reason, not as a failure (0.5.5)", () =>
+        {
+            using var fixture = new Fixture(new JobQueueOptions { Workers = 1 });
+            var running = fixture.Queue.Enqueue(Fast, "running", job => Task.Delay(Timeout.Infinite, job.CancellationToken));
+            var queued = fixture.Queue.Enqueue(Fast, "queued", _ => Task.CompletedTask);
+            Wait(() => fixture.Running() == 1);
+            Check.True(fixture.Queue.StopBackgroundAsync("Database reset", TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+            Wait(() => fixture.Tasks.Find(running.Id)!.State != "running");
+            var stopped = fixture.Tasks.Find(running.Id)!; var notStarted = fixture.Tasks.Find(queued.Id)!;
+            Check.True(stopped.CancelRequested && notStarted.CancelRequested, "Both rows are marked cancelled.");
+            Check.Equal("Stopped: Database reset", stopped.Message);
+            Check.Equal("Not started: Database reset", notStarted.Message);
+            Check.Equal(notStarted.Message, notStarted.Error);
+        });
+
+        suite.Add("jobs: a job stopped by the shutdown names the shutdown, not the user (0.5.5)", () =>
+        {
+            var fixture = new Fixture(new JobQueueOptions { Workers = 1, CancelGrace = TimeSpan.FromSeconds(5) });
+            var running = fixture.Queue.Enqueue(Fast, "running", job => Task.Delay(Timeout.Infinite, job.CancellationToken));
+            Wait(() => fixture.Running() == 1);
+            fixture.Dispose();
+            Wait(() => fixture.Tasks.Find(running.Id)!.State != "running");
+            Check.Equal("Stopped: AutoSourcarr stopped", fixture.Tasks.Find(running.Id)!.Message);
+        });
+
+        suite.Add("jobs: a completed job keeps its detail lines for Technical details (0.5.5)", () =>
+        {
+            using var fixture = new Fixture(new JobQueueOptions { Workers = 1 });
+            var done = fixture.Queue.Enqueue(Fast, "detail", job => { job.Result("0 chapter(s) found, 1 record(s) failed"); job.Detail("Team X (record 5): HTTP 404"); return Task.CompletedTask; });
+            Check.Equal(JobOutcome.Completed, done.Completion.WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult());
+            var row = fixture.Tasks.Find(done.Id)!;
+            Check.Equal("completed", row.State);
+            Check.Equal("0 chapter(s) found, 1 record(s) failed", row.Message);
+            Check.Equal("Team X (record 5): HTTP 404", row.Error);
+        });
+
+        suite.Add("chapters: failed records are described by source, record and reason (0.5.5)", () =>
+        {
+            var text = AutoSourcarr.Core.Catalogue.Chapters.ChapterRefresh.FailureText([
+                new System.Text.Json.Nodes.JsonObject { ["source_id"] = "123", ["source_name"] = "Team Argo", ["source_manga_id"] = 77, ["error"] = "HTTP 403" },
+                new System.Text.Json.Nodes.JsonObject { ["source_id"] = "456", ["source_name"] = "", ["source_manga_id"] = 8, ["error"] = "Timeout" }]);
+            Check.Equal("Team Argo (record 77): HTTP 403\nsource 456 (record 8): Timeout", text);
+        });
     }
 
     private static Func<JobContext, Task> Record(ConcurrentQueue<string> order, string name) => _ => { order.Enqueue(name); return Task.CompletedTask; };

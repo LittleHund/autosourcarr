@@ -1,7 +1,7 @@
 /* Typed destructive confirmations keep the phrase outside the scrollable preview. */
 (()=>{
   let active=false;
-  function request({title,rows=[],sections=[],details=[],phrase,acceptLabel='Confirm'}){
+  function request({title,rows=[],ready=null,sections=[],details=[],phrase,acceptLabel='Confirm'}){
     if(active)throw new Error('Another confirmation is already open');
     if(typeof phrase!=='string'||!phrase||phrase.length>128)throw new Error('A confirmation phrase is required');
     const dialog=document.createElement('dialog');
@@ -14,7 +14,9 @@
     const header=element('header',undefined,'confirmationHeader'),heading=element('h2',title||'Confirm action');
     heading.id='confirmationTitle';header.append(heading);
     const preview=element('div',undefined,'confirmationPreview');
-    const counts=element('ul');for(const row of rows)counts.append(element('li',row));if(rows.length)preview.append(counts);
+    const counts=element('ul');for(const row of rows)counts.append(element('li',row));if(rows.length||ready)preview.append(counts);
+    // 0.5.5: the dialog opens at once; counts that need the server (ready: a promise of rows) fill in when they arrive.
+    let waiting=!!ready;if(ready){counts.setAttribute('aria-live','polite');counts.append(element('li','Counting what will change…','muted'));}
     // 0.5.3: labelled lists (for example "Deleted" and "Kept") instead of one long paragraph.
     for(const section of sections){if(!section||!Array.isArray(section.items)||!section.items.length)continue;preview.append(element('h3',section.heading||''));const list=element('ul');for(const item of section.items)list.append(element('li',item));preview.append(list);}
     for(const detail of details)if(detail)preview.append(element('p',detail));
@@ -30,8 +32,10 @@
     actions.append(cancel,accept);footer.append(label,input,actions);layout.append(header,preview,footer);dialog.append(layout);
     return new Promise((resolve,reject)=>{
       const cleanup=()=>{dialog.remove();active=false;if(previous?.isConnected&&!previous.disabled)previous.focus?.();};
-      const confirm=()=>{if(input.value===phrase)dialog.close('confirmed');};
-      input.addEventListener('input',()=>{accept.disabled=input.value!==phrase;});
+      const confirm=()=>{if(!waiting&&input.value===phrase)dialog.close('confirmed');};
+      input.addEventListener('input',()=>{accept.disabled=waiting||input.value!==phrase;});
+      if(ready)Promise.resolve(ready).then(lines=>{counts.replaceChildren(...(lines||[]).map(line=>element('li',line)));waiting=false;accept.disabled=input.value!==phrase;},
+        error=>{counts.replaceChildren(element('li','The preview could not be loaded: '+(error?.message||error)+'. Cancel and try again.','confirmationError'));});
       input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();confirm();}else if(event.key==='Escape')event.stopPropagation?.();});
       accept.addEventListener('click',confirm);cancel.addEventListener('click',()=>dialog.close('cancelled'));
       dialog.addEventListener('cancel',event=>{event.preventDefault();event.stopPropagation?.();dialog.close('cancelled');});

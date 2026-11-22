@@ -12,7 +12,7 @@ using AutoSourcarr.Core.Settings;
 namespace AutoSourcarr.Core.Sources.Discovery;
 
 /// <summary>What one crawler pass did ("yielded", "backlog", "no-sources", "not-due", "fetched", "failed", "off") and how long to wait.</summary>
-public sealed record CrawlStep(string Outcome, TimeSpan Delay, string SourceId = "", string Mode = "", long Page = 0, int Items = 0, int NewItems = 0, string Error = "");
+public sealed record CrawlStep(string Outcome, TimeSpan Delay, string SourceId = "", string Mode = "", long Page = 0, int Items = 0, int NewItems = 0, string Error = "", string SourceName = "");
 
 /// <summary>
 /// Port of 0.4.5 <c>schedule_continuous_catalog_discovery</c> (phase 13): a low-priority, long-running job that walks the
@@ -209,7 +209,7 @@ public sealed class ContinuousCatalogueCrawler
             ["updated_at"] = DueScheduler.Iso(_clock.GetUtcNow()),
         };
         WriteCursor(saved);
-        return new(error is null ? "fetched" : "failed", interval, src.Id, mode, page, touched.Count, fresh.Distinct().Count(), error?.Message ?? "");
+        return new(error is null ? "fetched" : "failed", interval, src.Id, mode, page, touched.Count, fresh.Distinct().Count(), error?.Message ?? "", src.Name.Length > 0 ? src.Name : src.Id);
     }
 
     /// <summary>The saved cursor (for status and tests).</summary>
@@ -248,10 +248,14 @@ public sealed class ContinuousCatalogueCrawler
     private static long Long(JsonNode? value) => value is JsonValue number && number.TryGetValue<long>(out var result) ? result
         : value is JsonValue real && real.TryGetValue<double>(out var fraction) ? (long)fraction : 0;
 
+    private static string Where(CrawlStep step) =>
+        (step.SourceName.Length > 0 ? step.SourceName : "source " + step.SourceId) + " · " + step.Mode.ToLowerInvariant() + " page " + step.Page.ToString(CultureInfo.InvariantCulture);
+
     private static string Describe(CrawlStep step) => step.Outcome switch
     {
-        "fetched" => step.Mode + " page " + step.Page.ToString(CultureInfo.InvariantCulture) + " of " + step.SourceId + ": " + step.Items.ToString(CultureInfo.InvariantCulture) + " records",
-        "failed" => step.Mode + " page " + step.Page.ToString(CultureInfo.InvariantCulture) + " of " + step.SourceId + " failed: " + step.Error,
+        // 0.5.5: name the source ("page 3 of 6084907896154116083" read like a page count; it was the source id).
+        "fetched" => Where(step) + ": " + step.Items.ToString(CultureInfo.InvariantCulture) + " records",
+        "failed" => Where(step) + " failed: " + step.Error,
         "yielded" => "Waiting for higher-priority work",
         "backlog" => "Waiting for the enrichment backlog",
         "no-sources" => "No enabled source to crawl",

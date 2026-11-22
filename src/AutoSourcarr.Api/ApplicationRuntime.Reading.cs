@@ -48,7 +48,18 @@ internal sealed partial class ApplicationRuntime
         // 10A: chapter refresh, browse and the reader catalogue (mapped by CatalogueRuntime.MapEndpoints after this).
         var refresh = new ChapterRefresh(database, writeGate, catalogue.Chapters,
             (mangaId, details, chapters, token) => owner.SourceRuntime.Client.FetchMangaAndChaptersAsync(mangaId, details, chapters, token),
-            () => TimeSpan.FromSeconds(owner.Settings.RefreshSourceTimeout));
+            () => TimeSpan.FromSeconds(owner.Settings.RefreshSourceTimeout))
+        {
+            // 0.5.5: a failed record was only counted; now its source and reason reach the error list and docker logs.
+            RecordFailed = (reason, record, error) =>
+            {
+                var line = "Refresh chapters: " + (record.SourceName.Length > 0 ? record.SourceName : record.SourceId) + " (entry "
+                    + record.EntryId.ToString(System.Globalization.CultureInfo.InvariantCulture) + ", record " + record.MangaId.ToString(System.Globalization.CultureInfo.InvariantCulture) + "): " + reason;
+                owner.Errors.Record("Chapters", line, "chapter-refresh|" + record.SourceId + "|" + error.GetType().Name, severity: "warning",
+                    errorType: error.GetType().Name, sourceContext: new System.Text.Json.Nodes.JsonObject { ["source_id"] = record.SourceId, ["source_name"] = record.SourceName });
+                if (StdoutLogging()) Console.Out.WriteLine(DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture) + " [Chapters] " + owner.Privacy.Text(line));
+            },
+        };
         catalogue.Browse = new ReaderBrowse(database, writeGate, catalogue.ReaderRead, catalogue.Repository, refresh, owner.Io,
             () => new ReaderFreshness(TimeSpan.FromSeconds(owner.Settings.BrowseCacheRefreshSeconds), TimeSpan.FromSeconds(owner.Settings.MetadataTtlSeconds),
                 owner.Settings.BrowsePageSize))

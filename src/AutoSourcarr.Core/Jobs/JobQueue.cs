@@ -77,6 +77,8 @@ public sealed class JobContext
     public void Heartbeat() => _queue.Progress(_job, Attempt, null, null, null);
     /// <summary>The message the finished task keeps in the Completed list.</summary>
     public void Result(string message) => _job.ResultMessage = message;
+    /// <summary>0.5.5: details of a job that completed with partial failures, shown under "Technical details".</summary>
+    public void Detail(string detail) => _job.ResultDetail = detail;
     /// <summary>
     /// True when this job's cancellation came from a person (Cancel in Tasks): not a shutdown (DisposeAsync), a
     /// maintenance pause (StopBackgroundAsync, which records its reason) or the watchdog stopping a frozen job.
@@ -172,7 +174,7 @@ public sealed class JobQueue : IAsyncDisposable
         }
         foreach (var job in queued)
         {
-            _tasks.Fail(job.Id, reason, "Not started: " + reason);
+            _tasks.Cancel(job.Id, "Not started: " + reason);
             Publish("cancelled", job, new JsonObject { ["reason"] = reason });
             job.Finish(JobOutcome.Cancelled);
         }
@@ -299,11 +301,13 @@ public sealed class JobQueue : IAsyncDisposable
             _stop.Cancel();
             foreach (var job in _queued)
             {
-                _tasks.Fail(job.Id, "AutoSourcarr stopped before this job ran", "Not started: AutoSourcarr stopped");
+                _tasks.Cancel(job.Id, "Not started: AutoSourcarr stopped");
                 job.Finish(JobOutcome.Cancelled);
             }
             _queued.Clear();
             running = _running.ToArray();
+            // 0.5.5: a job stopped by the shutdown says so (it was listed as "Cancelled by user").
+            foreach (var job in running.Where(job => !job.CancelRequested)) job.CancelReason = "AutoSourcarr stopped";
         }
         foreach (var job in running) job.Cancel();
         Signal();
@@ -488,8 +492,8 @@ public sealed class JobQueue : IAsyncDisposable
         {
             switch (outcome)
             {
-                case JobOutcome.Completed: _tasks.Complete(job.Id, job.ResultMessage is { Length: > 0 } result ? result : "Done"); break;
-                case JobOutcome.Cancelled: _tasks.Cancel(job.Id, job.CancelReason ?? "Cancelled by user"); break;
+                case JobOutcome.Completed: _tasks.Complete(job.Id, job.ResultMessage is { Length: > 0 } result ? result : "Done", job.ResultDetail); break;
+                case JobOutcome.Cancelled: _tasks.Cancel(job.Id, job.CancelReason is { } stoppedBy ? "Stopped: " + stoppedBy : "Cancelled by user"); break;
                 default:
                     _tasks.Fail(job.Id, reason);
                     // A freeze was already recorded when the watchdog saw it; one freeze is one error.
@@ -618,6 +622,7 @@ public sealed class JobQueue : IAsyncDisposable
         public bool Frozen { get; set; }
         public string FrozenReason { get; set; } = "";
         public string? ResultMessage { get; set; }
+        public string? ResultDetail { get; set; }
         public string? CancelReason { get; set; }
         public bool CancelRequested { get; set; }
         public bool Finished { get; set; }

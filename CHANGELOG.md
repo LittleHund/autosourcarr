@@ -1,4 +1,28 @@
-## 0.5.4 - YYYY-MM-DD
+## 0.5.5 - YYYY-MM-DD
+
+0.5.5 makes backups, restores, resets and the task list calmer and easier to follow. Update by changing the image tag
+to `0.5.5` (or pulling `latest`); no migration step is needed.
+
+- **Backup and restore show their progress:** creating a backup, checking a backup and restoring now open a progress
+  window that stays open until the work is done (a backup can be cancelled from it). A restore follows AutoSourcarr's
+  restart and shows the result when the app is back.
+- **The reset dialog opens at once:** Reset database and Full reset show their dialog immediately; the counts of your
+  catalogue fill in when they are ready (the confirm button waits for them).
+- **Cancelled is not failed:** work stopped by you, by a reset or by a shutdown is listed as "cancelled" with the
+  reason ("Stopped: Database reset", "Not started: Database reset") instead of as a failure, and "Technical details"
+  no longer repeats the message.
+- **Fewer repeated tasks:** "Refresh duplicate review" runs at most once a minute (it ran dozens of times a minute
+  while the catalogue grew), reports its progress (a long refresh was stopped as "frozen" after 30 minutes), and the
+  crawler's "Find extra source records" scans share one task instead of queueing one per page.
+- **Why a chapter refresh failed:** when a source record fails during "Refresh chapters", the task's "Technical
+  details" name the source, the record and the reason; the same line goes to the error list and the container log.
+- **Readable discovery progress:** continuous discovery names the source it is reading ("MangaDex · latest page 3")
+  instead of the source's long number, which looked like a page count.
+- **Quieter logs:** a cover the browser stopped waiting for is one debug line instead of a stack trace, the source
+  host no longer tries to answer twice ("headers already sent"), a cover the source refuses is one warning line, and a
+  database that is briefly busy no longer shows up as a source health error.
+
+## 0.5.4 - 2026-11-09
 
 0.5.4 tells you when a new version is out. Update by changing the image tag to `0.5.4` (or pulling `latest`); no
 migration step is needed.

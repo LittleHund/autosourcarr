@@ -188,12 +188,15 @@ public sealed class SourceHealthCoordinator : IAsyncDisposable
     {
         using var lease = _owner.Enter();
         using var linked = Lifetime(cancellationToken);
+        var busy = 0;
         while (true)
         {
             await Task.Delay(TimeSpan.FromMinutes(1), linked.Token).ConfigureAwait(false);
-            try { await TickAsync(linked.Token).ConfigureAwait(false); }
+            try { await TickAsync(linked.Token).ConfigureAwait(false); busy = 0; }
             catch (OperationCanceledException) when (linked.IsCancellationRequested) { throw; }
-            catch (Exception error) { recordError(error); }
+            // 0.5.5: a database busy with a reset or a large import is retried next minute; only a lasting lock is an error.
+            catch (Microsoft.Data.Sqlite.SqliteException error) when (error.SqliteErrorCode is 5 or 6 && ++busy < 3) { }
+            catch (Exception error) { busy = 0; recordError(error); }
         }
     }
     public ValueTask DisposeAsync() { lock (_gate) return new(_dispose ??= CloseAsync()); }

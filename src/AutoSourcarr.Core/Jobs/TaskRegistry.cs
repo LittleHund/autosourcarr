@@ -36,8 +36,8 @@ public sealed class TaskRegistry(Func<DateTimeOffset>? clock = null)
     { Current = current is { } value ? Math.Max(0, value) : row.Current, Total = total is { } count ? Math.Max(0, count) : row.Total, Message = message ?? row.Message });
     public void Advance(string id, int amount = 1, string? message = null) => UpdateRunning(id, row => row with
     { Current = (int)Math.Clamp((long)row.Current + amount, 0, row.Total > 0 ? row.Total : int.MaxValue), Message = message ?? row.Message });
-    public void Complete(string id, string? message = null) => Finish(id, row => row with
-    { State = "completed", Current = row.Total > 0 ? row.Total : row.Current, Message = message ?? row.Message });
+    public void Complete(string id, string? message = null, string? detail = null) => Finish(id, row => row with
+    { State = "completed", Current = row.Total > 0 ? row.Total : row.Current, Message = message ?? row.Message, Error = detail is { Length: > 0 } text ? Limit(text, 4000) : row.Error });
     public void Fail(string id, string error, string? message = null) => Finish(id, row => row with
     { State = "failed", Error = error.Length > 0 ? error : "Task failed", Message = message ?? row.Message });
     public void Cancel(string id, string message = "Cancelled by user") => Finish(id, row => row with
