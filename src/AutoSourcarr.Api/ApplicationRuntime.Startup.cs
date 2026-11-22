@@ -161,15 +161,83 @@ internal sealed partial class ApplicationRuntime
             _metadataEnrichment?.Schedule(ids.Take(Math.Max(1, settings.MetadataEnrichmentEntriesPerFeed)).ToArray());
             if (settings.AutoVariantDiscovery)
             {
-                var scan = ids.Take(Math.Max(1, settings.AutoVariantEntriesPerFeed)).ToArray();
-                Jobs.Enqueue(Endpoints.DiscoveryV1Endpoints.AdditionalScanJob, "crawl:" + string.Join(',', scan), async job =>
-                {
-                    var result = await discovery.ScanAdditionalAsync(scan, (current, total, message) => job.Report(current, total, message), job.CancellationToken).ConfigureAwait(false);
-                    job.Result("Additional-record scan complete; " + result["added"]?.ToJsonString() + " record(s) added");
-                }, JobPriority.Low, origin: "automatic", title: "Find extra source records");
+                var dropped = 0;
+                lock (_crawlScanGate)
+                    foreach (var id in ids.Take(Math.Max(1, settings.AutoVariantEntriesPerFeed)))
+                    {
+                        if (_crawlScanQueued.Contains(id)) continue;
+                        if (_crawlScanPending.Count >= CrawlScanPendingLimit) { dropped++; continue; }
+                        _crawlScanPending.Enqueue(id); _crawlScanQueued.Add(id);
+                    }
+                // The crawler pauses on this backlog long before the limit; a drop is recorded, never silent.
+                if (dropped > 0) Errors.Record("Discovery", dropped.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + " new entries were not queued for the extra-record scan (the waiting list is full).", "crawl-scan-full", severity: "warning");
+                ScheduleCrawlScan(discovery);
             }
         }
         catch (Exception error) when (error is ObjectDisposedException or InvalidOperationException) { _ = error; }
+    }
+
+    // 0.5.5: the crawler's extra-record scans share one job and one list (one queued job per page flooded the task list).
+    private const int CrawlScanPendingLimit = 5000;
+    /// <summary>Entries one run scans before it ends, so other scans of this type (a manual one, the start-up one) get their turn.</summary>
+    private const int CrawlScanRunLimit = 50;
+    private readonly object _crawlScanGate = new();
+    private readonly Queue<long> _crawlScanPending = new();
+    private readonly HashSet<long> _crawlScanQueued = [];
+    private long _crawlScanRun;
+
+    /// <summary>The waiting list of the crawler's extra-record scan in crawled pages (the unit the crawler's backlog limit counts).</summary>
+    internal int CrawlScanBacklog()
+    {
+        var perPage = Math.Max(1, Settings.AutoVariantEntriesPerFeed);
+        lock (_crawlScanGate) return (_crawlScanPending.Count + perPage - 1) / perPage;
+    }
+
+    private void ScheduleCrawlScan(CatalogueDiscovery discovery)
+    {
+        JobHandle handle;
+        // Which run owns the waiting list: a cancelled run clears the list only while no newer run was queued for it.
+        var run = Interlocked.Increment(ref _crawlScanRun);
+        try
+        {
+            handle = Jobs.Enqueue(Endpoints.DiscoveryV1Endpoints.AdditionalScanJob, "crawl", async job =>
+            {
+                var done = 0; var added = 0L; var failed = 0L;
+                while (done < CrawlScanRunLimit)
+                {
+                    var batch = new List<long>(10); int left;
+                    lock (_crawlScanGate)
+                    {
+                        while (batch.Count < 10 && _crawlScanPending.TryDequeue(out var id)) { _crawlScanQueued.Remove(id); batch.Add(id); }
+                        left = _crawlScanPending.Count;
+                    }
+                    if (batch.Count == 0) break;
+                    var offset = done; var total = Math.Min(CrawlScanRunLimit, done + batch.Count + left);
+                    var result = await discovery.ScanAdditionalAsync(batch, (current, _, message) => job.Report(offset + current, total, message), job.CancellationToken).ConfigureAwait(false);
+                    done += batch.Count; added += result["added"]?.GetValue<int>() ?? 0; failed += result["failed"]?.GetValue<int>() ?? 0;
+                }
+                job.Result("Scanned " + done.ToString(System.Globalization.CultureInfo.InvariantCulture) + " new entries; " + added.ToString(System.Globalization.CultureInfo.InvariantCulture) + " record(s) added"
+                    + (failed > 0 ? " · " + failed.ToString(System.Globalization.CultureInfo.InvariantCulture) + " entr" + (failed == 1 ? "y" : "ies") + " could not be scanned" : ""));
+            }, JobPriority.Low, origin: "automatic", title: "Find extra source records");
+        }
+        catch (Exception error) when (error is ObjectDisposedException or InvalidOperationException) { _ = error; return; }
+        if (handle.Merged) { Interlocked.Decrement(ref _crawlScanRun); return; }
+        var stop = _healthStop.Token;
+        // Entries added while the job was finishing would wait for the next page; pick them up now.
+        _ = handle.Completion.ContinueWith(task =>
+        {
+            bool more;
+            lock (_crawlScanGate)
+            {
+                // A cancelled scan (by the user or a reset, which renumbers entries) drops its list, unless a newer run
+                // was queued meanwhile: then the list is that run's.
+                if ((!task.IsCompletedSuccessfully || task.Result != JobOutcome.Completed) && Interlocked.Read(ref _crawlScanRun) == run)
+                { _crawlScanPending.Clear(); _crawlScanQueued.Clear(); }
+                more = _crawlScanPending.Count > 0;
+            }
+            if (more && !stop.IsCancellationRequested) ScheduleCrawlScan(discovery);
+        }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
     }
 
     /// <summary>Runs <paramref name="start"/> after <paramref name="delay"/> unless the app is stopping first.</summary>

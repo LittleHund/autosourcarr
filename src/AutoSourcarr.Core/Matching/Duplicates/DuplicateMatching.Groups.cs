@@ -127,16 +127,20 @@ public sealed partial class DuplicateMatching
     /// Unresolved duplicate candidates per entry (duplicate_candidates): title and review scores, and whether the
     /// automatic gate would merge the pair across every original member.
     /// </summary>
-    public Dictionary<long, JsonObject> Candidates(IReadOnlyCollection<long>? entryIds = null, CancellationToken cancellationToken = default)
+    public Dictionary<long, JsonObject> Candidates(IReadOnlyCollection<long>? entryIds = null, CancellationToken cancellationToken = default, Action<int, int>? progress = null)
     {
         var wanted = entryIds is { Count: > 0 } requested ? Read(c => requested.Select(id => DuplicateEvidence.Canonical(c, id)).ToHashSet()) : null;
         var (pairs, titles) = Shortlist(entryIds);
         var snapshots = new Dictionary<long, JsonObject>(); var members = new Dictionary<long, List<JsonObject>>();
         JsonObject Snap(long id) { if (!snapshots.TryGetValue(id, out var value)) snapshots[id] = value = Read(c => _evidence.Snapshot(c, id)); return value; }
         var result = new Dictionary<long, (HashSet<long> Ids, SortedSet<string> Titles, double Best, List<JsonObject> Items)>();
+        var done = 0; var reported = System.Diagnostics.Stopwatch.StartNew(); progress?.Invoke(0, pairs.Count);
         foreach (var ((left, right), reasons) in pairs.OrderBy(pair => pair.Key))
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // 0.5.5: a long scan reports progress so the job watchdog does not stop it as frozen.
+            done++;
+            if (progress is not null && reported.Elapsed >= TimeSpan.FromSeconds(2)) { progress(done - 1, pairs.Count); reported.Restart(); }
             var leftTitles = titles.GetValueOrDefault(left) ?? []; var rightTitles = titles.GetValueOrDefault(right) ?? [];
             var best = 0.0; var bestPair = ("", "");
             foreach (var a in leftTitles) foreach (var b in rightTitles) { var score = TextMatcher.TitleSimilarity(a, b); if (score > best) { best = score; bestPair = (a, b); } }
@@ -175,9 +179,10 @@ public sealed partial class DuplicateMatching
     }
 
     /// <summary>Human-reviewable duplicate clusters (duplicate_groups); refreshes and persists the review snapshot.</summary>
-    public JsonArray Groups(bool force = false, CancellationToken cancellationToken = default)
+    public JsonArray Groups(bool force = false, CancellationToken cancellationToken = default, Action<string, int, int>? progress = null)
     {
-        _scan.Wait(cancellationToken);
+        // Waiting for another scan is visible progress too (it may take long on a large catalogue).
+        while (!_scan.Wait(TimeSpan.FromSeconds(20), cancellationToken)) progress?.Invoke("Waiting for the duplicate scan that is already running", 0, 0);
         try
         {
             long revision;
@@ -187,7 +192,7 @@ public sealed partial class DuplicateMatching
                 if (!force && _snapshot is { } current && !_snapshotStale && _clock.GetElapsedTime(current.At) <= TimeSpan.FromSeconds(Math.Max(1, _settings().DuplicateSnapshotTtlSeconds)))
                     return (JsonArray)current.Groups.DeepClone();
             }
-            var candidates = Candidates(null, cancellationToken);
+            var candidates = Candidates(null, cancellationToken, progress is null ? null : (current, total) => progress("Scoring duplicate candidates", current, total));
             var graph = new Dictionary<long, HashSet<long>>();
             foreach (var (id, record) in candidates)
                 foreach (var other in record["entry_ids"]!.AsArray().Select(node => Long(node)))
@@ -438,20 +443,32 @@ public sealed partial class DuplicateMatching
         };
     }
 
+    /// <summary>Minimum time between two automatic review refreshes (0.5.5: the list was rebuilt dozens of times a minute).</summary>
+    public TimeSpan SnapshotCooldown { get; set; } = TimeSpan.FromSeconds(60);
+    private long _lastSnapshotRefresh;
+
     /// <summary>Queues one snapshot rebuild unless an automatic sweep (which rebuilds it) is pending; false when nothing was queued.</summary>
     public bool ScheduleSnapshotRefresh()
     {
         if (Jobs is not { } jobs || Paused) { lock (_snapshotLock) _snapshotStale = true; return false; }
         try
         {
-            jobs.Enqueue(SnapshotJob, "snapshot", job =>
+            jobs.Enqueue(SnapshotJob, "snapshot", async job =>
             {
+                // 0.5.5: at most one refresh per cooldown; requests in the meantime merge into this queued job.
+                var cooldown = SnapshotCooldown - _clock.GetElapsedTime(Interlocked.Read(ref _lastSnapshotRefresh));
+                if (Interlocked.Read(ref _lastSnapshotRefresh) != 0 && cooldown > TimeSpan.Zero)
+                {
+                    job.Report(message: "Waiting a moment so changes are collected into one refresh");
+                    await Task.Delay(cooldown, _clock, job.CancellationToken).ConfigureAwait(false);
+                }
                 job.Report(message: "Scoring duplicate candidates");
-                var groups = Groups(true, job.CancellationToken);
+                JsonArray groups;
+                try { groups = Groups(true, job.CancellationToken, (message, current, total) => job.Report(current, total, message)); }
+                finally { Interlocked.Exchange(ref _lastSnapshotRefresh, _clock.GetTimestamp()); }
                 job.Result(groups.Count.ToString(CultureInfo.InvariantCulture) + " duplicate group" + (groups.Count == 1 ? "" : "s"));
                 if (_settings().AutomaticDuplicateMatching && groups.OfType<JsonObject>().Any(group => (group["pairs"] as JsonArray ?? []).OfType<JsonObject>().Any(pair => Bool(pair["auto_merge_eligible"]))))
                     ScheduleAutomatic(TimeSpan.FromSeconds(1));
-                return Task.CompletedTask;
             });
             return true;
         }

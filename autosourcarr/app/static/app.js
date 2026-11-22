@@ -1486,9 +1486,12 @@ function taskCardHtml(t){
   const repair=['source-repair','source-raw-input'].includes(t.kind),repairUi=globalThis.AutoSourcarrRepairTasks;
   const meta=[t.context||'',repair?repairUi?.metadata(t):'',taskProgressText(t),repair?t.message:message,repair?'':taskTimingText(t),taskUpdateText(t),taskFinishedText(t)].filter(Boolean).map(esc).join(' · ');
   const cancel=repair?(repairUi?.actions(t)||''):(state==='running'&&t.cancellable)?`<button class="dangerAction taskCancel" onclick="cancelTask('${jsq(t.id)}',this)">Cancel</button>`:'';
-  const label=t.kind==='source-raw-input'?'code needed':repair?String(t.repair_state||state).replaceAll('-',' '):t.interrupted?'interrupted':activity;
+  // A job stopped by the user, a reset or a shutdown is cancelled, not failed (0.5.5).
+  const cancelled=state==='failed'&&!!t.cancel_requested&&!t.interrupted;
+  const label=t.kind==='source-raw-input'?'code needed':repair?String(t.repair_state||state).replaceAll('-',' '):t.interrupted?'interrupted':cancelled?'cancelled':activity;
+  const details=[...new Set([t.message,t.error].filter(Boolean))].join('\n\n');
   const retry=t.interrupted&&!t.cancel_requested&&t.kind==='library-monitor'?`<button data-safe-task-retry="${esc(t.id)}">Retry observation</button>`:'';
-  return `<article class="taskCard ${esc(activity)}${repair?' repairTaskCard':''}" data-origin="${esc(t.origin||'unknown')}"><div class="taskCardHead"><div><strong>${esc(t.name||'Background task')}</strong><div class="muted">${meta||esc(state)}</div></div><div class="taskCardActions"><span class="taskState ${esc(activity)}">${esc(label)}</span>${cancel}${retry}</div></div>${t.origin?`<span class="taskOrigin">${t.origin==='manual'?'Your action':'Automatic'}</span>`:''}${!repair&&(t.error||String(t.message||'').length>280)?`<details><summary>Technical details</summary><pre>${esc([t.message,t.error].filter(Boolean).join('\n\n'))}</pre></details>`:''}${progress}${active&&total>0?`<div class="taskNumbers"><span>${current.toLocaleString()} / ${total.toLocaleString()}</span><span>${pct}%</span></div>`:''}</article>`;
+  return `<article class="taskCard ${esc(cancelled?'cancelled':activity)}${repair?' repairTaskCard':''}" data-origin="${esc(t.origin||'unknown')}"><div class="taskCardHead"><div><strong>${esc(t.name||'Background task')}</strong><div class="muted">${meta||esc(state)}</div></div><div class="taskCardActions"><span class="taskState ${esc(cancelled?'cancelled':activity)}">${esc(label)}</span>${cancel}${retry}</div></div>${t.origin?`<span class="taskOrigin">${t.origin==='manual'?'Your action':'Automatic'}</span>`:''}${!repair&&((t.error&&t.error!==t.message)||String(t.message||'').length>280)?`<details><summary>Technical details</summary><pre>${esc(details)}</pre></details>`:''}${progress}${active&&total>0?`<div class="taskNumbers"><span>${current.toLocaleString()} / ${total.toLocaleString()}</span><span>${pct}%</span></div>`:''}</article>`;
 }
 function renderTaskSection(listId,countId,items,emptyText){
   const list=$(listId),count=$(countId);if(count)count.textContent=String(items.length);
@@ -3867,13 +3870,18 @@ async function runCatalogueReset(kind){
   if(!window.AutoSourcarrConfirm){toast('The confirmation dialog is not loaded; refresh the page.');return;}
   button.disabled=true;
   try{
-    const preview=await api(text.route,{cache:'no-store',noMutationRefresh:true});
-    const saved=Number(preview.total_records)||0;
-    const clears=preview.clears||{},n=value=>Number(value||0).toLocaleString();
-    const rows=[kind==='full'?`${saved.toLocaleString()} saved manual decision(s) will be forgotten.`:`${saved.toLocaleString()} saved manual decision(s) are kept.`,
-      `${n(clears.entries)} entries with ${n(clears.records)} source records (${n(clears.hand_made_records)} of them matched, imported or split by hand), ${n(clears.merges)} completed merges and ${n(clears.identity_links)} provider identity links are cleared and matched again automatically.`];
-    const typed=await window.AutoSourcarrConfirm.request({title:text.title,rows,sections:[{heading:'Deleted',items:text.deleted},{heading:'Kept',items:text.kept}],details:[text.after,'Take a backup first (Settings, Backup & restore) if you may want to go back.'],phrase:text.phrase,acceptLabel:text.title});
-    if(typed!==text.phrase){toast(text.title+' cancelled');return;}
+    // 0.5.5: open the dialog at once; the counts (which can take a while on a busy NAS) fill in when they arrive.
+    let preview=null,previewError=null;
+    const ready=api(text.route,{cache:'no-store',noMutationRefresh:true}).then(result=>{
+      preview=result;
+      const saved=Number(result.total_records)||0;
+      const clears=result.clears||{},n=value=>Number(value||0).toLocaleString();
+      return [kind==='full'?`${saved.toLocaleString()} saved manual decision(s) will be forgotten.`:`${saved.toLocaleString()} saved manual decision(s) are kept.`,
+        `${n(clears.entries)} entries with ${n(clears.records)} source records (${n(clears.hand_made_records)} of them matched, imported or split by hand), ${n(clears.merges)} completed merges and ${n(clears.identity_links)} provider identity links are cleared and matched again automatically.`];
+    });
+    ready.catch(error=>{previewError=error;});
+    const typed=await window.AutoSourcarrConfirm.request({title:text.title,ready,sections:[{heading:'Deleted',items:text.deleted},{heading:'Kept',items:text.kept}],details:[text.after,'Take a backup first (Settings, Backup & restore) if you may want to go back.'],phrase:text.phrase,acceptLabel:text.title});
+    if(typed!==text.phrase||!preview){toast(previewError?text.title+' failed: '+previewError.message:text.title+' cancelled');return;}
     const r=await api(text.route,{method:'POST',timeoutMs:30000,body:JSON.stringify({confirm:true,preview_token:preview.preview_token})});
     duplicateData=null;matrixData=null;subbedData=null;await Promise.allSettled([health(),loadTasks()]);
     toast(r.merged?`A ${text.title.toLowerCase()} is already running; follow it in Tasks.`:`${text.title} started · follow it in Tasks`);

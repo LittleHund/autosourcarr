@@ -84,6 +84,9 @@ class HostApi(
                 parts.firstOrNull() == "v1" -> route(exchange, exchange.requestMethod, parts.drop(1), query)
                 else -> throw HttpError(404, "Unknown path")
             }
+        } catch (error: ClientGone) {
+            // 0.5.5: the app or browser stopped waiting (for example a cover scrolled out of view); nothing to answer.
+            logger.debug { "Client went away during ${exchange.requestMethod} ${exchange.requestURI.rawPath}: ${error.cause?.message}" }
         } catch (error: HttpError) {
             reply(exchange, error.status, problem(error.message ?: "Error"))
         } catch (error: NoSuchElementException) {
@@ -100,7 +103,13 @@ class HostApi(
                 reply(exchange, 503, problem(deferred.message ?: "Request deferred by local pacing", "SourceBackedOff"))
                 return
             }
-            logger.warn(error) { "Request ${exchange.requestMethod} ${exchange.requestURI.rawPath} failed" }
+            if (exchange.requestURI.rawPath.startsWith("/api/v1/")) {
+                // 0.5.5: a cover or page the source refuses is one line, not a stack trace per image.
+                logger.warn { "Request ${exchange.requestMethod} ${exchange.requestURI.rawPath} failed: ${error.message ?: error.javaClass.simpleName}" }
+                logger.debug(error) { "Image request failure details" }
+            } else {
+                logger.warn(error) { "Request ${exchange.requestMethod} ${exchange.requestURI.rawPath} failed" }
+            }
             // A source error (site down, changed layout, Cloudflare) is the source's answer, not a host failure.
             reply(exchange, 502, problem(error.message ?: error.javaClass.simpleName, error.javaClass.simpleName))
         } finally {
@@ -497,10 +506,17 @@ class HostApi(
             val bytes = it.body.bytes()
             exchange.responseHeaders.set("Content-Type", it.header("Content-Type") ?: "application/octet-stream")
             exchange.responseHeaders.set("Cache-Control", "no-store")
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.write(bytes)
+            try {
+                exchange.sendResponseHeaders(200, bytes.size.toLong())
+                exchange.responseBody.write(bytes)
+            } catch (error: java.io.IOException) {
+                throw ClientGone(error)
+            }
         }
     }
+
+    /** The client closed the connection while the answer was being written. */
+    private class ClientGone(cause: Throwable) : RuntimeException(cause)
 
     private fun loadPages(
         chapter: HostDb.Chapter,
@@ -849,6 +865,11 @@ class HostApi(
         body: JsonElement,
     ) {
         val bytes = json.encodeToString(JsonElement.serializer(), body).toByteArray(StandardCharsets.UTF_8)
+        // 0.5.5: never answer twice ("headers already sent" after a write failed half-way).
+        if (exchange.responseCode != -1) {
+            logger.debug { "Answer for ${exchange.requestURI.rawPath} was already started; status $status not sent" }
+            return
+        }
         try {
             exchange.responseHeaders.set("Content-Type", "application/json; charset=utf-8")
             exchange.sendResponseHeaders(status, bytes.size.toLong())

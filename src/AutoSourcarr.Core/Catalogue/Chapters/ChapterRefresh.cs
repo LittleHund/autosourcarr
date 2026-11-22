@@ -24,6 +24,9 @@ public sealed class ChapterRefresh(SqliteDatabase database, object sourceWriteGa
     /// <summary>Runs after chapters of a record were stored (metadata hydration, colour analysis …); errors are the caller's.</summary>
     public Action<long, string, long>? Stored { get; init; }
 
+    /// <summary>0.5.5: called once per failed record with a readable line (source, record, reason) for the logs.</summary>
+    public Action<string, Record, Exception>? RecordFailed { get; init; }
+
     public sealed record Record(long EntryId, string SourceId, long MangaId, string SourceName);
 
     /// <summary>Refreshes one attached record; <see cref="KeyNotFoundException"/> when it is not attached to the work.</summary>
@@ -50,7 +53,12 @@ public sealed class ChapterRefresh(SqliteDatabase database, object sourceWriteGa
             cancellationToken.ThrowIfCancellationRequested();
             try { found += await StoreAsync(record, cancellationToken).ConfigureAwait(false); }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-            catch (Exception error) { failures.Add(new JsonObject { ["source_id"] = record.SourceId, ["source_manga_id"] = record.MangaId, ["error"] = error.Message }); }
+            catch (Exception error)
+            {
+                var reason = error.Message.Length > 0 ? error.Message : error.GetType().Name;
+                failures.Add(new JsonObject { ["source_id"] = record.SourceId, ["source_name"] = record.SourceName, ["source_manga_id"] = record.MangaId, ["error"] = reason });
+                try { RecordFailed?.Invoke(reason, record, error); } catch (Exception) { /* logging never breaks the refresh */ }
+            }
             job?.Report(++done, records.Count, record.SourceName);
         }
         var canonical = records.Count > 0 ? records[0].EntryId : Canonical(entryId);
@@ -60,6 +68,13 @@ public sealed class ChapterRefresh(SqliteDatabase database, object sourceWriteGa
             ["entry_stats"] = Queries.EntryChapterStats([canonical]).GetValueOrDefault(canonical)?.DeepClone() ?? new JsonObject(),
         };
     }
+
+    /// <summary>One line per failed record: "Source name (record 123): reason".</summary>
+    public static string FailureText(IEnumerable<JsonObject> failures) => string.Join('\n', failures.Select(failure =>
+    {
+        var name = failure["source_name"]?.GetValue<string>() is { Length: > 0 } text ? text : "source " + failure["source_id"]?.GetValue<string>();
+        return name + " (record " + failure["source_manga_id"]?.ToJsonString() + "): " + failure["error"]?.GetValue<string>();
+    }));
 
     /// <summary>Queues a whole-work chapter refresh as a job (merged with one already queued for the work).</summary>
     public JobHandle ScheduleEntry(JobQueue jobs, long entryId, string origin = "manual", JobPriority? priority = null)
@@ -71,8 +86,11 @@ public sealed class ChapterRefresh(SqliteDatabase database, object sourceWriteGa
         return jobs.Enqueue(EntryJob, "entry-chapter-refresh:" + canonical.ToString(CultureInfo.InvariantCulture), async job =>
         {
             var result = await RefreshEntryAsync(canonical, job, job.CancellationToken).ConfigureAwait(false);
+            var failures = result["failures"]!.AsArray().OfType<JsonObject>().ToArray();
             job.Result(result["chapters_found"]!.GetValue<long>().ToString(CultureInfo.InvariantCulture) + " chapter(s) found, "
-                + result["failures"]!.AsArray().Count.ToString(CultureInfo.InvariantCulture) + " record(s) failed");
+                + failures.Length.ToString(CultureInfo.InvariantCulture) + " record(s) failed");
+            // 0.5.5: the reasons are shown under "Technical details" of the finished task.
+            if (failures.Length > 0) job.Detail(FailureText(failures));
         }, priority, origin, "Refresh chapters", title);
     }
 
