@@ -16,15 +16,6 @@
 /home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/os/MessageQueue.java:80: warning: [removal] finalize() in Object has been deprecated and marked for removal
             super.finalize();
                  ^
-/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/NetworkInfo.java:424: warning: [dep-ann] deprecated item is not annotated with @Deprecated
-    public String getReason() {
-                  ^
-/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/ConnectivityManager.java:1223: warning: [dep-ann] deprecated item is not annotated with @Deprecated
-    public static NetworkCapabilities networkCapabilitiesForType(int type) {
-                                      ^
-/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/ConnectivityManager.java:1848: warning: [dep-ann] deprecated item is not annotated with @Deprecated
-    public void reportInetCondition(int networkType, int percentage) {
-                ^
 /home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/webkit/WebSettings.java:256: warning: [dep-ann] deprecated item is not annotated with @Deprecated
     public static final int FORCE_DARK_OFF = 0;
                             ^
@@ -43,6 +34,15 @@
 /home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/database/AbstractCursor.java:385: warning: [removal] finalize() in Object has been deprecated and marked for removal
     protected void finalize() {
                    ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/NetworkInfo.java:424: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public String getReason() {
+                  ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/ConnectivityManager.java:1223: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public static NetworkCapabilities networkCapabilitiesForType(int type) {
+                                      ^
+/home/runner/work/autosourcarr/autosourcarr/.build/suwayomi/AndroidCompat/src/main/java/android/net/ConnectivityManager.java:1848: warning: [dep-ann] deprecated item is not annotated with @Deprecated
+    public void reportInetCondition(int networkType, int percentage) {
+                ^
 Note: Some input files use or override a deprecated API.
 Note: Recompile with -Xlint:deprecation for details.
 Note: Some input files use unchecked or unsafe operations.
