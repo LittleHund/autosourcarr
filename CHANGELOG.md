@@ -1,4 +1,4 @@
-## 0.5.5 - YYYY-MM-DD
+## 0.5.5 - 2026-11-23
 
 0.5.5 makes backups, restores, resets and the task list calmer and easier to follow. Update by changing the image tag
 to `0.5.5` (or pulling `latest`); no migration step is needed.
